@@ -57,7 +57,6 @@ import { Player, UnitMetadata } from './player/player';
 import { Database } from './proto/database';
 import { Gear } from './proto/gear';
 import { getReforgeCacheGearKey } from './proto/items';
-import { extendPlayerProtoWithMissingEffects } from './proto/proto_migration';
 import { SimResult } from './proto/sim_result';
 import { StatCap, Stats } from './proto/stats';
 import { Encounter } from './raid/encounter';
@@ -287,8 +286,6 @@ export class Sim {
 				if (gearChanged || gear.hasInactiveMetaGem()) {
 					player.equipment = gearAsBackendSpec(gear);
 				}
-
-				extendPlayerProtoWithMissingEffects(player, this.db);
 			});
 		});
 
@@ -662,7 +659,6 @@ export class Sim {
 		const player = raidProto.parties[0].players[0];
 		player.database = gear.toDatabase(this.db);
 		player.equipment = gearAsBackendSpec(gear);
-		extendPlayerProtoWithMissingEffects(player, this.db);
 		raidProto.parties[0].players[0] = player;
 
 		const result = await this.workerPool.computeStats(
@@ -784,15 +780,8 @@ export class Sim {
 				.includes(player.getRaidIndex())
 				? [UnitReference.create({ type: UnitType.Player, index: 0 })]
 				: [];
-			// `toDatabase()` fills items, enchants and gems only, so without this the request carries
-			// no consumables or spell effects. lib.wasm is built without the `with_db` tag, so a
-			// worker that has not already handled a full sim request cannot resolve them and computes
-			// the stat's sub-sims with no flask, elixir, food or potion.
-			const playerProto = player.toProto(false, true);
-			extendPlayerProtoWithMissingEffects(playerProto, this.db);
-
 			const request = StatWeightsRequest.create({
-				player: playerProto,
+				player: player.toProto(false, true),
 				raidBuffs: this.raid.getBuffs(),
 				partyBuffs: player.getParty()!.getBuffs(),
 				debuffs: this.raid.getDebuffs(),

@@ -3,7 +3,6 @@ package proto;
 
 option go_package = "./proto";
 import "common.proto";
-import "spell.proto";
 
 message SimDatabase {
 	repeated SimItem items = 1;
@@ -11,9 +10,6 @@ message SimDatabase {
 	repeated SimEnchant enchants = 2;
 	repeated SimGem gems = 3;
 	repeated ItemEffectRandPropPoints item_effect_rand_prop_points = 9;
-
-	repeated Consumable consumables = 7;
-	repeated SpellEffect spell_effects = 8;
 }
 
 // Contains only the Enchant info needed by the sim.
