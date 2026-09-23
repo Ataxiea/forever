@@ -69,6 +69,21 @@ var enchantEffectArgFixes = map[int]map[int]int{
 	8203: {0: ITEM_MOD_SPIRIT},
 }
 
+// The effect a proc-carrying enchant applies, when it resolves any stats. The database does not
+// carry it: the generator writes it into the sim's effects table.
+func (enchant *Enchant) ItemEffects() []*proto.ItemEffect {
+	if !enchant.HasEnchantEffect() {
+		return nil
+	}
+
+	eff := ItemEffect{TriggerType: 2, SpellID: enchant.SpellId}
+	if parsedEffect, hasStats := eff.ToProto(0); hasStats {
+		return []*proto.ItemEffect{parsedEffect}
+	}
+
+	return nil
+}
+
 func (enchant *Enchant) ToProto() *proto.UIEnchant {
 	uiEnchant := &proto.UIEnchant{
 		Name:               enchant.Name,
@@ -80,17 +95,6 @@ func (enchant *Enchant) ToProto() *proto.UIEnchant {
 		Stats:              stats.Stats{}.ToProtoArray(),
 		Quality:            enchant.Quality.ToProto(),
 		RequiredProfession: GetProfession(enchant.RequiredProfession),
-	}
-
-	if enchant.HasEnchantEffect() {
-		eff := ItemEffect{TriggerType: 2, SpellID: enchant.SpellId}
-		parsedEffect, hasStats := eff.ToProto(0)
-		if hasStats {
-			uiEnchant.EnchantEffects = append(uiEnchant.EnchantEffects, parsedEffect)
-		}
-		// if uiEnchant.EnchantEffect.GetOnUse() == nil && uiEnchant.EnchantEffect.GetProc() == nil {
-		// 	uiEnchant.EnchantEffect = nil
-		// }
 	}
 
 	if enchant.FDID == 0 {

@@ -405,12 +405,13 @@ func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) map[int32][]*pro
 			continue
 		}
 
-		if len(parsed.EnchantEffects) > 0 {
-			enchantEffects[parsed.EffectId] = parsed.EnchantEffects
+		effects := enchant.ItemEffects()
+		if len(effects) > 0 {
+			enchantEffects[parsed.EffectId] = effects
 		}
 
-		for _, enchantEffect := range parsed.EnchantEffects {
-			TryParseEnchantEffect(parsed, enchantEffect, groupMapProc, instance, enchantSpellEffects)
+		for _, enchantEffect := range effects {
+			TryParseEnchantEffect(parsed, effects, enchantEffect, groupMapProc, instance, enchantSpellEffects)
 		}
 	}
 
@@ -501,7 +502,6 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 	// Example loop over your items
 	for _, parsed := range db.Items {
 		effects := dbc.MergeItemEffectsForAllStates(parsed)
-		parsed.ItemEffects = effects
 		itemEffects[parsed.Id] = effects
 
 		for _, itemEffect := range effects {
@@ -807,7 +807,7 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 	return EffectParseResultInvalid
 }
 
-func TryParseEnchantEffect(enchant *proto.UIEnchant, enchantEffect *proto.ItemEffect, groupMapProc map[string]Group, instance *dbc.DBC, enchantSpellEffects map[int]*dbc.SpellEffect) EffectParseResult {
+func TryParseEnchantEffect(enchant *proto.UIEnchant, enchantEffects []*proto.ItemEffect, enchantEffect *proto.ItemEffect, groupMapProc map[string]Group, instance *dbc.DBC, enchantSpellEffects map[int]*dbc.SpellEffect) EffectParseResult {
 	if (enchantEffect.GetProc() != nil || EnchantHasDummyEffect(enchant, instance)) && isGeneratableEnchant(enchant.EffectId) {
 
 		// Effect was already manually implemented
@@ -830,7 +830,7 @@ func TryParseEnchantEffect(enchant *proto.UIEnchant, enchantEffect *proto.ItemEf
 
 			// The same two ids an item proc carries. An enchant's trigger is the spell the client
 			// hangs on the enchantment; the buff is what the shipped entry says it applies.
-			entry.Proc = routeEnchantProc(enchant, instance)
+			entry.Proc = routeEnchantProc(enchant, enchantEffects, instance)
 			if entry.Proc != nil {
 				entry.Supported = entry.Proc.Supported()
 			}
@@ -857,7 +857,7 @@ func TryParseEnchantEffect(enchant *proto.UIEnchant, enchantEffect *proto.ItemEf
 // The rows an enchant's proc is resolved from. An enchant applies its effect through one spell, so
 // the trigger is that spell and the buff is whatever the shipped entry names - the same spell again
 // where the client grants the stats through it directly.
-func routeEnchantProc(enchant *proto.UIEnchant, instance *dbc.DBC) *ProcRouting {
+func routeEnchantProc(enchant *proto.UIEnchant, enchantEffects []*proto.ItemEffect, instance *dbc.DBC) *ProcRouting {
 	if enchant.SpellId == 0 {
 		return nil
 	}
@@ -866,7 +866,7 @@ func routeEnchantProc(enchant *proto.UIEnchant, instance *dbc.DBC) *ProcRouting 
 	isWeaponProc := ok && raw.IsCombatSpell(int(enchant.SpellId))
 
 	buffSpellID := int(enchant.SpellId)
-	for _, effect := range enchant.EnchantEffects {
+	for _, effect := range enchantEffects {
 		if effect.GetProc() != nil {
 			buffSpellID = int(effect.BuffId)
 			break
@@ -875,7 +875,7 @@ func routeEnchantProc(enchant *proto.UIEnchant, instance *dbc.DBC) *ProcRouting 
 
 	routing := routeProc(int(enchant.SpellId), buffSpellID, isWeaponProc)
 
-	if len(enchant.EnchantEffects) == 0 {
+	if len(enchantEffects) == 0 {
 		if damage := dbc.ResolveDamageEffect(int(enchant.SpellId)); damage != nil {
 			routing.asDamage(int32(damage.SpellID))
 			return routing
