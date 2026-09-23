@@ -18,8 +18,6 @@ var gemsByID = map[int32]Gem{}
 var randomSuffixesByID = map[int32]RandomSuffix{}
 var enchantsByEffectID = map[int32]Enchant{}
 var itemEffectRandPropPointsByIlvl = map[int32]ItemEffectRandPropPoints{}
-var consumablesByID = map[int32]Consumable{}
-var spellEffectsById = map[int32]*proto.SpellEffect{}
 
 // These maps are written at request time by AddToDatabase while other requests are
 // mid-flight, and a concurrent map read/write is an unrecoverable fatal error rather than
@@ -77,16 +75,6 @@ func addToDatabase(newDB *proto.SimDatabase) {
 	for _, v := range newDB.ItemEffectRandPropPoints {
 		if _, ok := itemEffectRandPropPointsByIlvl[v.Ilvl]; !ok {
 			itemEffectRandPropPointsByIlvl[v.Ilvl] = ItemEffectRandPropPointsFromProto(v)
-		}
-	}
-	for _, v := range newDB.Consumables {
-		if _, ok := consumablesByID[v.Id]; !ok {
-			consumablesByID[v.Id] = ConsumableFromProto(v)
-		}
-	}
-	for _, v := range newDB.SpellEffects {
-		if _, ok := spellEffectsById[v.Id]; !ok {
-			spellEffectsById[v.Id] = v
 		}
 	}
 }
@@ -431,17 +419,15 @@ func GetGemByID(id int32) (Gem, bool) {
 }
 
 func GetConsumableByID(id int32) Consumable {
-	dbMu.RLock()
-	c := consumablesByID[id]
-	dbMu.RUnlock()
-	return c
+	c, ok := consumableTable[id]
+	if !ok {
+		return Consumable{}
+	}
+	return ConsumableFromProto(c)
 }
 
 func GetSpellEffectByID(id int32) *proto.SpellEffect {
-	dbMu.RLock()
-	e := spellEffectsById[id]
-	dbMu.RUnlock()
-	return e
+	return spellEffectTable[id]
 }
 
 func GetItemEffectRandPropPointsByIlvl(ilvl int32) *ItemEffectRandPropPoints {

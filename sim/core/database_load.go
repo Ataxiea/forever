@@ -19,8 +19,6 @@ func init() {
 		Gems:                     make([]*proto.SimGem, len(db.Gems)),
 		ItemEffectRandPropPoints: make([]*proto.ItemEffectRandPropPoints, len(db.ItemEffectRandPropPoints)),
 		RandomSuffixes:           make([]*proto.ItemRandomSuffix, len(db.RandomSuffixes)),
-		Consumables:              make([]*proto.Consumable, len(db.Consumables)),
-		SpellEffects:             make([]*proto.SpellEffect, len(db.SpellEffects)),
 	}
 
 	for i, item := range db.Items {
@@ -77,14 +75,6 @@ func init() {
 			Ilvl:           itemEffectRpp.Ilvl,
 			RandPropPoints: itemEffectRpp.RandPropPoints,
 		}
-	}
-
-	for i, consumable := range db.Consumables {
-		simDB.Consumables[i] = consumable
-	}
-
-	for i, effect := range db.SpellEffects {
-		simDB.SpellEffects[i] = effect
 	}
 
 	addToDatabase(simDB)
