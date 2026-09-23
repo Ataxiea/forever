@@ -1273,11 +1273,9 @@ func (s effectSource) eligibleSlots(character *core.Character) []proto.ItemSlot 
 
 // The proc-carrying effects this item or enchant declares, keyed by the aura each one applies.
 func (s effectSource) procEffects() map[int32]*proto.ItemEffect {
-	var declared []*proto.ItemEffect
+	declared := itemEffectsByID[s.id]
 	if s.isEnchant {
-		declared = core.GetEnchantByEffectID(s.id).EnchantEffects
-	} else if item := core.GetItemByID(s.id); item != nil {
-		declared = item.ItemEffects
+		declared = enchantEffectsByID[s.id]
 	}
 
 	procEffects := make(map[int32]*proto.ItemEffect)
@@ -1331,16 +1329,16 @@ func RegisterEnchantEffects(effects map[int32][]*proto.ItemEffect) {
 // The effects an on-use helper works from. A generated registration naming an item with no effect
 // data is a database bug rather than a runtime case, so both callers fail loudly and identically.
 func itemEffectsFor(itemID int32) []*proto.ItemEffect {
-	item := core.GetItemByID(itemID)
-	if item == nil {
+	if core.GetItemByID(itemID) == nil {
 		panic(fmt.Sprintf("No item with ID: %d", itemID))
 	}
 
-	if len(item.ItemEffects) == 0 {
+	effects := itemEffectsByID[itemID]
+	if len(effects) == 0 {
 		panic(fmt.Sprintf("No effects data for item with ID: %d", itemID))
 	}
 
-	return item.ItemEffects
+	return effects
 }
 
 // Share a cooldown only when the effect says it belongs to a category. One with no category shares
