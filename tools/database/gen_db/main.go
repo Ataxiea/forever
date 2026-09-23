@@ -270,6 +270,9 @@ func main() {
 	atlasDBProto := atlaslootDB.ToUIProto()
 	db.MergeZones(atlasDBProto.Zones)
 	db.MergeNpcs(atlasDBProto.Npcs)
+	if err := database.GenerateConsumablesTable(db.Consumables, db.Effects); err != nil {
+		panic(err)
+	}
 	db.WriteBinaryAndJson(fmt.Sprintf("%s/db.bin", dbDir), fmt.Sprintf("%s/db.json", dbDir))
 }
 

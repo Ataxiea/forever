@@ -74,6 +74,12 @@ func protoLiteral(v reflect.Value, elideType bool) string {
 			elems[i] = fmt.Sprintf("%d: %s", key.Int(), protoLiteral(v.MapIndex(key), true))
 		}
 		return v.Type().String() + "{" + strings.Join(elems, ", ") + "}"
+	case reflect.Slice:
+		elems := make([]string, v.Len())
+		for i := range elems {
+			elems[i] = protoLiteral(v.Index(i), true)
+		}
+		return v.Type().String() + "{" + strings.Join(elems, ", ") + "}"
 	case reflect.String:
 		return strconv.Quote(v.String())
 	case reflect.Float64:
@@ -84,7 +90,7 @@ func protoLiteral(v reflect.Value, elideType bool) string {
 		return strconv.FormatInt(v.Int(), 10)
 	}
 
-	panic(fmt.Sprintf("the item effects table has no literal for a %s", v.Type()))
+	panic(fmt.Sprintf("the generated tables have no literal for a %s", v.Type()))
 }
 
 // The fields a message sets, as "Name: value", in declaration order.
@@ -94,7 +100,7 @@ func protoFields(v reflect.Value) string {
 		field, value := v.Type().Field(i), v.Field(i)
 		_, isField := field.Tag.Lookup("protobuf")
 		_, isOneof := field.Tag.Lookup("protobuf_oneof")
-		if (!isField && !isOneof) || value.IsZero() || (value.Kind() == reflect.Map && value.Len() == 0) {
+		if (!isField && !isOneof) || value.IsZero() || ((value.Kind() == reflect.Map || value.Kind() == reflect.Slice) && value.Len() == 0) {
 			continue
 		}
 		parts = append(parts, field.Name+": "+protoLiteral(value, false))
