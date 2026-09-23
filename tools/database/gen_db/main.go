@@ -197,8 +197,11 @@ func main() {
 	leftovers.WriteBinaryAndJson(fmt.Sprintf("%s/leftover_db.bin", dbDir), fmt.Sprintf("%s/leftover_db.json", dbDir))
 	ApplySimmableFilters(db)
 
-	database.GenerateItemEffects(instance, db, dropSources)
-	database.GenerateEnchantEffects(instance, db)
+	itemEffects := database.GenerateItemEffects(instance, db, dropSources)
+	enchantEffects := database.GenerateEnchantEffects(instance, db)
+	if err := database.GenerateItemEffectsTable(itemEffects, enchantEffects); err != nil {
+		panic(err)
+	}
 	database.GenerateMissingEffectsFile()
 	database.GenerateItemEffectRandomPropPoints(instance, db)
 

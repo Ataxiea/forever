@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"maps"
 	"os"
 	"regexp"
 	"slices"
@@ -373,8 +374,9 @@ func GenerateMissingEffectsFile() error {
 	return nil
 }
 
-func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) {
+func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) map[int32][]*proto.ItemEffect {
 	groupMapProc := map[string]Group{}
+	enchantEffects := map[int32][]*proto.ItemEffect{}
 	enchantSpellEffects := map[int]*dbc.SpellEffect{}
 
 	// Several spells can grant the same enchant -- an enchant that was re-taught
@@ -396,10 +398,15 @@ func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) {
 		enchantSpellEffects[enchantID] = &effect
 	}
 
-	for _, enchant := range instance.Enchants {
+	for _, key := range slices.Sorted(maps.Keys(instance.Enchants)) {
+		enchant := instance.Enchants[key]
 		parsed := enchant.ToProto()
 		if _, ok := db.Enchants[EnchantToDBKey(parsed)]; !ok {
 			continue
+		}
+
+		if len(parsed.EnchantEffects) > 0 {
+			enchantEffects[parsed.EffectId] = parsed.EnchantEffects
 		}
 
 		for _, enchantEffect := range parsed.EnchantEffects {
@@ -413,6 +420,8 @@ func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) {
 	}
 
 	GenerateEffectsFile(procGroups, "sim/common/forever/enchants_auto_gen.go", TmplStrEnchant)
+
+	return registeredEffects(enchantEffects, procGroups)
 }
 
 // Names the ignore-list rule that excluded an effect, for the comment emitted in the generated
@@ -484,15 +493,18 @@ func ItemEffectIsSupported(instance *dbc.DBC, effectID int) bool {
 	return supported
 }
 
-func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int][]*proto.DropSource) {
+func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int][]*proto.DropSource) map[int32][]*proto.ItemEffect {
 	groupMapOnUse := map[string]Group{}
 	groupMapProc := map[string]Group{}
+	itemEffects := map[int32][]*proto.ItemEffect{}
 
 	// Example loop over your items
 	for _, parsed := range db.Items {
-		parsed.ItemEffects = dbc.MergeItemEffectsForAllStates(parsed)
+		effects := dbc.MergeItemEffectsForAllStates(parsed)
+		parsed.ItemEffects = effects
+		itemEffects[parsed.Id] = effects
 
-		for _, itemEffect := range parsed.ItemEffects {
+		for _, itemEffect := range effects {
 			if !ItemEffectIsSupported(instance, int(itemEffect.BuffId)) {
 				// Commented into the generated file rather than dropped. These are deliberately
 				// out of scope - summons, teleports, created items - but an item whose only
@@ -574,8 +586,7 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 		for _, entry := range entries {
 			for _, variant := range entry.Variants {
 				if _, ok := needsStatPostfix[variant.Name]; ok {
-					item := db.Items[int32(variant.ID)]
-					for _, itemEffect := range item.ItemEffects {
+					for _, itemEffect := range itemEffects[int32(variant.ID)] {
 						variant.Name += " - " + GetEffectStatString(itemEffect)
 					}
 				}
@@ -596,6 +607,8 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 
 	GenerateEffectsFile(onUseGroups, "sim/common/forever/stat_bonus_cds_auto_gen.go", TmplStrOnUse)
 	GenerateEffectsFile(procGroups, "sim/common/forever/stat_bonus_procs_auto_gen.go", TmplStrProc)
+
+	return registeredEffects(itemEffects, onUseGroups, procGroups)
 }
 
 func GenerateItemEffectRandomPropPoints(instance *dbc.DBC, db *WowDatabase) {
