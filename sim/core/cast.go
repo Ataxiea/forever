@@ -21,7 +21,19 @@ type Hardcast struct {
 	Target      *Unit
 	CanMove     bool
 	IsChanneled bool
+	Pushback    bool
 	CastTime    time.Duration
+}
+
+// A hit pushes a cast back by SpellPushbackDuration, but never leaves more than the full cast time to
+// go. Returns how far the cast moved.
+func (hc *Hardcast) pushBack(currentTime time.Duration) time.Duration {
+	pushback := min(SpellPushbackDuration, currentTime+hc.CastTime-hc.Expires)
+	if pushback <= 0 {
+		return 0
+	}
+	hc.Expires += pushback
+	return pushback
 }
 
 // Input for constructing the CastSpell function for a spell.
@@ -117,6 +129,14 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 			return spell.castFailureHelper(sim, "spell attached to an un-equipped item")
 		}
 
+		unshift := false
+		if spell.hasCastRequirement {
+			var reason string
+			if reason, unshift = spell.castRequirementFailure(); reason != "" {
+				return spell.castFailureHelper(sim, reason)
+			}
+		}
+
 		if spell.ExtraCastCondition != nil {
 			if !spell.ExtraCastCondition(sim, target) {
 				return spell.castFailureHelper(sim, "extra spell condition")
@@ -163,6 +183,10 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 
 		if (spell.Flags&SpellFlagCanCastWhileMoving == 0) && (spell.CurCast.CastTime > 0) && spell.Unit.Moving {
 			return spell.castFailureHelper(sim, "casting/channeling while moving not allowed!")
+		}
+
+		if unshift {
+			spell.Unit.AutoUnshift(sim)
 		}
 
 		isChanneled := spell.Flags.Matches(SpellFlagChanneled)
@@ -226,6 +250,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 				Target:      target,
 				CanMove:     spell.Flags&SpellFlagCanCastWhileMoving > 0,
 				IsChanneled: isChanneled,
+				Pushback:    spell.Flags.Matches(SpellFlagPushback),
 				CastTime:    spell.CurCast.CastTime,
 			}
 
@@ -293,6 +318,14 @@ func (spell *Spell) makeCastFuncSimple() CastSuccessFunc {
 			return spell.castFailureHelper(sim, "spell attached to an un-equipped item")
 		}
 
+		unshift := false
+		if spell.hasCastRequirement {
+			var reason string
+			if reason, unshift = spell.castRequirementFailure(); reason != "" {
+				return spell.castFailureHelper(sim, reason)
+			}
+		}
+
 		if spell.ExtraCastCondition != nil {
 			if !spell.ExtraCastCondition(sim, target) {
 				return spell.castFailureHelper(sim, "extra spell condition")
@@ -315,6 +348,10 @@ func (spell *Spell) makeCastFuncSimple() CastSuccessFunc {
 
 		if spell.MaxCharges > 0 && spell.charges == 0 {
 			return spell.castFailureHelper(sim, "not enough charges")
+		}
+
+		if unshift {
+			spell.Unit.AutoUnshift(sim)
 		}
 
 		if sim.Log != nil && !spell.Flags.Matches(SpellFlagNoLogs) {

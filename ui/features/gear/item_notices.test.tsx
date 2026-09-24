@@ -4,26 +4,30 @@ import { render } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ITEM_NOTICES, MISSING_RANDOM_SUFFIX_WARNING, registerSetBonusNotices, SET_BONUS_NOTICES } from './item_notices';
+import {
+	ENCHANT_NOTICES,
+	ITEM_INFO_NOTICES,
+	ITEM_NOTICES,
+	MISSING_RANDOM_SUFFIX_WARNING,
+	registerAreaStatsNotices,
+	registerSetBonusNotices,
+	SET_BONUS_NOTICES,
+} from './item_notices';
 
-vi.mock('@sim/constants/missing_effects_auto_gen', () => ({ MISSING_ITEM_EFFECTS: new Map([[1, ['Does a thing.']]]) }));
+vi.mock('@i18n/localization', () => ({
+	translateAreaType: (value: number) => `area-${value}`,
+	translateStat: (value: number) => `stat-${value}`,
+}));
+
+vi.mock('@sim/constants/missing_effects_auto_gen', () => ({
+	MISSING_ITEM_EFFECTS: new Map([[1, ['Does a thing.']]]),
+	MISSING_ENCHANT_EFFECTS: new Map([[2, ['Enchants a thing.']]]),
+}));
 
 const markup = (itemId: number, spec: Spec = Spec.SpecUnknown) => renderToStaticMarkup(ITEM_NOTICES.get(itemId)?.[spec]);
 const noticeContainer = (itemId: number, spec: Spec = Spec.SpecUnknown) => render(<>{ITEM_NOTICES.get(itemId)?.[spec]}</>).container;
 
 describe('the item notice table', () => {
-	it('renders the tentative-implementation notice', () => {
-		const container = noticeContainer(95346);
-		expect([...container.children].map(child => child.tagName.toLowerCase())).toEqual(['p', 'p']);
-		const paragraphs = container.querySelectorAll('p');
-		expect(paragraphs[0].textContent).toBe('This item is implemented, but detailed proc behavior will be confirmed on PTR.');
-		expect(paragraphs[0].querySelectorAll('span')).toHaveLength(1);
-		expect(paragraphs[0].querySelector('span')!.className).toBe('font-bold');
-		expect(paragraphs[0].querySelector('span')!.textContent).toBe('is');
-		expect(paragraphs[1].className).toBe('mb-0');
-		expect(paragraphs[1].textContent).toBe('Want to help out by providing additional information? Contact us on our Discord!');
-	});
-
 	it('lists the tooltips a missing item effect carries', () => {
 		const container = noticeContainer(1);
 		expect([...container.children].map(child => child.tagName.toLowerCase())).toEqual(['p', 'ul']);
@@ -35,16 +39,19 @@ describe('the item notice table', () => {
 		expect(items[0].textContent).toBe('Does a thing.');
 	});
 
-	it('renders the hand-written trinket notice', () => {
-		const container = noticeContainer(94523);
-		expect([...container.children].map(child => child.tagName.toLowerCase())).toEqual(['p', 'p', 'p']);
-		const paragraphs = container.querySelectorAll('p');
-		expect(paragraphs[0].textContent).toBe('The Agility proc on this trinket has been implemented, but the Voodoo Gnomes are not currently implemented!');
-		expect(paragraphs[1].textContent).toBe('PTR testing is required in order to fit out accurate damage parameters for the Voodoo Gnomes.');
-		expect(paragraphs[2].textContent).toBe('Want to help out by providing additional information? Contact us on our Discord!');
-		expect(paragraphs[0].querySelectorAll('span')).toHaveLength(1);
-		expect(paragraphs[0].querySelector('span')!.className).toBe('font-bold');
-		expect(paragraphs[0].querySelector('span')!.textContent).toBe('not');
+	it('lists the tooltips a missing enchant effect carries', () => {
+		const container = render(<>{ENCHANT_NOTICES.get(2)?.[Spec.SpecUnknown]}</>).container;
+		expect([...container.children].map(child => child.tagName.toLowerCase())).toEqual(['p', 'ul']);
+		const heading = container.querySelector('p')!;
+		expect(heading.className).toBe('font-bold');
+		expect(heading.textContent).toBe('The following enchant effect (on-use or proc) is not implemented!');
+		const items = container.querySelectorAll('ul > li');
+		expect(items).toHaveLength(1);
+		expect(items[0].textContent).toBe('Enchants a thing.');
+	});
+
+	it('has no notice for an enchant whose effect is modelled', () => {
+		expect(ENCHANT_NOTICES.has(34)).toBe(false);
 	});
 
 	it('renders the random suffix warning', () => {
@@ -77,5 +84,31 @@ describe('registerSetBonusNotices', () => {
 					'<ul class="mb-0"><li>2-piece: Not yet implemented</li><li>4-piece: Not yet implemented</li></ul>',
 			);
 		}
+	});
+});
+
+describe('registerAreaStatsNotices', () => {
+	const RUNE = 90010;
+	const PLAIN = 90011;
+	const db = {
+		getAllItems: () => [
+			{ id: RUNE, scalingOptions: { 0: { stats: { 17: 15 }, areaStats: [{ areaType: 1, stats: { 17: 29, 18: 29 } }] } } },
+			{ id: PLAIN, scalingOptions: { 0: { stats: { 17: 15 }, areaStats: [] } } },
+		],
+	} as unknown as Database;
+
+	afterEach(() => {
+		ITEM_INFO_NOTICES.delete(RUNE);
+		ITEM_INFO_NOTICES.delete(PLAIN);
+	});
+
+	it('writes an info notice naming each area and the stats it adds, and none for an item without any', () => {
+		registerAreaStatsNotices(db);
+
+		expect(renderToStaticMarkup(ITEM_INFO_NOTICES.get(RUNE))).toBe(
+			'<p class="mb-1">Only while the encounter is in one of these areas:</p>' + '<ul class="mb-0"><li>area-1: +29 stat-17, +29 stat-18</li></ul>',
+		);
+		expect(ITEM_INFO_NOTICES.has(PLAIN)).toBe(false);
+		expect(ITEM_NOTICES.has(RUNE)).toBe(false);
 	});
 });

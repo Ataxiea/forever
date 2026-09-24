@@ -1,5 +1,6 @@
 import { Spec } from '@generated/proto/common';
-import { MISSING_ITEM_EFFECTS } from '@sim/constants/missing_effects_auto_gen';
+import { translateAreaType, translateStat } from '@i18n/localization';
+import { MISSING_ENCHANT_EFFECTS, MISSING_ITEM_EFFECTS } from '@sim/constants/missing_effects_auto_gen';
 import type { Database } from '@sim/proto/database';
 import type { ReactNode } from 'react';
 
@@ -18,13 +19,26 @@ const WantToHelpMessage = () => <p className="mb-0">Want to help out by providin
 
 export const MISSING_RANDOM_SUFFIX_WARNING = <p className="mb-0">Please select a random suffix</p>;
 
-const MISSING_IMPLEMENTATION_WARNING = (
-	<>
-		<p className="font-bold">This item effect (on-use or proc) is not implemented!</p>
-		<p>We are working hard on gathering all the old resources to allow for an initial implementation.</p>
-		<WantToHelpMessage />
-	</>
-);
+const missingEffectNotice = (effectKind: 'item' | 'enchant', tooltips: string[]): ItemNoticeData => ({
+	[Spec.SpecUnknown]: !tooltips.length ? (
+		<>
+			<p className="font-bold">{`This ${effectKind} effect (on-use or proc) is not implemented!`}</p>
+			<p>We are working hard on gathering all the old resources to allow for an initial implementation.</p>
+			<WantToHelpMessage />
+		</>
+	) : (
+		<>
+			<p className="font-bold">{`The following ${effectKind} effect (on-use or proc) is not implemented!`}</p>
+			<ul>
+				{tooltips
+					.filter(tooltip => !!tooltip)
+					.map(tooltip => (
+						<li key={tooltip}>{tooltip}</li>
+					))}
+			</ul>
+		</>
+	),
+});
 
 const TENTATIVE_IMPLEMENTATION_WARNING = (
 	<>
@@ -39,7 +53,7 @@ const WILL_NOT_BE_IMPLEMENTED_WARNING = <>The equip/use effect on this item will
 
 const WILL_NOT_BE_IMPLEMENTED_ITEMS: number[] = [];
 
-const TENTATIVE_IMPLEMENTATION_ITEMS: number[] = [95346, 95347, 95344];
+const TENTATIVE_IMPLEMENTATION_ITEMS: number[] = [];
 
 export const ITEM_NOTICES = new Map<number, ItemNoticeData>([
 	...WILL_NOT_BE_IMPLEMENTED_ITEMS.map((itemID): [number, ItemNoticeData] => [
@@ -54,57 +68,19 @@ export const ITEM_NOTICES = new Map<number, ItemNoticeData>([
 			[Spec.SpecUnknown]: TENTATIVE_IMPLEMENTATION_WARNING,
 		},
 	]),
-	...[...MISSING_ITEM_EFFECTS].map(([itemID, tooltips]): [number, ItemNoticeData] => [
-		itemID,
-		{
-			[Spec.SpecUnknown]: !tooltips.length ? (
-				MISSING_IMPLEMENTATION_WARNING
-			) : (
-				<>
-					<p className="font-bold">The following item effect (on-use or proc) is not implemented!</p>
-					<ul>
-						{tooltips
-							.filter(tooltip => !!tooltip)
-							.map(tooltip => (
-								<li key={tooltip}>{tooltip}</li>
-							))}
-					</ul>
-				</>
-			),
-		},
-	]),
-
-	...[94523, 95665, 96037, 96409, 96781].map((itemID): [number, ItemNoticeData] => [
-		itemID,
-		{
-			[Spec.SpecUnknown]: (
-				<>
-					<p>
-						The Agility proc on this trinket has been implemented, but the Voodoo Gnomes are <span className="font-bold">not</span> currently
-						implemented!
-					</p>
-					<p>PTR testing is required in order to fit out accurate damage parameters for the Voodoo Gnomes.</p>
-					<WantToHelpMessage />
-				</>
-			),
-		},
-	]),
+	...[...MISSING_ITEM_EFFECTS].map(([itemID, tooltips]): [number, ItemNoticeData] => [itemID, missingEffectNotice('item', tooltips)]),
 ]);
+
+export const ENCHANT_NOTICES = new Map<number, ItemNoticeData>(
+	[...MISSING_ENCHANT_EFFECTS].map(([effectID, tooltips]): [number, ItemNoticeData] => [effectID, missingEffectNotice('enchant', tooltips)]),
+);
 
 export const GENERIC_MISSING_SET_BONUS_NOTICE_DATA = new Map<number, string>([
 	[2, 'Not yet implemented'],
 	[4, 'Not yet implemented'],
 ]);
 
-const ELE_T16_SET_BONUS_NOTICE_DATA = new Map<number, string>([
-	[2, 'Implementation needs testing on PTR'],
-	[4, 'Not yet implemented'],
-]);
-
-export const SET_BONUS_NOTICES = new Map<number, SetBonusNoticeData>([
-	[1182, ELE_T16_SET_BONUS_NOTICE_DATA], // Elemental T16
-	[1196, null], // Guardian T16
-]);
+export const SET_BONUS_NOTICES = new Map<number, SetBonusNoticeData>();
 
 export const registerSetBonusNotices = (db: Database) => {
 	SET_BONUS_NOTICES.forEach((value: SetBonusNoticeData, key: number) => {
@@ -126,4 +102,32 @@ export const registerSetBonusNotices = (db: Database) => {
 			ITEM_NOTICES.set(id, { [Spec.SpecUnknown]: noticeContent });
 		}
 	});
+};
+
+// Informational notices, shown behind an info icon rather than a warning.
+export const ITEM_INFO_NOTICES = new Map<number, ReactNode>();
+
+// Wowhead's tooltip shows the folded number; this names the area-only part.
+export const registerAreaStatsNotices = (db: Database) => {
+	for (const item of db.getAllItems()) {
+		const areaStats = item.scalingOptions?.[0]?.areaStats ?? [];
+		if (!areaStats.length) continue;
+
+		ITEM_INFO_NOTICES.set(
+			item.id,
+			<>
+				<p className="mb-1">Only while the encounter is in one of these areas:</p>
+				<ul className="mb-0">
+					{areaStats.map(bonus => (
+						<li key={bonus.areaType}>
+							{translateAreaType(bonus.areaType)}:{' '}
+							{Object.entries(bonus.stats)
+								.map(([stat, value]) => `+${value} ${translateStat(Number(stat))}`)
+								.join(', ')}
+						</li>
+					))}
+				</ul>
+			</>,
+		);
+	}
 };

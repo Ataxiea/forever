@@ -181,3 +181,87 @@ func TestShippedOverridesAreWellFormed(t *testing.T) {
 		}
 	}
 }
+
+func TestAreaBonusesBakeOntoTheRow(t *testing.T) {
+	rows := []storeSpell{{ID: 10}, {ID: 11}}
+	list := []overrides.AreaBonus{
+		{SpellID: 10, Groups: []int32{9163, 9202}, Multiplier: 2, DurationMultiplier: 1, Reason: "tooltip", Source: "tooltip"},
+	}
+	if err := applyAreaBonuses(rows, list); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if got := rows[0]; len(got.AreaBonusGroups) != 2 || got.AreaBonusGroups[1] != 9202 || got.AreaMultiplier != 2 || got.AreaDurationMultiplier != 1 {
+		t.Errorf("row 10 carries %v x%v (duration x%v)", got.AreaBonusGroups, got.AreaMultiplier, got.AreaDurationMultiplier)
+	}
+	if len(rows[0].overrideNotes) != 1 || !strings.Contains(rows[0].overrideNotes[0], "AreaBonus x2") {
+		t.Errorf("row 10's notes read %v", rows[0].overrideNotes)
+	}
+	if rows[1].AreaMultiplier != 0 || len(rows[1].overrideNotes) != 0 {
+		t.Errorf("row 11 was written to: %v", rows[1])
+	}
+
+	for _, tc := range []struct {
+		name  string
+		rows  []storeSpell
+		list  []overrides.AreaBonus
+		wants string
+	}{
+		{
+			name:  "no reason",
+			rows:  []storeSpell{{ID: 10}},
+			list:  []overrides.AreaBonus{{SpellID: 10, Groups: []int32{9161}, Multiplier: 2, DurationMultiplier: 1}},
+			wants: "states no reason",
+		},
+		{
+			name:  "a spell the store does not carry",
+			rows:  []storeSpell{{ID: 10}},
+			list:  []overrides.AreaBonus{{SpellID: 12, Groups: []int32{9161}, Multiplier: 2, DurationMultiplier: 1, Reason: "tooltip"}},
+			wants: "which the store does not carry",
+		},
+		{
+			name: "two bonuses on one spell",
+			rows: []storeSpell{{ID: 10}},
+			list: []overrides.AreaBonus{
+				{SpellID: 10, Groups: []int32{9161}, Multiplier: 2, DurationMultiplier: 1, Reason: "tooltip"},
+				{SpellID: 10, Groups: []int32{9165}, Multiplier: 3, DurationMultiplier: 1, Reason: "tooltip"},
+			},
+			wants: "two area bonuses",
+		},
+		{
+			name:  "no area group",
+			rows:  []storeSpell{{ID: 10}},
+			list:  []overrides.AreaBonus{{SpellID: 10, Multiplier: 2, DurationMultiplier: 1, Reason: "tooltip"}},
+			wants: "names no area group",
+		},
+		{
+			name:  "a row that now states the group itself",
+			rows:  []storeSpell{{ID: 10, RequiredAreas: 9161}},
+			list:  []overrides.AreaBonus{{SpellID: 10, Groups: []int32{9161}, Multiplier: 2, DurationMultiplier: 1, Reason: "tooltip"}},
+			wants: "now states area group 9161 itself",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := applyAreaBonuses(tc.rows, tc.list)
+			if err == nil {
+				t.Fatalf("the merge accepted %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.wants) {
+				t.Errorf("the error reads %q, which does not name %q", err, tc.wants)
+			}
+		})
+	}
+}
+
+func TestShippedAreaBonusesAreWellFormed(t *testing.T) {
+	if len(overrides.AreaBonuses) == 0 {
+		t.Fatal("the area bonus table is empty, so nothing below checked anything")
+	}
+	for _, b := range overrides.AreaBonuses {
+		if b.Reason == "" || b.Source == "" {
+			t.Errorf("spell %d's area bonus states reason %q and source %q", b.SpellID, b.Reason, b.Source)
+		}
+		if len(b.Groups) == 0 || b.Multiplier <= 0 || b.DurationMultiplier <= 0 {
+			t.Errorf("spell %d's area bonus reads %v x%v (duration x%v)", b.SpellID, b.Groups, b.Multiplier, b.DurationMultiplier)
+		}
+	}
+}

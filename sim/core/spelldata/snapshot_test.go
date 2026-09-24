@@ -6,22 +6,13 @@ package spelldata
 // number says so here instead of in a sim result.
 
 import (
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"slices"
 	"strings"
 	"testing"
-)
 
-// What the committed spells_auto_gen.go holds today. The bounds are wide enough that adding a class
-// or a patch's spells does not fail the gate, and the exact numbers are here so drift is visible.
-const (
-	generatedSpellCount  = 7047
-	generatedEffectCount = 9650
+	"github.com/wowsims/forever/sim/core/proto"
 )
-
-// The client's EffectIndex has gaps: 46 of the store's rows state an index that is not the
-// position it sits at, which is why EffectN counts by position and the store keeps the client's
-// own number alongside.
-const gappedIndexRows = 46
 
 // Installs the generated data for one test and puts the fixture back afterwards, since TestMain
 // swaps the fixture in for the whole package.
@@ -33,11 +24,10 @@ func withGeneratedStore(t *testing.T) {
 func TestGeneratedStoreShape(t *testing.T) {
 	withGeneratedStore(t)
 
+	// The bounds are wide enough that a regeneration adding a class or a patch's spells does not fail
+	// the gate. Whether the committed store is the one the committed inputs produce is
+	// TestStoreRegeneratesFromTheCommittedInputs' job.
 	rows := All()
-	if len(rows) != generatedSpellCount {
-		t.Errorf("the store holds %d spells, the snapshot pins %d - update the constant if the "+
-			"regeneration is the intended one", len(rows), generatedSpellCount)
-	}
 	if len(rows) < 5000 || len(rows) > 12000 {
 		t.Fatalf("the store holds %d spells, which is outside the [5000, 12000] a whole store has",
 			len(rows))
@@ -70,17 +60,15 @@ func TestGeneratedStoreShape(t *testing.T) {
 		}
 	}
 
-	if effects != generatedEffectCount {
-		t.Errorf("the store holds %d effects, the snapshot pins %d - update the constant if the "+
-			"regeneration is the intended one", effects, generatedEffectCount)
-	}
 	if effects < 6000 || effects > 16000 {
 		t.Errorf("the store holds %d effects, which is outside the [6000, 16000] a whole store has",
 			effects)
 	}
-	if gapped != gappedIndexRows {
-		t.Errorf("%d rows state an EffectIndex that is not its position, the snapshot pins %d - "+
-			"update the constant if the regeneration is the intended one", gapped, gappedIndexRows)
+	// The client's EffectIndex has gaps, which is why EffectN counts by position and the store keeps
+	// the client's own number alongside.
+	if gapped == 0 {
+		t.Errorf("no row states an EffectIndex that is not its position - EffectN's by-position count " +
+			"no longer has a gap to step over")
 	}
 }
 
@@ -148,6 +136,33 @@ func TestGeneratedLightningShield(t *testing.T) {
 	}
 }
 
+// Stolen Power's companion row requires Forest and Grassland; Staff of Westfall's group is a single zone.
+func TestGeneratedRequiredAreas(t *testing.T) {
+	withGeneratedStore(t)
+
+	if s := MustFind(1318002); s.RequiredAreas != 9161 || s.AreaType() != proto.AreaType_AreaTypeForestGrassland {
+		t.Errorf("Stolen Power 1318002 requires area group %d (%v), want 9161 (ForestGrassland)", s.RequiredAreas, s.AreaType())
+	}
+	if s := MustFind(1287561); s.RequiredAreas != 0 || s.AreaType() != proto.AreaType_AreaTypeUnknown {
+		t.Errorf("Stolen Power 1287561 requires area group %d, want none", s.RequiredAreas)
+	}
+	if s := MustFind(1292011); s.RequiredAreas != 9071 || s.AreaType() != proto.AreaType_AreaTypeUnknown {
+		t.Errorf("Staff of Westfall requires area group %d (%v), want 9071 (Unknown)", s.RequiredAreas, s.AreaType())
+	}
+}
+
+// Area bonuses come from the override table, not the client.
+func TestGeneratedAreaBonus(t *testing.T) {
+	withGeneratedStore(t)
+
+	if s := MustFind(1249113); len(s.AreaBonusGroups) != 1 || s.AreaBonusGroups[0] != 9203 || s.AreaMultiplier != 2 || s.AreaDurationMultiplier != 1 {
+		t.Errorf("Molten Fury's area bonus reads %v x%v (duration x%v), want [9203] x2 (duration x1)", s.AreaBonusGroups, s.AreaMultiplier, s.AreaDurationMultiplier)
+	}
+	if s := MustFind(1287571); s.AreaMultiplier != 2 || s.AreaDurationMultiplier != 2 {
+		t.Errorf("Monkey Business's area bonus reads x%v (duration x%v), want x2 (duration x2)", s.AreaMultiplier, s.AreaDurationMultiplier)
+	}
+}
+
 // Arcane Missiles rank 2: a periodic trigger reaches its tick spell through the effect.
 func TestGeneratedTriggerResolves(t *testing.T) {
 	withGeneratedStore(t)
@@ -208,6 +223,51 @@ func TestGeneratedOverrideRow(t *testing.T) {
 	}
 	if s.ProcChanceSource != ProcChancePPM {
 		t.Errorf("Armor Shatter's proc chance source is %d, want ProcChancePPM", s.ProcChanceSource)
+	}
+}
+
+// Frostbolt and Slam state 15, whose 0x2 pushes the cast back; EZ-Thro Bronze Mortar states 5.
+func TestGeneratedInterruptFlags(t *testing.T) {
+	withGeneratedStore(t)
+
+	for id, want := range map[int32]uint32{116: 15, 11605: 15, 1269268: 5} {
+		s := MustFind(id)
+		if s.InterruptFlags != want || s.PushedBack() != (want == 15) {
+			t.Errorf("%s (%d) states interrupt flags %d, pushed back %v; want %d", s.Name, id,
+				s.InterruptFlags, s.PushedBack(), want)
+		}
+	}
+}
+
+// Wrath is castable in Moonkin Form and excludes Tree Form, Healing Touch the reverse. Tiger's Fury
+// states its Cat Form requirement as a caster aura; its SpellShapeshift row is empty.
+func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
+	withGeneratedStore(t)
+
+	wrath := MustFind(5176)
+	if wrath.StanceMask != 0x40000000 || wrath.StanceExclude != 0x2 {
+		t.Errorf("Wrath's stance mask is %#x exclude %#x, want 0x40000000 exclude 0x2",
+			wrath.StanceMask, wrath.StanceExclude)
+	}
+
+	healingTouch := MustFind(5185)
+	if healingTouch.StanceMask != 0x2 || healingTouch.StanceExclude != 0x40000000 {
+		t.Errorf("Healing Touch's stance mask is %#x exclude %#x, want 0x2 exclude 0x40000000",
+			healingTouch.StanceMask, healingTouch.StanceExclude)
+	}
+
+	tigersFury := MustFind(5217)
+	if tigersFury.CasterAura != 768 {
+		t.Errorf("Tiger's Fury's caster aura is %d, want 768", tigersFury.CasterAura)
+	}
+
+	for id, want := range map[int32]dbcenums.ShapeshiftForm{
+		2457: dbcenums.FORM_BATTLE_STANCE, 71: dbcenums.FORM_DEFENSIVE_STANCE, 2458: dbcenums.FORM_BERSERKER_STANCE,
+		768: dbcenums.FORM_CAT_FORM, 9634: dbcenums.FORM_DIRE_BEAR_FORM, 24858: dbcenums.FORM_MOONKIN_FORM,
+	} {
+		if got := MustFind(id).ShapeshiftForm(); got != want {
+			t.Errorf("spell %d puts the caster in form %d, want %d", id, got, want)
+		}
 	}
 }
 

@@ -32,12 +32,14 @@ func init() {
 			RangedWeaponType: item.RangedWeaponType,
 			GemSockets:       item.GemSockets,
 			SocketBonus:      item.SocketBonus,
+			PseudoStats:      item.PseudoStats,
 			WeaponSpeed:      item.WeaponSpeed,
 			QualityModifier:  item.QualityModifier,
 			Unique:           item.Unique,
 			LimitCategory:    item.LimitCategory,
 			SetName:          item.SetName,
 			SetId:            item.SetId,
+			ClassAllowlist:   item.ClassAllowlist,
 			ScalingOptions:   item.ScalingOptions,
 		}
 	}
@@ -52,12 +54,14 @@ func init() {
 
 	for i, enchant := range db.Enchants {
 		simDB.Enchants[i] = &proto.SimEnchant{
-			EffectId:    enchant.EffectId,
-			Stats:       enchant.Stats,
-			Name:        enchant.Name,
-			Type:        enchant.Type,
-			EnchantType: enchant.EnchantType,
-			ExtraTypes:  enchant.ExtraTypes,
+			EffectId:     enchant.EffectId,
+			Stats:        enchant.Stats,
+			PseudoStats:  enchant.PseudoStats,
+			WeaponDamage: enchant.WeaponDamage,
+			Name:         enchant.Name,
+			Type:         enchant.Type,
+			EnchantType:  enchant.EnchantType,
+			ExtraTypes:   enchant.ExtraTypes,
 		}
 	}
 

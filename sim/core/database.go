@@ -143,11 +143,14 @@ type Item struct {
 
 	Name          string
 	Stats         stats.Stats // Stats applied to wearer
+	PseudoStats   []float64   // Indexed by proto.PseudoStat; percents through stats.FromPseudoStatsProto, haste through registerEquipSpeedAuras
 	Quality       proto.ItemQuality
 	Unique        bool
 	LimitCategory int32
 	SetName       string // Empty string if not part of a set.
 	SetID         int32  // 0 if not part of a set.
+
+	ClassAllowlist []proto.Class
 
 	GemSockets  []proto.GemColor
 	SocketBonus stats.Stats
@@ -176,12 +179,18 @@ func ItemFromProto(pData *proto.SimItem) Item {
 		QualityModifier:  pData.QualityModifier,
 		GemSockets:       pData.GemSockets,
 		SocketBonus:      stats.FromProtoArray(pData.SocketBonus),
+		PseudoStats:      pData.PseudoStats,
 		Unique:           pData.Unique,
 		LimitCategory:    pData.LimitCategory,
 		SetName:          pData.SetName,
 		SetID:            pData.SetId,
+		ClassAllowlist:   pData.ClassAllowlist,
 		ScalingOptions:   pData.ScalingOptions,
 	}
+}
+
+func (item *Item) UsableBy(class proto.Class) bool {
+	return len(item.ClassAllowlist) == 0 || slices.Contains(item.ClassAllowlist, class)
 }
 
 func (item *Item) ToItemSpecProto() *proto.ItemSpec {
@@ -213,22 +222,26 @@ func RandomSuffixFromProto(pData *proto.ItemRandomSuffix) RandomSuffix {
 }
 
 type Enchant struct {
-	EffectID    int32 // Used by UI to apply effect to tooltip
-	Stats       stats.Stats
-	Name        string         // Only needed for unit tests
-	Type        proto.ItemType // Only needed for unit tests
-	EnchantType proto.EnchantType
-	ExtraTypes  []proto.ItemType
+	EffectID     int32 // Used by UI to apply effect to tooltip
+	Stats        stats.Stats
+	PseudoStats  []float64      // Indexed by proto.PseudoStat; percents through stats.FromPseudoStatsProto, haste through registerEquipSpeedAuras
+	WeaponDamage float64        // Applied by newWeaponFromItem
+	Name         string         // Only needed for unit tests
+	Type         proto.ItemType // Only needed for unit tests
+	EnchantType  proto.EnchantType
+	ExtraTypes   []proto.ItemType
 }
 
 func EnchantFromProto(pData *proto.SimEnchant) Enchant {
 	return Enchant{
-		EffectID:    pData.EffectId,
-		Stats:       stats.FromProtoArray(pData.Stats),
-		Name:        pData.Name,
-		Type:        pData.Type,
-		EnchantType: pData.EnchantType,
-		ExtraTypes:  append([]proto.ItemType(nil), pData.ExtraTypes...),
+		EffectID:     pData.EffectId,
+		Stats:        stats.FromProtoArray(pData.Stats),
+		PseudoStats:  pData.PseudoStats,
+		WeaponDamage: pData.WeaponDamage,
+		Name:         pData.Name,
+		Type:         pData.Type,
+		EnchantType:  pData.EnchantType,
+		ExtraTypes:   append([]proto.ItemType(nil), pData.ExtraTypes...),
 	}
 }
 
@@ -540,6 +553,26 @@ func ProtoToEquipment(es *proto.EquipmentSpec) Equipment {
 	return NewEquipmentSet(ProtoToEquipmentSpec(es))
 }
 
+// Folds the stats of every matching area into Stats.
+func (item Item) inArea(areaTypes []proto.AreaType) Item {
+	if item.ID == 0 {
+		return item
+	}
+	for _, areaStats := range item.ScalingOptions[0].GetAreaStats() {
+		if slices.Contains(areaTypes, areaStats.AreaType) {
+			item.Stats = item.Stats.Add(stats.FromProtoMap(areaStats.Stats))
+		}
+	}
+	return item
+}
+
+func (equipment Equipment) inArea(areaTypes []proto.AreaType) Equipment {
+	for i := range equipment {
+		equipment[i] = equipment[i].inArea(areaTypes)
+	}
+	return equipment
+}
+
 // Like ItemSpec, but uses names for reference instead of ID.
 type ItemStringSpec struct {
 	Name    string
@@ -587,6 +620,7 @@ func ItemEquipmentBaseStats(item Item) stats.Stats {
 	}
 
 	equipStats = equipStats.Add(item.Stats)
+	equipStats = equipStats.Add(stats.FromPseudoStatsProto(item.PseudoStats))
 
 	// Random suffix stats can be Reforged, so apply those prior to any Reforges
 	rawSuffixStats := item.RandomSuffix.Stats
@@ -602,6 +636,7 @@ func ItemEquipmentGemAndEnchantStats(item Item) stats.Stats {
 
 	equipStats := stats.Stats{}
 	equipStats = equipStats.Add(item.Enchant.Stats)
+	equipStats = equipStats.Add(stats.FromPseudoStatsProto(item.Enchant.PseudoStats))
 
 	for _, gem := range item.Gems {
 		// A disabled meta gem keeps its color below so the socket bonus still matches.

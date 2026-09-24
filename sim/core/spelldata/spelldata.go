@@ -90,9 +90,16 @@ type Spell struct {
 	// effect, so this is zero unless an override fills it.
 	FlatThreat float32
 
+	// An area bonus from an override: AreaGroup ids (any counts), amount and duration factors.
+	AreaBonusGroups                        []int32
+	AreaMultiplier, AreaDurationMultiplier float32
+
 	// SpellClassOptions.SpellClassSet and SpellClassMask_0..3: the set of spells a talent effect
 	// naming this family reaches.
 	ClassFlags core.ClassFlags
+
+	// SpellInterrupts.InterruptFlags, read through PushedBack.
+	InterruptFlags uint32
 
 	// SpellInterrupts.AuraInterruptFlags_0/_1 and ChannelInterruptFlags_0/_1.
 	AuraInterrupt, ChannelInterrupt [2]uint32
@@ -100,8 +107,24 @@ type Spell struct {
 	// SpellShapeshift.ShapeshiftMask_0 | ShapeshiftMask_1 << 32: the forms the spell is usable in.
 	StanceMask uint64
 
+	// SpellShapeshift.ShapeshiftExclude_0 | ShapeshiftExclude_1 << 32: the forms the spell is barred from.
+	StanceExclude uint64
+
+	// SpellAuraRestrictions.CasterAuraSpell: the spell id whose aura the caster must carry to cast this one.
+	CasterAura int32
+
+	// SpellAuraRestrictions.ExcludeCasterAuraSpell: the spell id whose aura bars the caster from casting this one.
+	ExcludeCasterAura int32
+
 	// SpellTargetRestrictions.MaxTargets for an area effect. Zero is unlimited.
 	MaxTargets int16
+
+	// SpellTargetRestrictions.TargetCreatureType: the creature types the spell can hit, as a mask of
+	// 1 << (CreatureType - 1), so 4 is demons and 256 mechanicals. Zero is any.
+	TargetCreatureType int32
+
+	// SpellCastingRequirements.RequiredAreasID. Zero is anywhere.
+	RequiredAreas int32
 
 	// SpellEquippedItems: the item class, subclass mask and inventory-type mask the spell requires,
 	// which is how a weapon-specific proc states the weapons it fires from.
@@ -125,6 +148,11 @@ type Spell struct {
 
 	// What the tooltip states about the trigger that the proc mask cannot, baked in at generation.
 	ProcHint core.ProcHint
+
+	// Whether one roll of the damage is divided evenly among the targets hit, baked in at generation.
+	// No column states it; the tooltip reads "split between", "divided up evenly" or "$s1 total ...
+	// damage".
+	SplitsDamage bool
 
 	Effects []Effect
 	Powers  []Power
