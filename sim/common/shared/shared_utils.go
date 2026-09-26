@@ -2,6 +2,7 @@ package shared
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -1752,6 +1753,19 @@ func (s effectSource) registerProc(character *core.Character, triggerAura *core.
 	} else {
 		character.ItemSwap.RegisterProcWithSlots(s.id, triggerAura, slots)
 	}
+}
+
+// The effects the helpers resolve an item or enchant from, keyed by item ID and by enchant effect
+// ID. The database generator registers them for every item and enchant it writes a registration for.
+var itemEffectsByID = map[int32][]*proto.ItemEffect{}
+var enchantEffectsByID = map[int32][]*proto.ItemEffect{}
+
+func RegisterItemEffects(effects map[int32][]*proto.ItemEffect) {
+	maps.Copy(itemEffectsByID, effects)
+}
+
+func RegisterEnchantEffects(effects map[int32][]*proto.ItemEffect) {
+	maps.Copy(enchantEffectsByID, effects)
 }
 
 // The effects an on-use helper works from. A generated registration naming an item with no effect
