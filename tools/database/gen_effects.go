@@ -549,8 +549,8 @@ func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) map[int32][]*pro
 			continue
 		}
 		generated[parsed.EffectId] = true
-		if len(parsed.EnchantEffects) > 0 {
-			enchantEffects[parsed.EffectId] = parsed.EnchantEffects
+		if effects := dbc.SlotEffects(slots); len(effects) > 0 {
+			enchantEffects[parsed.EffectId] = effects
 		}
 
 		TryParseEnchantEffect(parsed, slots, groupMapProc, instance, enchantSpellEffects)
@@ -711,7 +711,6 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 	// Example loop over your items
 	for _, parsed := range db.Items {
 		effects := dbc.MergeItemEffectsForAllStates(parsed)
-		parsed.ItemEffects = effects
 		itemEffects[parsed.Id] = effects
 
 		for _, itemEffect := range effects {

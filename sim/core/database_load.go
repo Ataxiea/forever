@@ -43,7 +43,6 @@ func init() {
 			SetId:            item.SetId,
 			ClassAllowlist:   item.ClassAllowlist,
 			ScalingOptions:   item.ScalingOptions,
-			ItemEffects:      item.ItemEffects,
 		}
 	}
 
@@ -57,15 +56,14 @@ func init() {
 
 	for i, enchant := range db.Enchants {
 		simDB.Enchants[i] = &proto.SimEnchant{
-			EffectId:       enchant.EffectId,
-			Stats:          enchant.Stats,
-			PseudoStats:    enchant.PseudoStats,
-			WeaponDamage:   enchant.WeaponDamage,
-			EnchantEffects: enchant.EnchantEffects,
-			Name:           enchant.Name,
-			Type:           enchant.Type,
-			EnchantType:    enchant.EnchantType,
-			ExtraTypes:     enchant.ExtraTypes,
+			EffectId:     enchant.EffectId,
+			Stats:        enchant.Stats,
+			PseudoStats:  enchant.PseudoStats,
+			WeaponDamage: enchant.WeaponDamage,
+			Name:         enchant.Name,
+			Type:         enchant.Type,
+			EnchantType:  enchant.EnchantType,
+			ExtraTypes:   enchant.ExtraTypes,
 		}
 	}
 

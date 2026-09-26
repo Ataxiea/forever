@@ -204,7 +204,6 @@ type Item struct {
 	TempEnchantWeaponDamage float64
 	ScalingOptions          map[int32]*proto.ScalingItemProperties
 	RandPropPoints          int32
-	ItemEffects             []*proto.ItemEffect
 }
 
 func ItemFromProto(pData *proto.SimItem) Item {
@@ -227,7 +226,6 @@ func ItemFromProto(pData *proto.SimItem) Item {
 		SetID:            pData.SetId,
 		ClassAllowlist:   pData.ClassAllowlist,
 		ScalingOptions:   pData.ScalingOptions,
-		ItemEffects:      pData.ItemEffects,
 	}
 }
 

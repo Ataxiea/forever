@@ -91,6 +91,17 @@ var enchantEffectArgFixes = map[int]map[int]int{
 	8203: {0: ITEM_MOD_SPIRIT},
 }
 
+// The effects an enchant's slots resolve stats for, one per buff.
+func SlotEffects(slots []EnchantProcSlot) []*proto.ItemEffect {
+	var effects []*proto.ItemEffect
+	for _, slot := range slots {
+		if slot.Effect != nil && !slices.ContainsFunc(effects, func(e *proto.ItemEffect) bool { return e.BuffId == slot.Effect.BuffId }) {
+			effects = append(effects, slot.Effect)
+		}
+	}
+	return effects
+}
+
 func (enchant *Enchant) ToProto() *proto.UIEnchant {
 	uiEnchant, _ := enchant.ToProtoWithSlots()
 	return uiEnchant
@@ -110,11 +121,6 @@ func (enchant *Enchant) ToProtoWithSlots() (*proto.UIEnchant, []EnchantProcSlot)
 	}
 
 	slots := enchant.ProcSlots()
-	for _, slot := range slots {
-		if slot.Effect != nil && !slices.ContainsFunc(uiEnchant.EnchantEffects, func(e *proto.ItemEffect) bool { return e.BuffId == slot.Effect.BuffId }) {
-			uiEnchant.EnchantEffects = append(uiEnchant.EnchantEffects, slot.Effect)
-		}
-	}
 
 	if enchant.FDID == 0 {
 		uiEnchant.Icon = "trade_engraving"
