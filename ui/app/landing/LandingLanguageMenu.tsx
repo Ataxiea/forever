@@ -18,7 +18,7 @@ export const LandingLanguageMenu = () => {
 				trigger={<Icon name="globe" size="2x" />}
 				triggerProps={{
 					id: 'languageDropdown',
-					className: 'ui-landing-language-caret flex items-center px-0 py-4 text-sm whitespace-nowrap text-white/55 max-md:pt-2 md:px-2',
+					className: 'ui-landing-language-caret ui-landing-header-fg flex items-center px-0 py-4 text-sm whitespace-nowrap opacity-70 max-md:pt-2 md:px-2',
 					'aria-label': supportedLanguages[currentLang],
 				}}
 				align="end"
@@ -30,7 +30,7 @@ export const LandingLanguageMenu = () => {
 						<BaseMenu.Item
 							render={<button type="button" />}
 							nativeButton
-							className="clear-both block w-full rounded-none border-0 bg-transparent text-start font-normal whitespace-nowrap text-white no-underline"
+							className="ui-landing-language-item"
 							data-active={code === currentLang ? '' : undefined}
 							data-lang={code}
 							data-testid="dropdown-item"
