@@ -19,10 +19,10 @@ func init() {
 			{BuffId: 1317740, BuffName: "Smotts' Compass (1317740)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
 		},
 		4696: {
-			{BuffId: 1135, BuffName: "Drink (1135)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{34: 332}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 600000, CategoryId: 59, CategoryCooldownMs: 1000}}},
+			{BuffId: 1135, BuffName: "Drink (1135)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{31: 332}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 600000, CategoryId: 59, CategoryCooldownMs: 1000}}},
 		},
 		6622: {
-			{BuffId: 8191, BuffName: "Zeal (8191)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{30: 150, 40: 10}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 8191, BuffName: "Zeal (8191)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 150, 37: 10}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		6660: {
 			{BuffId: 8348, BuffName: "Julie's Blessing (8348)", EffectDurationMs: 12000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
@@ -64,7 +64,7 @@ func init() {
 			{BuffId: 15283, BuffName: "Stunning Blow (15283)", EffectDurationMs: 8000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		11811: {
-			{BuffId: 1300752, BuffName: "Heart of the Mountain (1300752)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{30: 520}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 360000, CategoryCooldownMs: -1}}},
+			{BuffId: 1300752, BuffName: "Heart of the Mountain (1300752)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 520}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 360000, CategoryCooldownMs: -1}}},
 		},
 		11902: {
 			{BuffId: 18089, BuffName: "Lightning Bolt (18089)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
@@ -130,7 +130,7 @@ func init() {
 			{BuffId: 29647, BuffName: "Flaming Shell (29647)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		13164: {
-			{BuffId: 17275, BuffName: "Heart of the Scale (17275)", EffectDurationMs: 300000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{36: 20}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
+			{BuffId: 17275, BuffName: "Heart of the Scale (17275)", EffectDurationMs: 300000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{33: 20}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
 		},
 		13262: {
 			{BuffId: 18112, BuffName: "Firebolt (18112)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
@@ -338,7 +338,7 @@ func init() {
 			{BuffId: 23682, BuffName: "Heroism (23689)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
 		},
 		19288: {
-			{BuffId: 23684, BuffName: "Aura of the Blue Dragon (23688)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{16: 150}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.02}}}},
+			{BuffId: 23684, BuffName: "Aura of the Blue Dragon (23688)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{13: 150}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.02}}}},
 		},
 		19289: {
 			{BuffId: 23687, BuffName: "Lightning Strike (23686)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
@@ -374,7 +374,7 @@ func init() {
 			{BuffId: 23734, BuffName: "Nature Aligned (23734)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
 		},
 		19345: {
-			{BuffId: 23780, BuffName: "Aegis of Preservation (23780)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{30: 500}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryCooldownMs: -1}}},
+			{BuffId: 23780, BuffName: "Aegis of Preservation (23780)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 500}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryCooldownMs: -1}}},
 		},
 		19577: {
 			{BuffId: 24428, BuffName: "Improved Hamstring (24428)", EffectDurationMs: -1},
@@ -416,7 +416,7 @@ func init() {
 			{BuffId: 24571, BuffName: "Blood Fury (24571)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 10000}}},
 		},
 		19952: {
-			{BuffId: 24498, BuffName: "Brilliant Light (24498)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{13: 140}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
+			{BuffId: 24498, BuffName: "Brilliant Light (24498)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
 		},
 		19953: {
 			{BuffId: 24531, BuffName: "Refocus (24531)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 10000}}},
@@ -548,7 +548,7 @@ func init() {
 			{BuffId: 26108, BuffName: "Glimpse of Madness (26108)", EffectDurationMs: 3000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		21180: {
-			{BuffId: 25891, BuffName: "Earthstrike (25891)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{17: 280, 18: 280}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
+			{BuffId: 25891, BuffName: "Earthstrike (25891)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{14: 280, 15: 280}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
 		},
 		21181: {
 			{BuffId: 25892, BuffName: "Grace of Earth (25892)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000}}},
@@ -561,7 +561,7 @@ func init() {
 			{BuffId: 1318470, BuffName: "Defender of the Timbermaw (1318470)"},
 		},
 		21473: {
-			{BuffId: 26166, BuffName: "Obsidian Insight (26166)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{5: 50, 15: 100}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 30000}}},
+			{BuffId: 26166, BuffName: "Obsidian Insight (26166)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{5: 50, 12: 100}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 30000}}},
 		},
 		21488: {
 			{BuffId: 26168, BuffName: "Chitinous Spikes (26168)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
@@ -576,7 +576,7 @@ func init() {
 			{BuffId: 26400, BuffName: "Arcane Shroud (26400)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
 		},
 		21670: {
-			{BuffId: 26480, BuffName: "Badge of the Swarmguard", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{23: 200}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}, StackingAura: &proto.ItemEffect{BuffId: 26481, BuffName: "Insight of the Qiraji", MaxCumulativeStacks: 6, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{23: 200}}}}, StackTrigger: &proto.ItemEffect_StackProc{StackProc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 10}}}},
+			{BuffId: 26480, BuffName: "Badge of the Swarmguard", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{20: 200}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}, StackingAura: &proto.ItemEffect{BuffId: 26481, BuffName: "Insight of the Qiraji", MaxCumulativeStacks: 6, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{20: 200}}}}, StackTrigger: &proto.ItemEffect_StackProc{StackProc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 10}}}},
 		},
 		21685: {
 			{BuffId: 26463, BuffName: "Mercurial Shield (26463)", EffectDurationMs: 60000, MaxCumulativeStacks: 20, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
@@ -618,7 +618,7 @@ func init() {
 			{BuffId: 27847, BuffName: "Cleanse Cost Reduced (27847)"},
 		},
 		22589: {
-			{BuffId: 28142, BuffName: "Power of the Guardian (28142)", EffectDurationMs: -1, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{13: 28}}}},
+			{BuffId: 28142, BuffName: "Power of the Guardian (28142)", EffectDurationMs: -1},
 		},
 		22678: {
 			{BuffId: 28200, BuffName: "Ascendance", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 75, 5: 40}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 60000, CategoryId: 1141, CategoryCooldownMs: 20000}}, StackingAura: &proto.ItemEffect{BuffId: 28204, BuffName: "Ascendance", MaxCumulativeStacks: 5, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 75, 5: 40}}}}, StackTrigger: &proto.ItemEffect_StackProc{StackProc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
@@ -660,10 +660,10 @@ func init() {
 			{BuffId: 28773, BuffName: "Glyph of Deflection (28773)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
 		},
 		23041: {
-			{BuffId: 28777, BuffName: "Slayer's Crest (28777)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{17: 260, 18: 260}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
+			{BuffId: 28777, BuffName: "Slayer's Crest (28777)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{14: 260, 15: 260}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
 		},
 		23042: {
-			{BuffId: 28778, BuffName: "Loatheb's Reflection (28778)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{35: 40, 36: 40, 37: 40, 38: 40, 39: 40}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
+			{BuffId: 28778, BuffName: "Loatheb's Reflection (28778)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{32: 40, 33: 40, 34: 40, 35: 40, 36: 40}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
 		},
 		23046: {
 			{BuffId: 28779, BuffName: "Essence of Sapphiron (28779)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 130, 5: 130}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
@@ -705,7 +705,7 @@ func init() {
 			{BuffId: 1249110, BuffName: "Chthonic Power (1249110)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{8: 29, 11: 29}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
 		249470: {
-			{BuffId: 1249113, BuffName: "Molten Fury (1249113)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{17: 55, 18: 55}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
+			{BuffId: 1249113, BuffName: "Molten Fury (1249113)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{14: 55, 15: 55}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
 		249473: {
 			{BuffId: 1249119, BuffName: "Eternal Power (1249118)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 40, 5: 13}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
@@ -734,7 +734,7 @@ func init() {
 			{BuffId: 1296664, BuffName: "Irresistible Scent (1296664)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryCooldownMs: -1}}},
 		},
 		270226: {
-			{BuffId: 1287571, BuffName: "Monkey Business (1287571)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 16, 1: 16, 2: 16, 3: 16, 16: 16}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
+			{BuffId: 1287571, BuffName: "Monkey Business (1287571)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 16, 1: 16, 2: 16, 3: 16, 13: 16}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
 		272427: {
 			{BuffId: 1291059, BuffName: "Tiger's Fury Cooldown Reduction (1291059)"},
@@ -764,7 +764,7 @@ func init() {
 			{BuffId: 1291101, BuffName: "Analyzing Weaknesses (1291101)", EffectDurationMs: 20000, MaxCumulativeStacks: 1, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 90000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
 		},
 		272439: {
-			{BuffId: 1291103, BuffName: "Serenity (1291103)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{16: 72}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 90000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
+			{BuffId: 1291103, BuffName: "Serenity (1291103)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{13: 72}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 90000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
 		272440: {
 			{BuffId: 1291105, BuffName: "Stabilized (1291105)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 360000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
