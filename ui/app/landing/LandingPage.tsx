@@ -10,7 +10,7 @@ import { classLaunchStatus, LANDING_CLASS_ORDER } from './landing_classes';
 import { LandingHeader } from './LandingHeader';
 import { LandingSpecModal } from './LandingSpecModal';
 
-const LEAVE_MS = 380;
+const LEAVE_MS = 1000;
 const REVEAL_AT_MS = 1600;
 export const LANDING_INTRO_MS = 3400;
 
@@ -59,7 +59,6 @@ export const LandingPage = () => {
 	const navigate = useCallback(
 		(href: string) => {
 			if (leaving !== null) return;
-			setModalOpen(false);
 			if (prefersReducedMotion()) {
 				window.location.assign(href);
 				return;
@@ -129,6 +128,15 @@ export const LandingPage = () => {
 						</section>
 						<p className="ui-landing-notice">{i18n.t('landing.home.notice')}</p>
 					</main>
+				</div>
+			)}
+			{leaving !== null && (
+				<div className="ui-landing-exit" aria-hidden="true">
+					<div className="ui-landing-mist">
+						<span className="ui-landing-mist-layer" />
+						<span className="ui-landing-mist-layer" />
+						<span className="ui-landing-mist-layer" />
+					</div>
 				</div>
 			)}
 			{introPhase !== 'done' && (

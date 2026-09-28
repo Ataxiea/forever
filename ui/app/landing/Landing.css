@@ -140,10 +140,16 @@
 
 	.ui-landing[data-leaving] .ui-landing-scene {
 		opacity: 0;
-		transform: translateY(-14px);
-		transition:
-			opacity 0.38s ease,
-			transform 0.38s ease;
+		transition: opacity 1s ease;
+	}
+
+	.ui-landing-exit {
+		position: fixed;
+		inset: 0;
+		z-index: var(--z-index-modal-elevated);
+		background-color: transparent;
+		animation: landing-exit-veil 1s ease forwards;
+		pointer-events: none;
 	}
 
 	.ui-landing-intro {
@@ -186,6 +192,18 @@
 	.ui-landing-mist-layer:nth-child(3) {
 		left: 46%;
 		animation: landing-mist-part-right 3.4s ease-in-out both;
+	}
+
+	.ui-landing-exit .ui-landing-mist-layer:nth-child(1) {
+		animation: landing-mist-close-left 1s ease-in both;
+	}
+
+	.ui-landing-exit .ui-landing-mist-layer:nth-child(2) {
+		animation: landing-mist-close-center 1s ease-in both;
+	}
+
+	.ui-landing-exit .ui-landing-mist-layer:nth-child(3) {
+		animation: landing-mist-close-right 1s ease-in both;
 	}
 
 	.ui-landing-intro-mark {
@@ -243,7 +261,6 @@
 		max-width: var(--modal-width-xl);
 		margin-inline: auto;
 		padding-inline: var(--spacing-page);
-		padding-bottom: var(--spacing-page);
 	}
 
 	.ui-landing-hero {
@@ -347,8 +364,12 @@
 		padding: --spacing(4);
 		text-align: start;
 		color: var(--color-white);
-		background: color-mix(in srgb, var(--color-forever-ink) 58%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-white) 22%, transparent);
+		background: color-mix(
+			in srgb,
+			var(--landing-accent, var(--color-forever-blue)) 34%,
+			color-mix(in srgb, var(--color-forever-ink) 78%, transparent)
+		);
+		border: 1px solid color-mix(in srgb, var(--landing-accent, var(--color-forever-blue)) 46%, transparent);
 		border-radius: var(--radius-md);
 		backdrop-filter: blur(8px);
 		transition:
@@ -362,18 +383,18 @@
 		content: '';
 		position: absolute;
 		inset: 0 auto 0 0;
-		width: 4px;
+		width: 6px;
 		background: var(--landing-accent, var(--color-forever-blue));
 	}
 
 	.ui-landing-class-card:hover {
 		transform: translateY(-2px);
-		border-color: color-mix(in srgb, var(--color-forever-parchment) 55%, transparent);
-		box-shadow: 0 12px 28px rgb(0 0 0 / 0.28);
+		border-color: color-mix(in srgb, var(--landing-accent, var(--color-forever-blue)) 78%, var(--color-white));
+		box-shadow: 0 12px 28px color-mix(in srgb, var(--landing-accent, var(--color-forever-blue)) 38%, transparent);
 	}
 
 	.ui-landing-class-card:focus-visible {
-		outline: 2px solid var(--color-forever-blue);
+		outline: 2px solid var(--landing-accent, var(--color-forever-blue));
 		outline-offset: 2px;
 	}
 
@@ -417,7 +438,7 @@
 	.ui-landing-notice {
 		max-width: 46rem;
 		margin-top: auto;
-		padding: var(--spacing-section) --spacing(3) var(--spacing-section);
+		padding: var(--spacing-section) --spacing(3) --spacing(3);
 		text-align: center;
 		font-size: var(--text-sm);
 		letter-spacing: 0.04em;
@@ -616,6 +637,7 @@
 	@media (prefers-reduced-motion: reduce) {
 		.ui-landing-intro,
 		.ui-landing-intro-mark,
+		.ui-landing-exit,
 		.ui-landing-mist-layer,
 		.ui-landing-side-mist span,
 		.ui-landing-starlight span,
@@ -652,6 +674,52 @@
 	100% {
 		opacity: 0;
 		transform: scale(1.08);
+	}
+}
+
+@keyframes landing-exit-veil {
+	from {
+		background-color: transparent;
+	}
+
+	to {
+		background-color: var(--color-forever-mist);
+	}
+}
+
+@keyframes landing-mist-close-left {
+	from {
+		opacity: 0;
+		transform: translateX(-28%);
+	}
+
+	to {
+		opacity: 0.92;
+		transform: translateX(0);
+	}
+}
+
+@keyframes landing-mist-close-center {
+	from {
+		opacity: 0;
+		transform: scale(1.2);
+	}
+
+	to {
+		opacity: 0.95;
+		transform: scale(1);
+	}
+}
+
+@keyframes landing-mist-close-right {
+	from {
+		opacity: 0;
+		transform: translateX(28%);
+	}
+
+	to {
+		opacity: 0.92;
+		transform: translateX(0);
 	}
 }
 
