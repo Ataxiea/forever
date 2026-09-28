@@ -16,8 +16,126 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		min-height: 100%;
+		min-height: 100dvh;
 		overflow: clip;
+		isolation: isolate;
+	}
+
+	.ui-landing-scene > header,
+	.ui-landing-main {
+		position: relative;
+		z-index: 1;
+	}
+
+	.ui-landing-atmosphere {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.ui-landing-side-mist,
+	.ui-landing-starlight {
+		position: absolute;
+		inset: 0;
+	}
+
+	.ui-landing-side-mist span {
+		position: absolute;
+		left: 0;
+		width: 68vw;
+		height: 78%;
+		background: radial-gradient(closest-side, color-mix(in srgb, var(--color-white) 70%, transparent) 0%, transparent 70%);
+		animation-name: landing-mist-cross;
+		animation-timing-function: linear;
+		animation-iteration-count: infinite;
+	}
+
+	.ui-landing-side-mist span:nth-child(1) {
+		top: -12%;
+		animation-duration: 36s;
+	}
+
+	.ui-landing-side-mist span:nth-child(2) {
+		top: 18%;
+		height: 58%;
+		animation-duration: 48s;
+		animation-delay: -20s;
+	}
+
+	.ui-landing-side-mist span:nth-child(3) {
+		top: 46%;
+		height: 64%;
+		animation-duration: 30s;
+		animation-delay: -12s;
+	}
+
+	.ui-landing-starlight span {
+		--star-from-x: 96%;
+		--star-to-x: -4%;
+		--star-from-y: 4%;
+		--star-to-y: 92%;
+
+		position: absolute;
+		width: min(42vw, 340px);
+		height: min(42vw, 340px);
+		margin-top: calc(min(42vw, 340px) / -2);
+		margin-left: calc(min(42vw, 340px) / -2);
+		border-radius: 9999px;
+		background: radial-gradient(
+			circle,
+			color-mix(in srgb, var(--color-white) 88%, transparent) 0%,
+			color-mix(in srgb, var(--color-forever-parchment) 55%, transparent) 28%,
+			transparent 70%
+		);
+		filter: blur(6px);
+		animation:
+			landing-star-x 22s linear infinite,
+			landing-star-y 22s cubic-bezier(0.42, 0.02, 0.78, 0.35) infinite,
+			landing-star-fade 22s linear infinite;
+	}
+
+	.ui-landing-starlight span:nth-child(2) {
+		--star-from-x: 88%;
+		--star-to-x: 6%;
+		--star-from-y: 16%;
+		--star-to-y: 98%;
+
+		width: min(30vw, 240px);
+		height: min(30vw, 240px);
+		margin-top: calc(min(30vw, 240px) / -2);
+		margin-left: calc(min(30vw, 240px) / -2);
+		animation-duration: 28s, 28s, 28s;
+		animation-delay: -11s, -11s, -11s;
+	}
+
+	.ui-landing-starlight span:nth-child(3) {
+		--star-from-x: 100%;
+		--star-to-x: -8%;
+		--star-from-y: 0%;
+		--star-to-y: 74%;
+
+		width: min(50vw, 400px);
+		height: min(50vw, 400px);
+		margin-top: calc(min(50vw, 400px) / -2);
+		margin-left: calc(min(50vw, 400px) / -2);
+		animation-duration: 26s, 26s, 26s;
+		animation-delay: -6s, -6s, -6s;
+	}
+
+	.ui-landing-starlight span:nth-child(4) {
+		--star-from-x: 78%;
+		--star-to-x: 2%;
+		--star-from-y: 10%;
+		--star-to-y: 86%;
+
+		width: min(24vw, 190px);
+		height: min(24vw, 190px);
+		margin-top: calc(min(24vw, 190px) / -2);
+		margin-left: calc(min(24vw, 190px) / -2);
+		animation-duration: 34s, 34s, 34s;
+		animation-delay: -19s, -19s, -19s;
 	}
 
 	.ui-landing[data-leaving] .ui-landing-scene {
@@ -119,6 +237,7 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
+		flex: 1;
 		align-items: center;
 		width: 100%;
 		max-width: var(--modal-width-xl);
@@ -150,13 +269,8 @@
 		content: '';
 		position: absolute;
 		z-index: -1;
-		inset: -45% -18%;
-		background: radial-gradient(
-			ellipse at center,
-			color-mix(in srgb, var(--color-forever-ink) 68%, transparent) 0%,
-			color-mix(in srgb, var(--color-forever-ink) 36%, transparent) 46%,
-			transparent 74%
-		);
+		inset: -90% -50%;
+		background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-forever-ink) 46%, transparent) 0%, transparent 58%);
 		pointer-events: none;
 	}
 
@@ -300,12 +414,25 @@
 			0 4px 14px rgb(0 0 0 / 0.65);
 	}
 
+	.ui-landing-notice {
+		max-width: 46rem;
+		margin-top: auto;
+		padding: var(--spacing-section) --spacing(3) var(--spacing-section);
+		text-align: center;
+		font-size: var(--text-sm);
+		letter-spacing: 0.04em;
+		color: var(--color-white);
+		text-shadow:
+			0 1px 2px rgb(0 0 0 / 0.95),
+			0 0 12px rgb(0 0 0 / 0.75);
+	}
+
 	.ui-landing-description::before {
 		content: '';
 		position: absolute;
 		z-index: -1;
-		inset: -35% -6%;
-		background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-forever-ink) 78%, transparent) 0%, transparent 72%);
+		inset: -120% -40%;
+		background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-forever-ink) 50%, transparent) 0%, transparent 62%);
 		pointer-events: none;
 	}
 
@@ -490,6 +617,8 @@
 		.ui-landing-intro,
 		.ui-landing-intro-mark,
 		.ui-landing-mist-layer,
+		.ui-landing-side-mist span,
+		.ui-landing-starlight span,
 		.ui-landing-stage {
 			animation: none;
 		}
@@ -568,6 +697,48 @@
 	100% {
 		opacity: 0;
 		transform: scale(1.35);
+	}
+}
+
+@keyframes landing-star-x {
+	from {
+		left: var(--star-from-x);
+	}
+
+	to {
+		left: var(--star-to-x);
+	}
+}
+
+@keyframes landing-star-y {
+	from {
+		top: var(--star-from-y);
+	}
+
+	to {
+		top: var(--star-to-y);
+	}
+}
+
+@keyframes landing-star-fade {
+	0%,
+	100% {
+		opacity: 0;
+	}
+
+	14%,
+	78% {
+		opacity: 0.8;
+	}
+}
+
+@keyframes landing-mist-cross {
+	from {
+		transform: translateX(-80vw);
+	}
+
+	to {
+		transform: translateX(120vw);
 	}
 }
 

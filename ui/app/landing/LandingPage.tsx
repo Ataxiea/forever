@@ -74,6 +74,19 @@ export const LandingPage = () => {
 		<div ref={setPortalHost} className="ui-landing" data-leaving={leaving !== null ? '' : undefined} data-testid="landing-root">
 			{introPhase !== 'mark' && (
 				<div className="ui-landing-scene">
+					<div className="ui-landing-atmosphere" aria-hidden="true">
+						<div className="ui-landing-side-mist">
+							<span />
+							<span />
+							<span />
+						</div>
+						<div className="ui-landing-starlight">
+							<span />
+							<span />
+							<span />
+							<span />
+						</div>
+					</div>
 					<LandingHeader />
 					<main className="ui-landing-main">
 						<section className="ui-landing-hero">
@@ -114,6 +127,7 @@ export const LandingPage = () => {
 								})}
 							</div>
 						</section>
+						<p className="ui-landing-notice">{i18n.t('landing.home.notice')}</p>
 					</main>
 				</div>
 			)}
