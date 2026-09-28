@@ -123,6 +123,14 @@
 	--color-cr-hp-fill-end: color-mix(in srgb, var(--color-success) 70%, var(--color-white));
 	--color-cr-hit-flash-mid: color-mix(in srgb, var(--color-warning) 60%, transparent);
 	--color-cr-hit-glow: color-mix(in srgb, var(--color-damage-crit) 40%, transparent);
+
+	--color-forever-blue: #1469b8;
+	--color-forever-deep: #0b3d6e;
+	--color-forever-sky: #e8f2fb;
+	--color-forever-mist: #f7fbfe;
+	--color-forever-ink: #10233a;
+	--color-forever-ink-soft: #48607c;
+	--color-forever-parchment: #f5e5cf;
 }
 
 @theme static inline {
