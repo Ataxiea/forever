@@ -56,10 +56,13 @@
 							},
 							"additionalProperties": false,
 							"required": ["eyebrow", "tagline", "chooseClass", "chooseSpec", "entering"]
+						},
+						"notice": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["title", "description", "welcomeDescription", "hero"]
+					"required": ["title", "description", "welcomeDescription", "hero", "notice"]
 				},
 				"header": {
 					"type": "object",

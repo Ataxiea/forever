@@ -16,7 +16,8 @@
 				"chooseClass": "Choose your class",
 				"chooseSpec": "Choose a specialization",
 				"entering": "Entering simulation…"
-			}
+			},
+			"notice": "© 2021-2026 WoWSims team · A fan-made project, not affiliated with Blizzard Entertainment."
 		},
 		"header": {
 			"wowsims": "WoWSims",
