@@ -12,13 +12,19 @@ export const LandingLanguageMenu = () => {
 	};
 
 	return (
-		<div className="relative">
+		<div className="relative max-md:w-full">
 			<Menu
 				surface="none"
-				trigger={<Icon name="globe" size="2x" />}
+				trigger={
+					<>
+						<Icon name="globe" size="2x" />
+						<span className="ui-landing-menu-label">{supportedLanguages[currentLang]}</span>
+					</>
+				}
 				triggerProps={{
 					id: 'languageDropdown',
-					className: 'ui-landing-language-caret ui-landing-header-fg flex items-center px-0 py-4 text-sm whitespace-nowrap opacity-70 max-md:pt-2 md:px-2',
+					className:
+						'ui-landing-language-caret ui-landing-header-fg flex items-center px-0 py-4 text-sm whitespace-nowrap md:px-2 md:opacity-70 max-md:w-full max-md:opacity-100',
 					'aria-label': supportedLanguages[currentLang],
 				}}
 				align="end"

@@ -22,7 +22,9 @@
 		"header": {
 			"wowsims": "WoWSims",
 			"expansion": "Forever",
-			"supportDevs": "Support us"
+			"supportDevs": "Support us",
+			"discord": "Discord",
+			"github": "GitHub"
 		}
 	},
 	"common": {

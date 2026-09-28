@@ -75,10 +75,16 @@
 						},
 						"supportDevs": {
 							"type": "string"
+						},
+						"discord": {
+							"type": "string"
+						},
+						"github": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["wowsims", "expansion", "supportDevs"]
+					"required": ["wowsims", "expansion", "supportDevs", "discord", "github"]
 				}
 			},
 			"additionalProperties": false,
