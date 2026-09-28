@@ -21,6 +21,10 @@
 		isolation: isolate;
 	}
 
+	.ui-landing-scene[data-intro] {
+		will-change: opacity;
+	}
+
 	.ui-landing-scene > header,
 	.ui-landing-main {
 		position: relative;
@@ -36,7 +40,14 @@
 		inset: 0;
 		z-index: 0;
 		overflow: hidden;
+		opacity: 1;
+		transition: opacity 1.4s linear;
 		pointer-events: none;
+	}
+
+	.ui-landing-scene[data-intro] .ui-landing-atmosphere {
+		opacity: 0;
+		transition: none;
 	}
 
 	.ui-landing-side-mist,
@@ -76,70 +87,92 @@
 	}
 
 	.ui-landing-starlight span {
-		--star-from-x: 96%;
-		--star-to-x: -4%;
-		--star-from-y: 4%;
-		--star-to-y: 92%;
+		--star-from-x: 96vw;
+		--star-to-x: -4vw;
+		--star-from-y: 4vh;
+		--star-to-y: 92vh;
 
 		position: absolute;
+		top: 0;
+		left: 0;
 		width: min(42vw, 340px);
 		height: min(42vw, 340px);
 		margin-top: calc(min(42vw, 340px) / -2);
 		margin-left: calc(min(42vw, 340px) / -2);
+		animation: landing-star-x 22s linear infinite;
+	}
+
+	.ui-landing-starlight span::before {
+		content: '';
+		position: absolute;
+		inset: 0;
 		border-radius: 9999px;
 		background: radial-gradient(
 			circle,
-			color-mix(in srgb, var(--color-white) 88%, transparent) 0%,
-			color-mix(in srgb, var(--color-forever-parchment) 55%, transparent) 28%,
-			transparent 70%
+			color-mix(in srgb, var(--color-white) 72%, transparent) 0%,
+			color-mix(in srgb, var(--color-forever-parchment) 36%, transparent) 18%,
+			transparent 64%
 		);
-		filter: blur(6px);
 		animation:
-			landing-star-x 22s linear infinite,
 			landing-star-y 22s cubic-bezier(0.42, 0.02, 0.78, 0.35) infinite,
 			landing-star-fade 22s linear infinite;
 	}
 
 	.ui-landing-starlight span:nth-child(2) {
-		--star-from-x: 88%;
-		--star-to-x: 6%;
-		--star-from-y: 16%;
-		--star-to-y: 98%;
+		--star-from-x: 88vw;
+		--star-to-x: 6vw;
+		--star-from-y: 16vh;
+		--star-to-y: 98vh;
 
 		width: min(30vw, 240px);
 		height: min(30vw, 240px);
 		margin-top: calc(min(30vw, 240px) / -2);
 		margin-left: calc(min(30vw, 240px) / -2);
-		animation-duration: 28s, 28s, 28s;
-		animation-delay: -11s, -11s, -11s;
+		animation-duration: 28s;
+		animation-delay: -11s;
+	}
+
+	.ui-landing-starlight span:nth-child(2)::before {
+		animation-duration: 28s, 28s;
+		animation-delay: -11s, -11s;
 	}
 
 	.ui-landing-starlight span:nth-child(3) {
-		--star-from-x: 100%;
-		--star-to-x: -8%;
-		--star-from-y: 0%;
-		--star-to-y: 74%;
+		--star-from-x: 100vw;
+		--star-to-x: -8vw;
+		--star-from-y: 0vh;
+		--star-to-y: 74vh;
 
 		width: min(50vw, 400px);
 		height: min(50vw, 400px);
 		margin-top: calc(min(50vw, 400px) / -2);
 		margin-left: calc(min(50vw, 400px) / -2);
-		animation-duration: 26s, 26s, 26s;
-		animation-delay: -6s, -6s, -6s;
+		animation-duration: 26s;
+		animation-delay: -6s;
+	}
+
+	.ui-landing-starlight span:nth-child(3)::before {
+		animation-duration: 26s, 26s;
+		animation-delay: -6s, -6s;
 	}
 
 	.ui-landing-starlight span:nth-child(4) {
-		--star-from-x: 78%;
-		--star-to-x: 2%;
-		--star-from-y: 10%;
-		--star-to-y: 86%;
+		--star-from-x: 78vw;
+		--star-to-x: 2vw;
+		--star-from-y: 10vh;
+		--star-to-y: 86vh;
 
 		width: min(24vw, 190px);
 		height: min(24vw, 190px);
 		margin-top: calc(min(24vw, 190px) / -2);
 		margin-left: calc(min(24vw, 190px) / -2);
-		animation-duration: 34s, 34s, 34s;
-		animation-delay: -19s, -19s, -19s;
+		animation-duration: 34s;
+		animation-delay: -19s;
+	}
+
+	.ui-landing-starlight span:nth-child(4)::before {
+		animation-duration: 34s, 34s;
+		animation-delay: -19s, -19s;
 	}
 
 	.ui-landing[data-leaving] .ui-landing-scene {
@@ -151,8 +184,9 @@
 		position: fixed;
 		inset: 0;
 		z-index: var(--z-index-modal-elevated);
-		background-color: transparent;
-		animation: landing-exit-veil 1s ease forwards;
+		background-color: var(--color-forever-mist);
+		opacity: 0;
+		animation: landing-exit-veil 1s linear forwards;
 		pointer-events: none;
 	}
 
@@ -164,7 +198,7 @@
 		align-items: center;
 		justify-content: center;
 		background-color: var(--color-forever-mist);
-		animation: landing-mist-clear 3.4s ease both;
+		animation: landing-intro-fade 3.4s linear both;
 		pointer-events: none;
 	}
 
@@ -176,26 +210,26 @@
 
 	.ui-landing-mist-layer {
 		position: absolute;
-		top: -30%;
-		bottom: -30%;
-		width: 80%;
+		top: 8%;
+		height: 84%;
+		width: 70%;
 		background: radial-gradient(closest-side, color-mix(in srgb, var(--color-white) 94%, transparent) 0%, transparent 72%);
 	}
 
 	.ui-landing-mist-layer:nth-child(1) {
 		left: -28%;
-		animation: landing-mist-part-left 3.4s ease-in-out both;
+		animation: landing-mist-part-left 3.4s linear both;
 	}
 
 	.ui-landing-mist-layer:nth-child(2) {
 		left: 12%;
 		width: 92%;
-		animation: landing-mist-part-center 3.4s ease-in-out both;
+		animation: landing-mist-part-center 3.4s linear both;
 	}
 
 	.ui-landing-mist-layer:nth-child(3) {
 		left: 46%;
-		animation: landing-mist-part-right 3.4s ease-in-out both;
+		animation: landing-mist-part-right 3.4s linear both;
 	}
 
 	.ui-landing-exit .ui-landing-mist-layer:nth-child(1) {
@@ -291,7 +325,6 @@
 		background: color-mix(in srgb, var(--color-forever-ink) 55%, transparent);
 		border: 1px solid color-mix(in srgb, var(--color-white) 22%, transparent);
 		border-radius: 9999px;
-		backdrop-filter: blur(12px);
 	}
 
 	.ui-landing-menu-bar,
@@ -385,6 +418,7 @@
 		z-index: -1;
 		inset: -90% -50%;
 		background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-forever-ink) 46%, transparent) 0%, transparent 58%);
+		mask-image: linear-gradient(to bottom, black 58%, transparent 68%);
 		pointer-events: none;
 	}
 
@@ -421,18 +455,16 @@
 
 	.ui-landing-stage {
 		opacity: 0;
-		animation-name: landing-stage-in;
+		animation-name: landing-stage-fade;
 		animation-duration: 0.9s;
 		animation-timing-function: ease-out;
 		animation-fill-mode: both;
 	}
 
 	.ui-landing-stage[data-stage='brand'] {
+		animation-name: landing-stage-fade;
+		animation-duration: 0.45s;
 		animation-delay: 0.05s;
-	}
-
-	.ui-landing-stage[data-stage='classes'] {
-		animation-delay: 0.28s;
 	}
 
 	.ui-landing-section-title {
@@ -441,10 +473,13 @@
 		padding: 0;
 		font-family: var(--font-display);
 		font-size: var(--text-2xl);
+		font-weight: bold;
 		letter-spacing: 0.04em;
 		text-align: center;
-		color: var(--color-forever-parchment);
-		text-shadow: 0 4px 8px rgb(0 0 0 / 0.3);
+		color: var(--color-white);
+		text-shadow:
+			0 1px 2px color-mix(in srgb, var(--color-forever-ink) 90%, transparent),
+			0 0 12px color-mix(in srgb, var(--color-forever-ink) 70%, transparent);
 	}
 
 	.ui-landing-class-grid {
@@ -468,7 +503,6 @@
 		);
 		border: 1px solid color-mix(in srgb, var(--landing-accent, var(--color-forever-blue)) 46%, transparent);
 		border-radius: var(--radius-md);
-		backdrop-filter: blur(8px);
 		transition:
 			transform 0.2s ease,
 			box-shadow 0.2s ease,
@@ -635,7 +669,6 @@
 		border: 1px solid color-mix(in srgb, var(--color-white) 22%, transparent);
 		border-radius: var(--radius-md);
 		outline: none;
-		backdrop-filter: blur(12px);
 	}
 
 	.ui-landing-language-item {
@@ -726,12 +759,15 @@
 		.ui-landing-mist-layer,
 		.ui-landing-side-mist span,
 		.ui-landing-starlight span,
+		.ui-landing-starlight span::before,
 		.ui-landing-stage {
 			animation: none;
 		}
 
-		.ui-landing-stage {
+		.ui-landing-stage,
+		.ui-landing-atmosphere {
 			opacity: 1;
+			transition: none;
 		}
 
 		.ui-landing[data-leaving] .ui-landing-scene {
@@ -762,13 +798,24 @@
 	}
 }
 
+@keyframes landing-intro-fade {
+	0%,
+	46% {
+		opacity: 1;
+	}
+
+	100% {
+		opacity: 0;
+	}
+}
+
 @keyframes landing-exit-veil {
 	from {
-		background-color: transparent;
+		opacity: 0;
 	}
 
 	to {
-		background-color: var(--color-forever-mist);
+		opacity: 1;
 	}
 }
 
@@ -787,12 +834,12 @@
 @keyframes landing-mist-close-center {
 	from {
 		opacity: 0;
-		transform: scale(1.2);
+		transform: translate3d(0, 6%, 0);
 	}
 
 	to {
 		opacity: 0.95;
-		transform: scale(1);
+		transform: translate3d(0, 0, 0);
 	}
 }
 
@@ -805,17 +852,6 @@
 	to {
 		opacity: 0.92;
 		transform: translateX(0);
-	}
-}
-
-@keyframes landing-mist-clear {
-	0%,
-	42% {
-		background-color: var(--color-forever-mist);
-	}
-
-	100% {
-		background-color: transparent;
 	}
 }
 
@@ -839,37 +875,47 @@
 @keyframes landing-mist-part-center {
 	0% {
 		opacity: 0.7;
-		transform: scale(0.92);
+		transform: translate3d(0, 6%, 0);
 	}
 
 	40% {
 		opacity: 0.95;
-		transform: scale(1);
+		transform: translate3d(0, 0, 0);
 	}
 
 	100% {
 		opacity: 0;
-		transform: scale(1.35);
+		transform: translate3d(0, -8%, 0);
 	}
 }
 
 @keyframes landing-star-x {
 	from {
-		left: var(--star-from-x);
+		transform: translate3d(var(--star-from-x), 0, 0);
 	}
 
 	to {
-		left: var(--star-to-x);
+		transform: translate3d(var(--star-to-x), 0, 0);
 	}
 }
 
 @keyframes landing-star-y {
 	from {
-		top: var(--star-from-y);
+		transform: translate3d(0, var(--star-from-y), 0);
 	}
 
 	to {
-		top: var(--star-to-y);
+		transform: translate3d(0, var(--star-to-y), 0);
+	}
+}
+
+@keyframes landing-stage-fade {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
 	}
 }
 
@@ -909,18 +955,6 @@
 	100% {
 		opacity: 0;
 		transform: translateX(36%);
-	}
-}
-
-@keyframes landing-stage-in {
-	from {
-		opacity: 0;
-		transform: translateY(18px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
 	}
 }
 
