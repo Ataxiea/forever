@@ -34,10 +34,32 @@
 						},
 						"welcomeDescription": {
 							"type": "string"
+						},
+						"hero": {
+							"type": "object",
+							"properties": {
+								"eyebrow": {
+									"type": "string"
+								},
+								"tagline": {
+									"type": "string"
+								},
+								"chooseClass": {
+									"type": "string"
+								},
+								"chooseSpec": {
+									"type": "string"
+								},
+								"entering": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": ["eyebrow", "tagline", "chooseClass", "chooseSpec", "entering"]
 						}
 					},
 					"additionalProperties": false,
-					"required": ["title", "description", "welcomeDescription"]
+					"required": ["title", "description", "welcomeDescription", "hero"]
 				},
 				"header": {
 					"type": "object",

@@ -9,12 +9,19 @@
 		"home": {
 			"title": "WoWSims - Forever",
 			"description": "A powerful simulation tool for World of Warcraft: Forever",
-			"welcomeDescription": "Welcome to WoWSims - Forever! This is a community-driven project to provide class and raid simulations for World of Warcraft® Forever together with the leading theorycrafters and class representatives."
+			"welcomeDescription": "This is a community-driven project to provide class and raid simulations for World of Warcraft® Forever together with the leading theorycrafters and class representatives.",
+			"hero": {
+				"eyebrow": "World of Warcraft® Forever",
+				"tagline": "Simulate every class, perfect every pull.",
+				"chooseClass": "Choose your class",
+				"chooseSpec": "Choose a specialization",
+				"entering": "Entering simulation…"
+			}
 		},
 		"header": {
 			"wowsims": "WoWSims",
 			"expansion": "Forever",
-			"supportDevs": "Support our devs"
+			"supportDevs": "Support us"
 		}
 	},
 	"common": {
