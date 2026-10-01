@@ -30,6 +30,9 @@ func init() {
 		1404: {
 			{BuffId: 835, BuffName: "Tidal Charm (835)", EffectDurationMs: 3000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 900000, CategoryId: 2584, CategoryCooldownMs: 900000}}},
 		},
+		1447: {
+			{BuffId: 18826, BuffName: "Savior's Sacrifice (18826)", EffectDurationMs: 10000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 300}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
+		},
 		1713: {
 			{BuffId: 1317424, BuffName: "Heal (1317424)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1153, CategoryCooldownMs: 120000}}},
 		},
@@ -53,6 +56,9 @@ func init() {
 		},
 		4984: {
 			{BuffId: 5024, BuffName: "Flee (5024)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000}}},
+		},
+		5028: {
+			{BuffId: 1312330, BuffName: "Holy Smite (1312330)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		5079: {
 			{BuffId: 1139, BuffName: "Cold Eye (1139)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 420000}}},
@@ -1177,6 +1183,9 @@ func init() {
 		},
 		285281: {
 			{BuffId: 1318178, BuffName: "Cracked Skull (1318178)", EffectDurationMs: 1000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		286556: {
+			{BuffId: 1320579, BuffName: "Desert Winds (1320579)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 2554, CategoryCooldownMs: 10000}}},
 		},
 	})
 	shared.RegisterEnchantEffects(map[int32][]*proto.ItemEffect{
