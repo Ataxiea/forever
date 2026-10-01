@@ -56,9 +56,6 @@ message SimItem {
 	bool unique = 17;
 	repeated double pseudo_stats = 18; // Indexed by PseudoStat.
 	repeated Class class_allowlist = 19; // Empty means every class may use the item.
-
-	reserved 14;
-	reserved "item_effects";
 }
 
 message Consumable {
