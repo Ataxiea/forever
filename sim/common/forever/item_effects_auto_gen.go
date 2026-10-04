@@ -84,6 +84,9 @@ func init() {
 		7734: {
 			{BuffId: 14537, BuffName: "Six Demon Bag (14537)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000, CategoryId: 1141, CategoryCooldownMs: 10000}}},
 		},
+		7747: {
+			{BuffId: 1293421, BuffName: "Shadow Bolt (7619)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.05}}}},
+		},
 		7939: {
 			{BuffId: 9777, BuffName: "Self Healing (9778)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.03}}}},
 		},
@@ -905,7 +908,7 @@ func init() {
 			{BuffId: 1287571, BuffName: "Monkey Business (1287571)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 16, 1: 16, 2: 16, 3: 16, 13: 16}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
 		272427: {
-			{BuffId: 1291059, BuffName: "Tiger's Fury Cooldown Reduction (1291059)"},
+			{BuffId: 1291059, BuffName: "Shifting Power Cooldown Reduction (1291059)"},
 		},
 		272428: {
 			{BuffId: 1291060, BuffName: "Increased Enrage Rage (1291060)"},
