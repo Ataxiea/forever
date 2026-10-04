@@ -24,7 +24,6 @@ export const DefaultDebuffs = Debuffs.create({
 	faerieFire: true,
 	sunderArmor: true,
 	curseOfRecklessness: true,
-	huntersMark: true,
 });
 
 export const DefaultConsumables = ConsumesSpec.create({
@@ -33,5 +32,5 @@ export const DefaultConsumables = ConsumesSpec.create({
 	foodId: Consumables.SmokedDesertDumplings.id,
 	explosiveId: Consumables.EzThroDynamiteII.id,
 	ohImbueId: Consumables.DenseSharpeningStone.id,
-	extraIds: [Consumables.GoblinSapperCharge.id, Consumables.ScrollOfAgilityIV.id, Consumables.ScrollOfStrengthIV.id],
+	extraIds: [Consumables.FireToastedBun.id, Consumables.GoblinSapperCharge.id, Consumables.ScrollOfAgilityIV.id, Consumables.ScrollOfStrengthIV.id],
 });
