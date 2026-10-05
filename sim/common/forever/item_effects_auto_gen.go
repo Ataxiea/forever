@@ -36,11 +36,26 @@ func init() {
 		1713: {
 			{BuffId: 1317424, BuffName: "Heal (1317424)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1153, CategoryCooldownMs: 120000}}},
 		},
+		1728: {
+			{BuffId: 1300753, BuffName: "Firebolt (1300753)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		1986: {
+			{BuffId: 18090, BuffName: "Wound (18090)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		2164: {
+			{BuffId: 18107, BuffName: "Wound (18107)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		2243: {
+			{BuffId: 18803, BuffName: "Focus (18803)", EffectDurationMs: 4000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+		},
 		2802: {
 			{BuffId: 13744, BuffName: "Blazing Emblem (13744)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{33: 33}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 600000}}},
 		},
 		2820: {
 			{BuffId: 14530, BuffName: "Speed (14530)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 360000, CategoryId: 44, CategoryCooldownMs: 10000}}},
+		},
+		2825: {
+			{BuffId: 29638, BuffName: "Searing Arrow (29638)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		3854: {
 			{BuffId: 13439, BuffName: "Frostbolt (13439)", EffectDurationMs: 5000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
@@ -77,6 +92,9 @@ func init() {
 		},
 		7515: {
 			{BuffId: 9253, BuffName: "Replenish Mana II (9253)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
+		},
+		7717: {
+			{BuffId: 9632, BuffName: "Bladestorm (9632)", EffectDurationMs: 9000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		7726: {
 			{BuffId: 1293539, BuffName: "Scarlet Retribution (1293539)"},
@@ -146,6 +164,9 @@ func init() {
 		},
 		10726: {
 			{BuffId: 13180, BuffName: "Gnomish Mind Control Cap (13180)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
+		},
+		10772: {
+			{BuffId: 18075, BuffName: "Rend (18075)", EffectDurationMs: 7000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		11302: {
 			{BuffId: 10368, BuffName: "Uther's Light Effect (8397)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.04}}}},
@@ -1093,6 +1114,12 @@ func init() {
 		274386: {
 			{BuffId: 1293820, BuffName: "Toy Soldier (1293820)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 2554, CategoryCooldownMs: 20000}}},
 		},
+		274425: {
+			{BuffId: 1294058, BuffName: "White Obsidian (1294055)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 10, ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+		},
+		274430: {
+			{BuffId: 1294065, BuffName: "Rock Sentinel (1294064)", EffectDurationMs: 10000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 300}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+		},
 		274759: {
 			{BuffId: 1295270, BuffName: "Prototype Pathcarver (1295270)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
@@ -1177,6 +1204,9 @@ func init() {
 		},
 		284262: {
 			{BuffId: 1315767, BuffName: "Howler's Cry (1315767)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		285102: {
+			{BuffId: 1317583, BuffName: "Poison (1317583)", EffectDurationMs: 9000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		285277: {
 			{BuffId: 1318068, BuffName: "Large Bomb (1318069)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
