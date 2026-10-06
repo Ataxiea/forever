@@ -18,6 +18,9 @@ func init() {
 		810: {
 			{BuffId: 13439, BuffName: "Frostbolt (13439)", EffectDurationMs: 5000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 3.5}}}},
 		},
+		869: {
+			{BuffId: 13752, BuffName: "Faerie Fire (13752)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
 		870: {
 			{BuffId: 18796, BuffName: "Fireball (18796)", EffectDurationMs: 6000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
@@ -576,9 +579,6 @@ func init() {
 		},
 		19959: {
 			{BuffId: 24544, BuffName: "Arcane Potency (24544)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
-		},
-		20005: {
-			{BuffId: 24362, BuffName: "Increased 1H Fist Weapons (24362)", EffectDurationMs: -1},
 		},
 		20048: {
 			{BuffId: 23990, BuffName: "Item - Minor Run Speed (23990)"},
