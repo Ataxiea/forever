@@ -60,6 +60,9 @@ func init() {
 		2825: {
 			{BuffId: 29638, BuffName: "Searing Arrow (29638)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
+		3475: {
+			{BuffId: 21142, BuffName: "Immolation (21142)", EffectDurationMs: -1},
+		},
 		3854: {
 			{BuffId: 13439, BuffName: "Frostbolt (13439)", EffectDurationMs: 5000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
@@ -170,6 +173,9 @@ func init() {
 		},
 		10772: {
 			{BuffId: 18075, BuffName: "Rend (18075)", EffectDurationMs: 7000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		10776: {
+			{BuffId: 1293819, BuffName: "Reduce Mechanic Duration - Snare/Root 07 (1293819)"},
 		},
 		11302: {
 			{BuffId: 10368, BuffName: "Uther's Light Effect (8397)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.04}}}},
