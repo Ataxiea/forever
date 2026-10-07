@@ -99,6 +99,9 @@ type Unit struct {
 	// Ranged swing speed without any temporary effects.
 	initialRangedSwingSpeed float64
 
+	basePhysicalCritPercent float64 // The base physical crit of the class or pet, which no defender suppresses.
+	critPerAgility          float64 // The physical crit per point of Agility, which no defender suppresses.
+
 	// Provides aura tracking behavior.
 	auraTracker
 
@@ -113,7 +116,7 @@ type Unit struct {
 
 	PseudoStats stats.PseudoStats
 
-	// The client form the unit is in; the class writes it.
+	// The form the unit is in, by the game files' numbering; the class writes it.
 	ShapeshiftForm dbcenums.ShapeshiftForm
 	// Leaves the current form, for a cast the form refuses but no form allows. Nil: none.
 	AutoUnshift func(sim *Simulation)
@@ -129,6 +132,14 @@ type Unit struct {
 	Spellbook                 []*Spell
 	spellRegistrationHandlers []SpellRegisteredHandler
 
+	spellMods []*SpellMod
+	equipMods []*SpellMod
+
+	// The spell mods that raise the chance of the unit's proc triggers, which read them when they roll.
+	procChanceMods []*SpellMod
+	// A pet's owner, whose proc chance mods the pet's triggers count with the pet's own.
+	procChanceOwner *Unit
+
 	// Pets owned by this Unit.
 	PetAgents []PetAgent
 
@@ -140,6 +151,7 @@ type Unit struct {
 	// AutoAttacks is the manager for auto attack swings.
 	// Must be enabled to use, with "EnableAutoAttacks()".
 	AutoAttacks AutoAttacks
+	Wand        *Wand // Set by EnableWand for a unit that can shoot a wand.
 
 	Rotation *APLRotation
 
@@ -149,6 +161,8 @@ type Unit struct {
 	cdTimers []*Timer
 
 	categoryTimers map[int32]*Timer
+
+	dotRankGroups map[string]*dotRankGroup
 
 	AttackTables                 []*AttackTable
 	DynamicDamageTakenModifiers  []DynamicDamageTakenModifier
@@ -174,9 +188,9 @@ type Unit struct {
 	rotationAction *PendingAction
 	hardcastAction *PendingAction
 
-	// Cached mana return values per tick.
-	manaTickWhileCasting    float64
-	manaTickWhileNotCasting float64
+	// Cached mana regen per second.
+	manaRegenWhileCasting    float64
+	manaRegenWhileNotCasting float64
 
 	CastSpeed           float64
 	meleeAttackSpeed    float64
@@ -185,13 +199,17 @@ type Unit struct {
 
 	CurrentTarget   *Unit
 	defaultTarget   *Unit
-	SecondaryTarget *Unit // Only used for NPCs in tank swap AIs currently.
+	SecondaryTarget *Unit // An NPC's second tank assignment; counts that tank as tanking for chance of death.
 
 	// The currently-channeled DOT spell, otherwise nil.
-	ChanneledDot *Dot
+	ChanneledDot       *Dot
+	channelEndHandlers []func(sim *Simulation, dot *Dot)
 
 	// Data about the most recently queued spell, otherwise nil.
 	QueuedSpell *QueuedSpell
+
+	// The cast the rotation or a major cooldown has in flight; procs never set it.
+	rotationCast rotationCast
 
 	// Used for reacting to mastery stat changes
 	OnMasteryStatChanged []OnMasteryStatChanged
@@ -353,24 +371,32 @@ func (unit *Unit) AddOnTemporaryStatsChange(otsc OnTemporaryStatsChange) {
 }
 
 func (unit *Unit) AddStatsDynamic(sim *Simulation, bonus stats.Stats) {
+	unit.addStatsDynamic(sim, &bonus)
+}
+
+func (unit *Unit) addStatsDynamic(sim *Simulation, bonus *stats.Stats) {
 	if unit.Env == nil {
 		panic("Environment not constructed.")
 	} else if !unit.Env.IsFinalized() && !unit.Env.MeasuringStats {
 		panic("Not finalized, use AddStats instead!")
 	}
 
-	unit.statsWithoutDeps.AddInplace(&bonus)
+	unit.statsWithoutDeps.AddInplace(bonus)
 
 	if !unit.Env.MeasuringStats || unit.Env.State == Finalized {
 		// Recompute the full total rather than applying dependencies to the
 		// delta: floored stats are only path-independent as floor(newTotal) -
 		// floor(oldTotal), while flooring per-delta would drift on every
 		// aura gain/expire cycle.
-		newStats := unit.ApplyStatDependencies(unit.statsWithoutDeps).FloorGameStats()
-		bonus = newStats.Subtract(unit.stats)
-		unit.stats = newStats
+		old := &unit.stats
+		*bonus = unit.statsWithoutDeps
+		unit.StatDependencyManager.ApplyStatDependenciesInPlace(bonus)
+		bonus.FloorGameStatsInPlace()
+		for k := range bonus {
+			bonus[k], old[k] = bonus[k]-old[k], bonus[k]
+		}
 	} else {
-		unit.stats.AddInplace(&bonus)
+		unit.stats.AddInplace(bonus)
 	}
 
 	if sim.Log != nil {
@@ -381,26 +407,24 @@ func (unit *Unit) AddStatsDynamic(sim *Simulation, bonus stats.Stats) {
 }
 
 func (unit *Unit) AddStatDynamic(sim *Simulation, stat stats.Stat, amount float64) {
-	bonus := stats.Stats{}
+	var bonus stats.Stats
 	bonus[stat] = amount
-	unit.AddStatsDynamic(sim, bonus)
+	unit.addStatsDynamic(sim, &bonus)
 }
 
-func (unit *Unit) processDynamicBonus(sim *Simulation, bonus stats.Stats) {
+func (unit *Unit) processDynamicBonus(sim *Simulation, bonus *stats.Stats) {
 	if bonus[stats.MP5] != 0 || bonus[stats.Intellect] != 0 || bonus[stats.Spirit] != 0 {
-		unit.UpdateManaRegenRates()
+		unit.UpdateManaRegenRates(sim)
 	}
 	if bonus[stats.Mana] != 0 && unit.HasManaBar() {
 		if unit.CurrentMana() > unit.MaxMana() {
 			unit.currentMana = unit.MaxMana()
 		}
 	}
-	if bonus[stats.MeleeHasteRating] != 0 {
+	if bonus[stats.HasteRating] != 0 {
 		unit.updateAttackSpeed()
 		unit.updateMeleeAndRangedHaste()
 		unit.AutoAttacks.UpdateSwingTimers(sim)
-	}
-	if bonus[stats.SpellHasteRating] != 0 {
 		unit.updateCastSpeed()
 	}
 	if bonus[stats.ReducedCritTakenPercent] != 0 {
@@ -413,7 +437,7 @@ func (unit *Unit) processDynamicBonus(sim *Simulation, bonus stats.Stats) {
 			continue
 		}
 
-		pet.pendingStatInheritance.AddInplace(&bonus)
+		pet.pendingStatInheritance.AddInplace(bonus)
 
 		if pet.statInheritanceAction.consumed || (pet.statInheritanceAction.NextActionAt == 0) {
 			numHeartbeats := (sim.CurrentTime - unit.Env.heartbeatOffset) / PetUpdateInterval
@@ -427,7 +451,8 @@ func (unit *Unit) EnableDynamicStatDep(sim *Simulation, dep *stats.StatDependenc
 	if unit.StatDependencyManager.EnableDynamicStatDep(dep) {
 		oldStats := unit.stats
 		unit.stats = unit.ApplyStatDependencies(unit.statsWithoutDeps).FloorGameStats()
-		unit.processDynamicBonus(sim, unit.stats.Subtract(oldStats))
+		d := unit.stats.Subtract(oldStats)
+		unit.processDynamicBonus(sim, &d)
 
 		if sim.Log != nil {
 			unit.Log(sim, "Dynamic dep enabled (%s): %s", dep.String(), unit.stats.Subtract(oldStats).FlatString())
@@ -438,7 +463,8 @@ func (unit *Unit) DisableDynamicStatDep(sim *Simulation, dep *stats.StatDependen
 	if unit.StatDependencyManager.DisableDynamicStatDep(dep) {
 		oldStats := unit.stats
 		unit.stats = unit.ApplyStatDependencies(unit.statsWithoutDeps).FloorGameStats()
-		unit.processDynamicBonus(sim, unit.stats.Subtract(oldStats))
+		d := unit.stats.Subtract(oldStats)
+		unit.processDynamicBonus(sim, &d)
 
 		if sim.Log != nil {
 			unit.Log(sim, "Dynamic dep disabled (%s): %s", dep.String(), unit.stats.Subtract(oldStats).FlatString())
@@ -453,7 +479,7 @@ func (unit *Unit) UpdateDynamicStatDep(sim *Simulation, dep *stats.StatDependenc
 		oldStats := unit.stats
 		unit.stats = unit.ApplyStatDependencies(unit.statsWithoutDeps).FloorGameStats()
 		statsChange := unit.stats.Subtract(oldStats)
-		unit.processDynamicBonus(sim, statsChange)
+		unit.processDynamicBonus(sim, &statsChange)
 
 		if sim.Log != nil {
 			unit.Log(sim, "Dynamic dep updated (%s): %s", dep.String(), statsChange.FlatString())
@@ -505,12 +531,22 @@ func (unit *Unit) IsChanneling() bool {
 	return unit.ChanneledDot != nil
 }
 
+// Runs the handler with the ended channel each time one of the unit's channels ends, run out or cut short, after its last tick
+// and after the rotation's wake-up is set, which the handler may move.
+func (unit *Unit) OnChannelEnd(handler func(sim *Simulation, dot *Dot)) {
+	unit.channelEndHandlers = append(unit.channelEndHandlers, handler)
+}
+
 func (unit *Unit) SpellGCD() time.Duration {
 	return max(GCDMin, unit.ApplyCastSpeed(GCDDefault))
 }
 
+func (unit *Unit) hasteRatingMultiplier() float64 {
+	return 1 + unit.stats[stats.HasteRating]/(HasteRatingPerHastePercent*100)
+}
+
 func (unit *Unit) TotalSpellHasteMultiplier() float64 {
-	return unit.PseudoStats.CastSpeedMultiplier * (1 + unit.stats[stats.SpellHasteRating]/(SpellHasteRatingPerHastePercent*100))
+	return unit.PseudoStats.CastSpeedMultiplier * unit.hasteRatingMultiplier()
 }
 
 func (unit *Unit) updateCastSpeed() {
@@ -552,17 +588,17 @@ func (unit *Unit) ApplyRealRangedHaste(dur time.Duration) time.Duration {
 	return time.Duration(float64(dur) / unit.TotalRealRangedHasteMultiplier())
 }
 func (unit *Unit) TotalMeleeHasteMultiplier() float64 {
-	return unit.PseudoStats.AttackSpeedMultiplier * unit.PseudoStats.MeleeSpeedMultiplier * (1 + (unit.stats[stats.MeleeHasteRating] / (PhysicalHasteRatingPerHastePercent * 100)))
+	return unit.PseudoStats.AttackSpeedMultiplier * unit.PseudoStats.MeleeSpeedMultiplier * unit.hasteRatingMultiplier()
 }
 
 // Returns the melee haste multiplier only including equip haste and real haste modifiers like lust
 // Same value for ranged and melee
 func (unit *Unit) TotalRealHasteMultiplier() float64 {
-	return unit.PseudoStats.AttackSpeedMultiplier * (1 + (unit.stats[stats.MeleeHasteRating] / (PhysicalHasteRatingPerHastePercent * 100)))
+	return unit.PseudoStats.AttackSpeedMultiplier * unit.hasteRatingMultiplier()
 }
 
 func (unit *Unit) TotalRealRangedHasteMultiplier() float64 {
-	return unit.PseudoStats.AttackSpeedMultiplier * unit.PseudoStats.RangedHasteMultiplier * (1 + (unit.stats[stats.MeleeHasteRating] / (PhysicalHasteRatingPerHastePercent * 100)))
+	return unit.PseudoStats.AttackSpeedMultiplier * unit.PseudoStats.RangedHasteMultiplier * unit.hasteRatingMultiplier()
 }
 
 func (unit *Unit) Armor() float64 {
@@ -570,11 +606,11 @@ func (unit *Unit) Armor() float64 {
 }
 
 func (unit *Unit) BlockDamageReduction() float64 {
-	return unit.stats[stats.BlockValue] * unit.PseudoStats.BlockValueMultiplier
+	return max(0, unit.stats[stats.Strength]*unit.PseudoStats.BlockValuePerStrength-1) + unit.stats[stats.BlockValue]*unit.PseudoStats.BlockValueMultiplier
 }
 
 func (unit *Unit) TotalRangedHasteMultiplier() float64 {
-	return unit.PseudoStats.AttackSpeedMultiplier * unit.PseudoStats.RangedSpeedMultiplier * (1 + (unit.stats[stats.MeleeHasteRating] / (PhysicalHasteRatingPerHastePercent * 100)))
+	return unit.PseudoStats.AttackSpeedMultiplier * unit.PseudoStats.RangedSpeedMultiplier * unit.hasteRatingMultiplier()
 }
 
 func (unit *Unit) updateMeleeAttackSpeed() {
@@ -591,9 +627,11 @@ func (unit *Unit) MultiplyMeleeSpeed(sim *Simulation, amount float64) {
 	unit.PseudoStats.MeleeSpeedMultiplier *= amount
 	unit.updateMeleeAttackSpeed()
 
-	unit.Env.TriggerDelayedPetInheritance(sim, unit.DynamicMeleeSpeedPets, func(sim *Simulation, pet *Pet) {
-		pet.dynamicMeleeSpeedInheritance(sim, amount)
-	})
+	if len(unit.DynamicMeleeSpeedPets) > 0 {
+		unit.Env.TriggerDelayedPetInheritance(sim, unit.DynamicMeleeSpeedPets, func(sim *Simulation, pet *Pet) {
+			pet.dynamicMeleeSpeedInheritance(sim, amount)
+		})
+	}
 
 	unit.AutoAttacks.UpdateSwingTimers(sim)
 }
@@ -655,9 +693,11 @@ func (unit *Unit) MultiplyAttackSpeed(sim *Simulation, amount float64) {
 	unit.updateAttackSpeed()
 	unit.updateMeleeAndRangedHaste()
 
-	unit.Env.TriggerDelayedPetInheritance(sim, unit.DynamicMeleeSpeedPets, func(sim *Simulation, pet *Pet) {
-		pet.dynamicMeleeSpeedInheritance(sim, amount)
-	})
+	if len(unit.DynamicMeleeSpeedPets) > 0 {
+		unit.Env.TriggerDelayedPetInheritance(sim, unit.DynamicMeleeSpeedPets, func(sim *Simulation, pet *Pet) {
+			pet.dynamicMeleeSpeedInheritance(sim, amount)
+		})
+	}
 
 	unit.AutoAttacks.UpdateSwingTimers(sim)
 }
@@ -690,12 +730,90 @@ type RatingConversion struct {
 	Step             float64
 }
 
+// The melee, ranged and spell percents one rating raises together, as the PseudoStats the character sheet
+// shows, at RatingPerPercent rating per percent point. Where HasPercentStats is set the rating also
+// converts into the back-end PhysicalPercent and SpellPercent; haste has no back-end percent Stat.
+type RatingChannels struct {
+	Rating                        stats.Stat
+	Melee, Ranged, Spell          proto.PseudoStat
+	PhysicalPercent, SpellPercent stats.Stat
+	HasPercentStats               bool
+	RatingPerPercent              float64
+}
+
+func (channels RatingChannels) Channels() []proto.PseudoStat {
+	return []proto.PseudoStat{channels.Melee, channels.Ranged, channels.Spell}
+}
+
+// The channels of the hit, crit and haste ratings. RATING_CHANNELS in ui/sim/proto/stats.ts is the UI's
+// copy of the same channels; the two are kept in sync by hand.
+var RatingChannelTable = []RatingChannels{
+	{
+		Rating:           stats.HitRating,
+		Melee:            proto.PseudoStat_PseudoStatMeleeHitPercent,
+		Ranged:           proto.PseudoStat_PseudoStatRangedHitPercent,
+		Spell:            proto.PseudoStat_PseudoStatSpellHitPercent,
+		PhysicalPercent:  stats.PhysicalHitPercent,
+		SpellPercent:     stats.SpellHitPercent,
+		HasPercentStats:  true,
+		RatingPerPercent: HitRatingPerHitPercent,
+	},
+	{
+		Rating:           stats.CritRating,
+		Melee:            proto.PseudoStat_PseudoStatMeleeCritPercent,
+		Ranged:           proto.PseudoStat_PseudoStatRangedCritPercent,
+		Spell:            proto.PseudoStat_PseudoStatSpellCritPercent,
+		PhysicalPercent:  stats.PhysicalCritPercent,
+		SpellPercent:     stats.SpellCritPercent,
+		HasPercentStats:  true,
+		RatingPerPercent: CritRatingPerCritPercent,
+	},
+	{
+		Rating:           stats.HasteRating,
+		Melee:            proto.PseudoStat_PseudoStatMeleeHastePercent,
+		Ranged:           proto.PseudoStat_PseudoStatRangedHastePercent,
+		Spell:            proto.PseudoStat_PseudoStatSpellHastePercent,
+		RatingPerPercent: HasteRatingPerHastePercent,
+	},
+}
+
+// The channels of a rating, and whether RatingChannelTable lists it.
+func RatingChannelsOf(rating stats.Stat) (RatingChannels, bool) {
+	for _, channels := range RatingChannelTable {
+		if channels.Rating == rating {
+			return channels, true
+		}
+	}
+	return RatingChannels{}, false
+}
+
+// The pseudo stat each magic school's hit percent travels as. None and Physical have none and hold
+// the zero value, PseudoStatMainHandDps, so read from SchoolIndexArcane on.
+var SchoolHitPseudoStats = [stats.SchoolLen]proto.PseudoStat{
+	stats.SchoolIndexArcane: proto.PseudoStat_PseudoStatSchoolHitPercentArcane,
+	stats.SchoolIndexFire:   proto.PseudoStat_PseudoStatSchoolHitPercentFire,
+	stats.SchoolIndexFrost:  proto.PseudoStat_PseudoStatSchoolHitPercentFrost,
+	stats.SchoolIndexHoly:   proto.PseudoStat_PseudoStatSchoolHitPercentHoly,
+	stats.SchoolIndexNature: proto.PseudoStat_PseudoStatSchoolHitPercentNature,
+	stats.SchoolIndexShadow: proto.PseudoStat_PseudoStatSchoolHitPercentShadow,
+}
+
+// The melee and spell percent of each channel table rating with back-end percent Stats. The ranged Stat
+// holds only what exceeds the melee percent, so no rating converts into it.
+func channelConversions() []RatingConversion {
+	var conversions []RatingConversion
+	for _, channels := range RatingChannelTable {
+		if channels.HasPercentStats {
+			conversions = append(conversions,
+				RatingConversion{channels.Rating, channels.PhysicalPercent, channels.RatingPerPercent, 0},
+				RatingConversion{channels.Rating, channels.SpellPercent, channels.RatingPerPercent, 0})
+		}
+	}
+	return conversions
+}
+
 // The rating conversions every unit has, in the order the reforge optimizer tries a rating's percents.
-var RatingConversions = []RatingConversion{
-	{stats.MeleeHitRating, stats.PhysicalHitPercent, PhysicalHitRatingPerHitPercent, 0},
-	{stats.SpellHitRating, stats.SpellHitPercent, SpellHitRatingPerHitPercent, 0},
-	{stats.MeleeCritRating, stats.PhysicalCritPercent, PhysicalCritRatingPerCritPercent, 0},
-	{stats.SpellCritRating, stats.SpellCritPercent, SpellCritRatingPerCritPercent, 0},
+var RatingConversions = append(channelConversions(), []RatingConversion{
 	{stats.ExpertiseRating, stats.ExpertisePercent, ExpertiseRatingPerExpertisePercent, 0},
 	{stats.DodgeRating, stats.DodgePercent, DodgeRatingPerDodgePercent, 0},
 	{stats.ParryRating, stats.ParryPercent, ParryRatingPerParryPercent, 0},
@@ -704,7 +822,7 @@ var RatingConversions = []RatingConversion{
 	{stats.DefenseRating, stats.DodgePercent, DefenseRatingPerAvoidancePercent, 0},
 	{stats.DefenseRating, stats.ParryPercent, DefenseRatingPerAvoidancePercent, 0},
 	{stats.DefenseRating, stats.BlockPercent, DefenseRatingPerAvoidancePercent, 0},
-}
+}...)
 
 func AddRatingConversions(sdm *stats.StatDependencyManager) {
 	for _, conversion := range RatingConversions {
@@ -781,6 +899,7 @@ func (unit *Unit) reset(sim *Simulation, _ Agent) {
 	unit.Hardcast.Expires = startingCDTime
 	unit.ChanneledDot = nil
 	unit.QueuedSpell = nil
+	unit.endRotationCast()
 	unit.DistanceFromTarget = unit.StartDistanceFromTarget
 	unit.Metrics.reset()
 	unit.ResetStatDeps()
@@ -796,7 +915,7 @@ func (unit *Unit) reset(sim *Simulation, _ Agent) {
 	unit.manaBar.reset()
 	unit.focusBar.reset(sim)
 	unit.healthBar.reset(sim)
-	unit.UpdateManaRegenRates()
+	unit.UpdateManaRegenRates(sim)
 
 	unit.energyBar.reset(sim)
 	unit.rageBar.reset(sim)
@@ -873,6 +992,11 @@ func (unit *Unit) GetUnit(ref *proto.UnitReference) *Unit {
 }
 
 func (unit *Unit) GetMetadata() *proto.UnitMetadata {
+	return unit.metadata(unit)
+}
+
+// casters are the units whose spells can cast this unit's auras, which decides an aura's category.
+func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 	metadata := &proto.UnitMetadata{
 		Name: unit.Label,
 	}
@@ -895,6 +1019,7 @@ func (unit *Unit) GetMetadata() *proto.UnitMetadata {
 			HasExpectedTick: spell.expectedTickDamageInternal != nil,
 			HasMissileSpeed: spell.MissileSpeed > 0.0,
 			HasRanks:        spell.Rank > 0,
+			Category:        spell.category(),
 		}
 	})
 
@@ -907,6 +1032,7 @@ func (unit *Unit) GetMetadata() *proto.UnitMetadata {
 			MaxStacks:          aura.MaxStacks,
 			HasIcd:             aura.Icd != nil,
 			HasExclusiveEffect: len(aura.ExclusiveEffects) > 0,
+			Category:           auraCategory(aura, casters),
 		}
 	})
 
@@ -929,7 +1055,7 @@ func (unit *Unit) GetBlockFromRating() float64 {
 
 func (unit *Unit) GetTotalDodgeChanceAsDefender(spell *Spell, atkTable *AttackTable) float64 {
 	chance := unit.PseudoStats.BaseDodgeChance +
-		atkTable.BaseDodgeChance +
+		atkTable.Hand(spell).BaseDodgeChance +
 		unit.GetDodgeFromRating() -
 		spell.DodgeParrySuppression() -
 		spell.Unit.PseudoStats.DodgeReduction
@@ -938,22 +1064,24 @@ func (unit *Unit) GetTotalDodgeChanceAsDefender(spell *Spell, atkTable *AttackTa
 
 func (unit *Unit) GetTotalParryChanceAsDefender(spell *Spell, atkTable *AttackTable) float64 {
 	chance := unit.PseudoStats.BaseParryChance +
-		atkTable.BaseParryChance +
+		atkTable.Hand(spell).BaseParryChance +
 		unit.GetParryFromRating() -
 		spell.DodgeParrySuppression()
 	return math.Max(chance, 0.0)
 }
 
-func (unit *Unit) GetTotalChanceToBeMissedAsDefender(atkTable *AttackTable) float64 {
+func (unit *Unit) GetTotalChanceToBeMissedAsDefender(spell *Spell, atkTable *AttackTable) float64 {
 	// ReducedPhysicalHitTakenChance is stored in percent points, BaseMissChance as a fraction.
-	chance := atkTable.BaseMissChance +
-		unit.PseudoStats.ReducedPhysicalHitTakenChance/100
+	defense := math.Floor(unit.stats[stats.DefenseRating] / DefenseRatingPerDefenseLevel)
+	chance := atkTable.Hand(spell).BaseMissChance +
+		unit.PseudoStats.ReducedPhysicalHitTakenChance/100 +
+		defense*MissDodgeParryBlockCritChancePerDefense/100
 	return math.Max(chance, 0.0)
 }
 
-func (unit *Unit) GetTotalBlockChanceAsDefender(atkTable *AttackTable) float64 {
+func (unit *Unit) GetTotalBlockChanceAsDefender(spell *Spell, atkTable *AttackTable) float64 {
 	chance := unit.PseudoStats.BaseBlockChance +
-		atkTable.BaseBlockChance +
+		atkTable.Hand(spell).BaseBlockChance +
 		unit.GetBlockFromRating()
 	return math.Max(chance, 0.0)
 }
@@ -964,9 +1092,9 @@ func (unit *Unit) updateReducedCritTakenPercent() {
 }
 
 func (unit *Unit) GetTotalAvoidanceChance(spell *Spell, atkTable *AttackTable) float64 {
-	miss := unit.GetTotalChanceToBeMissedAsDefender(atkTable)
+	miss := unit.GetTotalChanceToBeMissedAsDefender(spell, atkTable)
 	dodge := unit.GetTotalDodgeChanceAsDefender(spell, atkTable)
 	parry := unit.GetTotalParryChanceAsDefender(spell, atkTable)
-	block := unit.GetTotalBlockChanceAsDefender(atkTable)
+	block := unit.GetTotalBlockChanceAsDefender(spell, atkTable)
 	return miss + dodge + parry + block
 }

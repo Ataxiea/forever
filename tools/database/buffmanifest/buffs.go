@@ -21,7 +21,6 @@ var Raid = []BuffSpec{
 		Category: "StatBuff",
 		Stats: []proto.Stat{
 			proto.Stat_StatSpirit,
-			proto.Stat_StatSpellDamage,
 		},
 	},
 	{
@@ -37,16 +36,6 @@ var Raid = []BuffSpec{
 		},
 	},
 	{
-		Field:      "thorns",
-		SpellID:    9910,
-		Category:   "Thorns",
-		SingleAura: true,
-		Stats: []proto.Stat{
-			proto.Stat_StatDefenseRating,
-			proto.Stat_StatStamina,
-		},
-	},
-	{
 		Field:   "prayer_of_fortitude",
 		SpellID: 21564,
 		Stats: []proto.Stat{
@@ -58,7 +47,6 @@ var Raid = []BuffSpec{
 		SpellID: 27683,
 		Stats: []proto.Stat{
 			proto.Stat_StatShadowResistance,
-			proto.Stat_StatStamina,
 		},
 	},
 	{
@@ -164,8 +152,7 @@ var Party = []BuffSpec{
 		Category:   "DruidCritAura",
 		SingleAura: true,
 		Stats: []proto.Stat{
-			proto.Stat_StatMeleeCritRating,
-			proto.Stat_StatSpellCritRating,
+			proto.Stat_StatCritRating,
 		},
 	},
 	{
@@ -194,11 +181,11 @@ var Party = []BuffSpec{
 	{
 		Field:      "moonkin_aura",
 		SpellID:    24907,
+		TooltipID:  24858,
 		Category:   "DruidCritAura",
 		SingleAura: true,
 		Stats: []proto.Stat{
-			proto.Stat_StatMeleeCritRating,
-			proto.Stat_StatSpellCritRating,
+			proto.Stat_StatCritRating,
 		},
 	},
 	// Driven because the damage scales with the providing paladin's Holy spell power.
@@ -210,7 +197,6 @@ var Party = []BuffSpec{
 		SingleAura:     true,
 		Driver:         true,
 		Stats: []proto.Stat{
-			proto.Stat_StatArmor,
 			proto.Stat_StatDefenseRating,
 		},
 	},
@@ -227,7 +213,8 @@ var Party = []BuffSpec{
 		SharedCategory: "PaladinAura",
 		SingleAura:     true,
 		Stats: []proto.Stat{
-			proto.Stat_StatDefenseRating,
+			proto.Stat_StatSpellDamage,
+			proto.Stat_StatHealingPower,
 		},
 	},
 	// TODO: rank 5 states 50 ranged attack power and rank 4 states 75; in-game testing has to say
@@ -246,8 +233,7 @@ var Party = []BuffSpec{
 		Kind:    KindItemCount,
 		Label:   "Atiesh - Mage",
 		Stats: []proto.Stat{
-			proto.Stat_StatSpellDamage,
-			proto.Stat_StatHealingPower,
+			proto.Stat_StatCritRating,
 		},
 	},
 	{
@@ -270,7 +256,7 @@ var Party = []BuffSpec{
 			proto.Stat_StatStrength,
 		},
 	},
-	// Driven because totem_twisting shortens the aura to the 9 s of every 10 a twisting shaman keeps it up.
+	// Driven because Windfury Totem takes the air slot: under both, Grace of Air does nothing.
 	{
 		Field:    "grace_of_air_totem",
 		SpellID:  25360,
@@ -297,6 +283,9 @@ var Party = []BuffSpec{
 		Owner:   proto.Class_ClassDruid,
 		Kind:    KindItemCount,
 		Label:   "Atiesh - Druid",
+		Stats: []proto.Stat{
+			proto.Stat_StatMP5,
+		},
 	},
 	{
 		Field:   "atiesh_priest",
@@ -304,11 +293,42 @@ var Party = []BuffSpec{
 		Owner:   proto.Class_ClassPriest,
 		Kind:    KindItemCount,
 		Label:   "Atiesh - Priest",
+		Stats: []proto.Stat{
+			proto.Stat_StatHealingPower,
+		},
 	},
 	{
-		Field:  "totem_twisting",
-		Kind:   KindFlag,
-		Reason: "sim behaviour toggle with no spell source; rendered under Other Inputs.",
+		Field:    "stoneskin_totem",
+		SpellID:  10405,
+		CastID:   10408,
+		Talent:   16258,
+		Category: "StoneskinTotem",
+		Stats: []proto.Stat{
+			proto.Stat_StatDefenseRating,
+		},
+	},
+	// A pet ability the hunter class family does not file, so the owner is stated. It does not stack
+	// with Battle Shout: the two share one category and the stronger applies.
+	{
+		Field:      "furious_howl",
+		SpellID:    24597,
+		Owner:      proto.Class_ClassHunter,
+		Category:   "BattleShout",
+		SingleAura: true,
+		Stats: []proto.Stat{
+			proto.Stat_StatAttackPower,
+		},
+	},
+	// The totem's party aura procs 16389 on every main-hand auto attack; the fire damage is the driver's.
+	{
+		Field:    "flametongue_totem",
+		SpellID:  15036,
+		CastID:   16387,
+		Kind:     KindProc,
+		Category: "FlametongueTotem",
+		Stats: []proto.Stat{
+			proto.Stat_StatAttackPower,
+		},
 	},
 }
 
@@ -354,7 +374,6 @@ var Individual = []BuffSpec{
 			proto.Stat_StatHealingPower,
 		},
 	},
-	// Auras 134 and 110 are the spirit regen the driver applies.
 	{
 		Field:    "innervates",
 		SpellID:  29166,
@@ -371,126 +390,128 @@ var Individual = []BuffSpec{
 		Kind:     KindExternalCD,
 		Category: "PowerInfusion",
 		Stats: []proto.Stat{
-			proto.Stat_StatSpellHasteRating,
+			proto.Stat_StatSpellDamage,
+			proto.Stat_StatHealingPower,
 		},
 		Label: "Power Infusions",
+	},
+	{
+		Field:      "thorns",
+		SpellID:    9910,
+		Category:   "Thorns",
+		SingleAura: true,
+		Stats: []proto.Stat{
+			proto.Stat_StatDefenseRating,
+			proto.Stat_StatStamina,
+		},
 	},
 }
 
 var Debuffs = []BuffSpec{
 	{
-		Field:      "hunters_mark",
-		SpellID:    14325,
-		Category:   "HuntersMark",
-		SingleAura: true,
+		Field:    "hunters_mark",
+		SpellID:  14325,
+		Category: "HuntersMark",
 		Stats: []proto.Stat{
 			proto.Stat_StatRangedAttackPower,
-			proto.Stat_StatAttackPower,
 		},
 	},
 	// The Holy damage taken is applied by NewSpellDataJudgementOfTheCrusaderAuraRank in debuffs.go,
 	// which the paladin's own ranks share.
 	{
-		Field:      "judgement_of_the_crusader",
-		SpellID:    20303,
-		Category:   "Judgement of the Crusader",
-		SingleAura: true,
+		Field:     "judgement_of_the_crusader",
+		SpellID:   20303,
+		TooltipID: 20308,
+		Category:  "Judgement of the Crusader",
 		Stats: []proto.Stat{
 			proto.Stat_StatHolyDamage,
 			proto.Stat_StatSpellDamage,
 		},
 	},
 	{
-		Field:   "judgement_of_light",
-		SpellID: 20346,
-		Kind:    KindProc,
+		Field:     "judgement_of_light",
+		SpellID:   20346,
+		TooltipID: 20349,
+		Kind:      KindProc,
 		Stats: []proto.Stat{
 			proto.Stat_StatDefenseRating,
 		},
 	},
 	{
-		Field:   "judgement_of_wisdom",
-		SpellID: 20355,
-		Kind:    KindProc,
+		Field:     "judgement_of_wisdom",
+		SpellID:   20355,
+		TooltipID: 20357,
+		Kind:      KindProc,
 		Stats: []proto.Stat{
 			proto.Stat_StatMP5,
 		},
 	},
 	{
-		Field:      "curse_of_elements",
-		SpellID:    1311680,
-		Category:   "CurseOfElements",
-		SingleAura: true,
+		Field:    "curse_of_elements",
+		SpellID:  1311680,
+		Category: "CurseOfElements",
 		Stats: []proto.Stat{
 			proto.Stat_StatSpellDamage,
 		},
 	},
 	{
-		Field:      "curse_of_recklessness",
-		SpellID:    11717,
-		Category:   "CurseOfRecklessness",
-		SingleAura: true,
+		Field:    "curse_of_recklessness",
+		SpellID:  11717,
+		Category: "MinorArmorReduction", // TODO: verify in game that Curse of Recklessness, Faerie Fire and Dust Cloud share one slot.
 		Stats: []proto.Stat{
 			proto.Stat_StatAttackPower,
 		},
 	},
 	{
-		Field:      "faerie_fire",
-		SpellID:    9907,
-		Category:   "FaerieFireAura",
-		SingleAura: true,
+		Field:    "faerie_fire",
+		SpellID:  9907,
+		Category: "MinorArmorReduction", // TODO: verify in game that Curse of Recklessness, Faerie Fire and Dust Cloud share one slot.
 		Stats: []proto.Stat{
 			proto.Stat_StatAttackPower,
-			proto.Stat_StatMeleeHitRating,
 		},
 	},
 	// The -450 armor is per combo point, so the raid config's debuff is the five-point finisher. A
 	// rogue spending fewer needs a driver that prices the aura, and there is none.
 	{
-		Field:      "expose_armor",
-		SpellID:    11198,
-		Category:   "MajorArmorReduction",
-		SingleAura: true,
+		Field:    "expose_armor",
+		SpellID:  11198,
+		Category: "MajorArmorReduction",
 		Stats: []proto.Stat{
 			proto.Stat_StatAttackPower,
 		},
 	},
 	// Five stacks are worth nothing until they are there, so a driver ramps them.
 	{
-		Field:      "sunder_armor",
-		SpellID:    11597,
-		Category:   "MajorArmorReduction",
-		SingleAura: true,
-		Driver:     true,
+		Field:    "sunder_armor",
+		SpellID:  11597,
+		Category: "MajorArmorReduction",
+		Driver:   true,
 		Stats: []proto.Stat{
 			proto.Stat_StatAttackPower,
 		},
 	},
 	{
-		Field:      "gift_of_arthas",
-		SpellID:    11374,
-		Category:   "GiftOfArthasAura",
-		SingleAura: true,
+		Field:    "gift_of_arthas",
+		SpellID:  11374,
+		Category: "GiftOfArthasAura",
 		Stats: []proto.Stat{
 			proto.Stat_StatAttackPower,
 			proto.Stat_StatDefenseRating,
 		},
 	},
 	{
-		Field:      "demoralizing_roar",
-		SpellID:    9898,
-		Category:   "Demoralizing",
-		SingleAura: true,
+		Field:    "demoralizing_roar",
+		SpellID:  9898,
+		Category: "Demoralizing",
 		Stats: []proto.Stat{
 			proto.Stat_StatStamina,
 			proto.Stat_StatDefenseRating,
 		},
 	},
 	{
-		Field:      "demoralizing_shout",
-		SpellID:    11556,
-		Category:   "Demoralizing",
-		SingleAura: true,
+		Field:    "demoralizing_shout",
+		SpellID:  11556,
+		Category: "Demoralizing",
 		Stats: []proto.Stat{
 			proto.Stat_StatStamina,
 			proto.Stat_StatDefenseRating,
@@ -506,17 +527,96 @@ var Debuffs = []BuffSpec{
 		},
 	},
 	{
-		Field:   "insect_swarm",
-		SpellID: 24977,
+		Field:    "insect_swarm",
+		SpellID:  24977,
+		Category: "HitChanceReduction", // TODO: verify in game that Scorpid Sting and Insect Swarm share one slot.
 		Stats: []proto.Stat{
 			proto.Stat_StatStamina,
 			proto.Stat_StatDefenseRating,
 		},
 	},
 	{
-		Field:   "scorpid_sting",
-		SpellID: 3043,
+		Field:    "scorpid_sting",
+		SpellID:  3043,
+		Category: "HitChanceReduction", // TODO: verify in game that Scorpid Sting and Insect Swarm share one slot.
 		Stats: []proto.Stat{
+			proto.Stat_StatStamina,
+			proto.Stat_StatDefenseRating,
+		},
+	},
+	// Every flat attack-power reduction on a target bids in one category: the strongest applies.
+	{
+		Field:    "hex_of_weakness",
+		SpellID:  19285,
+		Category: "Demoralizing",
+		Stats: []proto.Stat{
+			proto.Stat_StatStamina,
+			proto.Stat_StatDefenseRating,
+		},
+	},
+	{
+		Field:    "demoralizing_screech",
+		SpellID:  24579,
+		Owner:    proto.Class_ClassHunter,
+		Category: "Demoralizing",
+		Stats: []proto.Stat{
+			proto.Stat_StatStamina,
+			proto.Stat_StatDefenseRating,
+		},
+	},
+	{
+		Field:    "curse_of_weakness",
+		SpellID:  11708,
+		Category: "CurseOfWeakness",
+		Stats: []proto.Stat{
+			proto.Stat_StatStamina,
+			proto.Stat_StatDefenseRating,
+		},
+	},
+	// The game files state one stack, and a stacking row's amount follows its stacks, so the raid's
+	// copy takes it from a driver rather than sitting at zero.
+	{
+		Field:    "dust_cloud",
+		SpellID:  1265904,
+		CastID:   1265911,
+		Category: "MinorArmorReduction", // TODO: verify in game that Curse of Recklessness, Faerie Fire and Dust Cloud share one slot.
+		Driver:   true,
+		Stats: []proto.Stat{
+			proto.Stat_StatAttackPower,
+		},
+	},
+	// Annihilator's proc keeps the stacks up, so the raid's copy holds all three from the start.
+	{
+		Field:    "armor_shatter",
+		SpellID:  16928,
+		Category: "ArmorShatter",
+		Driver:   true,
+		Stats: []proto.Stat{
+			proto.Stat_StatAttackPower,
+		},
+	},
+	// The talent's rank prices the debuff, which the talent states only in its tooltip.
+	{
+		Field:     "vindication",
+		SpellID:   440667,
+		TooltipID: 9452,
+		Owner:     proto.Class_ClassPaladin,
+		Talent:    9452,
+		Proto:     ProtoBool,
+		Category:  "Demoralizing",
+		Stats: []proto.Stat{
+			proto.Stat_StatStamina,
+			proto.Stat_StatDefenseRating,
+		},
+	},
+	// The resistance is 21992's own; the slow is its triggered 27648, which the driver bids in the
+	// attack-speed category on an aura of its own so that a tie there leaves the resistance up.
+	{
+		Field:   "thunderfury",
+		SpellID: 21992,
+		Driver:  true,
+		Stats: []proto.Stat{
+			proto.Stat_StatNatureDamage,
 			proto.Stat_StatStamina,
 			proto.Stat_StatDefenseRating,
 		},

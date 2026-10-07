@@ -1,6 +1,8 @@
 package core
 
 import (
+	"strconv"
+
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -113,13 +115,15 @@ const (
 	OutcomeCrit
 	OutcomeCrush
 
-	OutcomePartial1_4 // 1/4 of the spell was resisted.
-	OutcomePartial2_4 // 2/4 of the spell was resisted.
-	OutcomePartial3_4 // 3/4 of the spell was resisted.
+	// The tenths of the damage a partial resist took (1 to 10), as a 4-bit number.
+	OutcomePartial1
+	OutcomePartial2
+	OutcomePartial4
+	OutcomePartial8
 )
 
 const (
-	OutcomePartial = OutcomePartial1_4 | OutcomePartial2_4 | OutcomePartial3_4
+	OutcomePartial = OutcomePartial1 | OutcomePartial2 | OutcomePartial4 | OutcomePartial8
 	OutcomeLanded  = OutcomeHit | OutcomeCrit | OutcomeCrush | OutcomeGlance | OutcomeBlock
 )
 
@@ -147,16 +151,19 @@ func (ho HitOutcome) String() string {
 	}
 }
 
+func partialResistOutcome(tenths int) HitOutcome {
+	return HitOutcome(tenths) * OutcomePartial1
+}
+
+func (ho HitOutcome) ResistedTenths() int {
+	return int((ho & OutcomePartial) / OutcomePartial1)
+}
+
 func (ho HitOutcome) PartialResistString() string {
-	if ho.Matches(OutcomePartial1_4) {
-		return " (25% Resist)"
-	} else if ho.Matches(OutcomePartial2_4) {
-		return " (50% Resist)"
-	} else if ho.Matches(OutcomePartial3_4) {
-		return " (75% Resist)"
-	} else {
-		return ""
+	if tenths := ho.ResistedTenths(); tenths > 0 {
+		return " (" + strconv.Itoa(tenths*10) + "% Resist)"
 	}
+	return ""
 }
 
 // Other flags
@@ -203,7 +210,9 @@ const (
 	SpellFlagSupressDoTApply                                // If present this spell will not apply dots (Used for DTR dot supression)
 	SpellFlagSwapped                                        // Indicates that this spell is not useable because it is from a currently swapped item
 	SpellFlagCastWhileIncapacitated                         // Allows the cast while the unit is incapacitated, e.g. Berserker Rage breaking a Fear.
+	SpellFlagFullResistanceTicks                            // Its ticks meet the target's full resistance, as direct hits and channel ticks do, where other ticks meet a tenth, and roll partial resists even on a binary spell (Insect Swarm).
 	SpellFlagPushback                                       // Damage taken while hardcasting pushes the cast back: SpellInterrupts.InterruptFlags 0x2.
+	SpellFlagNoPartialResist                                // The spell's hits never lose damage to a partial resist, e.g. a wand's shots.
 
 	// Used to let agents categorize their spells.
 	SpellFlagAgentReserved1
@@ -216,11 +225,11 @@ const (
 
 type SpellSchool byte
 
-// The bit values are the client's. SpellMisc.SchoolMask uses exactly this order, so a generated spell
-// row carries the number the DBC states rather than a translation of it, and the only school that used
-// to agree on its bit was Frost. Nothing outside this file depends on the numbers: the conversions to
-// stats.SchoolIndex, the resistance stat and the school damage stat are all switches over these names,
-// stats.SchoolIndex is its own enum for array positions, and proto.SpellSchool is separate again.
+// The bit values are the game files'. SpellMisc.SchoolMask uses exactly this order, so a generated
+// spell row carries the number the DBC states rather than a translation of it. Nothing outside this
+// file depends on the numbers: the conversions to stats.SchoolIndex, the resistance stat and the
+// school damage stat are all switches over these names, stats.SchoolIndex is its own enum for array
+// positions, and proto.SpellSchool is separate again.
 const (
 	SpellSchoolNone     SpellSchool = 0
 	SpellSchoolPhysical SpellSchool = 1
@@ -245,25 +254,40 @@ func (ss SpellSchool) Matches(other SpellSchool) bool {
 	return (ss & other) != 0
 }
 
-func (ss SpellSchool) ResistanceStat() stats.Stat {
+// Holy has no resistance stat, and neither do spell school combinations, which supposedly use the
+// "path of the least resistance".
+func (ss SpellSchool) ResistanceStat() (stats.Stat, bool) {
 	switch ss {
 	case SpellSchoolPhysical:
-		return stats.ArmorPenetration
+		return stats.ArmorPenetration, true
 	case SpellSchoolArcane:
-		return stats.ArcaneResistance
+		return stats.ArcaneResistance, true
 	case SpellSchoolFire:
-		return stats.FireResistance
+		return stats.FireResistance, true
 	case SpellSchoolFrost:
-		return stats.FrostResistance
-	case SpellSchoolHoly:
-		return 0 // Holy resistance doesn't exist.
+		return stats.FrostResistance, true
 	case SpellSchoolNature:
-		return stats.NatureResistance
+		return stats.NatureResistance, true
 	case SpellSchoolShadow:
-		return stats.ShadowResistance
-	default:
-		return 0 // This applies to spell school combinations, which supposedly use the "path of the least resistance", so 0 is a good fit.
+		return stats.ShadowResistance, true
 	}
+	return 0, false
+}
+
+// The stat a target resistance mask pierces: ArmorPenetration for physical alone and SpellPiercing for
+// a mask of every school with a resistance. Any other mask has no stat: a mask of physical and a spell
+// school pierces nothing, and a mask of some spell schools pierces those schools alone.
+func (ss SpellSchool) PiercingStat() (stats.Stat, bool) {
+	const resistances = SpellSchoolFire | SpellSchoolNature | SpellSchoolFrost | SpellSchoolShadow | SpellSchoolArcane
+	switch {
+	case ss == SpellSchoolPhysical:
+		return stats.ArmorPenetration, true
+	case ss.Matches(SpellSchoolPhysical):
+		return 0, false
+	case ss&resistances == resistances:
+		return stats.SpellPiercing, true
+	}
+	return 0, false
 }
 
 func (ss SpellSchool) SchoolDamage() stats.Stat {
@@ -283,6 +307,19 @@ func (ss SpellSchool) SchoolDamage() stats.Stat {
 	default:
 		return stats.SpellDamage
 	}
+}
+
+var singleSchools = [...]SpellSchool{SpellSchoolPhysical, SpellSchoolArcane, SpellSchoolFire, SpellSchoolFrost,
+	SpellSchoolHoly, SpellSchoolNature, SpellSchoolShadow}
+
+// The school Spell.SchoolIndex reads: the first of physical, arcane, fire, frost, holy, nature, shadow.
+func (ss SpellSchool) MultiplierSchool() SpellSchool {
+	for _, school := range singleSchools {
+		if ss.Matches(school) {
+			return school
+		}
+	}
+	return SpellSchoolNone
 }
 
 func (ss SpellSchool) SchoolIndex() stats.SchoolIndex {

@@ -54,8 +54,9 @@ func swingHealed(sim *core.Simulation, caster *testCaster, outcome core.HitOutco
 
 func stepPast(t *testing.T, sim *core.Simulation, until time.Duration) {
 	t.Helper()
-	sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{DoAt: until, OnAction: func(*core.Simulation) {}}))
-	for steps := 0; sim.CurrentTime < until; steps++ {
+	reached := false
+	sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{DoAt: until, OnAction: func(*core.Simulation) { reached = true }}))
+	for steps := 0; !reached; steps++ {
 		if steps > 10000 {
 			t.Fatalf("the sim did not reach %v", until)
 		}
@@ -129,7 +130,7 @@ func TestProcHealRollsAStatedAmount(t *testing.T) {
 	}
 
 	sim, caster, _ := newHealProcSim(t, 990977, 990978, fixedHeal, 0)
-	low, high := effect.Min(caster.Level), effect.Max(caster.Level)
+	low, high := effect.Min(), effect.Max()
 	if got := swingHealed(sim, caster, core.OutcomeDodge, 0); got < low || got > high {
 		t.Errorf("the heal was %v, want %v to %v", got, low, high)
 	}

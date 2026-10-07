@@ -1,6 +1,7 @@
 package priest
 
 import (
+	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -58,6 +59,7 @@ func (priest *Priest) Initialize() {
 		priest.registerSmiteSpell(rank)
 	})
 	priest.registerShadowfiendSpell()
+	shared.RegisterShoot(&priest.Character)
 
 	if priest.Race == proto.Race_RaceNightElf {
 		starshardsCDTimer := priest.NewTimer()
@@ -89,6 +91,7 @@ func New(char *core.Character, selfBuffs SelfBuffs, talents string) *Priest {
 
 	core.FillTalentsProto(priest.Talents.ProtoReflect(), talents, TalentTreeSizes)
 	priest.EnableManaBar()
+	priest.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	if selfBuffs.Armor == proto.PriestOptions_InnerFire {
 		// Inner Fire rank 7: +1580 armor. The charges never run out on a caster that is not hit.
 		priest.AddStat(stats.Armor, 1580)

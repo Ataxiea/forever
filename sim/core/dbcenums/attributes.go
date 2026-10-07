@@ -9,7 +9,7 @@ const (
 	// The spell cannot be cast while the caster is in any shapeshift form.
 	ATTR_NOT_SHAPESHIFTED uint32 = 0x10000
 
-	// The two bits the client marks a channel with. Arcane Missiles and Blizzard carry the first,
+	// The two bits the game files mark a channel with. Arcane Missiles and Blizzard carry the first,
 	// Evocation and Tranquility only the second, so a channel check has to read both.
 	ATTR_EX_1_IS_CHANNELLED      uint32 = 0x4
 	ATTR_EX_1_IS_SELF_CHANNELLED uint32 = 0x40
@@ -19,6 +19,9 @@ const (
 	ATTR_EX_1_DISCOUNT_POWER_ON_MISS uint32 = 0x8000000
 
 	ATTR_EX_2_CANT_CRIT uint32 = 0x20000000
+
+	// The cast does not reset the auto attack timers.
+	ATTR_EX_2_DO_NOT_RESET_COMBAT_TIMERS uint32 = 0x20000
 
 	// The spell is castable while shapeshifted even though its form bars casting: the exception to
 	// ATTR_NOT_SHAPESHIFTED.
@@ -39,7 +42,7 @@ const (
 	ATTR_EX_6_AURA_IS_WEAPON_PROC uint32 = 0x80
 
 	// A periodic effect whose ticks roll a critical strike: Rend, Corruption, Rupture and the
-	// other bleeds and DoTs the client marks, 225 spells in this build.
+	// other bleeds and DoTs the game files mark, 225 spells in this build.
 	ATTR_EX_8_PERIODIC_CAN_CRIT uint32 = 0x200
 
 	ATTR_EX_11_SCALES_WITH_ITEM_LEVEL uint32 = 0x4
@@ -56,7 +59,7 @@ const (
 	ATTR_REQ_STEALTH                        uint32 = 0x20000
 	ATTR_CANCEL_AUTO_ATTACK                 uint32 = 0x100000
 	ATTR_NO_D_P_B                           uint32 = 0x200000
-	ATTR_NO_COMBAT                          uint32 = 0x400000
+	ATTR_NOT_IN_COMBAT                      uint32 = 0x10000000
 	ATTR_NO_CANCEL                          uint32 = 0x80000000
 	ATTR_EX_1_NO_STEALTH_BREAK              uint32 = 0x20
 	ATTR_EX_1_MELEE_COMBAT_START            uint32 = 0x200

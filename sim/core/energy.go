@@ -45,8 +45,8 @@ func (unit *Unit) EnableEnergyBar(options EnergyBarOptions) {
 		unit:                  unit,
 		maxEnergy:             max(10, options.MaxEnergy),
 		maxComboPoints:        options.MaxComboPoints,
-		EnergyTickDuration:    time.Millisecond * 2020,
-		EnergyPerTick:         20.2,
+		EnergyTickDuration:    time.Second / 10,
+		EnergyPerTick:         1,
 		energyRegenMultiplier: 1,
 		regenMetrics:          unit.NewEnergyMetrics(ActionID{OtherID: proto.OtherAction_OtherActionEnergyRegen}),
 		EnergyRefundMetrics:   unit.NewEnergyMetrics(ActionID{OtherID: proto.OtherAction_OtherActionRefund}),
@@ -166,6 +166,16 @@ func (eb *energyBar) ResetEnergyTick(sim *Simulation) {
 	eb.AddEnergy(sim, partialTickAmount, eb.regenMetrics)
 	eb.nextEnergyTick = sim.CurrentTime + eb.EnergyTickDuration
 	sim.RescheduleTask(eb.nextEnergyTick)
+}
+
+// Sets the most energy the bar holds. A raised maximum grants no energy; energy above a lowered one is
+// lost and counted against the metrics. Without a Simulation there is no energy yet to lose.
+func (eb *energyBar) SetMaximumEnergy(sim *Simulation, maxEnergy float64, metrics *ResourceMetrics) {
+	eb.maxEnergy = maxEnergy
+
+	if sim != nil && eb.currentEnergy > maxEnergy {
+		eb.SpendEnergy(sim, eb.currentEnergy-maxEnergy, metrics)
+	}
 }
 
 // Used for dynamic updates to maximum Energy, such as from the Druid Primal Madness talent

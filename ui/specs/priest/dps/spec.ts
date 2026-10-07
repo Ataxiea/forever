@@ -4,7 +4,8 @@ import { EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat } from '@generated/prot
 import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { DEFAULT_HYBRID_CASTER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as PriestInputs from './inputs';
@@ -27,9 +28,9 @@ export default defineSpec<Spec.SpecDpsPriest>({
 		Stat.StatSpellDamage,
 		Stat.StatShadowDamage,
 		Stat.StatHolyDamage,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatMana,
 		Stat.StatMP5,
 		Stat.StatSpirit,
@@ -63,7 +64,7 @@ export default defineSpec<Spec.SpecDpsPriest>({
 			PseudoStat.PseudoStatSchoolHitPercentShadow,
 		],
 	),
-	gemStats: DEFAULT_HYBRID_CASTER_GEM_STATS,
+	displayWeaponSkillGroups: [WeaponSkillGroup.Wands],
 
 	defaults: {
 		// Default equipped gear.
@@ -71,7 +72,7 @@ export default defineSpec<Spec.SpecDpsPriest>({
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentShadow, 16);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentShadow, 17);
 		})(),
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,

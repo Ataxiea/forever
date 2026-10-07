@@ -131,6 +131,13 @@ func (mcd *MajorCooldown) shouldActivateHelper(sim *Simulation, character *Chara
 		return false
 	}
 
+	// A major cooldown never leaves the form, timed or not; an APL cast of its spell does.
+	if mcd.Spell.hasCastRequirement {
+		if _, unshift := mcd.Spell.castRequirementFailure(sim, character.CurrentTarget); unshift {
+			return false
+		}
+	}
+
 	if mcd.numUsages < len(mcd.timings) {
 		return sim.CurrentTime >= mcd.timings[mcd.numUsages]
 	}
@@ -151,9 +158,9 @@ func (mcd *MajorCooldown) tryActivateHelper(sim *Simulation, character *Characte
 
 	if shouldActivate {
 		if mcd.Spell.Flags.Matches(SpellFlagHelpful) {
-			mcd.Spell.Cast(sim, &character.Unit)
+			mcd.Spell.castForRotation(sim, &character.Unit, nil)
 		} else {
-			mcd.Spell.Cast(sim, character.CurrentTarget)
+			mcd.Spell.castForRotation(sim, character.CurrentTarget, nil)
 		}
 
 		mcd.numUsages++

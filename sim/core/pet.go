@@ -102,7 +102,8 @@ func NewPet(config PetConfig) Pet {
 
 				StatDependencyManager: stats.NewStatDependencyManager(),
 
-				ReactionTime: config.Owner.ReactionTime,
+				ReactionTime:    config.Owner.ReactionTime,
+				procChanceOwner: &config.Owner.Unit,
 
 				StartDistanceFromTarget: distanceFromTarget,
 				DistanceFromTarget:      distanceFromTarget,
@@ -156,6 +157,14 @@ func makeStatInheritanceFunc(statInheritance PetStatInheritance) PetStatInherita
 func (pet *Pet) inheritOwnerStats(sim *Simulation) {
 	pet.inheritedStats = pet.statInheritance(pet.Owner.GetStats())
 	pet.AddStatsDynamic(sim, pet.inheritedStats)
+}
+
+// Snapshots the owner's stats again, for a pet that inherits them on its own schedule rather than
+// on every change to its owner's.
+func (pet *Pet) RefreshInheritedStats(sim *Simulation) {
+	inheritedStats := pet.statInheritance(pet.Owner.GetStats())
+	pet.AddStatsDynamic(sim, inheritedStats.Subtract(pet.inheritedStats))
+	pet.inheritedStats = inheritedStats
 }
 
 func (pet *Pet) enableDynamicStats(sim *Simulation) {
@@ -266,6 +275,7 @@ func (pet *Pet) Enable(sim *Simulation, petAgent PetAgent) {
 	}
 	//reset current mana after applying stats
 	pet.manaBar.reset()
+	pet.manaBar.lastManaTick = sim.CurrentTime
 
 	//reset current health after applying stats
 	pet.healthBar.reset(sim)

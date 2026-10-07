@@ -6,11 +6,11 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-// The snippets docs/spell_data.md shows a porter, as runnable code: a doc that names an accessor the
+// The snippets docs/spell_data/ shows a porter, as runnable code: a doc that names an accessor the
 // package no longer has, or a value it no longer answers, fails here.
 //
 // They read the generated store rather than the hand-built rows the rest of the package's tests run
-// against, so the numbers are the client's own. TestMain installs those rows for the whole package,
+// against, so the numbers are the game files' own. TestMain installs those rows for the whole package,
 // so every example puts them back on its way out; the values themselves are the ones snapshot_test.go
 // pins.
 func generatedStore() func() {
@@ -35,8 +35,8 @@ func ExampleFind() {
 	// true 0s
 }
 
-// Effects are counted from 1 by position, not by the client's EffectIndex, and the values come in the
-// units the client states them in.
+// Effects are counted from 1 by position, not by the game files' EffectIndex, and the values come
+// in the units the game files state them in.
 func ExampleSpell_EffectN() {
 	defer generatedStore()()
 
@@ -44,7 +44,7 @@ func ExampleSpell_EffectN() {
 	damage := frostbolt.EffectN(2)
 
 	fmt.Println(damage.Index)
-	fmt.Printf("%.0f %.0f %.3f\n", damage.BaseValue(), damage.Average(60), damage.Coeff())
+	fmt.Printf("%.0f %.0f %.3f\n", damage.BaseValue(), damage.AverageAt(60), damage.Coeff())
 	fmt.Println(frostbolt.EffectN(3) == NilEffect)
 	// Output:
 	// 1
@@ -62,8 +62,8 @@ func ExampleSpell_PowerCost() {
 	// 25 true 1.5s
 }
 
-// What the row fills in a spell config, before the caller adds the effects and the flags the client
-// does not state.
+// What the row fills in a spell config, before the caller adds the effects and the flags the game
+// files do not state.
 func ExampleSpellConfig() {
 	defer generatedStore()()
 

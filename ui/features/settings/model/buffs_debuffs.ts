@@ -1,12 +1,12 @@
+import { makeBooleanIndividualBuffInput, makeBooleanPartyBuffInput } from '@features/inputs/icon_inputs';
 import { Class, Stat } from '@generated/proto/common';
 import { ActionId } from '@sim/proto/action_id';
 import { Party } from '@sim/raid/party';
-import { makeBooleanIndividualBuffInput, makeBooleanPartyBuffInput } from '@ui-kit/icon_inputs';
 
 import * as Generated from './buffs_debuffs_auto_gen';
 import { IconPickerStatOption, inDisplayOrder } from './stat_options';
 
-// Every buff the client database resolves to a spell has its input generated from the manifest;
+// Every buff the game files resolve to a spell has its input generated from the manifest;
 // the rows below are the ones it cannot produce, and the registries at the end of this file
 // interleave the two.
 export * from './buffs_debuffs_auto_gen';
@@ -50,16 +50,21 @@ export const PARTY_BUFFS_CONFIG = inDisplayOrder(Generated.GENERATED_PARTY_BUFFS
 	Generated.MoonkinAura,
 	{
 		config: RetributionAura,
-		stats: [Stat.StatArmor, Stat.StatDefenseRating],
+		stats: [Stat.StatDefenseRating],
 		ownerClass: Class.ClassPaladin,
 	},
 	Generated.ConcentrationAura,
 	Generated.TrueshotAura,
+	Generated.FuriousHowl,
 	Generated.AtieshMage,
 	Generated.AtieshWarlock,
+	Generated.AtieshDruid,
+	Generated.AtieshPriest,
 	Generated.StrengthOfEarthTotem,
+	Generated.StoneskinTotem,
 	Generated.GraceOfAirTotem,
 	Generated.WindfuryTotem,
+	Generated.FlametongueTotem,
 ]);
 
 export const BUFFS_CONFIG = inDisplayOrder(
@@ -95,13 +100,20 @@ export const DEBUFFS_CONFIG = inDisplayOrder(Generated.GENERATED_DEBUFFS_CONFIG,
 	Generated.JudgementOfWisdom,
 	Generated.CurseOfElements,
 	Generated.CurseOfRecklessness,
+	Generated.CurseOfWeakness,
 	Generated.FaerieFire,
+	Generated.DustCloud,
 	Generated.ExposeArmor,
 	Generated.SunderArmor,
+	Generated.ArmorShatter,
 	Generated.GiftOfArthas,
 	Generated.DemoralizingRoar,
 	Generated.DemoralizingShout,
+	Generated.HexOfWeakness,
+	Generated.DemoralizingScreech,
+	Generated.Vindication,
 	Generated.ThunderClap,
+	Generated.Thunderfury,
 	Generated.InsectSwarm,
 	Generated.ScorpidSting,
 ]);

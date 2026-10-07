@@ -31,6 +31,7 @@ export const UI_ALIASES: Record<string, string> = {
 	'@app': path.resolve(BASE_PATH, 'app'),
 	'@specs': path.resolve(BASE_PATH, 'specs'),
 	'@i18n': path.resolve(BASE_PATH, 'i18n'),
+	'@testing': path.resolve(BASE_PATH, 'testing'),
 };
 
 function serveExternalAssets() {
@@ -134,6 +135,9 @@ export default defineConfig(({ command, mode }) => {
 		path.resolve(__dirname, 'sim/core/bulk/candidates.go'),
 		path.resolve(__dirname, 'tools/database/gen_character_constants_ts.go'),
 		path.resolve(__dirname, 'tools/database/gen_bulksim_constants.ts.go'),
+		path.resolve(__dirname, 'sim/core/consumes_imbues.go'),
+		path.resolve(__dirname, 'sim/core/bulk/statistics.go'),
+		path.resolve(__dirname, 'tools/database/gen_sim_tables_ts.go'),
 	];
 
 	return {
@@ -164,6 +168,11 @@ export default defineConfig(({ command, mode }) => {
 				enableBuild: false,
 			}),
 		],
+		// GitHub Actions sets GITHUB_REPOSITORY in every job, so the issue links point at whichever
+		// repository built this page. A fork's build files its issues on the fork.
+		define: {
+			'import.meta.env.VITE_GITHUB_REPOSITORY': JSON.stringify(process.env.GITHUB_REPOSITORY ?? ''),
+		},
 		oxc: {
 			jsx: {
 				runtime: 'automatic',

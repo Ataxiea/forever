@@ -7,7 +7,7 @@ export const DEFAULT_ACTION_CATEGORY = 3;
 
 // A fixed sort category for casts whose default MELEE/SPELL/DEFAULT bucket would order them
 // badly. An entry belongs here only if its id is reachable - a spellId in a committed APL, a
-// `SpellID:` literal in sim/**/*.go, an id the client DB's spellIcons knows, a reference in
+// `SpellID:` literal in sim/**/*.go, an id the game files' spellIcons table knows, a reference in
 // ui/*.ts(x), or one in a committed ui/ JSON. Spells register under a rank id (Arcane Shot is
 // 27019 here, not 3044). Flat Record<number, number> keyed by anyId(), so an OtherAction id and a
 // spellId of the same numeric value are indistinguishable; safe only because OtherAction values
@@ -16,6 +16,9 @@ export const rotationCategoryOverrides: Record<number, number> = {
 	[OtherAction.OtherActionMove]: 0,
 	[OtherAction.OtherActionAttack]: 0.01,
 	[OtherAction.OtherActionShoot]: 0.5,
+
+	// Wand: the row opens with the channel, which deals nothing itself, so it sorts as a spell
+	[5019]: SPELL_ACTION_CATEGORY, // Shoot
 
 	// Hunter
 	[34490]: MELEE_ACTION_CATEGORY + 0.29, // Silencing Shot

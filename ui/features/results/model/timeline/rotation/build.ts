@@ -8,6 +8,7 @@ import { kebabCase } from '@sim/utils/format';
 import {
 	actionBucketKey,
 	AURA_AS_RESOURCE,
+	FILL_RESOURCES,
 	groupedAurasByAbility,
 	IDS_TO_GROUP_FOR_ROTATION,
 	makeRowKey,
@@ -83,10 +84,20 @@ function auraItems(auraUptimeLogs: ReadonlyArray<AuraUptimeLog>, sharesRowWithCa
 	});
 }
 
+/**
+ * Casts of one row that start closer together than this, in seconds, run on as one stack. A cast icon
+ * is 24px wide and the default zoom is 100px per second, so each cast inside the window draws over the
+ * one before it.
+ */
+const STACK_WINDOW = 0.21;
+
 function castRowItems(castLogs: ReadonlyArray<CastLog>, mergedAuras: ReadonlyArray<Array<AuraUptimeLog>>, duration: number, showGcd: boolean): Array<RowItem> {
 	const items: Array<RowItem> = [];
+	let stack: Array<CastLog> = [];
 	castLogs.forEach(castLog => {
 		const start = castLog.timestamp;
+		const previous = stack[stack.length - 1];
+		stack = previous && start - previous.timestamp < STACK_WINDOW ? [...stack, castLog] : [castLog];
 		const cancelled = !!castLog.castCancelledLog;
 		const width = cancelled ? castLog.cancelTime : castLog.castTime + castLog.travelTime;
 		const hasTravelTime = !cancelled && castLog.travelTime != 0;
@@ -103,6 +114,7 @@ function castRowItems(castLogs: ReadonlyArray<CastLog>, mergedAuras: ReadonlyArr
 			travelStart: hasTravelTime ? castLog.castTime : null,
 			travelDuration: hasTravelTime ? castLog.travelTime : null,
 			log: castLog,
+			stack,
 		});
 		if (showGcd && !cancelled) {
 			const extensionStart = start + castLog.castTime;
@@ -126,13 +138,33 @@ function gcdRowItems(unit: UnitMetrics, duration: number): Array<RowItem> {
 		}));
 }
 
-function resourceItems(resourceType: ResourceType, resourceLogs: Array<ResourceGroupLog>, duration: number): Array<ResourceItem> {
+// Regen ticks come 100 ms apart, with a little margin for the float timestamps.
+const REGEN_STEP = 0.095;
+
+// One group per regen step: a group that starts less than a step after the first group of the current
+// step joins it, so a credit between two ticks adds no slice of its own.
+function mergeRegenSteps(groups: Array<ResourceGroupLog>): Array<ResourceGroupLog> {
+	const steps: Array<ResourceGroupLog> = [];
+	for (const group of groups) {
+		const step = steps[steps.length - 1];
+		if (step && group.timestamp - step.timestamp < REGEN_STEP) {
+			steps[steps.length - 1] = {
+				...step,
+				valueAfter: group.valueAfter,
+				maxValue: Math.max(step.maxValue, group.maxValue),
+				logs: [...step.logs, ...group.logs],
+			};
+		} else {
+			steps.push(group);
+		}
+	}
+	return steps;
+}
+
+function resourceItems(resourceType: ResourceType, logs: Array<ResourceGroupLog>, duration: number): Array<ResourceItem> {
+	const display: ResourceDisplay = PERCENTAGE_RESOURCES.includes(resourceType) ? 'percent' : FILL_RESOURCES.includes(resourceType) ? 'fill' : 'number';
+	const resourceLogs = display === 'fill' ? mergeRegenSteps(logs) : logs;
 	const startValue = (group: ResourceGroupLog): number => (group.maxValue == null ? resourceLogs[0].valueBefore : group.maxValue);
-	const display: ResourceDisplay = PERCENTAGE_RESOURCES.includes(resourceType)
-		? 'percent'
-		: resourceType == ResourceType.ResourceTypeEnergy || resourceType == ResourceType.ResourceTypeFocus
-			? 'fill'
-			: 'number';
 
 	return resourceLogs.map((group, i) => {
 		const start = group.timestamp;

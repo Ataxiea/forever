@@ -1,11 +1,10 @@
 import i18n from '@i18n/config';
 import { CHARACTER_LEVEL } from '@sim/constants/mechanics';
 import type { Player } from '@sim/player/player';
-import { getMetaGemConditionDescription } from '@sim/proto/gems';
 import { professionNames } from '@sim/proto/names';
 import { getTalentPoints } from '@sim/proto/utils';
 import type { SimWarning } from '@sim/sim_host';
-import { subscribeAll, subscribePlayerField } from '@sim/state/subscriptions';
+import { subscribeAll, subscribePlayerField, subscribeRaidField } from '@sim/state/subscriptions';
 
 // Talents are three free-form trees, so there is no per-row requirement to check: the only
 // thing the string can be wrong about is the point total.
@@ -13,20 +12,6 @@ const MAX_TALENT_POINTS = CHARACTER_LEVEL - 9;
 
 export function defaultSimWarnings<SpecType extends number>(player: Player<SpecType>): Array<SimWarning> {
 	return [
-		{
-			updateOn: subscribePlayerField(player, 'gear'),
-			getContent: () => {
-				if (!player.getGear().hasInactiveMetaGem()) {
-					return '';
-				}
-
-				const metaGem = player.getGear().getMetaGem()!;
-				return i18n.t('sidebar.warnings.meta_gem_disabled', {
-					gemName: metaGem.name,
-					description: getMetaGemConditionDescription(metaGem),
-				});
-			},
-		},
 		{
 			updateOn: subscribeAll([
 				subscribePlayerField(player, 'gear'),
@@ -48,19 +33,6 @@ export function defaultSimWarnings<SpecType extends number>(player: Player<SpecT
 			},
 		},
 		{
-			updateOn: subscribePlayerField(player, 'gear'),
-			getContent: () => {
-				const jcGems = player.getGear().getJCGems();
-				if (jcGems.length <= 2) {
-					return '';
-				}
-
-				return i18n.t('sidebar.warnings.too_many_jc_gems', {
-					count: jcGems.length,
-				});
-			},
-		},
-		{
 			updateOn: subscribePlayerField(player, 'talentsString'),
 			getContent: () => {
 				const talentPoints = getTalentPoints(player.getTalentsString());
@@ -73,6 +45,24 @@ export function defaultSimWarnings<SpecType extends number>(player: Player<SpecT
 				return i18n.t('sidebar.warnings.unspent_talent_points', {
 					count: MAX_TALENT_POINTS - talentPoints,
 				});
+			},
+		},
+		{
+			updateOn: subscribeRaidField(player.sim.raid, 'partyBuffs'),
+			getContent: () => {
+				const buffs = player.getParty()?.getBuffs();
+				if (!buffs?.windfuryTotem) {
+					return '';
+				}
+
+				const warnings: Array<string> = [];
+				if (buffs.graceOfAirTotem) {
+					warnings.push(i18n.t('sidebar.warnings.windfury_over_grace_of_air'));
+				}
+				if (buffs.flametongueTotem) {
+					warnings.push(i18n.t('sidebar.warnings.windfury_over_flametongue'));
+				}
+				return warnings;
 			},
 		},
 	];

@@ -19,7 +19,7 @@ const executeGo = `package warrior
 
 var executeRank = spellData.Execute.Highest()
 
-var executeBaseDamage = executeRank.EffectN(1).Average(core.CharacterLevel)
+var executeBaseDamage = executeRank.EffectN(1).AverageAt(core.CharacterLevel)
 
 var executeDamagePerRage = float64(executeRank.EffectN(1).ChainAmp) * 10
 
@@ -51,7 +51,7 @@ func positionOf(t *testing.T, text, needle string, offset int) (int, int) {
 func hoverOn(t *testing.T, ws *workspace, text, uri, needle string, offset int) (string, []string, bool) {
 	t.Helper()
 	line, col := positionOf(t, text, needle, offset)
-	return ws.hover(text, line, col, uri)
+	return ws.hover(text, line, col, uri, nil)
 }
 
 func wantHover(t *testing.T, text, needle string, offset int, wants ...string) string {
@@ -91,10 +91,10 @@ func TestHoverSpellIDShapes(t *testing.T) {
 		}
 	}
 
-	if _, _, ok := newWorkspace().hover("\tspell.ApplyEffects = nil", 0, 12, "file:///tmp/a.ts"); ok {
+	if _, _, ok := newWorkspace().hover("\tspell.ApplyEffects = nil", 0, 12, "file:///tmp/a.ts", nil); ok {
 		t.Error("a TS line with no id answered a hover")
 	}
-	if _, _, ok := newWorkspace().hover("\tspelldata.Find(116) // the rank 1", 0, 30, "file:///tmp/a.ts"); ok {
+	if _, _, ok := newWorkspace().hover("\tspelldata.Find(116) // the rank 1", 0, 30, "file:///tmp/a.ts", nil); ok {
 		t.Error("a column outside the match answered a hover")
 	}
 }
@@ -103,7 +103,7 @@ func TestHoverSpellIDShapes(t *testing.T) {
 func TestHoverColumnIsUTF16(t *testing.T) {
 	line := "// — spelldata.MustFind(11574)"
 	col := len([]rune(line[:strings.Index(line, "11574")]))
-	if markdown, _, ok := newWorkspace().hover(line, 0, col, "file:///tmp/a.go"); !ok || !strings.HasPrefix(markdown, "### 11574 ") {
+	if markdown, _, ok := newWorkspace().hover(line, 0, col, "file:///tmp/a.go", nil); !ok || !strings.HasPrefix(markdown, "### 11574 ") {
 		t.Errorf("the id after a dash answered %v %q", ok, markdown)
 	}
 }
@@ -119,7 +119,7 @@ func TestHoverFamily(t *testing.T) {
 }
 
 // The card a rank pick hovers as: a heading, the ladder call, the row's columns under its name, and the
-// effects below a rule with each wording over its client row.
+// effects below a rule with each wording over its game files row.
 const executeCard = "### 20662 Execute · Rank 5\n" +
 	"`warrior spellData.Execute.Highest()`  \n" +
 	"\n" +
@@ -131,7 +131,7 @@ const executeCard = "### 20662 Execute · Rank 5\n" +
 	"| **cost** | 15 rage |\n" +
 	"| **range** | 5 yd |\n" +
 	"| **stance** | Battle, Berserker |\n" +
-	"| **equip** | needs a melee weapon |\n" +
+	"| **equip** | needs a melee weapon in the main hand |\n" +
 	"| **attrs** | refund on miss |\n" +
 	"| **labels** | 25 |\n" +
 	"\n" +
@@ -151,8 +151,8 @@ func TestHoverRankPick(t *testing.T) {
 
 func TestHoverValue(t *testing.T) {
 	markdown := wantHover(t, executeGo, "executeBaseDamage =", 4,
-		"`executeBaseDamage` = **600**\n\n`spellData.Execute.Highest().EffectN(1).Average(60)`",
-		"`spellData.Execute.Highest().EffectN(1).Average(60)`\n\n### 20662 Execute · Rank 5\n",
+		"`executeBaseDamage` = **600**\n\n`spellData.Execute.Highest().EffectN(1).AverageAt(60)`",
+		"`spellData.Execute.Highest().EffectN(1).AverageAt(60)`\n\n### 20662 Execute · Rank 5\n",
 		"| 1 ▶ | a dummy effect holding 600 to the enemy<br>",
 		"| 2 | casts 26651 Execute to the caster<br>")
 	if strings.Contains(markdown, "The amount at a caster level") {
@@ -175,11 +175,11 @@ func TestHoverTalentRank(t *testing.T) {
 	wantHover(t, crueltyGo, "crueltyRank :=", 4,
 		"### 12320 Cruelty · rank 3 of 5\n",
 		"| | Cruelty (rank 3 of 5) |",
-		"| 1 | +3% physical crit<br>`E_APPLY_AURA A_MOD_WEAPON_CRIT_PERCENT base=3 target=[1,0]` |")
+		"| 1 | +3% physical crit, per weapon: only attacks made with a melee weapon<br>`E_APPLY_AURA A_MOD_WEAPON_CRIT_PERCENT base=3 target=[1,0]` |")
 	wantHover(t, crueltyGo, "crueltyCrit :=", 4,
 		"`crueltyCrit` = **3**\n\n`spellData.Cruelty.Rank(3).EffectN(1).BaseValue()`",
 		"### 12320 Cruelty · rank 3 of 5\n",
-		"| 1 ▶ | +3% physical crit<br>")
+		"| 1 ▶ | +3% physical crit, per weapon: only attacks made with a melee weapon<br>")
 	wantHover(t, crueltyGo, "Cruelty.Rank", 3,
 		"### warrior/Cruelty\n",
 		"| 12320 | Cruelty | rank 3 of 5 | `Rank(3)` | effect 1 = 3 |",
@@ -206,13 +206,13 @@ const battleShoutGo = `package warrior
 var battleShoutRank = spellData.BattleShout.Highest()
 
 func (warrior *Warrior) registerBattleShout() {
-	baseAttackPower := battleShoutRank.Effect(dbcenums.A_MOD_ATTACK_POWER, 0).Average(core.CharacterLevel)
+	baseAttackPower := battleShoutRank.Effect(dbcenums.A_MOD_ATTACK_POWER, 0).AverageAt(core.CharacterLevel)
 }
 `
 
 func TestHoverEnumArgument(t *testing.T) {
 	wantHover(t, battleShoutGo, "baseAttackPower :=", 4,
-		"`baseAttackPower` = **139**\n\n`spellData.BattleShout.Highest().Effect(99, 0).Average(60)`",
+		"`baseAttackPower` = **139**\n\n`spellData.BattleShout.Highest().Effect(99, 0).AverageAt(60)`",
 		"| 1 ▶ | +139 attack power to the party around the caster")
 }
 
@@ -241,11 +241,11 @@ func TestHoverSegments(t *testing.T) {
 		"`EffectN(1)` = **effect 1** of 20662 Execute (Rank 5)",
 		"`spellData.Execute.Highest().EffectN(1)`",
 		"---\n| # | effect |\n|--:|:--|\n| 1 ▶ | a dummy effect holding 600 to the enemy<br>`E_DUMMY base=600 sp=1 target=[6,0]` |\n",
-		"`Average(60) = 600`  \n")
+		"`AverageAt(60) = 600`  \n")
 
-	markdown := wantHover(t, executeGo, "Average(core", 2,
-		"`Average(60)` = **600**",
-		"`spellData.Execute.Highest().EffectN(1).Average(60)`",
+	markdown := wantHover(t, executeGo, "AverageAt(core", 2,
+		"`AverageAt(60)` = **600**",
+		"`spellData.Execute.Highest().EffectN(1).AverageAt(60)`",
 		"| 1 ▶ |")
 	// The editor's Go server shows the accessor's doc beside this hover already.
 	if strings.Contains(markdown, "The amount at a caster level") {
@@ -266,9 +266,9 @@ func TestHoverTrace(t *testing.T) {
 		"sim/warrior/execute.go:5:9",
 		"declarations sim/warrior: cache miss",
 		"ident executeBaseDamage",
-		"  executeBaseDamage = executeRank.EffectN(1).Average(core.CharacterLevel)  (sim/warrior/execute.go:5)",
+		"  executeBaseDamage = executeRank.EffectN(1).AverageAt(core.CharacterLevel)  (sim/warrior/execute.go:5)",
 		"  executeRank = spellData.Execute.Highest()  (sim/warrior/execute.go:3)",
-		"expr spellData.Execute.Highest().EffectN(1).Average(core.CharacterLevel)",
+		"expr spellData.Execute.Highest().EffectN(1).AverageAt(core.CharacterLevel)",
 		"✓ 20662 Execute (Rank 5) → effect 1 → 600",
 	}
 	if len(trace) != len(want) {
@@ -319,7 +319,7 @@ func TestDeclarations(t *testing.T) {
 		"// var stubbedRank = spellData.MangleBear.ByID(33987)",
 		"\tconfig := spelldata.SpellConfig(&warrior.Unit, executeRank, spelldata.Melee(cost))",
 		"\tmaxRage := warrior.MaximumRage() - spell.Cost.GetCurrentCost()",
-		"\tticks := executeRank.EffectN(1).Average(level)",
+		"\tticks := executeRank.EffectN(1).AverageAt(level)",
 		"\tsplit := spellData.Execute.",
 		"\t\tHighest().",
 		"\t\tEffectN(1)",
@@ -346,6 +346,95 @@ func TestDeclarations(t *testing.T) {
 		if found[name] != chain {
 			t.Errorf("%s is declared as %q, want %q", name, found[name], chain)
 		}
+	}
+}
+
+func TestEachParameterDeclarations(t *testing.T) {
+	file := strings.Join([]string{
+		"package priest",
+		"",
+		"func registerHolyFireSpell(rank *spelldata.Spell) {",
+		"\trank.DamageEffect()",
+		"}",
+		"",
+		"func registerVampiricEmbrace(rank *spelldata.Spell, timer int) {",
+		"\trank.DamageEffect()",
+		"}",
+		"",
+		"func register() {",
+		"\tspellData.HolyFire.Each(func(_ int32, rank *spelldata.Spell) {",
+		"\t\tregisterHolyFireSpell(rank)",
+		"\t})",
+		"\tspellData.VampiricEmbrace.Each(func(_ int32, rank *spelldata.Spell) {",
+		"\t\tregisterVampiricEmbrace(rank, 1)",
+		"\t})",
+		"}",
+	}, "\n")
+
+	parsed := parseGo("priest.go", file)
+
+	if len(parsed.parameterSources) != 2 {
+		t.Fatalf("got %d parameter sources, want 2", len(parsed.parameterSources))
+	}
+
+	for _, source := range parsed.parameterSources {
+		if got := source.chain.text(false); got != "spellData.HolyFire" &&
+			got != "spellData.VampiricEmbrace" {
+			t.Errorf("unexpected source chain %q", got)
+		}
+	}
+}
+
+func TestVirtualRankPreservesAccessorChain(t *testing.T) {
+	file := strings.Join([]string{
+		"package priest",
+		"",
+		"func registerHolyFireSpell(rank *spelldata.Spell) {",
+		"\trank.EffectN(1).Average()",
+		"}",
+		"",
+		"func register() {",
+		"\tspellData.HolyFire.Each(func(_ int32, rank *spelldata.Spell) {",
+		"\t\tregisterHolyFireSpell(rank)",
+		"\t})",
+		"}",
+	}, "\n")
+
+	parsed := parseGo("priest.go", file)
+	if len(parsed.parameterSources) != 1 {
+		t.Fatalf("got %d parameter sources, want 1", len(parsed.parameterSources))
+	}
+
+	source := parsed.parameterSources[0]
+	sourceDeclaration, ok := parameterDeclaration(parsed, source)
+	if !ok {
+		t.Fatal("rank parameter was not declared")
+	}
+
+	declarations := map[string]declaration{
+		sourceDeclaration.name: sourceDeclaration,
+	}
+
+	chain, err := parseChain("rank.EffectN(1).Average()")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hover, ok := resolved(chain, "rank", declarations, &tracer{})
+	if !ok {
+		t.Fatal("rank chain did not resolve")
+	}
+
+	if hover.parameter == nil {
+		t.Fatal("rank chain lost its virtual parameter")
+	}
+
+	if hover.rank == nil {
+		t.Fatal("rank chain did not produce a virtual rank")
+	}
+
+	if got := hover.chain.text(false); got != "rank.EffectN(1).Average()" {
+		t.Errorf("resolved chain became %q, want rank.EffectN(1).Average()", got)
 	}
 }
 
@@ -376,10 +465,10 @@ func resolveText(text string, decls map[string]declaration) (string, error) {
 func TestResolveChain(t *testing.T) {
 	decls := declared(map[string]string{
 		"executeRank":       "spellData.Execute.Highest()",
-		"executeBaseDamage": "executeRank.EffectN(1).Average(core.CharacterLevel)",
+		"executeBaseDamage": "executeRank.EffectN(1).AverageAt(core.CharacterLevel)",
 	})
 	resolves := map[string]string{
-		"executeBaseDamage":      "spellData.Execute.Highest().EffectN(1).Average(core.CharacterLevel)",
+		"executeBaseDamage":      "spellData.Execute.Highest().EffectN(1).AverageAt(core.CharacterLevel)",
 		"executeRank":            "spellData.Execute.Highest()",
 		"executeRank.EffectN(1)": "spellData.Execute.Highest().EffectN(1)",
 		"Cruelty.Rank(3)":        "spellData.Cruelty.Rank(3)",
@@ -407,11 +496,11 @@ func TestResolveChainGuards(t *testing.T) {
 	deep := declared(map[string]string{
 		"a": "spellData.Execute.Highest()",
 		"b": "a.EffectN(1)",
-		"c": "b.Average(60)",
-		"d": "c.Min(60)",
-		"e": "d.Min(60)",
+		"c": "b.AverageAt(60)",
+		"d": "c.MinAt(60)",
+		"e": "d.MinAt(60)",
 	})
-	if got, err := resolveText("c", deep); got != "spellData.Execute.Highest().EffectN(1).Average(60)" {
+	if got, err := resolveText("c", deep); got != "spellData.Execute.Highest().EffectN(1).AverageAt(60)" {
 		t.Errorf("c resolved to %q, %v", got, err)
 	}
 	if _, err := resolveText("e", deep); err == nil || !strings.Contains(err.Error(), "more than 4 names") {
@@ -485,7 +574,7 @@ func TestHoverLocalScope(t *testing.T) {
 }
 
 func TestHoverWithoutPackageClause(t *testing.T) {
-	if _, _, ok := newWorkspace().hover("x := spellData.Execute.Highest()\n", 0, 2, "file:///tmp/a.go"); ok {
+	if _, _, ok := newWorkspace().hover("x := spellData.Execute.Highest()\n", 0, 2, "file:///tmp/a.go", nil); ok {
 		t.Error("a file with no package clause answered a hover")
 	}
 }
@@ -758,4 +847,107 @@ func TestHoverRowByID(t *testing.T) {
 		"`BaseValue()` = **30**",
 		"`spelldata.MustFind(23562).EffectN(1).BaseValue()`",
 		"| 1 ▶ |")
+}
+
+func TestVirtualRankAccessorRendering(t *testing.T) {
+	file := strings.Join([]string{
+		"package priest",
+		"",
+		"func registerDarkSacrificeSpell(rank *spelldata.Spell) {",
+		"\trank.Duration()",
+		"\trank.EnergizeEffect()",
+		"\trank.EnergizeEffect().Average()",
+		"}",
+		"",
+		"func register() {",
+		"\tspellData.DarkSacrifice.Each(func(_ int32, rank *spelldata.Spell) {",
+		"\t\tregisterDarkSacrificeSpell(rank)",
+		"\t})",
+		"}",
+	}, "\n")
+
+	parsed := parseGo("dark_sacrifice.go", file)
+
+	if len(parsed.parameterSources) != 1 {
+		t.Fatalf("got %d parameter sources, want 1", len(parsed.parameterSources))
+	}
+
+	source := parsed.parameterSources[0]
+	sourceDeclaration, ok := parameterDeclaration(parsed, source)
+	if !ok {
+		t.Fatal("rank parameter was not declared")
+	}
+
+	declarations := map[string]declaration{
+		sourceDeclaration.name: sourceDeclaration,
+	}
+
+	tests := []struct {
+		name string
+		expr string
+		want string
+	}{
+		{
+			name: "duration",
+			expr: "rank.Duration()",
+			want: "`Duration()` = **15s**",
+		},
+		{
+			name: "energize effect",
+			expr: "rank.EnergizeEffect()",
+			want: "`EnergizeEffect()` = **no effect**",
+		},
+		{
+			name: "average",
+			expr: "rank.EnergizeEffect().Average()",
+			want: "`Average()` = **0**",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chain, err := parseChain(tt.expr)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			hover, ok := resolved(chain, "rank", declarations, &tracer{})
+			if !ok {
+				t.Fatal("rank chain did not resolve")
+			}
+
+			if hover.rank == nil {
+				t.Fatal("rank chain did not produce a virtual rank")
+			}
+
+			hover.rank.rank = 5
+
+			result, err := evalExpr(ladderFamilies(), hover.chain, "priest", hover.rank)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			markdown := exprMarkdown(result, hover)
+
+			if !strings.Contains(markdown, tt.want) {
+				t.Errorf("hover does not contain %q:\n%s", tt.want, markdown)
+			}
+
+			if !strings.Contains(markdown, "### 1277328 Dark Sacrifice (Rank 5)") {
+				t.Errorf("hover does not contain resolved spell/rank heading:\n%s", markdown)
+			}
+
+			if strings.Contains(markdown, "| **school** |") {
+				t.Errorf("virtual-rank accessor hover rendered the full spell card:\n%s", markdown)
+			}
+
+			if strings.Contains(markdown, "`rank.EnergizeEffect()`") {
+				t.Errorf("virtual-rank accessor hover rendered the evaluator trail:\n%s", markdown)
+			}
+
+			if strings.Contains(markdown, "`rank.EnergizeEffect().Average()`") {
+				t.Errorf("virtual-rank accessor hover rendered the full expression:\n%s", markdown)
+			}
+		})
+	}
 }

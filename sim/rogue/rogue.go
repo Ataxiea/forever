@@ -170,16 +170,11 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 	core.FillTalentsProto(rogue.Talents.ProtoReflect(), talents, TalentTreeSizes)
 
 	// Passive rogue threat reduction: https://wotlk.wowhead.com/spell=21184/rogue-passive-dnd
-	rogue.PseudoStats.ThreatMultiplier *= 0.71
+	rogue.PseudoStats.ThreatMultiplier *= 1 + spellData.RoguePassive.Highest().EffectN(1).Percent()
 	rogue.PseudoStats.CanParry = true
 
-	maxEnergy := 100.0
+	maxEnergy := 100.0 + spellData.Vigor.ValueAt(rogue.Talents.Vigor)
 
-	// TODO: Forever expands Vigor from 1 rank to 2; the per-rank max-energy bonus is
-	// unconfirmed, so it is pinned to 0 until the Forever tooltip is known.
-	if rogue.Talents.Vigor > 0 {
-		maxEnergy += 0
-	}
 	if rogue.HasPvpEnergy {
 		maxEnergy += 10
 	}
@@ -201,7 +196,6 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 	rogue.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	rogue.AddStatDependency(stats.Agility, stats.AttackPower, 1)
 	rogue.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
-	rogue.AddStatDependency(stats.Agility, stats.DodgeRating, 1/20*core.DodgeRatingPerDodgePercent)
 
 	return rogue
 }

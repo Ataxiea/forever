@@ -8,19 +8,22 @@ import (
 
 var thunderClapRank = spellData.ThunderClap.Highest()
 
-var thunderClapBaseDamage = thunderClapRank.DamageEffect().Average(core.CharacterLevel)
+// TODO: The Attack Power share (0.07) is verified in game on Rank 1 only; Ranks 2 to 6 carry the same
+// share unmeasured. Verify it on the higher ranks once logs at their level exist.
+var thunderClapBaseDamage = thunderClapRank.DamageEffect().Average()
+var thunderClapAPCoeff = thunderClapRank.DamageEffect().APCoeff()
 var thunderClapSlow = thunderClapRank.EffectN(2).BaseValue()
 
 // The melee speed factor the warrior's clap leaves on the target, the Conqueror's set included.
 func (warrior *Warrior) thunderClapSpeed() float64 {
-	return 1 / core.SlowedTimeMultiplier(thunderClapSlow*(1+warrior.thunderClapEffectBonus))
+	return core.SymmetricMultiplierFromPercent(thunderClapSlow * (1 + warrior.thunderClapEffectBonus))
 }
 
 func (warrior *Warrior) registerThunderClap() {
 	auras := warrior.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		// The clap bids its whole slow in the attack-speed category, so the strongest single slow
 		// on the target is the only one applied. The generated aura holds the category at the
-		// client's amount; the clap sets its bid before it lands, and the effect applies what the
+		// game files' amount; the clap sets its bid before it lands, and the effect applies what the
 		// bid is worth.
 		aura := buffs.NewSpellDataThunderClapAura(target, true, 0)
 		speed := 1.0
@@ -41,14 +44,14 @@ func (warrior *Warrior) registerThunderClap() {
 	// (0 of 799 landed hits from 6 prot warriors on fresh.warcraftlogs.com, 2026-09-14).
 	config := spelldata.SpellConfig(&warrior.Unit, thunderClapRank,
 		spelldata.Flags(core.SpellFlagAPL|core.SpellFlagBinary))
-	config.ClassSpellMask = SpellMaskThunderClap
 	config.ProcMask = core.ProcMaskRangedSpecial
 	config.DamageMultiplier = 1
 	// TODO: In-game verification needed for threat multiplier / flat threat.
 	config.ThreatMultiplier = 1
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		results := spell.CalcCleaveDamage(sim, target, int32(thunderClapRank.MaxTargets), thunderClapBaseDamage, spell.OutcomeMagicHitAndCrit)
+		baseDamage := thunderClapBaseDamage + thunderClapAPCoeff*spell.MeleeAttackPower(target)
+		results := spell.CalcCleaveDamage(sim, target, int32(thunderClapRank.MaxTargets), baseDamage, spell.OutcomeMagicHitAndCrit)
 		warrior.CastNormalizedSweepingStrikesAttack(results, sim)
 
 		for _, result := range results {

@@ -33,7 +33,6 @@ export const DefaultDebuffs = Debuffs.create({
 	curseOfRecklessness: true,
 	exposeArmor: true,
 	giftOfArthas: true,
-	huntersMark: true,
 	judgementOfWisdom: true,
 	sunderArmor: true,
 });
@@ -41,7 +40,7 @@ export const DefaultDebuffs = Debuffs.create({
 export const DefaultConsumables = ConsumesSpec.create({
 	conjuredId: Consumables.DemonicRune.id,
 	flaskId: Consumables.FlaskOfSupremePower.id,
-	foodId: Consumables.SunriseOmelette.id,
+	foodId: Consumables.NightfinSoup.id,
 	mhImbueId: Consumables.BrilliantWizardOil.id,
 	potId: Consumables.MajorManaPotion.id,
 });

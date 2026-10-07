@@ -22,11 +22,16 @@ describe('the buff registries', () => {
 			'Retribution Aura',
 			'Concentration Aura',
 			'Trueshot Aura',
+			'Furious Howl',
 			'Atiesh - Mage',
 			'Atiesh - Warlock',
+			'Atiesh - Druid',
+			'Atiesh - Priest',
 			'Strength of Earth Totem',
+			'Stoneskin Totem',
 			'Grace of Air Totem',
 			'Windfury Totem',
+			'Flametongue Totem',
 		]);
 	});
 
@@ -63,20 +68,23 @@ describe('the buff registries', () => {
 			'Judgement of Wisdom',
 			'Curse of the Elements',
 			'Curse of Recklessness',
+			'Curse of Weakness',
 			'Faerie Fire',
+			'Dust Cloud',
 			'Expose Armor',
 			'Sunder Armor',
+			'Armor Shatter',
 			'Gift of Arthas',
 			'Demoralizing Roar',
 			'Demoralizing Shout',
+			'Hex of Weakness',
+			'Demoralizing Screech',
+			'Vindication',
 			'Thunder Clap',
+			'Thunderfury',
 			'Insect Swarm',
 			'Scorpid Sting',
 		]);
-	});
-
-	it('has no miscellaneous debuff rows left', () => {
-		expect(BuffDebuffInputs.DEBUFFS_MISC_CONFIG).toHaveLength(0);
 	});
 
 	it('puts the hand-written inputs themselves at those positions, not lookalikes', () => {

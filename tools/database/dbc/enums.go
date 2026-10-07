@@ -29,7 +29,7 @@ const (
 	ITEM_SPELLTRIGGER_LEARN_SPELL_ID  int = 6
 )
 
-// The client's spell enums live in sim/core/dbcenums, which the sim reads as well. The aliases
+// The game files' spell enums live in sim/core/dbcenums, which the sim reads as well. The aliases
 // keep the field types of this package's rows spelled as its own.
 type SpellEffectType = dbcenums.SpellEffectType
 type EffectAuraType = dbcenums.EffectAuraType
@@ -93,8 +93,8 @@ func (raw ItemQuality) ToProto() proto.ItemQuality {
 const (
 	ITEM_CLASS_CONSUMABLE = iota
 	ITEM_CLASS_CONTAINER
-	ITEM_CLASS_WEAPON
-	ITEM_CLASS_GEM
+	ITEM_CLASS_WEAPON = dbcenums.ITEM_CLASS_WEAPON
+	ITEM_CLASS_GEM    = iota
 	ITEM_CLASS_ARMOR
 	ITEM_CLASS_REAGENT
 	ITEM_CLASS_PROJECTILE
@@ -213,7 +213,7 @@ const (
 
 const (
 	TRADE_GOODS_EXPLOSIVES = 2
-	// The client's shared cooldown category for explosives, 60 s.
+	// The game files' shared cooldown category for explosives, 60 s.
 	EXPLOSIVES_SPELL_CATEGORY = 24
 	// The categories potions, food, drink and conjured items (healthstones, mana gems, runes, Thistle
 	// Tea) share their cooldown through.
@@ -288,10 +288,10 @@ const (
 	ITEM_MOD_BLOCK_VALUE              = 48
 	ITEM_MOD_MAX                      = 49
 
-	// Indices above ITEM_MOD_MAX that the Forever client actually puts on items.
+	// Indices above ITEM_MOD_MAX that the Forever game files actually put on items.
 	// 50-56 are standard (wowdev.wiki/Stat_Types); 50 is already handled below.
 	// 83+ has no upstream definition -- the canonical enum stops at 74 -- so these
-	// were identified from self-labelling test items and enchant rows in the client.
+	// were identified from self-labelling test items and enchant rows in the game files.
 	ITEM_MOD_EXTRA_ARMOR       = 50
 	ITEM_MOD_FIRE_RESISTANCE   = 51
 	ITEM_MOD_FROST_RESISTANCE  = 52
@@ -307,6 +307,11 @@ const (
 	ITEM_MOD_FROST_DAMAGE  = 87
 	ITEM_MOD_SHADOW_DAMAGE = 88
 	ITEM_MOD_ARCANE_DAMAGE = 89
+
+	// Spell penetration on one school, in points of the target's resistance: 21516 Dagger of Spell
+	// Penetration - Fire 150 Resist (TEST) budgets 150 of 119, and 21518's Frost twin 150 of 121.
+	ITEM_MOD_FIRE_SPELL_PENETRATION  = 119
+	ITEM_MOD_FROST_SPELL_PENETRATION = 121
 
 	ITEM_MOD_ALL_RESISTANCES = 124
 )
@@ -328,8 +333,11 @@ const (
 	BloodElf Race = 1 << 9  // 512
 	Draenei  Race = 1 << 10 // 1024
 
-	AlliedRaces Race = Human | Dwarf | NightElf | Gnome | Draenei
-	HordeRaces  Race = Undead | Orc | Tauren | Troll | Goblin | BloodElf
+	HighOrderSkyborne  Race = 1 << 32
+	WindshaperSkyborne Race = 1 << 33
+
+	AlliedRaces Race = Human | Dwarf | NightElf | Gnome | Draenei | HighOrderSkyborne
+	HordeRaces  Race = Undead | Orc | Tauren | Troll | Goblin | BloodElf | WindshaperSkyborne
 )
 
 // Returns whether there is any overlap between the given masks.

@@ -4,7 +4,7 @@ import { EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat } from '@generated/prot
 import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { DEFAULT_HYBRID_CASTER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as Presets from './presets';
@@ -23,9 +23,9 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 		Stat.StatSpellDamage,
 		Stat.StatArcaneDamage,
 		Stat.StatNatureDamage,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatMP5,
 		Stat.StatSpirit,
 	],
@@ -52,7 +52,6 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 		],
 		[PseudoStat.PseudoStatSpellCritPercent, PseudoStat.PseudoStatSpellHastePercent, PseudoStat.PseudoStatSpellHitPercent],
 	),
-	gemStats: DEFAULT_HYBRID_CASTER_GEM_STATS,
 
 	defaults: {
 		// Default equipped gear.
@@ -61,7 +60,7 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 		epWeights: new Stats(),
 		// Default stat caps for stat weights tab. (also needed for reforging since we don't want to reforge above stat caps)
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatSpellHitPercent, 16);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatSpellHitPercent, 17);
 		})(),
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,

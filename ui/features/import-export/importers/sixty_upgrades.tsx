@@ -7,7 +7,7 @@ import { finishIndividualImport } from './finish_individual_import';
 import type { ImporterDefinition } from './types';
 
 const removedSuffixesBody = (itemNames: string[]) => (
-	<div>
+	<>
 		<p>Sixty Upgrades currently exports the wrong Random Suffixes. We have removed the random suffix on the following item(s):</p>
 		<ul>
 			{itemNames.map((itemName, index) => (
@@ -16,7 +16,7 @@ const removedSuffixesBody = (itemNames: string[]) => (
 				</li>
 			))}
 		</ul>
-	</div>
+	</>
 );
 
 export const SIXTY_UPGRADES_IMPORTER: ImporterDefinition = {
@@ -69,9 +69,6 @@ export const SIXTY_UPGRADES_IMPORTER: ImporterDefinition = {
 					missingEnchants.push(itemSpec.enchant);
 					return;
 				}
-			}
-			if (itemJson.gems) {
-				itemSpec.gems = (itemJson.gems as any[]).filter(gemJson => gemJson?.id).map(gemJson => gemJson.id);
 			}
 
 			// As long as 60U exports the wrong suffixes we should inform the user that they need to manually add them.

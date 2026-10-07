@@ -5,6 +5,9 @@ import (
 )
 
 func (rogue *Rogue) applyPoisons() {
+	if rogue.Consumables.MhWeaponImbueId == 0 && rogue.Consumables.OhWeaponImbueId == 0 {
+		return
+	}
 	rogue.applyDeadlyPoison()
 	rogue.applyWoundPoison()
 	rogue.applyInstantPoison()
@@ -26,6 +29,7 @@ func (rogue *Rogue) registerDeadlyPoisonSpell() {
 	// 	DefenseType:    core.DefenseTypeMagic,
 	// 	ProcMask:       core.ProcMaskSpellDamageProc,
 	// 	ClassSpellMask: RogueSpellDeadlyPoison,
+	// 	ClassFlags:     spellData.DeadlyPoison.Highest().ClassFlags,
 	// 	Flags:          core.SpellFlagPoison | core.SpellFlagPassiveSpell | core.SpellFlagProc,
 	//
 	// 	DamageMultiplier:         1,
@@ -95,6 +99,7 @@ func (rogue *Rogue) registerWoundPoisonSpell() {
 	// 	DefenseType:    core.DefenseTypeMagic,
 	// 	ProcMask:       core.ProcMaskSpellDamageProc,
 	// 	ClassSpellMask: RogueSpellWoundPoison,
+	// 	ClassFlags:     spellData.WoundPoison.Highest().ClassFlags,
 	// 	Flags:          core.SpellFlagPoison | core.SpellFlagPassiveSpell | core.SpellFlagProc,
 	//
 	// 	DamageMultiplier:         1,
@@ -132,6 +137,7 @@ func (rogue *Rogue) registerInstantPoisonSpell() {
 	// 	DefenseType:    core.DefenseTypeMagic,
 	// 	ProcMask:       core.ProcMaskSpellDamageProc,
 	// 	ClassSpellMask: RogueSpellInstantPoison,
+	// 	ClassFlags:     spellData.InstantPoison.Highest().ClassFlags,
 	// 	Flags:          core.SpellFlagPoison | core.SpellFlagPassiveSpell | core.SpellFlagProc,
 	//
 	// 	DamageMultiplier:         1,
@@ -148,10 +154,10 @@ func (rogue *Rogue) registerInstantPoisonSpell() {
 
 func (rogue *Rogue) getPoisonProcMask(poisonId int32) core.ProcMask {
 	var mask core.ProcMask
-	if rogue.Consumables.MhImbueId == poisonId {
+	if rogue.Consumables.MhWeaponImbueId == poisonId {
 		mask |= core.ProcMaskMeleeMH
 	}
-	if rogue.Consumables.OhImbueId == poisonId {
+	if rogue.Consumables.OhWeaponImbueId == poisonId {
 		mask |= core.ProcMaskMeleeOH
 	}
 	return mask

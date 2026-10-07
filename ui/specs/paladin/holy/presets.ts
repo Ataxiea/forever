@@ -16,12 +16,11 @@ export const DefaultOptions = HolyPaladinOptions.create({
 });
 
 export const DefaultConsumables = ConsumesSpec.create({
-	foodId: Consumables.SunriseOmelette.id,
+	foodId: Consumables.SoaringPamplona.id,
 	potId: Consumables.MajorManaPotion.id,
 });
 
 export const OtherDefaults = {
 	distanceFromTarget: 20,
 	profession1: Profession.Enchanting,
-	profession2: Profession.Jewelcrafting,
 };

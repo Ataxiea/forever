@@ -13,8 +13,10 @@ import (
 // must not write through it.
 var nilPower = &Power{}
 
+// The client marks 51 instants - the hunter's shots and stings among them - with a negative cast
+// time, which is no cast at all.
 func (s *Spell) CastTime() time.Duration {
-	return core.DurationFromMillis(s.CastTimeMs)
+	return max(0, core.DurationFromMillis(s.CastTimeMs))
 }
 
 // SpellCooldowns.RecoveryTime. A spell gated by its category instead - Fire Blast and Cone of Cold
@@ -31,7 +33,7 @@ func (s *Spell) GCD() time.Duration {
 	return core.DurationFromMillis(s.GCDMs)
 }
 
-// The client states a permanent aura as -1, which is core.NeverExpires here.
+// The game files state a permanent aura as -1, which is core.NeverExpires here.
 func (s *Spell) Duration() time.Duration {
 	if s.DurationMs == -1 {
 		return core.NeverExpires
@@ -52,13 +54,23 @@ func (s *Spell) DefenseTypeCore() core.DefenseType {
 	return s.DefenseType
 }
 
-// The i-th effect the row carries, counted from 1 by position rather than by the client's
+// The i-th effect the row carries, counted from 1 by position rather than by the game files'
 // EffectIndex, which has gaps. Out of range answers NilEffect.
 func (s *Spell) EffectN(i int) *Effect {
 	if i < 1 || i > len(s.Effects) {
 		return NilEffect
 	}
 	return &s.Effects[i-1]
+}
+
+// The effect at the game files' EffectIndex i, or NilEffect when the row carries none there.
+func (s *Spell) EffectAtIndex(i uint8) *Effect {
+	for j := range s.Effects {
+		if s.Effects[j].Index == i {
+			return &s.Effects[j]
+		}
+	}
+	return NilEffect
 }
 
 // The one effect with this aura and misc value. Panics when none matches, and when two do: reading
@@ -86,7 +98,7 @@ func (s *Spell) Effect(aura dbcenums.EffectAuraType, misc int32) *Effect {
 }
 
 // The first effect matching all three, or NilEffect. Zero matches anything it is given as: an aura of
-// 0 on a direct effect is what the client states there.
+// 0 on a direct effect is what the game files state there.
 func (s *Spell) FindEffect(typ dbcenums.SpellEffectType, aura dbcenums.EffectAuraType, misc int32) *Effect {
 	for i := range s.Effects {
 		e := &s.Effects[i]
@@ -104,6 +116,24 @@ func (s *Spell) DamageEffect() *Effect {
 	return s.firstOfType(dbcenums.E_SCHOOL_DAMAGE, dbcenums.E_WEAPON_DAMAGE,
 		dbcenums.E_WEAPON_PERCENT_DAMAGE, dbcenums.E_NORMALIZED_WEAPON_DMG,
 		dbcenums.E_WEAPON_DAMAGE_NOSCHOOL)
+}
+
+// A weapon strike's damage: its flat weapon-damage roll, the weapon damage and extra, all scaled by
+// the spell's weapon percent, or taken whole where it states none. In game the percent scales the
+// flat part too: Holy Strike rank 1's 12 ± 1.5 at 25% shows as 2 to 4.
+func (s *Spell) WeaponStrike(sim *core.Simulation, spell *core.Spell, weaponDamage, extra float64) float64 {
+	flat := s.firstOfType(dbcenums.E_NORMALIZED_WEAPON_DMG, dbcenums.E_WEAPON_DAMAGE_NOSCHOOL,
+		dbcenums.E_WEAPON_DAMAGE)
+	percent := 1.0
+	if p := s.firstOfType(dbcenums.E_WEAPON_PERCENT_DAMAGE); p != NilEffect {
+		percent = p.Percent()
+	}
+	return (flat.RollAt(sim, spell.Unit.Level) + weaponDamage + extra) * percent
+}
+
+// The effect granting the caster extra attacks, whose BasePoints is how many.
+func (s *Spell) ExtraAttacksEffect() *Effect {
+	return s.firstOfType(dbcenums.E_ADD_EXTRA_ATTACKS)
 }
 
 func (s *Spell) HealEffect() *Effect {
@@ -133,6 +163,10 @@ func (s *Spell) AbsorbEffect() *Effect {
 
 func (s *Spell) EnergizeEffect() *Effect {
 	return s.firstOfType(dbcenums.E_ENERGIZE)
+}
+
+func (s *Spell) CategoryCooldownEffect() *Effect {
+	return s.firstOfType(dbcenums.E_MODIFY_COOLDOWNS_BY_CATEGORY)
 }
 
 // The effect a resource gain lands through: E_ENERGIZE, an amount into the bar its misc value names
@@ -193,7 +227,8 @@ func (s *Spell) Power(t dbcenums.PowerType) *Power {
 	return nilPower
 }
 
-// The cost in the units the sim spends: rage off the client's 0-1000 bar, everything else as stated.
+// The cost in the units the sim spends: rage off the game files' 0-1000 bar, everything else as
+// stated.
 func (s *Spell) PowerCost(t dbcenums.PowerType) float64 {
 	cost := float64(s.Power(t).Cost)
 	if t.InTenths() {
@@ -211,10 +246,24 @@ func (s *Spell) Cost() float64 {
 	return s.PowerCost(s.Powers[0].Type)
 }
 
-// Spell.NameSubtext_lang's "Rank N" as a number; 0 for a spell the client shows no rank on, whose
+// Spell.NameSubtext_lang's "Rank N" as a number; 0 for a spell the game files show no rank on, whose
 // subtext is "Passive" or empty.
 func (s *Spell) RankNumber() int32 {
 	return rankOf(s)
+}
+
+// The name with its "Rank N" subtext, "Holy Fire Rank 8"; a spell the game files show no rank on keeps
+// its name.
+func (s *Spell) RankedName() string {
+	if s.RankNumber() == 0 {
+		return s.Name
+	}
+	return s.Name + " " + s.Rank
+}
+
+// The ranked name with the caster's label, "Holy Fire Rank 8 - Priest (#1)".
+func (s *Spell) RankedLabel(owner *core.Unit) string {
+	return s.RankedName() + " - " + owner.Label
 }
 
 // The spells the tooltip names, in the order it names them. An id the store does not carry is left
@@ -261,8 +310,8 @@ func (s *Spell) Triggered() []*Spell {
 	return resolve(ids)
 }
 
-// The outcome a periodic tick rolls: a tick that can crit where the client marks Periodic Can Crit, a
-// plain tick otherwise, on the hit table the row's defense type names.
+// The outcome a periodic tick rolls: a tick that can crit where the game files mark Periodic Can
+// Crit, a plain tick otherwise, on the hit table the row's defense type names.
 func (s *Spell) TickOutcome(dot *core.Dot) core.OutcomeApplier {
 	switch tickOutcomeKind(s.PeriodicCanCrit(), s.DefenseTypeCore() == core.DefenseTypeMagic) {
 	case tickOutcomeMagicCrit:

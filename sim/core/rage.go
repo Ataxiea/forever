@@ -8,12 +8,29 @@ import (
 
 const ThreatPerRageGained = 5
 
-// TODO: Ingame test needed at higher levels
-const DamageTakenRageFactor = 10
+// Rage from damage taken counts a hit before any of the defender's mitigation, with a physical hit counted
+// as if armor reduced it by half, whatever the defender's armor.
+const DamageTakenRageArmorMultiplier = 0.5
+
+// Damage taken grants DamageTakenRageFactor * damage / c rage, where c is the rage conversion value at the defender's level (230.6 at 60).
+// TODO: Ingame test needed -- a level 14 bear with 1032 health gained a third of this; 18 * damage / maximum health
+// fits that bear and a level 14 warrior with 359 health alike.
+const DamageTakenRageFactor = 2.5
+
+func rageConversion(level int32) float64 {
+	l := float64(level)
+	return 0.0091107836*l*l + 3.225598133*l + 4.2652911
+}
+
 const (
 	BaseRageHitFactor     = 3.46
 	TwoHandRageHitFactor  = 4.5
 	TwoHandRageMultiplier = TwoHandRageHitFactor / BaseRageHitFactor
+	// A critical auto attack adds this share of its rage before the two-hand multiplier, for every rage
+	// user (Rule of Rage (DND) states 100).
+	// TODO: Ingame test needed -- confirm with a dual-wield combat log that an off-hand crit's bonus is
+	// the off-hand swing's own rage, the off-hand halving included.
+	CritRageBonus = 1.0
 )
 
 type rageBar struct {
@@ -38,6 +55,27 @@ type RageBarOptions struct {
 
 func (unit *Unit) EnableRageBar(options RageBarOptions) {
 	rageFromDamageTakenMetrics := unit.NewRageMetrics(ActionID{OtherID: proto.OtherAction_OtherActionDamageTaken})
+	damageTakenRageConversion := rageConversion(unit.Level)
+
+	// Direct hits and periodic ticks from a unit grant rage alike.
+	// TODO: Ingame test needed -- physical periodic damage (bleeds) counts at half like a physical hit; no
+	// combat log covers a rage user taking a bleed.
+	rageFromDamageTaken := func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
+		if unit.GetCurrentPowerBar() != RageBar {
+			return
+		}
+		if !result.Landed() {
+			return
+		}
+
+		damage := result.PreMitigationDamage
+		if spell.SpellSchool.Matches(SpellSchoolPhysical) {
+			damage *= DamageTakenRageArmorMultiplier
+		}
+		generatedRage := DamageTakenRageFactor * damage / damageTakenRageConversion * unit.rageBar.damageTakenRageMultiplier
+
+		unit.AddRage(sim, generatedRage, rageFromDamageTakenMetrics)
+	}
 
 	unit.SetCurrentPowerBar(RageBar)
 	unit.RegisterAura(Aura{
@@ -70,12 +108,16 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 				return
 			}
 
-			if weapon.NormalizedSwingSpeed == TwoHandNormalizedSwingSpeed {
-				hitFactor *= TwoHandRageMultiplier
-			}
-
 			// rage is normalized so it only depends on weapon swing speed and some multipliers
-			generatedRage := hitFactor * weapon.SwingSpeed * options.BaseRageMultiplier * handMultiplier
+			swingRage := hitFactor * weapon.SwingSpeed * options.BaseRageMultiplier * handMultiplier
+			generatedRage := swingRage
+			if weapon.NormalizedSwingSpeed == TwoHandNormalizedSwingSpeed {
+				generatedRage *= TwoHandRageMultiplier
+			}
+			// The crit bonus scales the swing's rage without the two-hand multiplier; the off-hand factors stay in it.
+			if result.DidCrit() {
+				generatedRage += CritRageBonus * swingRage
+			}
 
 			var metrics *ResourceMetrics
 			if spell.Cost != nil {
@@ -88,19 +130,8 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 			}
 			unit.AddRage(sim, generatedRage, metrics)
 		},
-		OnSpellHitTaken: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
-			if unit.GetCurrentPowerBar() != RageBar {
-				return
-			}
-
-			preArmorDamage := result.PostArmorAndResistanceMultiplier
-			if result.ArmorAndResistanceMultiplier > 0 {
-				preArmorDamage /= result.ArmorAndResistanceMultiplier
-			}
-			generatedRage := preArmorDamage * DamageTakenRageFactor / unit.MaxHealth() * unit.rageBar.damageTakenRageMultiplier
-
-			unit.AddRage(sim, generatedRage, rageFromDamageTakenMetrics)
-		},
+		OnSpellHitTaken:       rageFromDamageTaken,
+		OnPeriodicDamageTaken: rageFromDamageTaken,
 	})
 
 	// Not a real spell, just holds metrics from rage gain threat.
@@ -113,7 +144,7 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 	unit.rageBar = rageBar{
 		unit:                      unit,
 		maxRage:                   maxRage,
-		startingRage:              max(0, min(options.StartingRage, maxRage)),
+		startingRage:              max(0, options.StartingRage),
 		offHandRageMultiplier:     1,
 		damageTakenRageMultiplier: 1,
 		RageRefundMetrics:         unit.NewRageMetrics(ActionID{OtherID: proto.OtherAction_OtherActionRefund}),
@@ -133,6 +164,16 @@ func (rb *rageBar) MaximumRage() float64 {
 	return rb.maxRage
 }
 
+// Sets the most rage the bar holds. A raised maximum grants no rage; rage above a lowered one is lost
+// and counted against the metrics. Without a Simulation there is no rage yet to lose.
+func (rb *rageBar) SetMaximumRage(sim *Simulation, maxRage float64, metrics *ResourceMetrics) {
+	rb.maxRage = maxRage
+
+	if sim != nil && rb.currentRage > maxRage {
+		rb.SpendRage(sim, rb.currentRage-maxRage, metrics)
+	}
+}
+
 func (rb *rageBar) SetOffHandRageMultiplier(multiplier float64) {
 	rb.offHandRageMultiplier = multiplier
 }
@@ -150,7 +191,7 @@ func (rb *rageBar) AddRage(sim *Simulation, amount float64, metrics *ResourceMet
 	metrics.AddEvent(amount, newRage-rb.currentRage)
 
 	if sim.Log != nil {
-		rb.unit.Log(sim, "Gained %0.3f rage from %s (%0.3f --> %0.3f) of %0.0f total.", amount, metrics.ActionID, rb.currentRage, newRage, 100.0)
+		rb.unit.Log(sim, "Gained %0.3f rage from %s (%0.3f --> %0.3f) of %0.0f total.", amount, metrics.ActionID, rb.currentRage, newRage, rb.maxRage)
 	}
 
 	rb.currentRage = newRage
@@ -168,7 +209,7 @@ func (rb *rageBar) SpendRage(sim *Simulation, amount float64, metrics *ResourceM
 	metrics.AddEvent(-amount, -amount)
 
 	if sim.Log != nil {
-		rb.unit.Log(sim, "Spent %0.3f rage from %s (%0.3f --> %0.3f) of %0.0f total.", amount, metrics.ActionID, rb.currentRage, newRage, 100.0)
+		rb.unit.Log(sim, "Spent %0.3f rage from %s (%0.3f --> %0.3f) of %0.0f total.", amount, metrics.ActionID, rb.currentRage, newRage, rb.maxRage)
 	}
 
 	rb.currentRage = newRage
@@ -187,7 +228,7 @@ func (rb *rageBar) reset(_ *Simulation) {
 		return
 	}
 
-	rb.currentRage = rb.startingRage
+	rb.currentRage = min(rb.startingRage, rb.maxRage)
 	rb.damageTakenRageMultiplier = 1
 }
 

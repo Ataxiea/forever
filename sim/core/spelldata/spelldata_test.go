@@ -1,7 +1,6 @@
 package spelldata
 
 import (
-	"math"
 	"os"
 	"strings"
 	"testing"
@@ -11,7 +10,7 @@ import (
 	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
-// Rows in the shape the client states them, standing in for the generated store: a ranked
+// Rows in the shape the game files state them, standing in for the generated store: a ranked
 // direct-damage spell with a slow on it, a proc aura that fires a triggered spell, the spell it
 // fires, and two carrying the fractional EffectBasePointsF about one effect in 55 has. Ids ascend,
 // as the generated slice's do.
@@ -30,7 +29,7 @@ func fixture() []Spell {
 			Effects: []Effect{
 				{SpellID: 116, Index: 0, Type: dbcenums.E_APPLY_AURA, Aura: 33, BasePoints: -40},
 				{SpellID: 116, Index: 1, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 19, PPL: 0.5,
-					SpellLevel: 4, MaxLevel: 8, Variance: 0.105263, SPCoef: 0.407},
+					BaseLevel: 4, MaxLevel: 8, Variance: 0.105263, SPCoef: 0.407},
 			},
 			Powers: []Power{{Type: 0, Cost: 25}},
 		},
@@ -62,7 +61,7 @@ func fixture() []Spell {
 			MaxLevel:   7,
 			Effects: []Effect{
 				{SpellID: 800, Index: 0, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 19.7, PPL: 0.5,
-					SpellLevel: 4, MaxLevel: 7},
+					BaseLevel: 4, MaxLevel: 7},
 			},
 		},
 		{
@@ -106,36 +105,43 @@ func TestFindMisses(t *testing.T) {
 // where the scaling stops however high the caster is.
 func TestEffectAverage(t *testing.T) {
 	damage := Find(116).EffectN(2)
-	if got := damage.Average(60); got != 21 {
+	if got := damage.AverageAt(60); got != 21 {
 		t.Errorf("Average(60) = %v, want 21", got)
 	}
-	if got := damage.Average(6); got != 20 {
+	if got := damage.AverageAt(6); got != 20 {
 		t.Errorf("Average(6) = %v, want 20", got)
 	}
-	if got := damage.Average(2); got != 19 {
+	if got := damage.AverageAt(2); got != 19 {
 		t.Errorf("Average(2) = %v, want 19", got)
 	}
 
-	wantMin, wantMax := 21-21*0.105263/2, 21+21*0.105263/2
-	if got := damage.Min(60); math.Abs(got-wantMin) > 1e-9 {
-		t.Errorf("Min(60) = %v, want %v", got, wantMin)
+	// 21 spread by 10.5% of the base 19 is 21 ± 1.
+	if got := damage.MinAt(60); got != 20 {
+		t.Errorf("Min(60) = %v, want 20", got)
 	}
-	if got := damage.Max(60); math.Abs(got-wantMax) > 1e-9 {
-		t.Errorf("Max(60) = %v, want %v", got, wantMax)
+	if got := damage.MaxAt(60); got != 22 {
+		t.Errorf("Max(60) = %v, want 22", got)
 	}
 }
 
-// A fractional base keeps its fraction until the whole amount is floored: -58.4697 is -59, and 19.7
-// gaining 0.5 over three levels is 21.2 floored to 21, not 19 + 1.5 floored to 20.
+// A damage amount keeps its fraction, in float32: 19.7 gaining 0.5 over three levels is 21.2, and its
+// tooltip ends are the floor, 21. Any other amount is floored whole: the aura's -58.4697 is -59.
 func TestEffectAverageKeepsTheFraction(t *testing.T) {
-	if got := Find(700).EffectN(1).Average(60); got != -59 {
-		t.Errorf("Average(60) of a fractional negative base = %v, want -59", got)
+	if got := Find(700).EffectN(1).AverageAt(60); got != -59 {
+		t.Errorf("Average(60) of a fractional negative aura base = %v, want -59", got)
 	}
-	if got := Find(800).EffectN(1).Average(60); got != 21 {
-		t.Errorf("Average(60) of a fractional base gaining 1.5 = %v, want 21", got)
+	damage := Find(800).EffectN(1)
+	if got, want := damage.AverageAt(60), float64(float32(21.2)); got != want {
+		t.Errorf("Average(60) of a fractional base gaining 1.5 = %v, want %v", got, want)
 	}
-	if got := Find(800).EffectN(1).Average(4); got != 19 {
-		t.Errorf("Average(4) at the spell's own level = %v, want 19", got)
+	if got, want := damage.AverageAt(4), float64(float32(19.7)); got != want {
+		t.Errorf("Average(4) at the spell's own level = %v, want %v", got, want)
+	}
+	if got, want := damage.MeanAt(60), float64(float32(21.2)); got != want {
+		t.Errorf("Mean(60) of an effect that does not roll = %v, want %v", got, want)
+	}
+	if got, want := [2]float64{damage.MinAt(60), damage.MaxAt(60)}, [2]float64{21, 21}; got != want {
+		t.Errorf("Min(60) and Max(60) = %v, want %v", got, want)
 	}
 }
 
@@ -146,7 +152,7 @@ func TestEffectOutOfRange(t *testing.T) {
 	if Find(116).EffectN(0) != NilEffect {
 		t.Error("EffectN(0) is not NilEffect")
 	}
-	if got := NilEffect.Average(60); got != 0 {
+	if got := NilEffect.AverageAt(60); got != 0 {
 		t.Errorf("NilEffect.Average(60) = %v, want 0", got)
 	}
 	if got := Nil.CastTime(); got != 0 {
@@ -184,7 +190,7 @@ func TestTimes(t *testing.T) {
 		t.Errorf("cast time of 116 = %v, want 1.5s", got)
 	}
 
-	// The client's permanent aura.
+	// The game files' permanent aura.
 	permanent := &Spell{DurationMs: -1}
 	if got := permanent.Duration(); got != core.NeverExpires {
 		t.Errorf("duration of a permanent aura = %v, want NeverExpires", got)
@@ -196,7 +202,7 @@ func TestPowerCost(t *testing.T) {
 		t.Errorf("mana cost of 116 = %v, want 25", got)
 	}
 
-	// Rage is on the client's 0-1000 bar: 300 is 30 rage.
+	// Rage is on the game files' 0-1000 bar: 300 is 30 rage.
 	rager := &Spell{Powers: []Power{{Type: 1, Cost: 300}}}
 	if got := rager.PowerCost(1); got != 30 {
 		t.Errorf("rage cost = %v, want 30", got)
@@ -264,7 +270,7 @@ func TestRankedLadder(t *testing.T) {
 }
 
 // Each rank of a trait talent is a copy carrying the curve's value, so the store's own row keeps the
-// client's.
+// game files'.
 func TestTalentLadder(t *testing.T) {
 	curves[116] = [][]float64{{-40, -45, -50}, {19, 20, 21}}
 	defer delete(curves, 116)
@@ -277,7 +283,7 @@ func TestTalentLadder(t *testing.T) {
 		t.Errorf("rank 3 slow = %v, want -50", got)
 	}
 	if got := Find(116).EffectN(2).BaseValue(); got != 19 {
-		t.Errorf("the store's own row reads %v, want the client's 19", got)
+		t.Errorf("the store's own row reads %v, want the game files' 19", got)
 	}
 }
 
@@ -295,6 +301,18 @@ func TestTalentCurveLengthPanics(t *testing.T) {
 	defer delete(curves, 116)
 
 	requirePanic(t, "spelldata: spell 116 curve row 1 has 2 ranks, want 3", func() { Talent(116, 3) })
+}
+
+func TestLadderContains(t *testing.T) {
+	withRows(t, []Spell{{ID: 116}, {ID: 205}, {ID: 837}})
+
+	ladder := Ranked(116, 205)
+	if !ladder.Contains(&core.Spell{ActionID: core.ActionID{SpellID: 205}}) {
+		t.Error("rank 2 is not contained")
+	}
+	if ladder.Contains(&core.Spell{ActionID: core.ActionID{SpellID: 837}}) {
+		t.Error("a spell outside the ladder is contained")
+	}
 }
 
 // Find binary searches, so the store refuses rows it could not search.

@@ -6,12 +6,13 @@ package druid
 var faerieFireRank = spellData.FaerieFire.Highest()
 
 // TODO: To be implemented.
+// TODO: Faerie Fire does not reset the swing timer.
 func (druid *Druid) registerFaerieFireSpell() {
 	panic("To be implemented")
 
 	// The TBC implementation, kept for the port:
 	// auras := druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-	// 	// The druid's own copy of the aura; the client has no Improved Faerie
+	// 	// The druid's own copy of the aura; the game files have no Improved Faerie
 	// 	// Fire node, so there are no talent points to pass.
 	// 	return buffs.NewSpellDataFaerieFireAura(target, true, 0)
 	// })
@@ -59,7 +60,7 @@ func (druid *Druid) registerFaerieFireFeralSpell() {
 
 	// The TBC implementation, kept for the port:
 	// druid.FaerieFireAuras = druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-	// 	// The druid's own copy of the aura; the client has no Improved Faerie
+	// 	// The druid's own copy of the aura; the game files have no Improved Faerie
 	// 	// Fire node, so there are no talent points to pass.
 	// 	return buffs.NewSpellDataFaerieFireAura(target, true, 0)
 	// })

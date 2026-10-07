@@ -48,11 +48,11 @@ func (mage *Mage) registerArmorSpells() {
 	// 	Duration: time.Minute * 30,
 	// 	OnGain: func(aura *core.Aura, sim *core.Simulation) {
 	// 		mage.PseudoStats.SpiritRegenRateCasting += .3
-	// 		mage.UpdateManaRegenRates()
+	// 		mage.UpdateManaRegenRates(sim)
 	// 	},
 	// 	OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 	// 		mage.PseudoStats.SpiritRegenRateCasting -= .3
-	// 		mage.UpdateManaRegenRates()
+	// 		mage.UpdateManaRegenRates(sim)
 	// 	},
 	// })
 	//
@@ -64,6 +64,7 @@ func (mage *Mage) registerArmorSpells() {
 	// 	DefenseType:    core.DefenseTypeMagic,
 	// 	Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 	// 	ClassSpellMask: MageSpellMageArmor,
+	// 	ClassFlags:     spellData.MageArmor.Highest().ClassFlags,
 	// 	ManaCost: core.ManaCostOptions{
 	// 		FlatCost: 575,
 	// 	},
@@ -98,6 +99,7 @@ func (mage *Mage) registerArmorSpells() {
 	// 	DefenseType:    core.DefenseTypeMagic,
 	// 	Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 	// 	ClassSpellMask: MageSpellFrostArmor,
+	// 	ClassFlags:     spellData.IceArmor.Highest().ClassFlags,
 	// 	ManaCost: core.ManaCostOptions{
 	// 		FlatCost: 630,
 	// 	},

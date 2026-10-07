@@ -2,7 +2,7 @@ package spelldata
 
 // The generated store as the package loads it, rather than the fixture the rest of the tests run
 // against: the shape every accessor depends on (ids in search order, effects in position order) and
-// a handful of rows read out of the client database by hand, so that a regeneration which moves a
+// a handful of rows read out of the game files by hand, so that a regeneration which moves a
 // number says so here instead of in a sim result.
 
 import (
@@ -48,7 +48,7 @@ func TestGeneratedStoreShape(t *testing.T) {
 				t.Errorf("spell %d effect %d says it belongs to spell %d", s.ID, position, e.SpellID)
 			}
 			if position > 0 && e.Index <= s.Effects[position-1].Index {
-				t.Errorf("spell %d has effect index %d after %d - the effects are out of client order",
+				t.Errorf("spell %d has effect index %d after %d - the effects are out of game files order",
 					s.ID, e.Index, s.Effects[position-1].Index)
 			}
 			if int(e.Index) != position {
@@ -64,8 +64,8 @@ func TestGeneratedStoreShape(t *testing.T) {
 		t.Errorf("the store holds %d effects, which is outside the [6000, 16000] a whole store has",
 			effects)
 	}
-	// The client's EffectIndex has gaps, which is why EffectN counts by position and the store keeps
-	// the client's own number alongside.
+	// The game files' EffectIndex has gaps, which is why EffectN counts by position and the store
+	// keeps the game files' own number alongside.
 	if gapped == 0 {
 		t.Errorf("no row states an EffectIndex that is not its position - EffectN's by-position count " +
 			"no longer has a gap to step over")
@@ -100,8 +100,89 @@ func TestGeneratedFrostbolt(t *testing.T) {
 		t.Errorf("Frostbolt's spell power coefficient is %v, want 0.407", damage.SPCoef)
 	}
 	// 19 plus half a point for each of the four levels between the rank's own 4 and its cap of 8.
-	if got := damage.Average(60); got != 21 {
+	if got := damage.AverageAt(60); got != 21 {
 		t.Errorf("Frostbolt rank 1 averages %v at level 60, want 21", got)
+	}
+}
+
+// Per-level scaling counts from the spell's BaseLevel: Vindication's debuff states BaseLevel 0 and
+// SpellLevel 1, and the game shows the BaseLevel amount.
+func TestAverageCountsLevelsFromBaseLevel(t *testing.T) {
+	withGeneratedStore(t)
+
+	vindication := MustFind(440667).EffectN(1)
+	for _, c := range []struct {
+		level int32
+		want  float64
+	}{{16, -50}, {20, -64}, {60, -204}} {
+		if got := vindication.AverageAt(c.level); got != c.want {
+			t.Errorf("Vindication's debuff at %d is %v, want %v", c.level, got, c.want)
+		}
+	}
+	// BaseLevel equals SpellLevel on ordinary ranks, so their amounts do not move.
+	if got := MustFind(11556).EffectN(1).AverageAt(60); got != -205 {
+		t.Errorf("Demoralizing Shout at 60 is %v, want -205", got)
+	}
+}
+
+// Every row but 350026 at 0 and 60 is an in-game tooltip. Wrath rank 3 (5178), Wildvine Potion's 11387
+// and Minor Recombobulator's 18805 end their base points on halves, which round to the even end: 27.5
+// and 32.5 are 28 and 32, 0.5 and 1499.5 are 0 and 1500.
+func TestRollEndsMatchTheTooltip(t *testing.T) {
+	withGeneratedStore(t)
+
+	for _, c := range []struct {
+		spell    int32
+		effect   int
+		level    int32
+		min, max float64
+	}{
+		{350026, 1, 0, 48, 56},
+		{350026, 1, 14, 60, 69},
+		{350026, 1, 60, 63, 72},
+		{350025, 2, 14, 39, 44},
+		{5177, 1, 20, 24, 29},
+		{2912, 1, 20, 73, 89},
+		{5178, 1, 20, 32, 37},
+		{11387, 1, 35, 0, 1500},
+		{18805, 2, 60, 202, 338},
+		{18805, 3, 60, 96, 160},
+	} {
+		effect := MustFind(c.spell).EffectN(c.effect)
+		if got, want := [2]float64{effect.MinAt(c.level), effect.MaxAt(c.level)}, [2]float64{c.min, c.max}; got != want {
+			t.Errorf("%d effect %d at %d rolls %v, want %v", c.spell, c.effect, c.level, got, want)
+		}
+	}
+
+	// Wrath rank 3 at 20 shows 32 to 37, but a cast rolls its whole amount around Average, which keeps
+	// the fraction, so before spell power it averages 34.2 rather than the tooltip's middle.
+	if got, want := MustFind(5178).DamageEffect().MeanAt(20), float64(float32(34.2)); got != want {
+		t.Errorf("Wrath rank 3 at 20 averages %v, want %v", got, want)
+	}
+}
+
+// A physical hit rolls its base points by the whole Variance either side: Revenge rank 1's 22 ± 3.4 is
+// 19 to 25. A spell-school hit and a heal of any school, Healing Potion's included, leave their roll to
+// core, which spreads the whole amount by DirectVariance; an energize keeps the half-width roll.
+func TestRollWidthByEffectKind(t *testing.T) {
+	withGeneratedStore(t)
+
+	revenge := MustFind(6572).DamageEffect()
+	if got, want := [2]float64{revenge.MinAt(60), revenge.MaxAt(60)}, [2]float64{19, 25}; got != want {
+		t.Errorf("Revenge rank 1 rolls %v, want %v", got, want)
+	}
+	if got := revenge.DirectVariance(); got != 0 {
+		t.Errorf("Revenge rank 1 hands core a DirectVariance of %v, want 0", got)
+	}
+
+	for _, effect := range []*Effect{MustFind(5178).DamageEffect(), MustFind(439).HealEffect()} {
+		if got := effect.DirectVariance(); got != effect.Variance || got == 0 {
+			t.Errorf("%d hands core a DirectVariance of %v, want its Variance %v", effect.SpellID, got, effect.Variance)
+		}
+	}
+
+	if got := MustFind(437).EnergizeEffect().DirectVariance(); got != 0 {
+		t.Errorf("Restore Mana hands core a DirectVariance of %v, want 0", got)
 	}
 }
 
@@ -151,7 +232,7 @@ func TestGeneratedRequiredAreas(t *testing.T) {
 	}
 }
 
-// Area bonuses come from the override table, not the client.
+// Area bonuses come from the override table, not the game files.
 func TestGeneratedAreaBonus(t *testing.T) {
 	withGeneratedStore(t)
 
@@ -172,7 +253,7 @@ func TestGeneratedTriggerResolves(t *testing.T) {
 	}
 }
 
-// Retaliation's counterattack is a link the client does not state and overrides.HandTriggers
+// Retaliation's counterattack is a link the game files do not state and overrides.HandTriggers
 // supplies, so it has to come back out of Triggered() and Drivers().
 func TestGeneratedHandLink(t *testing.T) {
 	withGeneratedStore(t)
@@ -212,17 +293,17 @@ func TestGeneratedTalentCurve(t *testing.T) {
 	}
 }
 
-// Armor Shatter's rate is not in the client at all: its ProcChance is the 101 sentinel and an
-// override supplies the PPM.
+// Lightning Strike's rate is not in the game files at all: Darkmoon Card: Maelstrom's column reads
+// 100 beside a tooltip that says "chance", and an override supplies the PPM.
 func TestGeneratedOverrideRow(t *testing.T) {
 	withGeneratedStore(t)
 
-	s := MustFind(16928)
+	s := MustFind(23686)
 	if s.RPPM != 1 {
-		t.Errorf("Armor Shatter's RPPM is %v, want the override's 1", s.RPPM)
+		t.Errorf("Lightning Strike's RPPM is %v, want the override's 1", s.RPPM)
 	}
 	if s.ProcChanceSource != ProcChancePPM {
-		t.Errorf("Armor Shatter's proc chance source is %d, want ProcChancePPM", s.ProcChanceSource)
+		t.Errorf("Lightning Strike's proc chance source is %d, want ProcChancePPM", s.ProcChanceSource)
 	}
 }
 
@@ -239,8 +320,8 @@ func TestGeneratedInterruptFlags(t *testing.T) {
 	}
 }
 
-// Wrath is castable in Moonkin Form and excludes Tree Form, Healing Touch the reverse. Tiger's Fury
-// states its Cat Form requirement as a caster aura; its SpellShapeshift row is empty.
+// Wrath is castable in Moonkin Form and excludes Tree Form, Healing Touch the reverse. Shifting Power
+// states its Cat Form requirement twice, as a caster aura beside its stance mask.
 func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 	withGeneratedStore(t)
 
@@ -256,9 +337,10 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 			healingTouch.StanceMask, healingTouch.StanceExclude)
 	}
 
-	tigersFury := MustFind(5217)
-	if tigersFury.CasterAura != 768 {
-		t.Errorf("Tiger's Fury's caster aura is %d, want 768", tigersFury.CasterAura)
+	shiftingPower := MustFind(1322605)
+	if shiftingPower.CasterAura != 768 || shiftingPower.StanceMask != 0x1 {
+		t.Errorf("Shifting Power's caster aura is %d and stance mask %#x, want 768 and 0x1",
+			shiftingPower.CasterAura, shiftingPower.StanceMask)
 	}
 
 	for id, want := range map[int32]dbcenums.ShapeshiftForm{
@@ -268,6 +350,22 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 		if got := MustFind(id).ShapeshiftForm(); got != want {
 			t.Errorf("spell %d puts the caster in form %d, want %d", id, got, want)
 		}
+	}
+}
+
+// Justice Battleplate's 4-piece bonus 1301076 is a 189 row masked to 8388608.
+func TestGeneratedRatingRowParsesExpertise(t *testing.T) {
+	withGeneratedStore(t)
+
+	parsed := ParseStatic(parseWarrior(), MustFind(1301076))
+	if len(parsed.Applied) != 1 {
+		t.Fatalf("attached %v, want one attachment", appliedKinds(parsed))
+	}
+	if got := parsed.Applied[0].Kind; got != "stat ExpertiseRating" {
+		t.Errorf("kind = %q, want %q", got, "stat ExpertiseRating")
+	}
+	if got := parsed.Applied[0].Value; got != 12 {
+		t.Errorf("value = %v, want 12", got)
 	}
 }
 

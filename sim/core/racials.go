@@ -1,7 +1,6 @@
 package core
 
 import (
-	"math"
 	"time"
 
 	"github.com/wowsims/forever/sim/core/proto"
@@ -13,7 +12,7 @@ func applyRaceEffects(agent Agent) {
 
 	switch character.Race {
 	case proto.Race_RaceDwarf:
-		applyWeaponSpecialization(character, "Mace Specialization", 1259719, 1, proto.WeaponType_WeaponTypeMace)
+		applyWeaponSpecialization(character, 1, proto.WeaponType_WeaponTypeMace) // Mace Specialization 1259719
 		applyCreatureTypeSlaying(character, proto.MobType_MobTypeBeast)
 
 		actionID := ActionID{SpellID: 20594}
@@ -52,7 +51,7 @@ func applyRaceEffects(agent Agent) {
 		applyEureka(character)
 	case proto.Race_RaceHuman:
 		character.MultiplyStat(stats.Spirit, 1.05)
-		applyWeaponSpecialization(character, "Sword Specialization", 20597, 2, proto.WeaponType_WeaponTypeSword)
+		applyWeaponSpecialization(character, 2, proto.WeaponType_WeaponTypeSword) // Sword Specialization 20597
 	case proto.Race_RaceNightElf:
 		character.PseudoStats.BaseDodgeChance += 0.01
 		character.PseudoStats.MovementSpeedMultiplier *= 1.02
@@ -74,7 +73,7 @@ func applyRaceEffects(agent Agent) {
 				},
 			})
 	case proto.Race_RaceOrc:
-		applyWeaponSpecialization(character, "Axe Specialization", 20574, 1, proto.WeaponType_WeaponTypeAxe)
+		applyWeaponSpecialization(character, 1, proto.WeaponType_WeaponTypeAxe) // Axe Specialization 20574
 
 		bloodFuryID := ActionID{SpellID: 20572}
 
@@ -276,36 +275,19 @@ func applySkyborneSharedRacials(character *Character) {
 
 func applyCreatureTypeSlaying(character *Character, mobType proto.MobType) {
 	character.Env.RegisterPostFinalizeEffect(func() {
-		character.MultiplyDamageVersus(1.05, true, mobType)
+		character.MultiplyDamageVersus(1.05, mobType)
+		character.MultiplyCritDamageVersus(1.05, mobType)
 	})
 }
 
-func applyWeaponSpecialization(character *Character, label string, spellID int32, critPercent float64, weaponType proto.WeaponType) {
-	hasWeaponEquipped := func() bool {
-		mh, oh := character.MainHand(), character.OffHand()
-		return (mh != nil && mh.WeaponType == weaponType) || (oh != nil && oh.WeaponType == weaponType)
-	}
-
-	aura := character.RegisterAura(Aura{
-		Label:      label,
-		ActionID:   ActionID{SpellID: spellID},
-		Duration:   NeverExpires,
-		BuildPhase: Ternary(hasWeaponEquipped(), CharacterBuildPhaseBase, CharacterBuildPhaseNone),
-	}).
-		AttachStatBuff(stats.PhysicalCritPercent, critPercent).
-		AttachStatBuff(stats.SpellCritPercent, critPercent)
-
-	if hasWeaponEquipped() {
-		MakePermanent(aura)
-	}
-
-	character.RegisterItemSwapCallback(AllWeaponSlots(), func(sim *Simulation, _ proto.ItemSlot) {
-		if hasWeaponEquipped() {
-			aura.Activate(sim)
-		} else {
-			aura.Deactivate(sim)
-		}
-	})
+// The crit holds while any weapon slot holds a weapon of this type, one- or two-handed, follows item
+// swaps, and reaches every spell and attack. The sheet counts it in the base stage.
+func applyWeaponSpecialization(character *Character, critPercent float64, weaponType proto.WeaponType) {
+	req := EquipRequirement{SubclassMask: WeaponSubclassMask(weaponType)}
+	character.NewEquipGatedStats(req, stats.Stats{
+		stats.PhysicalCritPercent: critPercent,
+		stats.SpellCritPercent:    critPercent,
+	}).SetLevel(nil, 1)
 }
 
 func applyExpansiveMind(character *Character) {
@@ -319,46 +301,96 @@ func applyExpansiveMind(character *Character) {
 	}
 }
 
-// The client scopes Eureka! to each class's damaging abilities with a spell family mask. Core cannot
-// see those masks, so this takes every class ability that deals damage (or heals, for a priest).
+// One class's Eureka! row: the class mask and the fraction of its idx0 SPELLMOD_COST, idx1
+// SPELLMOD_DAMAGE and idx2 SPELLMOD_DOT, zero where the row states no SPELLMOD_DOT.
+type EurekaMods struct {
+	CostFlags, DamageFlags, ChannelFlags ClassFlags
+	Cost, Damage, Channel                float64
+}
+
+var eurekaMods func(spellID int32) EurekaMods
+
+// The rows sit in the spell store, which imports core, so sim/core/buffs registers their reader from
+// its init.
+func RegisterEurekaMods(read func(spellID int32) EurekaMods) {
+	eurekaMods = read
+}
+
+// Eureka! scopes its mods to each class's abilities by the game files' class masks: idx0 of each row
+// names the spells whose cost it lowers, idx1 the ones whose direct damage it raises, and idx2, on the
+// warlock and priest rows only, the channels whose ticks it raises once the channel spends a stack. A
+// stack goes on a landed ability any of them names that has a damage component.
 func applyEureka(character *Character) {
 	var spellID int32
-	var costReduction float64
 	var resourceType proto.ResourceType
 	procMask := ProcMaskSpecial
+	spendCallback := CallbackOnSpellHitDealt
 
 	switch character.Class {
 	case proto.Class_ClassRogue:
-		spellID, costReduction, resourceType = 1259812, 0.2, proto.ResourceType_ResourceTypeEnergy
+		spellID, resourceType = 1259812, proto.ResourceType_ResourceTypeEnergy
 	case proto.Class_ClassWarrior:
-		spellID, costReduction, resourceType = 1259813, 0.4, proto.ResourceType_ResourceTypeRage
+		spellID, resourceType = 1259813, proto.ResourceType_ResourceTypeRage
 	case proto.Class_ClassMage:
-		spellID, costReduction, resourceType = 1259817, 0.5, proto.ResourceType_ResourceTypeMana
+		spellID, resourceType = 1259817, proto.ResourceType_ResourceTypeMana
 	case proto.Class_ClassWarlock:
-		spellID, costReduction, resourceType = 1259821, 0.5, proto.ResourceType_ResourceTypeMana
+		spellID, resourceType = 1259821, proto.ResourceType_ResourceTypeMana
 	case proto.Class_ClassPriest:
-		spellID, costReduction, resourceType = 1259823, 0.15, proto.ResourceType_ResourceTypeMana
+		spellID, resourceType = 1259823, proto.ResourceType_ResourceTypeMana
 		procMask |= ProcMaskSpellHealing
+		spendCallback |= CallbackOnHealDealt
 	default:
 		return
 	}
 
+	if eurekaMods == nil {
+		panic(`no Eureka! rows are registered: import _ "github.com/wowsims/forever/sim/core/buffs"`)
+	}
+	mods := eurekaMods(spellID)
 	actionID := ActionID{SpellID: spellID}
-	const anyClassSpell = math.MaxInt64
 
 	costMod := character.AddDynamicMod(SpellModConfig{
 		Kind:         SpellMod_PowerCost_Pct,
-		ClassMask:    anyClassSpell,
+		ClassFlags:   mods.CostFlags,
 		ProcMask:     procMask,
 		ResourceType: resourceType,
-		FloatValue:   -costReduction,
+		FloatValue:   mods.Cost,
 	})
 	damageMod := character.AddDynamicMod(SpellModConfig{
-		Kind:       SpellMod_DamageDone_Pct,
-		ClassMask:  anyClassSpell,
+		Kind:       SpellMod_DirectDamageDone_Flat,
+		ClassFlags: mods.DamageFlags,
 		ProcMask:   procMask,
-		FloatValue: 0.1,
+		FloatValue: mods.Damage,
 	})
+	// TODO: Ingame test needed: whether a channel that spends a stack keeps the bonus on all of its
+	// ticks once the aura has ended, the last stack included.
+	isEurekaChannel := func(spell *Spell) bool {
+		return spell.Flags.Matches(SpellFlagChanneled) && !spell.Flags.Matches(SpellFlagNoSpellMods) &&
+			spell.MatchesFlags(mods.ChannelFlags) && procMask.Matches(spell.ProcMask)
+	}
+	var boostedChannels map[*Dot]bool
+	if !mods.ChannelFlags.IsZero() {
+		boostedChannels = make(map[*Dot]bool)
+		// The channel's own expire hook comes first, so its final tick keeps the bonus.
+		character.OnSpellRegistered(func(spell *Spell) {
+			if !isEurekaChannel(spell) {
+				return
+			}
+			for _, dot := range append(DotArray{spell.AOEDot()}, spell.dots...) {
+				if dot == nil {
+					continue
+				}
+				dot.ApplyOnExpire(func(_ *Aura, _ *Simulation) {
+					if boostedChannels[dot] {
+						dot.PeriodicDamageMultiplier /= 1 + mods.Channel
+						delete(boostedChannels, dot)
+					}
+				})
+			}
+		})
+	}
+
+	firstHit, resetFirstHit := OncePerCast()
 
 	aura := character.RegisterAura(Aura{
 		Label:     "Eureka!",
@@ -366,6 +398,7 @@ func applyEureka(character *Character) {
 		Duration:  time.Second * 15,
 		MaxStacks: 3,
 		OnGain: func(aura *Aura, sim *Simulation) {
+			resetFirstHit()
 			aura.SetStacks(sim, 3)
 			costMod.Activate()
 			damageMod.Activate()
@@ -374,10 +407,37 @@ func applyEureka(character *Character) {
 			costMod.Deactivate()
 			damageMod.Deactivate()
 		},
-		OnCastComplete: func(aura *Aura, sim *Simulation, spell *Spell) {
-			if spell.Matches(anyClassSpell) && spell.ProcMask.Matches(procMask) {
-				aura.RemoveStack(sim)
+	})
+
+	spendFlags := mods.CostFlags
+	for i := range spendFlags.Mask {
+		spendFlags.Mask[i] |= mods.DamageFlags.Mask[i]
+	}
+
+	aura.AttachProcTrigger(ProcTrigger{
+		Name:       "Eureka! - Spend",
+		Callback:   spendCallback,
+		ClassFlags: spendFlags,
+		ProcMask:   procMask,
+		Outcome:    OutcomeLanded,
+
+		RequireDamageComponent: true,
+
+		ExtraCondition: func(sim *Simulation, spell *Spell, _ *SpellResult) bool {
+			return firstHit(sim, spell)
+		},
+		Handler: func(sim *Simulation, spell *Spell, result *SpellResult) {
+			if isEurekaChannel(spell) {
+				dot := spell.AOEDot()
+				if dot == nil {
+					dot = spell.Dot(result.Target)
+				}
+				if dot != nil && dot.IsActive() && !boostedChannels[dot] {
+					dot.PeriodicDamageMultiplier *= 1 + mods.Channel
+					boostedChannels[dot] = true
+				}
 			}
+			aura.RemoveStack(sim)
 		},
 	})
 
@@ -439,6 +499,9 @@ func applyTouchOfTheGrave(character *Character) {
 		Outcome:    OutcomeLanded,
 		ProcChance: procChance,
 		ICD:        time.Second,
+
+		RequireDamageComponent: true,
+
 		Handler: func(sim *Simulation, spell *Spell, result *SpellResult) {
 			drain.Cast(sim, result.Target)
 		},

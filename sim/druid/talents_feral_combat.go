@@ -16,16 +16,18 @@ func (druid *Druid) registerFeralCombatTalents() {
 	druid.applyFeralCharge()
 	druid.applySharpenedClaws()
 
-	// Tier 4
 	druid.applyShreddingAttacks()
+
+	// Tier 4
+	druid.applyShiftingPower()
 	// Primal Bite implemented in mangle.go
 	druid.applyPredatoryStrikes()
 	druid.applyBloodFrenzy()
 
 	// Tier 5
-	druid.applyPredatoryInstincts()
+	druid.applyImprovedShiftingPower()
 	// Leader of the Pack implemented in druid.go
-	druid.applyKingOfTheJungle()
+	druid.applyPredatoryInstincts()
 
 	// Tier 6
 	druid.applyNaturalReaction()
@@ -55,7 +57,7 @@ func (druid *Druid) applyThickHide() {
 }
 
 // Predatory Instincts: +2% melee critical strike damage per rank while in Cat or Bear form.
-// The client aura (33859 and its ranks) is school-masked to Physical, so it covers every
+// The aura in the game files (33859 and its ranks) is school-masked to Physical, so it covers every
 // physical attack in form (abilities and auto attacks, Ravage included) and nothing else.
 //
 // TODO: To be implemented. Forever's regenerated aura enum no longer carries the crit damage
@@ -302,12 +304,22 @@ func (druid *Druid) applyFeralCharge() {
 	}
 }
 
-// applyKingOfTheJungle implements King of the Jungle, new in Forever.
+// applyShiftingPower implements Shifting Power, new in Forever.
 //
 // TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
 // the effect can be modelled; there is no TBC equivalent to port.
-func (druid *Druid) applyKingOfTheJungle() {
-	if druid.Talents.KingOfTheJungle == 0 {
+func (druid *Druid) applyShiftingPower() {
+	if !druid.Talents.ShiftingPower {
+		return
+	}
+}
+
+// applyImprovedShiftingPower implements Improved Shifting Power, new in Forever.
+//
+// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
+// the effect can be modelled; there is no TBC equivalent to port.
+func (druid *Druid) applyImprovedShiftingPower() {
+	if druid.Talents.ImprovedShiftingPower == 0 {
 		return
 	}
 }

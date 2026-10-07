@@ -33,13 +33,19 @@ func (dpm *DynamicProcManager) Proc(sim *Simulation, procMask ProcMask, label st
 }
 
 func (dpm *DynamicProcManager) Chance(procMask ProcMask, sim *Simulation) float64 {
+	chance, _ := dpm.chanceFor(procMask, sim)
+	return chance
+}
+
+// The chance the manager states for a hit of this proc mask, and whether any of its masks hears it.
+func (dpm *DynamicProcManager) chanceFor(procMask ProcMask, sim *Simulation) (float64, bool) {
 	for i, m := range dpm.procMasks {
 		if m.Matches(procMask) {
-			return dpm.procChances[i].Chance(sim)
+			return dpm.procChances[i].Chance(sim), true
 		}
 	}
 
-	return 0
+	return 0, false
 }
 
 // PPMManager for static ProcMasks
@@ -170,14 +176,4 @@ func (sp staticProc) Reset()                       {}
 func (sp staticProc) Chance(_ *Simulation) float64 { return sp.chance }
 func (sp staticProc) Proc(sim *Simulation, label string) bool {
 	return sim.Proc(sp.chance, label)
-}
-
-func (item *Item) selectEffectId(isEnchant bool, isGem bool) int32 {
-	if isEnchant {
-		return item.Enchant.EffectID
-	} else if isGem {
-		return item.Gems[0].ID
-	}
-
-	return item.ID
 }

@@ -126,6 +126,7 @@ func RegisterAllStatConsumables() {
 		13453,  // Elixir of Brute Force
 		13454,  // Greater Arcane Elixir
 		13510,  // Flask of the Titans
+		13511,  // Flask of Distilled Wisdom
 		13512,  // Flask of Supreme Power
 		13513,  // Flask of Chromatic Resistance
 		13810,  // Blessed Sunfruit
@@ -164,6 +165,7 @@ func RegisterAllStatConsumables() {
 		21546,  // Elixir of Holy Power
 		22192,  // Bloodkelp Elixir of Dodging
 		22193,  // Bloodkelp Elixir of Resistance
+		22236,  // Buttermilk Delight
 		22237,  // Dark Desire
 		22238,  // Very Berry Cream
 		22239,  // Sweet Surprise
@@ -174,28 +176,10 @@ func RegisterAllStatConsumables() {
 		23211,  // Toasted Smorc
 		23326,  // Midsummer Sausage
 		23327,  // Fire-toasted Bun
-		206177, // Pine Nut Butter
-		210708, // Elixir of Coalesced Regret
-		211815, // Silverwing Battle Hymn
-		211816, // Warsong Battle Drum
-		211953, // Scroll of Arcane Recovery I
-		211954, // Scroll of Arcane Accuracy I
-		211955, // Scroll of Arcane Protection - Fire I
-		211956, // Scroll of Arcane Protection - Frost I
-		211957, // Scroll of Arcane Power I
-		217308, // Enchanted Sigil: Innovation
-		217398, // Lesser Arcane Elixir
-		227286, // Warmed Rumsey Rum with Cream
-		228978, // Enchanted Sigil: Flowing Waters
-		232436, // Darkclaw Bisque
-		232438, // Smoked Redgill
-		238637, // Prowler Steak
-		238638, // Filet o' Flank
-		238639, // Sunrise Omelette
+		23435,  // Elderberry Pie
 		246948, // Distilled Firewater
 		247754, // Minor Arcane Elixir
 		247755, // Elixir of Minor Force
-		248613, // Lightning in a Bottle
 		249865, // Peace Tea
 		249866, // Royal Tea
 		249867, // Root Tea

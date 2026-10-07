@@ -94,6 +94,24 @@ func TestElixirTakesEveryEffectAndTheDurationOfItsRow(t *testing.T) {
 	}
 }
 
+// Elixir of the Grizzly 250351 (1250986) states 25 Strength and the same 2% crit as Elixir of the
+// Mongoose: both stats apply, the crit once.
+func TestOnlyOneElixirsCritApplies(t *testing.T) {
+	const grizzly int32 = 250351
+	registerStatConsumable(t, elixirOfTheMongooseID)
+	registerStatConsumable(t, grizzly)
+
+	mongoose := statGain(&proto.ConsumesSpec{ElixirIds: []int32{elixirOfTheMongooseID}}, &proto.RaidBuffs{})
+	both := statGain(&proto.ConsumesSpec{ElixirIds: []int32{elixirOfTheMongooseID, grizzly}}, &proto.RaidBuffs{})
+	if both[stats.Agility] != 25 || both[stats.Strength] != 25 {
+		t.Errorf("Mongoose and Grizzly add %v Agility and %v Strength, want 25 and 25", both[stats.Agility], both[stats.Strength])
+	}
+	if both[stats.PhysicalCritPercent] != mongoose[stats.PhysicalCritPercent] || both[stats.SpellCritPercent] != mongoose[stats.SpellCritPercent] {
+		t.Errorf("Mongoose and Grizzly add %v%% physical and %v%% spell crit, want Mongoose's alone: %v%% and %v%%",
+			both[stats.PhysicalCritPercent], both[stats.SpellCritPercent], mongoose[stats.PhysicalCritPercent], mongoose[stats.SpellCritPercent])
+	}
+}
+
 // Scroll of Intellect IV states 16 Intellect, which Arcane Brilliance's 40 overrides rather than adds
 // to.
 func TestScrollIsExclusiveWithTheRaidBuffOfItsStat(t *testing.T) {
@@ -241,6 +259,24 @@ func TestAFlaskStacksWithAnElixir(t *testing.T) {
 	elixir := statGain(&proto.ConsumesSpec{ElixirIds: []int32{arcane}}, &proto.RaidBuffs{})
 	if both := statGain(&proto.ConsumesSpec{FlaskId: supremePower, ElixirIds: []int32{arcane}}, &proto.RaidBuffs{}); both != flask.Add(elixir) {
 		t.Errorf("Flask of Supreme Power and Arcane Elixir add %v, want each one's in full: %v and %v", both, flask, elixir)
+	}
+}
+
+// Flask of Distilled Wisdom 13511 (17627) states its 2000 as A_MOD_MAX_POWER on mana, which is the
+// Mana stat, and nothing else.
+func TestDistilledWisdomAddsTwoThousandMana(t *testing.T) {
+	const distilledWisdom int32 = 13511
+	registerStatConsumable(t, distilledWisdom)
+
+	gain := statGain(&proto.ConsumesSpec{FlaskId: distilledWisdom}, &proto.RaidBuffs{})
+	if want := (stats.Stats{stats.Mana: 2000}); gain != want {
+		t.Errorf("Flask of Distilled Wisdom adds %v, want 2000 Mana alone", gain)
+	}
+
+	_, without := newConsumablesSim(&proto.ConsumesSpec{}, &proto.RaidBuffs{})
+	_, with := newConsumablesSim(&proto.ConsumesSpec{FlaskId: distilledWisdom}, &proto.RaidBuffs{})
+	if got := with.MaxMana() - without.MaxMana(); got != 2000 {
+		t.Errorf("Flask of Distilled Wisdom raises maximum mana by %v, want 2000", got)
 	}
 }
 

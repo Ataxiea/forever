@@ -3,6 +3,7 @@ package mage
 import (
 	"time"
 
+	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -70,9 +71,10 @@ func (mage *Mage) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
 
 func (mage *Mage) Initialize() {
 	// ImprovedScorchAuras is filled by the port of registerScorchSpell: the
-	// client's Fire Vulnerability (22959) is A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER,
+	// game files' Fire Vulnerability (22959) is A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER,
 	// so it raises the fire damage this mage deals rather than the damage the
-	// target takes, and sim/core has no aura to build it from.
+	// target takes: the port parses it onto each target's aura with
+	// spelldata.ParseEffects and FromCaster.
 	mage.registerPassives()
 	mage.registerSpells()
 }
@@ -95,6 +97,7 @@ func (mage *Mage) registerSpells() {
 	mage.registerFrostNovaSpell()
 	mage.registerManaGems()
 	mage.registerScorchSpell()
+	shared.RegisterShoot(&mage.Character)
 
 	FlameStrikeRankMap.Each(func(_ int32, rankConfig *spelldata.Spell) { mage.registerFlamestrike(rankConfig) })
 
@@ -126,6 +129,7 @@ func NewMage(character *core.Character, options *proto.Player) *Mage {
 	core.FillTalentsProto(mage.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 
 	mage.EnableManaBar()
+	mage.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	mage.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
 
 	// TODO: Forever drops Summon Water Elemental; the pet is never created until we know

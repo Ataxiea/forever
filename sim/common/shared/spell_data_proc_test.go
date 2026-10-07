@@ -21,7 +21,7 @@ const (
 	healProcBuff    int32 = 1249119
 )
 
-// core skips an effect whose item this client does not ship, which every id below is: the test's own
+// core skips an effect whose item the game files do not ship, which every id below is: the test's own
 // ids are chosen to be absent from the shipped database so that registering them cannot collide with
 // a real effect. Putting them in the database first is what lets the registration run under the
 // with_db build tag as it does without it.
@@ -49,18 +49,6 @@ func TestSpellDataProcRegistersEveryVariant(t *testing.T) {
 
 	if !core.HasItemEffect(990001) || !core.HasItemEffect(990002) {
 		t.Error("a variant was left unregistered")
-	}
-
-	// Only the highest ID goes into the test suite, so a dozen re-issues of one trinket do not each
-	// get their own fixture entry.
-	if core.HasItemEffectForTest(990001) {
-		t.Error("the lower-ID variant was added to the test suite as well")
-	}
-	if !core.HasItemEffectForTest(990002) {
-		t.Error("the highest-ID variant was kept out of the test suite")
-	}
-	if !core.AddEffectsToTest {
-		t.Error("the variant loop left effects out of the test suite for whatever registers next")
 	}
 }
 
@@ -159,7 +147,7 @@ func TestSpellDataProcStatesATrigger(t *testing.T) {
 	}
 }
 
-// The client leaves the duration off the buff on a fair few procs and states it on the trigger, and
+// The game files leave the duration off the buff on a fair few procs and state it on the trigger, and
 // an aura of no duration is one core refuses to activate.
 func TestProcBuffDurationFallsBackToTheTrigger(t *testing.T) {
 	trigger, buff := chargeRows()
@@ -286,7 +274,7 @@ func TestSpellDataProcAppliesToACharacter(t *testing.T) {
 }
 
 // A damage proc has no buff at all: the row it names is a spell that deals damage, and what the
-// client states about that spell is its school, its hit table and the amount it rolls. What it does
+// game files state about that spell is its school, its hit table and the amount it rolls. What it does
 // not state is that the game casts it off a hit, which is the GCD, the cost and the cast time this
 // has to strip.
 func TestSpellDataDamageProcAppliesToACharacter(t *testing.T) {
@@ -323,10 +311,13 @@ func TestSpellDataDamageProcAppliesToACharacter(t *testing.T) {
 		t.Errorf("defense type = %v, want the row's magic", spell.DefenseType)
 	}
 	for _, flag := range []core.SpellFlag{core.SpellFlagPassiveSpell, core.SpellFlagNoOnCastComplete,
-		core.SpellFlagNoOnDamageDealt, core.SpellFlagProc} {
+		core.SpellFlagProc} {
 		if !spell.Flags.Matches(flag) {
 			t.Errorf("flags = %b, want %b set", spell.Flags, flag)
 		}
+	}
+	if spell.Flags.Matches(core.SpellFlagNoOnDamageDealt) {
+		t.Error("the proc's hits skip the damage listeners, want them heard by the ones that hear procs")
 	}
 	if spell.ProcMask != core.ProcMaskEmpty {
 		t.Errorf("proc mask = %v, want none: a proc's damage is heard through its flags", spell.ProcMask)
@@ -419,7 +410,7 @@ func TestStatedEnchantChanceRollsOnTheEnchantedWeaponOnly(t *testing.T) {
 	trigger := &spelldata.Spell{ID: 990410, Name: "Test Fiery Blaze", ProcChance: 15}
 	cfg := SpellDataProc{Name: "Test Fiery Blaze", EnchantID: enchantID, TriggerSpellID: trigger.ID,
 		BuffSpellID: trigger.ID, IsWeaponProc: true}
-	config := spellDataProcListener(character, cfg, cfg.effectSource(), trigger, nil)
+	config := spellDataProcListener(character, cfg, cfg.effectSource(), trigger)
 
 	if config.ProcChance != 0 {
 		t.Errorf("flat chance = %v, want none: it would roll on the off hand's hits too", config.ProcChance)
@@ -482,7 +473,7 @@ func TestSpellDataProcTakesAPPMOverride(t *testing.T) {
 			row := *spelldata.MustFind(tc.spellID)
 			unsupported := func() []string {
 				if tc.isWeaponProc {
-					return spelldata.ItemProcUnsupported(&row, true)
+					return spelldata.ItemProcUnsupportedWithRate(&row, true, 0)
 				}
 				return spelldata.EnchantAuraUnsupported(&row)
 			}
@@ -503,7 +494,7 @@ func TestSpellDataProcTakesAPPMOverride(t *testing.T) {
 
 			cfg := SpellDataProc{Name: "Test " + tc.name, EnchantID: enchantID, TriggerSpellID: row.ID,
 				BuffSpellID: row.ID, IsWeaponProc: tc.isWeaponProc}
-			config := spellDataProcListener(character, cfg, cfg.effectSource(), &row, nil)
+			config := spellDataProcListener(character, cfg, cfg.effectSource(), &row)
 
 			if config.ProcChance != 0 {
 				t.Errorf("flat chance = %v, want none beside the rate", config.ProcChance)
@@ -585,7 +576,7 @@ func TestEnchantAuraPPMFollowsItsWeapon(t *testing.T) {
 			row.ProcChanceSource, row.ProcChanceEffect = spelldata.ProcChancePPM, 0
 			cfg := SpellDataProc{Name: "Test " + tc.name, EnchantID: tc.enchantID, TriggerSpellID: row.ID,
 				BuffSpellID: row.ID}
-			config := spellDataProcListener(character, cfg, cfg.effectSource(), &row, nil)
+			config := spellDataProcListener(character, cfg, cfg.effectSource(), &row)
 
 			if config.DPM == nil {
 				t.Fatal("no procs-per-minute manager")

@@ -1,12 +1,14 @@
 package spelldata
 
 import (
+	"math"
 	"testing"
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
 // One row per shape the proc resolver has to answer for: the four chance sources, an override-baked
@@ -256,21 +258,13 @@ func TestProcTriggerMasklessRateFromTheCaller(t *testing.T) {
 	}
 }
 
-// The trigger is still built for a row the decode reads past; the audit is where that shows up.
-func TestProcTriggerUnsupportedNamesTheBitsAndTheHints(t *testing.T) {
+// The trigger is still built for a row the decode reads past.
+func TestProcTriggerBuildsPastUnsupportedBitsAndHints(t *testing.T) {
 	withRows(t, procRows())
 
 	trigger := ProcTrigger(testCharacter(), Find(2600), noopHandler)
 	if trigger.Callback != core.CallbackOnSpellHitDealt {
 		t.Errorf("callback = %d, want the supported bits to still build a listener", trigger.Callback)
-	}
-
-	unsupported := ProcTriggerUnsupported(testCharacter(), Find(2600))
-	if len(unsupported) != 2 || unsupported[0] != "KILL" || unsupported[1] != "NAMED_ABILITY" {
-		t.Errorf("unsupported = %v, want the KILL bit and the named-ability hint", unsupported)
-	}
-	if got := ProcTriggerUnsupported(testCharacter(), Find(2000)); len(got) != 0 {
-		t.Errorf("unsupported = %v, want none on a row the decode models", got)
 	}
 }
 
@@ -284,19 +278,13 @@ func TestProcTriggerDropsAClassMaskOfAnotherFamily(t *testing.T) {
 	if got := ProcTrigger(warrior, Find(2700), noopHandler).ClassFlags; !got.IsZero() {
 		t.Errorf("class flags = %v, want none: family 5 names nothing a warrior casts", got)
 	}
-	if got := ProcTriggerUnsupported(warrior, Find(2700)); len(got) != 1 || got[0] != "CLASS_MASK_OTHER_FAMILY" {
-		t.Errorf("unsupported = %v, want the dropped mask reported", got)
-	}
 
 	warlock := &core.Character{Class: proto.Class_ClassWarlock}
 	if got := ProcTrigger(warlock, Find(2700), noopHandler).ClassFlags; got != (core.ClassFlags{Family: 5, Mask: [4]uint32{0: 0x8}}) {
 		t.Errorf("class flags = %v, want the row's, which is the warlock's own family", got)
 	}
-	if got := ProcTriggerUnsupported(warlock, Find(2700)); len(got) != 0 {
-		t.Errorf("unsupported = %v, want none where the family is the character's", got)
-	}
 
-	// A class the client states no family for is no evidence that the mask is somebody else's.
+	// A class the game files state no family for is no evidence that the mask is somebody else's.
 	if got := ProcTrigger(testCharacter(), Find(2700), noopHandler).ClassFlags; got.IsZero() {
 		t.Error("class flags were dropped for a character whose class states no family")
 	}
@@ -310,9 +298,6 @@ func TestProcTriggerKeepsAMaskOutsideEveryClassFamily(t *testing.T) {
 	warrior := &core.Character{Class: proto.Class_ClassWarrior}
 	if got := ProcTrigger(warrior, Find(2800), noopHandler).ClassFlags; got != (core.ClassFlags{Family: 13, Mask: [4]uint32{0: 0x1}}) {
 		t.Errorf("class flags = %v, want the row's: family 13 is nobody's class family", got)
-	}
-	if got := ProcTriggerUnsupported(warrior, Find(2800)); len(got) != 0 {
-		t.Errorf("unsupported = %v, want none for a mask outside every class family", got)
 	}
 }
 
@@ -342,6 +327,74 @@ func TestClassSpellFamilies(t *testing.T) {
 	}
 
 	if len(core.ClassSpellFamilies) != 9 {
-		t.Errorf("the table holds %d classes, and this client has 9", len(core.ClassSpellFamilies))
+		t.Errorf("the table holds %d classes, and the game files have 9", len(core.ClassSpellFamilies))
+	}
+}
+
+// A trigger carries its row's own class flags, which is what a SPELLMOD_CHANCE_OF_SUCCESS names:
+// Improved Poisons 14113 raises the 20% Instant Poison 8680 rolls by 10 points, and Moonkin Form
+// 24858 doubles the chance of Omen of Clarity 16864 while the form is up.
+func TestAProcChanceModReachesTheTriggerBuiltFromTheRowItNames(t *testing.T) {
+	withGeneratedStore(t)
+
+	rogue := parseCharacter(&proto.Player{Class: proto.Class_ClassRogue, Spec: &proto.Player_Rogue{Rogue: &proto.Rogue{}}})
+	instantPoison := MustFind(8680)
+	trigger := ProcTrigger(rogue, instantPoison, noopHandler, WeaponProc())
+	if trigger.ProcSpellClassFlags != instantPoison.ClassFlags {
+		t.Fatalf("the trigger's own class flags = %v, want the row's %v", trigger.ProcSpellClassFlags, instantPoison.ClassFlags)
+	}
+	if got := rogue.ModifiedProcChance(trigger.ProcSpellClassFlags, trigger.ProcChance); got != 0.2 {
+		t.Errorf("Instant Poison's chance before the talent: %v, want 0.2", got)
+	}
+
+	parsed := ParseStatic(rogue, MustFind(14113))
+	if kinds := appliedKinds(parsed); len(kinds) == 0 || kinds[0] != "SpellMod_ProcChance_Flat" {
+		t.Fatalf("Improved Poisons attached %v, want the proc chance mod first", kinds)
+	}
+	if got := rogue.ModifiedProcChance(trigger.ProcSpellClassFlags, trigger.ProcChance); math.Abs(got-0.3) > 1e-9 {
+		t.Errorf("Instant Poison's chance with the talent: %v, want 0.3", got)
+	}
+
+	sim := &core.Simulation{}
+	druid := parseCharacter(&proto.Player{Class: proto.Class_ClassDruid, Spec: &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{}}})
+	moonkin := MustFind(24858)
+	form := druid.RegisterAura(AuraConfig(moonkin))
+	ParseEffects(druid, form, moonkin, Effects(5))
+	omen := MustFind(16864).ClassFlags
+
+	form.Activate(sim)
+	if got := druid.ModifiedProcChance(omen, 0.1); math.Abs(got-0.2) > 1e-9 {
+		t.Errorf("Omen of Clarity's chance in Moonkin Form: %v, want 0.2", got)
+	}
+	form.Deactivate(sim)
+	if got := druid.ModifiedProcChance(omen, 0.1); got != 0.1 {
+		t.Errorf("Omen of Clarity's chance out of the form: %v, want 0.1", got)
+	}
+}
+
+// Frenzy 19621 names the proc of Tamed Pet Passive 20784, a row the store does not hold, and
+// Improved Judgement of Light 23564 the Judgement of Light debuff 20185 on the target. Both attach to
+// the caster: a pet's trigger counts its owner's mods, and the debuff's trigger names the paladin.
+func TestAProcChanceModReachesThePetAndTheTargetSideTrigger(t *testing.T) {
+	withGeneratedStore(t)
+
+	hunter := parseCharacter(&proto.Player{Class: proto.Class_ClassHunter, Spec: &proto.Player_Hunter{Hunter: &proto.Hunter{}}})
+	hunter.Party.Raid = &core.Raid{}
+	pet := core.NewPet(core.PetConfig{Name: "Test Pet", Owner: hunter,
+		StatInheritance: func(stats.Stats) stats.Stats { return stats.Stats{} }})
+	frenzy := MustFind(19621)
+	if kinds := appliedKinds(ParseStatic(hunter, frenzy)); len(kinds) != 1 || kinds[0] != "SpellMod_ProcChance_Flat" {
+		t.Fatalf("Frenzy attached %v, want the proc chance mod", kinds)
+	}
+	if got := pet.ModifiedProcChance(frenzy.EffectN(1).ClassFlags, 0); math.Abs(got-0.2) > 1e-9 {
+		t.Errorf("the pet's Frenzy chance with the talent: %v, want 0.2", got)
+	}
+
+	paladin := parseCharacter(&proto.Player{Class: proto.Class_ClassPaladin, Spec: &proto.Player_RetributionPaladin{RetributionPaladin: &proto.RetributionPaladin{}}})
+	if kinds := appliedKinds(ParseStatic(paladin, MustFind(23564))); len(kinds) != 1 || kinds[0] != "SpellMod_ProcChance_Flat" {
+		t.Fatalf("Improved Judgement of Light attached %v, want the proc chance mod", kinds)
+	}
+	if got := paladin.ModifiedProcChance(MustFind(20185).ClassFlags, 0.5); math.Abs(got-0.6) > 1e-9 {
+		t.Errorf("Judgement of Light's chance with the talent: %v, want 0.6", got)
 	}
 }

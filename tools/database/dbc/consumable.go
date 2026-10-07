@@ -22,6 +22,8 @@ type Consumable struct {
 	ClassMask          int
 	RaceMask           int64
 	RequiredSkill      int
+	RequiredSkillRank  int
+	RequiredHoliday    int // ItemSparse.RequiredHoliday, 0 when the item names no world event.
 	TemporaryEnchant   TemporaryEnchant
 }
 
@@ -85,13 +87,14 @@ func (c *Consumable) ToMap() map[string]interface{} {
 // ToProto converts the Consumable to a proto representation.
 func (c *Consumable) ToProto() *proto.Consumable {
 	onUses := c.OnUseEffects()
-	enchant := temporaryEnchantSpell(onUses)
+	enchant, enchantEffect := temporaryEnchantSpell(onUses)
 	category := onUseCategory(onUses)
 	consumable := &proto.Consumable{
 		Id:                 int32(c.Id),
-		Type:               c.consumableType(enchant, category),
+		Type:               c.consumableType(enchantEffect, category),
 		Stats:              c.GetStatModifiers().ToProtoArray(),
 		Name:               c.Name,
+		Lvl:                int32(c.ItemLevel),
 		BuffsMainStat:      false, // Todo: Should be food currently, might be more in MoP, figure out how to tell
 		CategoryId:         int32(c.SpellCategoryID),
 		EffectIds:          c.GetNonStatEffectIds(),
@@ -101,6 +104,14 @@ func (c *Consumable) ToProto() *proto.Consumable {
 	}
 	if category > 0 {
 		consumable.CategoryId = category
+	}
+	// A required level of 1 requires nothing: the EZ-Thro and SAF-T bombs and the Restored potions
+	// state 1 beside item levels up to 60.
+	if c.RequiredLevel > 1 {
+		consumable.Lvl = int32(c.RequiredLevel)
+	}
+	if consumable.RequiredProfession != proto.Profession_ProfessionUnknown {
+		consumable.ReqProfRank = int32(c.RequiredSkillRank)
 	}
 	if c.RaceMask != -1 && c.RaceMask != 0 {
 		consumable.RaceAllowlist = GetRacesFromRaceMask(c.RaceMask)
@@ -135,16 +146,16 @@ func (c *Consumable) OnUseEffects() []*proto.ItemEffect {
 	return effects
 }
 
-func temporaryEnchantSpell(onUses []*proto.ItemEffect) *Spell {
+func temporaryEnchantSpell(onUses []*proto.ItemEffect) (*Spell, dbcenums.SpellEffectType) {
 	for _, e := range onUses {
 		for _, se := range dbcInstance.SpellEffects[int(e.BuffId)] {
 			if IsTemporaryEnchantEffect(se.EffectType) {
 				spell := dbcInstance.Spells[int(e.BuffId)]
-				return &spell
+				return &spell, se.EffectType
 			}
 		}
 	}
-	return nil
+	return nil, 0
 }
 
 // The category the first on-use shares: the item's row, or where it states none, its spell's. The
@@ -171,9 +182,11 @@ func (c *Consumable) SharesExplosivesCategory() bool {
 // item whose spell 11406 shares category 4), and otherwise its item subclass, with what shares the
 // food or drink category food. Whether it is an explosive takes how its spell routes, which the
 // database package decides.
-func (c *Consumable) consumableType(enchant *Spell, category int32) proto.ConsumableType {
+func (c *Consumable) consumableType(enchantEffect dbcenums.SpellEffectType, category int32) proto.ConsumableType {
 	switch {
-	case enchant != nil:
+	case enchantEffect == dbcenums.E_360:
+		return proto.ConsumableType_ConsumableTypeWeaponImbue
+	case enchantEffect != 0:
 		return proto.ConsumableType_ConsumableTypeImbue
 	case category == POTION_SPELL_CATEGORY:
 		return proto.ConsumableType_ConsumableTypePotion
@@ -217,8 +230,10 @@ func (s ConsumableClass) ToProto() proto.ConsumableType {
 // A consumable's effects that restore a resource rather than grant a stat, which the sim wires up
 // separately.
 var consumableRestoreEffectTypes = map[SpellEffectType]bool{
-	dbcenums.E_HEAL:     true,
-	dbcenums.E_ENERGIZE: true,
+	dbcenums.E_HEAL:         true,
+	dbcenums.E_HEAL_PCT:     true,
+	dbcenums.E_ENERGIZE:     true,
+	dbcenums.E_ENERGIZE_PCT: true,
 }
 
 func (consumable *Consumable) GetNonStatEffectIds() []int32 {
@@ -258,6 +273,16 @@ func (consumable *Consumable) GetStatModifiers() *stats.Stats {
 				for _, spellEffect := range spellEffects {
 					if stat, ok := spellEffect.ParseStatEffect(spellEffect.Coefficient != 0, 0); ok {
 						stats.AddInplace(&stat)
+					}
+					// A periodic trigger with a value hands its amount to every effect of the spell it
+					// triggers: Nutritious Food 1248401 states Well Fed 1248422's Strength that way.
+					if spellEffect.EffectAura == dbcenums.A_PERIODIC_TRIGGER_SPELL_WITH_VALUE {
+						for _, triggered := range dbcInstance.SpellEffects[spellEffect.EffectTriggerSpell] {
+							triggered.EffectBasePoints = spellEffect.EffectBasePoints
+							if stat, ok := triggered.ParseStatEffect(false, 0); ok {
+								stats.AddInplace(&stat)
+							}
+						}
 					}
 				}
 			}

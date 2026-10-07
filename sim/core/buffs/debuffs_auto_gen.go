@@ -15,10 +15,9 @@ import (
 var HuntersMarkCategory = "HuntersMark"
 var huntersMarkSpell = spelldata.MustFind(14325)
 var huntersMarkMeta = &Meta{
-	Label:      "Hunter's Mark",
-	Spell:      huntersMarkSpell,
-	Category:   HuntersMarkCategory,
-	SingleAura: true,
+	Label:    "Hunter's Mark",
+	Spell:    huntersMarkSpell,
+	Category: HuntersMarkCategory,
 }
 
 func HuntersMarkValue(talentPoints int32) float64 {
@@ -68,10 +67,9 @@ func NewSpellDataJudgementOfWisdomAura(unit *core.Unit, isPlayer bool, talentPoi
 var CurseOfElementsCategory = "CurseOfElements"
 var curseOfElementsSpell = spelldata.MustFind(1311680)
 var curseOfElementsMeta = &Meta{
-	Label:      "Curse of the Elements",
-	Spell:      curseOfElementsSpell,
-	Category:   CurseOfElementsCategory,
-	SingleAura: true,
+	Label:    "Curse of the Elements",
+	Spell:    curseOfElementsSpell,
+	Category: CurseOfElementsCategory,
 }
 
 func CurseOfElementsValue(talentPoints int32) float64 {
@@ -87,13 +85,12 @@ func NewSpellDataCurseOfElementsAura(unit *core.Unit, isPlayer bool, talentPoint
 // Curse of Recklessness
 // Left out: effect 1 A_DUMMY(4) misc 0
 // Left out: effect 3 A_PREVENTS_FLEEING(92) misc 0
-var CurseOfRecklessnessCategory = "CurseOfRecklessness"
+var CurseOfRecklessnessCategory = "MinorArmorReduction"
 var curseOfRecklessnessSpell = spelldata.MustFind(11717)
 var curseOfRecklessnessMeta = &Meta{
-	Label:      "Curse of Recklessness",
-	Spell:      curseOfRecklessnessSpell,
-	Category:   CurseOfRecklessnessCategory,
-	SingleAura: true,
+	Label:    "Curse of Recklessness",
+	Spell:    curseOfRecklessnessSpell,
+	Category: CurseOfRecklessnessCategory,
 }
 
 func CurseOfRecklessnessValue(talentPoints int32) float64 {
@@ -109,13 +106,12 @@ func NewSpellDataCurseOfRecklessnessAura(unit *core.Unit, isPlayer bool, talentP
 // Faerie Fire
 // Left out: effect 2 A_DISPEL_IMMUNITY(41) misc 6
 // Left out: effect 3 A_DISPEL_IMMUNITY(41) misc 5
-var FaerieFireCategory = "FaerieFireAura"
+var FaerieFireCategory = "MinorArmorReduction"
 var faerieFireSpell = spelldata.MustFind(9907)
 var faerieFireMeta = &Meta{
-	Label:      "Faerie Fire",
-	Spell:      faerieFireSpell,
-	Category:   FaerieFireCategory,
-	SingleAura: true,
+	Label:    "Faerie Fire",
+	Spell:    faerieFireSpell,
+	Category: FaerieFireCategory,
 }
 
 func FaerieFireValue(talentPoints int32) float64 {
@@ -135,7 +131,6 @@ var exposeArmorMeta = &Meta{
 	Label:           "Expose Armor",
 	Spell:           exposeArmorSpell,
 	Category:        ExposeArmorCategory,
-	SingleAura:      true,
 	FullComboPoints: true,
 }
 
@@ -153,10 +148,9 @@ func NewSpellDataExposeArmorAura(unit *core.Unit, isPlayer bool, talentPoints in
 var SunderArmorCategory = "MajorArmorReduction"
 var sunderArmorSpell = spelldata.MustFind(11597)
 var sunderArmorMeta = &Meta{
-	Label:      "Sunder Armor",
-	Spell:      sunderArmorSpell,
-	Category:   SunderArmorCategory,
-	SingleAura: true,
+	Label:    "Sunder Armor",
+	Spell:    sunderArmorSpell,
+	Category: SunderArmorCategory,
 }
 
 func SunderArmorValue(talentPoints int32) float64 {
@@ -173,10 +167,9 @@ func NewSpellDataSunderArmorAura(unit *core.Unit, isPlayer bool, talentPoints in
 var GiftOfArthasCategory = "GiftOfArthasAura"
 var giftOfArthasSpell = spelldata.MustFind(11374)
 var giftOfArthasMeta = &Meta{
-	Label:      "Gift of Arthas",
-	Spell:      giftOfArthasSpell,
-	Category:   GiftOfArthasCategory,
-	SingleAura: true,
+	Label:    "Gift of Arthas",
+	Spell:    giftOfArthasSpell,
+	Category: GiftOfArthasCategory,
 }
 
 func GiftOfArthasValue(talentPoints int32) float64 {
@@ -193,10 +186,9 @@ func NewSpellDataGiftOfArthasAura(unit *core.Unit, isPlayer bool, talentPoints i
 var DemoralizingRoarCategory = "Demoralizing"
 var demoralizingRoarSpell = spelldata.MustFind(9898)
 var demoralizingRoarMeta = &Meta{
-	Label:      "Demoralizing Roar",
-	Spell:      demoralizingRoarSpell,
-	Category:   DemoralizingRoarCategory,
-	SingleAura: true,
+	Label:    "Demoralizing Roar",
+	Spell:    demoralizingRoarSpell,
+	Category: DemoralizingRoarCategory,
 }
 
 func DemoralizingRoarValue(talentPoints int32) float64 {
@@ -213,10 +205,9 @@ func NewSpellDataDemoralizingRoarAura(unit *core.Unit, isPlayer bool, talentPoin
 var DemoralizingShoutCategory = "Demoralizing"
 var demoralizingShoutSpell = spelldata.MustFind(11556)
 var demoralizingShoutMeta = &Meta{
-	Label:      "Demoralizing Shout",
-	Spell:      demoralizingShoutSpell,
-	Category:   DemoralizingShoutCategory,
-	SingleAura: true,
+	Label:    "Demoralizing Shout",
+	Spell:    demoralizingShoutSpell,
+	Category: DemoralizingShoutCategory,
 }
 
 func DemoralizingShoutValue(talentPoints int32) float64 {
@@ -250,10 +241,12 @@ func NewSpellDataThunderClapAura(unit *core.Unit, isPlayer bool, talentPoints in
 
 // Insect Swarm
 // Left out: effect 1 A_PERIODIC_DAMAGE(3) misc 0
+var InsectSwarmCategory = "HitChanceReduction"
 var insectSwarmSpell = spelldata.MustFind(24977)
 var insectSwarmMeta = &Meta{
-	Label: "Insect Swarm",
-	Spell: insectSwarmSpell,
+	Label:    "Insect Swarm",
+	Spell:    insectSwarmSpell,
+	Category: InsectSwarmCategory,
 }
 
 func InsectSwarmValue(talentPoints int32) float64 {
@@ -267,10 +260,12 @@ func NewSpellDataInsectSwarmAura(unit *core.Unit, isPlayer bool, talentPoints in
 }
 
 // Scorpid Sting
+var ScorpidStingCategory = "HitChanceReduction"
 var scorpidStingSpell = spelldata.MustFind(3043)
 var scorpidStingMeta = &Meta{
-	Label: "Scorpid Sting",
-	Spell: scorpidStingSpell,
+	Label:    "Scorpid Sting",
+	Spell:    scorpidStingSpell,
+	Category: ScorpidStingCategory,
 }
 
 func ScorpidStingValue(talentPoints int32) float64 {
@@ -281,6 +276,165 @@ func ScorpidStingDuration(talentPoints int32) time.Duration {
 }
 func NewSpellDataScorpidStingAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newDebuff(unit, scorpidStingMeta, isPlayer, talentPoints)
+}
+
+// Hex of Weakness
+var HexOfWeaknessCategory = "Demoralizing"
+var hexOfWeaknessSpell = spelldata.MustFind(19285)
+var hexOfWeaknessMeta = &Meta{
+	Label:    "Hex of Weakness",
+	Spell:    hexOfWeaknessSpell,
+	Category: HexOfWeaknessCategory,
+}
+
+func HexOfWeaknessValue(talentPoints int32) float64 {
+	return hexOfWeaknessMeta.Value(talentPoints)
+}
+func HexOfWeaknessDuration(talentPoints int32) time.Duration {
+	return hexOfWeaknessMeta.Duration(talentPoints)
+}
+func NewSpellDataHexOfWeaknessAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, hexOfWeaknessMeta, isPlayer, talentPoints)
+}
+
+// Demoralizing Screech
+var DemoralizingScreechCategory = "Demoralizing"
+var demoralizingScreechSpell = spelldata.MustFind(24579)
+var demoralizingScreechMeta = &Meta{
+	Label:    "Demoralizing Screech",
+	Spell:    demoralizingScreechSpell,
+	Category: DemoralizingScreechCategory,
+}
+
+func DemoralizingScreechValue(talentPoints int32) float64 {
+	return demoralizingScreechMeta.Value(talentPoints)
+}
+func DemoralizingScreechDuration(talentPoints int32) time.Duration {
+	return demoralizingScreechMeta.Duration(talentPoints)
+}
+func NewSpellDataDemoralizingScreechAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, demoralizingScreechMeta, isPlayer, talentPoints)
+}
+
+// Curse of Weakness
+var CurseOfWeaknessCategory = "CurseOfWeakness"
+var curseOfWeaknessSpell = spelldata.MustFind(11708)
+var curseOfWeaknessMeta = &Meta{
+	Label:    "Curse of Weakness",
+	Spell:    curseOfWeaknessSpell,
+	Category: CurseOfWeaknessCategory,
+}
+
+func CurseOfWeaknessValue(talentPoints int32) float64 {
+	return curseOfWeaknessMeta.Value(talentPoints)
+}
+func CurseOfWeaknessDuration(talentPoints int32) time.Duration {
+	return curseOfWeaknessMeta.Duration(talentPoints)
+}
+func NewSpellDataCurseOfWeaknessAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, curseOfWeaknessMeta, isPlayer, talentPoints)
+}
+
+// Dust Cloud
+var DustCloudCategory = "MinorArmorReduction"
+var dustCloudSpell = spelldata.MustFind(1265904)
+var dustCloudMeta = &Meta{
+	Label:    "Dust Cloud",
+	Spell:    dustCloudSpell,
+	Category: DustCloudCategory,
+}
+
+func DustCloudValue(talentPoints int32) float64 {
+	return dustCloudMeta.Value(talentPoints)
+}
+func DustCloudDuration(talentPoints int32) time.Duration {
+	return dustCloudMeta.Duration(talentPoints)
+}
+func NewSpellDataDustCloudAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, dustCloudMeta, isPlayer, talentPoints)
+}
+
+// Armor Shatter
+var ArmorShatterCategory = "ArmorShatter"
+var armorShatterSpell = spelldata.MustFind(16928)
+var armorShatterMeta = &Meta{
+	Label:    "Armor Shatter",
+	Spell:    armorShatterSpell,
+	Category: ArmorShatterCategory,
+}
+
+func ArmorShatterValue(talentPoints int32) float64 {
+	return armorShatterMeta.Value(talentPoints)
+}
+func ArmorShatterDuration(talentPoints int32) time.Duration {
+	return armorShatterMeta.Duration(talentPoints)
+}
+func NewSpellDataArmorShatterAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, armorShatterMeta, isPlayer, talentPoints)
+}
+
+// Vindication
+var VindicationCategory = "Demoralizing"
+var vindicationSpell = spelldata.MustFind(440667)
+var vindicationMeta = &Meta{
+	Label:         "Vindication",
+	Spell:         vindicationSpell,
+	Category:      VindicationCategory,
+	Talent:        spelldata.Talent(9452, 3),
+	TalentEffect:  1,
+	TalentDivisor: 3,
+}
+
+func VindicationValue(talentPoints int32) float64 {
+	return vindicationMeta.Value(talentPoints)
+}
+func VindicationDuration(talentPoints int32) time.Duration {
+	return vindicationMeta.Duration(talentPoints)
+}
+func NewSpellDataVindicationAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, vindicationMeta, isPlayer, talentPoints)
+}
+
+// Thunderfury
+var thunderfurySpell = spelldata.MustFind(21992)
+var thunderfuryMeta = &Meta{
+	Label: "Thunderfury",
+	Spell: thunderfurySpell,
+}
+
+func ThunderfuryValue(talentPoints int32) float64 {
+	return thunderfuryMeta.Value(talentPoints)
+}
+func ThunderfuryDuration(talentPoints int32) time.Duration {
+	return thunderfuryMeta.Duration(talentPoints)
+}
+func NewSpellDataThunderfuryAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newDebuff(unit, thunderfuryMeta, isPlayer, talentPoints)
+}
+
+// The generated debuffs by the spell they read.
+var debuffMetas = map[int32]*Meta{
+	14325:   huntersMarkMeta,
+	20346:   judgementOfLightMeta,
+	20355:   judgementOfWisdomMeta,
+	1311680: curseOfElementsMeta,
+	11717:   curseOfRecklessnessMeta,
+	9907:    faerieFireMeta,
+	11198:   exposeArmorMeta,
+	11597:   sunderArmorMeta,
+	11374:   giftOfArthasMeta,
+	9898:    demoralizingRoarMeta,
+	11556:   demoralizingShoutMeta,
+	11581:   thunderClapMeta,
+	24977:   insectSwarmMeta,
+	3043:    scorpidStingMeta,
+	19285:   hexOfWeaknessMeta,
+	24579:   demoralizingScreechMeta,
+	11708:   curseOfWeaknessMeta,
+	1265904: dustCloudMeta,
+	16928:   armorShatterMeta,
+	440667:  vindicationMeta,
+	21992:   thunderfuryMeta,
 }
 
 func applyGeneratedDebuffs(target *core.Unit, debuffs *proto.Debuffs, raid *proto.Raid) {
@@ -325,5 +479,26 @@ func applyGeneratedDebuffs(target *core.Unit, debuffs *proto.Debuffs, raid *prot
 	}
 	if debuffs.ScorpidSting {
 		core.MakePermanent(NewSpellDataScorpidStingAura(target, false, 0))
+	}
+	if debuffs.HexOfWeakness {
+		core.MakePermanent(NewSpellDataHexOfWeaknessAura(target, false, 0))
+	}
+	if debuffs.DemoralizingScreech {
+		core.MakePermanent(NewSpellDataDemoralizingScreechAura(target, false, 0))
+	}
+	if debuffs.CurseOfWeakness {
+		core.MakePermanent(NewSpellDataCurseOfWeaknessAura(target, false, 0))
+	}
+	if debuffs.DustCloud {
+		driveDustCloud(target, debuffs, raid)
+	}
+	if debuffs.ArmorShatter {
+		driveArmorShatter(target, debuffs, raid)
+	}
+	if debuffs.Vindication {
+		core.MakePermanent(NewSpellDataVindicationAura(target, false, 0))
+	}
+	if debuffs.Thunderfury {
+		driveThunderfury(target, debuffs, raid)
 	}
 }

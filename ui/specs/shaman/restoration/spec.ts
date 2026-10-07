@@ -5,7 +5,7 @@ import { EquipmentSpec, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { DEFAULT_HEALER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defaultHealerIndividualBuffs, defaultHealerPartyBuffs, defaultHealerRaidBuffs } from '@sim/proto/utils';
 import { defineSpec } from '@sim/spec_config';
 
@@ -23,7 +23,7 @@ export default defineSpec<Spec.SpecRestorationShaman>({
 	knownIssues: [],
 
 	// All stats for which EP should be calculated.
-	epStats: [Stat.StatIntellect, Stat.StatSpirit, Stat.StatHealingPower, Stat.StatSpellCritRating, Stat.StatSpellHasteRating, Stat.StatMP5],
+	epStats: [Stat.StatIntellect, Stat.StatSpirit, Stat.StatHealingPower, Stat.StatCritRating, Stat.StatHasteRating, Stat.StatMP5],
 	// Reference stat against which to calculate EP.
 	epReferenceStat: Stat.StatHealingPower,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
@@ -46,7 +46,6 @@ export default defineSpec<Spec.SpecRestorationShaman>({
 		],
 		[PseudoStat.PseudoStatSpellCritPercent, PseudoStat.PseudoStatSpellHastePercent],
 	),
-	gemStats: DEFAULT_HEALER_GEM_STATS,
 
 	defaults: {
 		// Default equipped gear.
@@ -98,6 +97,6 @@ export default defineSpec<Spec.SpecRestorationShaman>({
 		return APLRotation.create();
 	},
 
-	// The gem optimizer.
+	// The gear optimizer.
 	reforge: {},
 });

@@ -4,8 +4,9 @@ import { Cooldowns, EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat } from '@gen
 import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { SpecRotation } from '@sim/proto/spec_types';
-import { DEFAULT_CASTER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as MageInputs from './inputs';
@@ -30,9 +31,9 @@ export default defineSpec<Spec.SpecMage>({
 		Stat.StatFrostDamage,
 		Stat.StatFireDamage,
 		Stat.StatSpellPiercing,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatMana,
 		Stat.StatMP5,
 	],
@@ -66,14 +67,13 @@ export default defineSpec<Spec.SpecMage>({
 			PseudoStat.PseudoStatSpellHastePercent,
 		],
 	),
+	displayWeaponSkillGroups: [WeaponSkillGroup.Wands],
 
 	modifyDisplayStats: (player: Player<Spec.SpecMage>) => {
 		return {
 			talents: new Stats().addPseudoStat(PseudoStat.PseudoStatSpellCritPercent, player.getTalents().arcaneInstability),
 		};
 	},
-
-	gemStats: DEFAULT_CASTER_GEM_STATS,
 
 	consumableStats: [
 		Stat.StatIntellect,
@@ -84,9 +84,9 @@ export default defineSpec<Spec.SpecMage>({
 		Stat.StatFrostDamage,
 		Stat.StatFireDamage,
 		Stat.StatArcaneDamage,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatCritRating,
+		Stat.StatHitRating,
+		Stat.StatHasteRating,
 	],
 
 	defaults: {
@@ -95,7 +95,7 @@ export default defineSpec<Spec.SpecMage>({
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentArcane, 16);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentArcane, 17);
 		})(),
 		// Default consumes settings.
 		consumables: DefaultConsumables,

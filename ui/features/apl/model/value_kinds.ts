@@ -48,6 +48,7 @@ import {
 	APLValueDotRemainingTime,
 	APLValueDotTickFrequency,
 	APLValueDotTimeToNextTick,
+	APLValueEncounterInArea,
 	APLValueEnergyTimeToTarget,
 	APLValueFrontOfTarget,
 	APLValueGCDIsReady,
@@ -93,6 +94,7 @@ import {
 	APLValueSpellTimeToCharge,
 	APLValueSpellTimeToReady,
 	APLValueSpellTravelTime,
+	APLValueTargetIsMobType,
 	APLValueTimeToNextEnergyTick,
 	APLValueTotemRemainingTime,
 	APLValueUnitDistance,
@@ -107,6 +109,7 @@ import { itemSwapEnabledSpecs } from '@sim/spec_config';
 
 import {
 	actionIdFieldConfig,
+	areaTypeFieldConfig,
 	autoSwingTypeFieldConfig,
 	autoTypeFieldConfig,
 	booleanFieldConfig,
@@ -119,6 +122,7 @@ import {
 	makeUseDotBaseValueCheckbox,
 	mathOperatorFieldConfig,
 	minIcdInput,
+	mobTypeFieldConfig,
 	placeholderNameFieldConfig,
 	reactionTimeCheckbox,
 	statTypeFieldConfig,
@@ -163,6 +167,11 @@ export type ValueKindModel<T> = {
 function inputBuilder<T extends APLValueImplType>(config: ValueKindModel<T>): ValueKindModel<T> {
 	return config;
 }
+
+const includeAutoValue = (player: Player<any>, isPrepull: boolean) => {
+	const spec = player.getSpec();
+	return !isPrepull && spec !== Spec.SpecBalanceDruid && spec !== Spec.SpecElementalShaman;
+};
 
 export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImplMap[f]> } = {
 	// Operators
@@ -283,6 +292,13 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [],
 	}),
+	encounterInArea: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.encounter_in_area.label'),
+		submenu: ['encounter'],
+		shortDescription: i18n.t('rotation_tab.apl.values.encounter_in_area.tooltip'),
+		newValue: APLValueEncounterInArea.create,
+		fields: [areaTypeFieldConfig('areaType')],
+	}),
 
 	// Boss
 	bossSpellIsCasting: inputBuilder({
@@ -308,6 +324,13 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		newValue: APLValueBossCurrentTarget.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets')],
+	}),
+	targetIsMobType: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.target_is_mob_type.label'),
+		submenu: ['boss'],
+		shortDescription: i18n.t('rotation_tab.apl.values.target_is_mob_type.tooltip'),
+		newValue: APLValueTargetIsMobType.create,
+		fields: [unitFieldConfig('targetUnit', 'targets'), mobTypeFieldConfig('mobType')],
 	}),
 
 	// Unit
@@ -550,18 +573,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['auto'],
 		shortDescription: i18n.t('rotation_tab.apl.values.auto_swing_time.tooltip'),
 		newValue: APLValueAutoSwingTime.create,
-		includeIf(player: Player<any>, isPrepull: boolean) {
-			const clss = player.getClass();
-			const spec = player.getSpec();
-			return (
-				!isPrepull &&
-				clss !== Class.ClassMage &&
-				clss !== Class.ClassPriest &&
-				clss !== Class.ClassWarlock &&
-				spec !== Spec.SpecBalanceDruid &&
-				spec !== Spec.SpecElementalShaman
-			);
-		},
+		includeIf: includeAutoValue,
 		fields: [autoSwingTypeFieldConfig('autoType')],
 	}),
 	autoTimeToNext: inputBuilder({
@@ -569,18 +581,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['auto'],
 		shortDescription: i18n.t('rotation_tab.apl.values.time_to_next_auto.tooltip'),
 		newValue: APLValueAutoTimeToNext.create,
-		includeIf(player: Player<any>, isPrepull: boolean) {
-			const clss = player.getClass();
-			const spec = player.getSpec();
-			return (
-				!isPrepull &&
-				clss !== Class.ClassMage &&
-				clss !== Class.ClassPriest &&
-				clss !== Class.ClassWarlock &&
-				spec !== Spec.SpecBalanceDruid &&
-				spec !== Spec.SpecElementalShaman
-			);
-		},
+		includeIf: includeAutoValue,
 		fields: [autoTypeFieldConfig('autoType')],
 	}),
 	autoTimeSinceLast: inputBuilder({
@@ -588,18 +589,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['auto'],
 		shortDescription: i18n.t('rotation_tab.apl.values.time_since_last_auto.tooltip'),
 		newValue: APLValueAutoTimeSinceLast.create,
-		includeIf(player: Player<any>, isPrepull: boolean) {
-			const clss = player.getClass();
-			const spec = player.getSpec();
-			return (
-				!isPrepull &&
-				clss !== Class.ClassMage &&
-				clss !== Class.ClassPriest &&
-				clss !== Class.ClassWarlock &&
-				spec !== Spec.SpecBalanceDruid &&
-				spec !== Spec.SpecElementalShaman
-			);
-		},
+		includeIf: includeAutoValue,
 		fields: [autoTypeFieldConfig('autoType')],
 	}),
 

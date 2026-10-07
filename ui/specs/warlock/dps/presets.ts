@@ -24,7 +24,7 @@ export const DefaultOptions = WarlockOptions.create({
 
 export const DefaultConsumables = ConsumesSpec.create({
 	flaskId: Consumables.FlaskOfSupremePower.id,
-	foodId: Consumables.SunriseOmelette.id,
+	foodId: Consumables.NightfinSoup.id,
 	conjuredId: Consumables.DemonicRune.id,
 	mhImbueId: Consumables.BrilliantWizardOil.id,
 	potId: Consumables.MajorSpellblastingPotion.id,
@@ -62,5 +62,4 @@ export const DefaultDebuffs = Debuffs.create({
 	curseOfElements: true,
 	giftOfArthas: true,
 	exposeArmor: true,
-	huntersMark: true,
 });

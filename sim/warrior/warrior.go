@@ -5,53 +5,24 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var TalentTreeSizes = [3]int{17, 18, 18}
+var TalentTreeSizes = [3]int{17, 17, 18}
 
 type WarriorInputs struct {
 	UseBattleShout bool
 	DefaultStance  proto.WarriorStance
 
 	StartingRage   float64
+	QueueDelay     int32
 	StanceSnapshot bool
 	HasBsT2        bool
 }
 
-// What is left of the sim's own spell masks now that the client's spell class mask addresses the
-// rest: the two Sweeping Strikes copies and the Whirlwind off-hand strike, which have no client row
-// to be named by, and the six abilities a handler or a listener singles out by hand.
-const (
-	SpellMaskNone int64 = 0
-
-	SpellMaskSweepingStrikesHit int64 = 1 << iota
-	SpellMaskSweepingStrikesNormalizedHit
-	SpellMaskWhirlwindOh
-
-	SpellMaskExecute
-	SpellMaskThunderClap
-	SpellMaskWhirlwind
-	SpellMaskShieldBash
-	SpellMaskBloodthirst
-	SpellMaskHamstring
-
-	WarriorSpellLast
-	WarriorSpellsAll = WarriorSpellLast<<1 - 1
-)
-
-// The client's SpellClassOptions for the registrations that do not resolve a row of their own: the
-// stance spells, and the sim-only sub-spells that take their parent's flags, the client having no
-// row for a Whirlwind off-hand strike or a Sweeping Strikes copy.
-var (
-	SpellFlagsBattleStance    = spellData.BattleStance.Highest().ClassFlags
-	SpellFlagsBerserkerStance = spellData.BerserkerStance.Highest().ClassFlags
-	SpellFlagsDefensiveStance = spellData.DefensiveStance.Highest().ClassFlags
-
-	SpellFlagsSweepingStrikes = spellData.SweepingStrikes.Highest().ClassFlags
-	SpellFlagsWhirlwind       = spellData.Whirlwind.Highest().ClassFlags
-)
+// The game files' SpellClassOptions for the Sweeping Strikes copy, a sim-only sub-spell that takes its
+// parent's flags, the game files having no row for it.
+var SpellFlagsSweepingStrikes = spellData.SweepingStrikes.Highest().ClassFlags
 
 type Warrior struct {
 	core.Character
@@ -85,7 +56,12 @@ type Warrior struct {
 	Taunt             *core.Spell
 	VictoryRush       *core.Spell
 
-	EnrageAura *core.Aura
+	curQueueAura       *core.Aura
+	curQueuedAutoSpell *core.Spell
+	queuedRealismICD   *core.Cooldown
+
+	EnrageAura     *core.Aura
+	GoreDrinkerAura *core.Aura
 
 	SweepingStrikesAura *core.Aura
 	OverpowerAura       *core.Aura
@@ -141,6 +117,9 @@ func (warrior *Warrior) Initialize() {
 }
 
 func (warrior *Warrior) Reset(_ *core.Simulation) {
+	warrior.curQueueAura = nil
+	warrior.curQueuedAutoSpell = nil
+
 	switch warrior.DefaultStance {
 	case proto.WarriorStance_WarriorStanceBattle:
 		warrior.ShapeshiftForm = battleStanceRank.ShapeshiftForm()
@@ -172,7 +151,7 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 	core.FillTalentsProto(warrior.Talents.ProtoReflect(), talents, TalentTreeSizes)
 
 	warrior.EnableRageBar(core.RageBarOptions{
-		MaxRage:            100 + spellData.BoundlessRage.TenthsAt(warrior.Talents.BoundlessRage),
+		MaxRage:            100,
 		BaseRageMultiplier: 1,
 		StartingRage:       inputs.StartingRage,
 	})
@@ -181,19 +160,21 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 		MainHand:       warrior.WeaponFromMainHand(),
 		OffHand:        warrior.WeaponFromOffHand(),
 		AutoSwingMelee: true,
+		ReplaceMHSwing: warrior.TryHSOrCleave,
 	})
 
 	warrior.PseudoStats.CanParry = true
-	// TODO: In-game testing required
-	warrior.PseudoStats.BaseDodgeChance += 0.0075
-	warrior.PseudoStats.BaseParryChance += 0.05
-	warrior.PseudoStats.BaseBlockChance += 0.05
 
 	warrior.AddStatDependency(stats.Strength, stats.AttackPower, 2)
-	warrior.AddStatDependency(stats.Strength, stats.BlockValue, 1/20.0)
 	warrior.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
-	warrior.AddStatDependency(stats.Agility, stats.DodgeRating, 1/30.0*core.DodgeRatingPerDodgePercent)
 	warrior.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
+
+	// Without a delay the sim re-queues Heroic Strike faster than a player can, which lands
+	// back-to-back hits around extra attacks.
+	warrior.queuedRealismICD = &core.Cooldown{
+		Timer:    warrior.NewTimer(),
+		Duration: time.Millisecond * time.Duration(inputs.QueueDelay),
+	}
 
 	return warrior
 }
@@ -213,15 +194,4 @@ func (warrior *Warrior) CastNormalizedSweepingStrikesAttack(results core.SpellRe
 // Agent is a generic way to access underlying warrior on any of the agents.
 type WarriorAgent interface {
 	GetWarrior() *Warrior
-}
-
-// The recovery the ability waits out. A warrior ability states it on a shared category - Bloodthirst
-// and Mortal Strike both run off category 971 - and leaves its own column at zero, so the cooldown
-// is whichever of the two the client filled in.
-//
-// The category is a timer as well as a number, and spelldata.SpellConfig puts every spell naming one
-// on the unit's timer for it: Revenge and Overpower share category 65, Shield Bash and Pummel share
-// 88, and Mortal Strike, Bloodthirst and Shield Slam share 971.
-func cooldownOf(s *spelldata.Spell) time.Duration {
-	return max(s.Cooldown(), s.CategoryCooldown())
 }
