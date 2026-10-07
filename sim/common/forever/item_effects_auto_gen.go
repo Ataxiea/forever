@@ -42,6 +42,9 @@ func init() {
 		1728: {
 			{BuffId: 1300753, BuffName: "Firebolt (1300753)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
+		1982: {
+			{BuffId: 18211, BuffName: "Shadow Bolt (18211)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
 		1986: {
 			{BuffId: 18090, BuffName: "Wound (18090)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
