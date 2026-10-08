@@ -144,9 +144,6 @@ func init() {
 		8708: {
 			{BuffId: 1317432, BuffName: "Forging Strike (1317432)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
-		9380: {
-			{BuffId: 11657, BuffName: "Jang'thraze (11657)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
-		},
 		9651: {
 			{BuffId: 18081, BuffName: "Lightning Bolt (18081)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
@@ -412,9 +409,6 @@ func init() {
 		},
 		17705: {
 			{BuffId: 21919, BuffName: "Thrash (21919)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
-		},
-		17733: {
-			{BuffId: 21951, BuffName: "Fist of Stone (21951)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		17753: {
 			{BuffId: 29655, BuffName: "Keeper's Sting (29655)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
