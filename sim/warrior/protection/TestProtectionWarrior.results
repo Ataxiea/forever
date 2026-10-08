@@ -100,9 +100,9 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-Beastmaster'sCap-22013"
  value: {
-  dps: 332.11956
-  tps: 597.27462
-  dtps: 2051.71748
+  dps: 328.41973
+  tps: 589.67807
+  dtps: 2062.8236
   hps: 16.4
  }
 }
@@ -136,18 +136,18 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-BlessedPlate"
  value: {
-  dps: 342.69075
-  tps: 613.09853
-  dtps: 2261.97809
+  dps: 338.28357
+  tps: 605.4677
+  dtps: 2274.49539
   hps: 16.4
  }
 }
 dps_results: {
  key: "TestProtectionWarrior-AllItems-Conqueror'sBattlegear"
  value: {
-  dps: 374.38971
-  tps: 656.93632
-  dtps: 1631.21569
+  dps: 371.41919
+  tps: 650.84381
+  dtps: 1627.71997
   hps: 16.4
  }
 }
@@ -208,9 +208,9 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-Dreadnaught'sBattlegear"
  value: {
-  dps: 400.06366
-  tps: 703.09758
-  dtps: 1523.47533
+  dps: 395.93899
+  tps: 696.57363
+  dtps: 1514.21388
   hps: 16.4
  }
 }
@@ -406,9 +406,9 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-FrozenHeartoftheMountain-249469"
  value: {
-  dps: 331.04656
-  tps: 595.48097
-  dtps: 2045.88026
+  dps: 328.20892
+  tps: 590.46126
+  dtps: 2054.07456
   hps: 16.4
  }
 }
@@ -523,9 +523,9 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-ImperialPlate"
  value: {
-  dps: 345.76955
-  tps: 617.3896
-  dtps: 2240.71395
+  dps: 341.99032
+  tps: 610.88271
+  dtps: 2246.3549
   hps: 16.4
  }
 }
@@ -541,9 +541,9 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-KissoftheSpider-22954"
  value: {
-  dps: 341.46299
-  tps: 612.59169
-  dtps: 2040.48263
+  dps: 335.95386
+  tps: 602.68272
+  dtps: 2057.60714
   hps: 16.4
  }
 }
@@ -748,9 +748,9 @@ dps_results: {
 dps_results: {
  key: "TestProtectionWarrior-AllItems-StormGauntlets-12632"
  value: {
-  dps: 329.67485
-  tps: 593.30098
-  dtps: 2086.99816
+  dps: 326.51242
+  tps: 588.09034
+  dtps: 2094.36204
   hps: 16.4
  }
 }

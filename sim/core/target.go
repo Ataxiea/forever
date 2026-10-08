@@ -462,6 +462,7 @@ type AttackTableHand struct {
 	GlanceMultiplierMin  float64
 	GlanceMultiplierMax  float64
 	MeleeCritSuppression float64
+	HitSuppression       float64 // The hit chance lost while the hand's skill is more than 10 below the target's defense.
 	BaseSpellMissChance  float64 // The spell table's miss with the level difference taken from the hand's skill, which a wand shot rolls.
 }
 
@@ -486,6 +487,9 @@ func newAttackTableHand(attacker *Unit, defender *Unit, weapon *Item) AttackTabl
 	}
 	if skillDiff > 10 {
 		hand.BaseMissChance = 0.05 + skillDiff*0.002
+		// 0.2% of hit per point of skill beyond the first 10 below the target's defense, so 1% at 300
+		// skill against a level 63 target, where the hit that removes every miss is 9%.
+		hand.HitSuppression = (skillDiff - 10) * 0.002
 	} else {
 		hand.BaseMissChance = 0.05 + skillDiff*0.001
 	}

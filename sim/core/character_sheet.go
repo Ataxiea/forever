@@ -140,7 +140,8 @@ func (character *Character) GetPseudoStatsProto() []float64 {
 		proto.PseudoStat_PseudoStatMeleeCritSuppressionPercent:  mainHand.CritSuppressionPercent,
 		proto.PseudoStat_PseudoStatRangedCritSuppressionPercent: ranged.CritSuppressionPercent,
 
-		proto.PseudoStat_PseudoStatMainHandMissPercent:   mainHandTable.BaseMissChance * 100,
+		// The hit that removes every main hand miss: the base miss and the hit the target suppresses.
+		proto.PseudoStat_PseudoStatMainHandMissPercent:   (mainHandTable.BaseMissChance + mainHandTable.HitSuppression) * 100,
 		proto.PseudoStat_PseudoStatMainHandDodgePercent:  mainHandTable.BaseDodgeChance * 100,
 		proto.PseudoStat_PseudoStatMainHandParryPercent:  mainHandTable.BaseParryChance * 100,
 		proto.PseudoStat_PseudoStatMainHandGlancePercent: mainHandTable.BaseGlanceChance * 100,

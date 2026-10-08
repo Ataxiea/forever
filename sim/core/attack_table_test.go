@@ -34,12 +34,12 @@ func TestPlayerAttackTableAgainstEachTargetLevel(t *testing.T) {
 		level                                   int32
 		miss, dodge, parry                      float64
 		glance, glanceMin, glanceMax, critSuppr float64
-		auraCritSuppr, spellMiss                float64
+		auraCritSuppr, spellMiss, hitSuppr      float64
 	}{
-		{60, 0.05, 0.05, 0.05, 0.10, 0.91, 0.99, 0, 0, 0.04},
-		{61, 0.055, 0.055, 0.055, 0.20, 0.91, 0.99, 0.01, 0, 0.05},
-		{62, 0.06, 0.06, 0.06, 0.30, 0.80, 0.90, 0.02, 0, 0.06},
-		{63, 0.08, 0.065, 0.14, 0.40, 0.55, 0.75, 0.03, 0.018, 0.17},
+		{60, 0.05, 0.05, 0.05, 0.10, 0.91, 0.99, 0, 0, 0.04, 0},
+		{61, 0.055, 0.055, 0.055, 0.20, 0.91, 0.99, 0.01, 0, 0.05, 0},
+		{62, 0.06, 0.06, 0.06, 0.30, 0.80, 0.90, 0.02, 0, 0.06, 0},
+		{63, 0.08, 0.065, 0.14, 0.40, 0.55, 0.75, 0.03, 0.018, 0.17, 0.01},
 	} {
 		attacker, defender := attackTableUnits(PlayerUnit, 60, EnemyUnit, tc.level)
 		table := NewAttackTable(attacker, defender)
@@ -52,6 +52,7 @@ func TestPlayerAttackTableAgainstEachTargetLevel(t *testing.T) {
 			GlanceMultiplierMin:  tc.glanceMin,
 			GlanceMultiplierMax:  tc.glanceMax,
 			MeleeCritSuppression: tc.critSuppr,
+			HitSuppression:       tc.hitSuppr,
 		}
 		values := []attackTableValue{
 			{"aura crit suppression", table.AuraCritSuppression, tc.auraCritSuppr},
@@ -74,6 +75,7 @@ func handValues(hand string, got, want AttackTableHand) []attackTableValue {
 		{hand + " glance multiplier min", got.GlanceMultiplierMin, want.GlanceMultiplierMin},
 		{hand + " glance multiplier max", got.GlanceMultiplierMax, want.GlanceMultiplierMax},
 		{hand + " melee crit suppression", got.MeleeCritSuppression, want.MeleeCritSuppression},
+		{hand + " hit suppression", got.HitSuppression, want.HitSuppression},
 	}
 }
 
@@ -91,6 +93,7 @@ func TestWeaponSkillSettingSetsTheSwordHandsTableAgainstALevel63Target(t *testin
 		GlanceMultiplierMin:  0.55,
 		GlanceMultiplierMax:  0.75,
 		MeleeCritSuppression: 0.03,
+		HitSuppression:       0.01,
 	}
 
 	for _, tc := range []struct {
@@ -106,6 +109,7 @@ func TestWeaponSkillSettingSetsTheSwordHandsTableAgainstALevel63Target(t *testin
 			GlanceMultiplierMin:  0.01,
 			GlanceMultiplierMax:  0.30,
 			MeleeCritSuppression: 0.06,
+			HitSuppression:       0.04,
 		}},
 		{300, level63},
 		{305, AttackTableHand{
@@ -476,6 +480,19 @@ func TestExpectedMeleeDamageBlocksNoMoreThanTheDamage(t *testing.T) {
 			if !(math.Abs(result.Damage-tc.want) <= 1e-9) {
 				t.Errorf("%s, %v block value against %v damage: expected damage %v, want %v", name, tc.blockValue, tc.damage, result.Damage, tc.want)
 			}
+		}
+	}
+}
+
+// At 300 skill against a level 63 target the first 1% of hit is suppressed, so a special misses until 9% hit.
+func TestHitSuppressionLeavesAMissUntilNinePercentHitAgainstALevel63Target(t *testing.T) {
+	attacker, defender := attackTableUnits(PlayerUnit, 60, EnemyUnit, 63)
+	table := NewAttackTable(attacker, defender)
+	spell := &Spell{Unit: attacker, ProcMask: ProcMaskMeleeMHSpecial}
+	for _, tc := range []struct{ hit, miss float64 }{{0, 0.08}, {1, 0.08}, {5, 0.04}, {8, 0.01}, {9, 0}, {10, 0}} {
+		attacker.stats[stats.PhysicalHitPercent] = tc.hit
+		if got := spell.GetPhysicalMissChance(table); math.Abs(got-tc.miss) > 1e-9 {
+			t.Errorf("%v%% hit: miss = %v, want %v", tc.hit, got, tc.miss)
 		}
 	}
 }
