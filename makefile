@@ -379,3 +379,8 @@ webworkers:
 .PHONY: vscode-spelldata
 vscode-spelldata:
 	cd tools/vscode-spelldata && npm ci --no-audit --no-fund && npm run build
+
+# The APL panel bundles the site's APL model, so it needs the generated protos and the root packages.
+.PHONY: vscode-apl
+vscode-apl: ui/generated/proto/api.ts node_modules
+	cd tools/vscode-apl && npm ci --no-audit --no-fund && npm run build

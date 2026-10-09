@@ -35,6 +35,8 @@
 		".history",
 		"ui/generated/proto/*",
 		".vscode/extensions/wowsims-spelldata",
-		"tools/vscode-spelldata"
+		"tools/vscode-spelldata",
+		".vscode/extensions/wowsims-apl",
+		"tools/vscode-apl"
 	]
 }

@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+
+import { MANIFEST_KEYS, generatedManifest, manifestText } from '../scripts/manifest.mjs';
+
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+
+test('the manifest is the same text on every build', () => {
+	assert.equal(manifestText(pkg), manifestText(structuredClone(pkg)));
+	assert.equal(manifestText({ ...pkg, scripts: { other: 'x' }, devDependencies: {} }), manifestText(pkg));
+});
+
+test('the manifest carries only what VS Code reads, and says it is generated', () => {
+	const manifest = generatedManifest(pkg);
+	assert.deepEqual(Object.keys(manifest), [...MANIFEST_KEYS, 'x-generated']);
+	assert.equal(manifest['x-generated'], 'make vscode-apl');
+	assert.equal(manifest.main, './out/extension.js');
+	assert.deepEqual(manifest.activationEvents, ['onWebviewPanel:wowsims-apl.editor']);
+	assert.equal(manifest.contributes.commands[0].command, 'wowsims-apl.openToSide');
+});

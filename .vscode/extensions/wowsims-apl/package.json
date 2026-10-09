@@ -1,0 +1,60 @@
+{
+	"name": "wowsims-apl",
+	"displayName": "WoWSims APL Editor",
+	"version": "0.1.0",
+	"publisher": "wowsims",
+	"engines": {
+		"vscode": "^1.91.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onWebviewPanel:wowsims-apl.editor"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "wowsims-apl.openToSide",
+				"title": "WoWSims: Open APL Editor to the Side",
+				"icon": "$(list-tree)"
+			},
+			{
+				"command": "wowsims-apl.reloadRegistered",
+				"title": "WoWSims: Reload Registered APL Spells"
+			}
+		],
+		"menus": {
+			"editor/title": [
+				{
+					"command": "wowsims-apl.openToSide",
+					"when": "resourceFilename =~ /\\.apl\\.json$/",
+					"group": "navigation"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "wowsims-apl.openToSide",
+					"when": "resourceFilename =~ /\\.apl\\.json$/"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "wowsims-apl.openToSide",
+				"key": "ctrl+k a",
+				"mac": "cmd+k a",
+				"when": "editorTextFocus && resourceFilename =~ /\\.apl\\.json$/"
+			}
+		],
+		"configuration": {
+			"title": "WoWSims APL Editor",
+			"properties": {
+				"wowsims-apl.goBinary": {
+					"type": "string",
+					"default": "go",
+					"description": "The go binary that runs tools/aplspells for the spells each spec registers. `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+				}
+			}
+		}
+	},
+	"x-generated": "make vscode-apl"
+}

@@ -1,0 +1,192 @@
+import { Fragment, type ReactNode } from 'react';
+
+import { IdChip } from './db';
+import type { AplFieldSpec } from '@features/apl/model/field_specs';
+
+import { type Family, type Json, type JsonObject, enumNumber, fieldInfo, humanize, isObject, kindMessage, kindModel, kindOf, resolve } from './model';
+
+const COMPARE: Record<string, string> = { OpEq: '=', OpNe: '≠', OpGe: '≥', OpGt: '>', OpLe: '≤', OpLt: '<' };
+const MATH: Record<string, string> = { OpAdd: '+', OpSub: '−', OpMul: '×', OpDiv: '÷' };
+
+// The short name a unit reference reads as; the kind's default unit has no reference and reads as nothing.
+export function unitText(json: Json | undefined): string | undefined {
+	if (!isObject(json) || typeof json.type !== 'string') {
+		return undefined;
+	}
+	const index = typeof json.index === 'number' ? json.index : 0;
+	switch (json.type) {
+		case 'Self':
+			return 'self';
+		case 'CurrentTarget':
+			return 'target';
+		case 'PreviousTarget':
+			return 'previous target';
+		case 'NextTarget':
+			return 'next target';
+		case 'Target':
+			return `target ${index + 1}`;
+		case 'Pet':
+			return `pet ${index + 1}`;
+		case 'Player':
+			return `player ${index + 1}`;
+		default:
+			return json.type;
+	}
+}
+
+// How tightly each operator binds, so only a looser operand gets brackets; `and` inside `or` and the other
+// way round keep theirs, since readers do not all know which binds first.
+const PRECEDENCE: Record<string, number> = { or: 1, and: 2, not: 3, cmp: 4, OpAdd: 5, OpSub: 5, OpMul: 6, OpDiv: 6 };
+const ATOM = 7;
+
+function precedence(json: Json | undefined): number {
+	const kind = kindOf('value', json);
+	if (kind === 'math' && isObject(json) && isObject(json.math)) {
+		return PRECEDENCE[String(json.math.op ?? 'OpAdd')] ?? ATOM;
+	}
+	return (kind ? PRECEDENCE[kind] : undefined) ?? ATOM;
+}
+
+function needsBrackets(child: number, parent: number): boolean {
+	return child < parent || (parent > 0 && child !== parent && child <= 2 && parent <= 2);
+}
+
+const op = (text: string) => <span className="op">{text}</span>;
+
+function joined(items: ReactNode[], separator: ReactNode): ReactNode {
+	return items.map((item, i) => (
+		<Fragment key={i}>
+			{i > 0 ? separator : null}
+			{item}
+		</Fragment>
+	));
+}
+
+// One argument of a kind, as it reads inline; undefined when the field is unset and has nothing to say.
+function argument(family: Family, kind: string, body: JsonObject, spec: AplFieldSpec): ReactNode | undefined {
+	const json = body[spec.field];
+	switch (spec.kind) {
+		case 'actionId':
+			return <IdChip json={json} />;
+		case 'unit':
+			return unitText(json) ? <span className="unit">{unitText(json)}</span> : undefined;
+		case 'value':
+			return json === undefined ? undefined : <ValueText json={json} />;
+		case 'valueList':
+			return Array.isArray(json)
+				? joined(
+						json.map(v => <ValueText json={v} />),
+						', ',
+					)
+				: undefined;
+		case 'action':
+			return json === undefined ? undefined : <ActionText json={json} />;
+		case 'actionList':
+			return Array.isArray(json)
+				? joined(
+						json.map(a => <ActionText json={a} />),
+						op(' → '),
+					)
+				: undefined;
+		case 'boolean':
+			return json === true ? <span className="flag">{spec.label ?? humanize(spec.field)}</span> : undefined;
+		case 'groupVariables':
+			return undefined;
+		case 'enum': {
+			const number = enumNumber(fieldInfo(kindMessage(family, kind), spec.field), json) ?? 0;
+			const label = spec.table.options.find(option => option.value === number)?.label;
+			return json === undefined && !label ? undefined : <span className="lit">{label ?? String(json)}</span>;
+		}
+		default:
+			return json === undefined || json === '' ? undefined : <span className="lit">{String(json)}</span>;
+	}
+}
+
+function args(family: Family, kind: string, body: JsonObject): ReactNode[] {
+	const model = kindModel(family, kind);
+	if (!model) {
+		return [];
+	}
+	return model.fields.map(descriptor => argument(family, kind, body, resolve(descriptor))).filter((node): node is ReactNode => node !== undefined);
+}
+
+export function ValueText({ json, parent = 0 }: { json: Json | undefined; parent?: number }) {
+	const kind = kindOf('value', json);
+	if (!kind || !isObject(json)) {
+		return <span className="lit invalid">{json === undefined || (isObject(json) && Object.keys(json).length === 0) ? 'none' : JSON.stringify(json)}</span>;
+	}
+	const body = isObject(json[kind]) ? (json[kind] as JsonObject) : {};
+	const own = precedence(json);
+	const wrap = (node: ReactNode) => (needsBrackets(own, parent) ? <span className="paren">({node})</span> : node);
+	// The right operand of a non-associative operator binds one step tighter: a − (b − c) keeps its brackets.
+	const right = own + 0.5;
+	switch (kind) {
+		case 'const':
+			return <span className="lit">{String(body.val ?? '')}</span>;
+		case 'variableRef':
+			return <span className="var">${String(body.name ?? '')}</span>;
+		case 'variablePlaceholder':
+			return <span className="var">?{String(body.name ?? '')}</span>;
+		case 'cmp':
+			return wrap(
+				<>
+					<ValueText json={body.lhs} parent={right} /> {op(COMPARE[String(body.op ?? 'OpEq')] ?? String(body.op))}{' '}
+					<ValueText json={body.rhs} parent={right} />
+				</>,
+			);
+		case 'math':
+			return wrap(
+				<>
+					<ValueText json={body.lhs} parent={own} /> {op(MATH[String(body.op ?? 'OpAdd')] ?? String(body.op))}{' '}
+					<ValueText json={body.rhs} parent={right} />
+				</>,
+			);
+		case 'and':
+		case 'or': {
+			const vals = Array.isArray(body.vals) ? body.vals : [];
+			return wrap(
+				<>
+					{joined(
+						vals.map(v => <ValueText json={v} parent={own} />),
+						<> {op(kind)} </>,
+					)}
+				</>,
+			);
+		}
+		case 'not':
+			return wrap(
+				<>
+					{op('not ')}
+					<ValueText json={body.val} parent={ATOM} />
+				</>,
+			);
+	}
+	const label = kindModel('value', kind)?.label ?? kind;
+	const shown = args('value', kind, body);
+	return (
+		<span className="call">
+			<span className="fn">{label}</span>
+			{shown.length > 0 ? <>({joined(shown, ', ')})</> : null}
+		</span>
+	);
+}
+
+export function ActionText({ json }: { json: Json | undefined }) {
+	const kind = kindOf('action', json);
+	if (!kind || !isObject(json)) {
+		return (
+			<span className="lit invalid">
+				{json === undefined || (isObject(json) && Object.keys(json).length === 0) ? 'no action set' : JSON.stringify(json)}
+			</span>
+		);
+	}
+	const body = isObject(json[kind]) ? (json[kind] as JsonObject) : {};
+	const label = kindModel('action', kind)?.label ?? kind;
+	const shown = args('action', kind, body);
+	return (
+		<span className="action">
+			<span className="fn">{label}</span>
+			{shown.length > 0 ? <> {joined(shown, ' ')}</> : null}
+		</span>
+	);
+}

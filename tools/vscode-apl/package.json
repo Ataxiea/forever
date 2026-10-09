@@ -1,0 +1,74 @@
+{
+	"name": "wowsims-apl",
+	"displayName": "WoWSims APL Editor",
+	"description": "Read and edit an .apl.json rotation in a panel beside it, with spell names and icons from the database and the site's own action and value forms.",
+	"version": "0.1.0",
+	"private": true,
+	"publisher": "wowsims",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.91.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onWebviewPanel:wowsims-apl.editor"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "wowsims-apl.openToSide",
+				"title": "WoWSims: Open APL Editor to the Side",
+				"icon": "$(list-tree)"
+			},
+			{
+				"command": "wowsims-apl.reloadRegistered",
+				"title": "WoWSims: Reload Registered APL Spells"
+			}
+		],
+		"menus": {
+			"editor/title": [
+				{
+					"command": "wowsims-apl.openToSide",
+					"when": "resourceFilename =~ /\\.apl\\.json$/",
+					"group": "navigation"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "wowsims-apl.openToSide",
+					"when": "resourceFilename =~ /\\.apl\\.json$/"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "wowsims-apl.openToSide",
+				"key": "ctrl+k a",
+				"mac": "cmd+k a",
+				"when": "editorTextFocus && resourceFilename =~ /\\.apl\\.json$/"
+			}
+		],
+		"configuration": {
+			"title": "WoWSims APL Editor",
+			"properties": {
+				"wowsims-apl.goBinary": {
+					"type": "string",
+					"default": "go",
+					"description": "The go binary that runs tools/aplspells for the spells each spec registers. `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"build": "node scripts/build.mjs",
+		"check": "node scripts/build.mjs --check",
+		"test": "node --test --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/*.test.mjs"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"@types/vscode": "~1.91.0",
+		"esbuild": "0.28.2",
+		"jsonc-parser": "3.3.1",
+		"typescript": "^5.9.3"
+	}
+}
