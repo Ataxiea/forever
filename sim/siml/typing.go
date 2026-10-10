@@ -71,6 +71,26 @@ type typer struct {
 	placeholders map[scope]map[string]bool // The placeholders each group's statements hold.
 	scope        scope
 	decl         *variableDecl // The declaration whose value is being typed.
+	at           []any         // The JSON path, from IndividualSimSettings, of what is being typed: JSON names and list indices.
+	spans        []pathSpan    // The nodes that read, each at the JSON path it writes, in the order they are read.
+}
+
+// A node's text and the JSON path of what it writes.
+type pathSpan struct {
+	span
+	path []any
+}
+
+// Types what follows at the JSON path keys lead to from the current one; gives what restores the current one.
+func (t *typer) in(keys ...any) func() {
+	n := len(t.at)
+	t.at = append(t.at, keys...)
+	return func() { t.at = t.at[:n] }
+}
+
+// Records that the text at writes the current JSON path.
+func (t *typer) mark(at span) {
+	t.spans = append(t.spans, pathSpan{span: at, path: append([]any{}, t.at...)})
 }
 
 var (
@@ -189,9 +209,24 @@ func constValue(text string) *proto.APLValue {
 }
 
 func (t *typer) value(n node) *proto.APLValue {
+	if p, ok := n.(*parenNode); ok {
+		return t.value(p.expr)
+	}
+	v := t.valueOf(n)
+	if v != nil {
+		t.mark(n.pos())
+	}
+	return v
+}
+
+// The value n writes at the JSON path keys lead to.
+func (t *typer) valueIn(n node, keys ...any) *proto.APLValue {
+	defer t.in(keys...)()
+	return t.value(n)
+}
+
+func (t *typer) valueOf(n node) *proto.APLValue {
 	switch n := n.(type) {
-	case *parenNode:
-		return t.value(n.expr)
 	case *literalNode:
 		return constValue(n.text)
 	case *stringNode:
@@ -221,12 +256,12 @@ func (t *typer) value(n node) *proto.APLValue {
 		}
 		return nil
 	case *notNode:
-		if val := t.value(n.operand); val != nil {
+		if val := t.valueIn(n.operand, "not", "val"); val != nil {
 			return &proto.APLValue{Value: &proto.APLValue_Not{Not: &proto.APLValueNot{Val: val}}}
 		}
 		return nil
 	case *logicNode:
-		vals, ok := t.values(n.operands)
+		vals, ok := t.values(n.op, n.operands)
 		switch {
 		case !ok:
 			return nil
@@ -235,13 +270,13 @@ func (t *typer) value(n node) *proto.APLValue {
 		}
 		return &proto.APLValue{Value: &proto.APLValue_Or{Or: &proto.APLValueOr{Vals: vals}}}
 	case *compareNode:
-		lhs, rhs := t.value(n.left), t.value(n.right)
+		lhs, rhs := t.valueIn(n.left, "cmp", "lhs"), t.valueIn(n.right, "cmp", "rhs")
 		if lhs == nil || rhs == nil {
 			return nil
 		}
 		return &proto.APLValue{Value: &proto.APLValue_Cmp{Cmp: &proto.APLValueCompare{Op: compareOperators[n.op], Lhs: lhs, Rhs: rhs}}}
 	case *mathNode:
-		lhs, rhs := t.value(n.left), t.value(n.right)
+		lhs, rhs := t.valueIn(n.left, "math", "lhs"), t.valueIn(n.right, "math", "rhs")
 		if lhs == nil || rhs == nil {
 			return nil
 		}
@@ -260,12 +295,12 @@ func (t *typer) value(n node) *proto.APLValue {
 	return nil
 }
 
-// Each of nodes as a value; false when any fails, after typing them all.
-func (t *typer) values(nodes []node) ([]*proto.APLValue, bool) {
+// Each of nodes as a value of the vals of op, and or or; false when any fails, after typing them all.
+func (t *typer) values(op string, nodes []node) ([]*proto.APLValue, bool) {
 	out := make([]*proto.APLValue, len(nodes))
 	ok := true
 	for i, n := range nodes {
-		out[i] = t.value(n)
+		out[i] = t.valueIn(n, op, "vals", i)
 		ok = ok && out[i] != nil
 	}
 	return out, ok
@@ -291,6 +326,7 @@ func (t *typer) kindBody(k *aplKind, args *argList) protoreflect.Message {
 	if args == nil {
 		return body
 	}
+	defer t.in(k.field.JSONName())()
 	defer t.enter(k, nil, args)()
 	if !t.kindArgs(k, args, body) {
 		return nil
@@ -350,12 +386,15 @@ func (t *typer) unitPrefixed(m *memberNode) *proto.APLValue {
 		t.report("unknown-kind", message, m.name.span)
 		return nil
 	}
+	unitField := k.message.byProto[k.UnitField]
+	pop := t.in(k.field.JSONName(), unitField.JSON)
 	unit := t.unitName(m.object)
+	pop()
 	if unit == nil {
 		return nil
 	}
 	body := newMessage(k.message.desc)
-	body.Set(k.message.byProto[k.UnitField].desc, protoreflect.ValueOfMessage(unit.ProtoReflect()))
+	body.Set(unitField.desc, protoreflect.ValueOfMessage(unit.ProtoReflect()))
 	return kindValue(k, body)
 }
 
@@ -385,6 +424,7 @@ func (t *typer) accessor(a *accessorNode) *proto.APLValue {
 	body := newMessage(k.message.desc)
 	given := map[*field]bool{}
 	ok := true
+	defer t.in(k.field.JSONName())()
 	defer t.enter(k, a.unit, a.args)()
 	if a.unit != nil {
 		unitField := k.message.byProto[acc.Unit]
@@ -393,7 +433,10 @@ func (t *typer) accessor(a *accessorNode) *proto.APLValue {
 			ok = false
 		} else {
 			given[unitField] = true
-			if unit := t.unitName(*a.unit); unit != nil {
+			pop := t.in(unitField.JSON)
+			unit := t.unitName(*a.unit)
+			pop()
+			if unit != nil {
 				body.Set(unitField.desc, protoreflect.ValueOfMessage(unit.ProtoReflect()))
 			} else {
 				ok = false
@@ -402,7 +445,10 @@ func (t *typer) accessor(a *accessorNode) *proto.APLValue {
 	}
 	subject := k.message.byProto[acc.Subject]
 	given[subject] = true
-	if v, good := t.single(subject, a.subject); good {
+	pop := t.in(subject.JSON)
+	v, good := t.single(subject, a.subject)
+	pop()
+	if good {
 		body.Set(subject.desc, v)
 	} else {
 		ok = false
@@ -459,7 +505,12 @@ func (t *typer) kindArgs(k *aplKind, args *argList, body protoreflect.Message) b
 			continue
 		}
 		given[target] = true
+		pop := t.in(target.JSON)
+		if list != nil {
+			t.at = append(t.at, len(items))
+		}
 		v, good := t.single(target, a.value)
+		pop()
 		ok = ok && good
 		if list != nil {
 			items = append(items, v)
@@ -515,7 +566,9 @@ func (t *typer) namedArg(k *aplKind, n name, value node, body protoreflect.Messa
 		return false
 	}
 	given[f] = true
+	pop := t.in(f.JSON)
 	v, ok := t.term(f, value)
+	pop()
 	if ok {
 		body.Set(f.desc, v)
 	}
@@ -543,6 +596,8 @@ func (t *typer) setFlag(f *field, at span, body protoreflect.Message, given map[
 	}
 	given[f] = true
 	body.Set(f.desc, protoreflect.ValueOfBool(true))
+	defer t.in(f.JSON)()
+	t.mark(at)
 	return true
 }
 
@@ -578,12 +633,17 @@ func (t *typer) term(f *field, n node) (protoreflect.Value, bool) {
 	}
 	list := newList(f)
 	ok = true
-	for _, item := range l.items {
+	for i, item := range l.items {
+		pop := t.in(i)
 		v, good := t.single(f, item)
+		pop()
 		if good && ok {
 			list.Append(v)
 		}
 		ok = ok && good
+	}
+	if ok {
+		t.mark(l.span)
 	}
 	return protoreflect.ValueOfList(list), ok
 }
@@ -593,6 +653,15 @@ func (t *typer) single(f *field, n node) (protoreflect.Value, bool) {
 	if r, ok := n.(*rawNode); ok && f.Printed != "value" && f.Printed != "action" {
 		return t.rawField(f, r, f.Printed == "indexed")
 	}
+	v, ok := t.singleOf(f, n)
+	// A message marks its own text.
+	if ok && f.desc.Message() == nil {
+		t.mark(n.pos())
+	}
+	return v, ok
+}
+
+func (t *typer) singleOf(f *field, n node) (protoreflect.Value, bool) {
 	switch f.Printed {
 	case "value":
 		return messageValue(t.value(n))
@@ -779,6 +848,7 @@ func (t *typer) message(f *field, n node) (protoreflect.Value, bool) {
 		return t.wrongType(f, fmt.Sprintf("its fields in %s(…), or raw JSON", f.Siml), n)
 	}
 	if body := t.messageArgs(t.ix.messages[f.Type], c.args); body != nil {
+		t.mark(c.span)
 		return protoreflect.ValueOfMessage(body), true
 	}
 	return protoreflect.Value{}, false
@@ -819,13 +889,18 @@ func (t *typer) messageArgs(m *message, args *argList) protoreflect.Message {
 		switch {
 		case element:
 			elements[f] = true
-			if v, good = t.single(f, a.value); good {
+			pop := t.in(f.JSON, body.Get(f.desc).List().Len())
+			v, good = t.single(f, a.value)
+			pop()
+			if good {
 				body.Mutable(f.desc).List().Append(v)
 			}
 			ok = ok && good
 			continue
 		case a.name != nil || call.args != nil:
+			pop := t.in(f.JSON)
 			v, good = t.term(f, a.value)
+			pop()
 		default:
 			v, good = t.bareFlag(f, a.value.pos())
 		}
@@ -896,6 +971,7 @@ func (t *typer) indexed(f *field, n node) (protoreflect.Value, bool) {
 		}
 		ok = ok && good
 	}
+	t.mark(c.span)
 	if !ok {
 		return protoreflect.Value{}, false
 	}
@@ -912,8 +988,10 @@ func (t *typer) indexed(f *field, n node) (protoreflect.Value, bool) {
 func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 	switch n := n.(type) {
 	case *noneNode:
+		t.mark(n.span)
 		return &proto.ActionID{}
 	case *rawNode:
+		t.mark(n.span)
 		if m := t.raw(actionIDMessage, n); m != nil {
 			return m.Interface().(*proto.ActionID)
 		}
@@ -927,6 +1005,7 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 				t.report("unknown-enum", fmt.Sprintf("other.%s names no other action%s", n.name.text, didYouMean(n.name.text, e.shortNames())), n.name.span)
 				return nil
 			}
+			t.mark(n.span)
 			return &proto.ActionID{RawId: &proto.ActionID_OtherId{OtherId: proto.OtherAction(v.Number)}}
 		case "item":
 			r, ok := t.lookup(n.name, NamespaceItem, "item.")
@@ -934,6 +1013,7 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 				return nil
 			}
 			t.refs = append(t.refs, r)
+			t.mark(n.span)
 			return &proto.ActionID{RawId: &proto.ActionID_ItemId{ItemId: r.id}}
 		}
 	case *callNode:
@@ -945,6 +1025,7 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 			return nil
 		}
 		t.refs = append(t.refs, r)
+		t.mark(n.span)
 		return r.actionID
 	}
 	t.report("wrong-type", "a name goes here: a spell, item.<name> or other.<name>", n.pos())
@@ -954,8 +1035,10 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 func (t *typer) unit(n node) *proto.UnitReference {
 	switch n := n.(type) {
 	case *noneNode:
+		t.mark(n.span)
 		return &proto.UnitReference{}
 	case *rawNode:
+		t.mark(n.span)
 		if m := t.raw(unitMessage, n); m != nil {
 			return m.Interface().(*proto.UnitReference)
 		}
@@ -978,6 +1061,8 @@ func (t *typer) unitName(n name) *proto.UnitReference {
 			message = "; the units are " + strings.Join(words, ", ") + ", and targetN, playerN, petN"
 		}
 		t.report("wrong-type", "no unit is named "+n.text+message, n.span)
+	} else {
+		t.mark(n.span)
 	}
 	return u
 }
@@ -988,7 +1073,7 @@ func (t *typer) action(n *actionNode) *proto.APLAction {
 	out := t.step(n.step)
 	var condition *proto.APLValue
 	if n.condition != nil {
-		condition = t.value(n.condition)
+		condition = t.valueIn(n.condition, "condition")
 	}
 	if out == nil || n.condition != nil && condition == nil {
 		return nil
@@ -1000,6 +1085,7 @@ func (t *typer) action(n *actionNode) *proto.APLAction {
 		}
 		out.Condition = condition
 	}
+	t.mark(n.span)
 	return out
 }
 
@@ -1014,16 +1100,18 @@ func (t *typer) step(n node) *proto.APLAction {
 		}
 		return nil
 	case *castStep:
+		defer t.in("castSpell")()
 		spell, target, ok := t.spellAndTarget(s.spell, s.target)
 		if !ok {
 			return nil
 		}
 		return &proto.APLAction{Action: &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{SpellId: spell, Target: target}}}
 	case *channelStep:
+		defer t.in("channelSpell")()
 		spell, target, ok := t.spellAndTarget(s.spell, s.target)
 		body := &proto.APLActionChannelSpell{SpellId: spell, Target: target, AllowRecast: s.recast}
 		if s.until != nil {
-			body.InterruptIf = t.value(s.until)
+			body.InterruptIf = t.valueIn(s.until, "interruptIf")
 			ok = ok && body.InterruptIf != nil
 		}
 		if !ok {
@@ -1031,7 +1119,11 @@ func (t *typer) step(n node) *proto.APLAction {
 		}
 		return &proto.APLAction{Action: &proto.APLAction_ChannelSpell{ChannelSpell: body}}
 	case *waitStep:
-		v := t.value(s.value)
+		keys := []any{"wait", "duration"}
+		if s.until {
+			keys = []any{"waitUntil", "condition"}
+		}
+		v := t.valueIn(s.value, keys...)
 		switch {
 		case v == nil:
 			return nil
@@ -1040,7 +1132,11 @@ func (t *typer) step(n node) *proto.APLAction {
 		}
 		return &proto.APLAction{Action: &proto.APLAction_Wait{Wait: &proto.APLActionWait{Duration: v}}}
 	case *moveStep:
-		v := t.value(s.value)
+		keys := []any{"move", "rangeFromTarget"}
+		if s.duration {
+			keys = []any{"moveDuration", "duration"}
+		}
+		v := t.valueIn(s.value, keys...)
 		switch {
 		case v == nil:
 			return nil
@@ -1051,7 +1147,12 @@ func (t *typer) step(n node) *proto.APLAction {
 	case *groupStep:
 		return t.groupStep(s)
 	case *scheduleStep:
+		pop := t.in("schedule", "innerAction")
 		inner := t.step(s.step)
+		if inner != nil {
+			t.mark(s.step.pos())
+		}
+		pop()
 		if inner == nil {
 			return nil
 		}
@@ -1061,7 +1162,9 @@ func (t *typer) step(n node) *proto.APLAction {
 		actions := make([]*proto.APLAction, len(s.actions))
 		ok := true
 		for i, a := range s.actions {
+			pop := t.in("sequence", "actions", i)
 			actions[i] = t.action(a)
+			pop()
 			ok = ok && actions[i] != nil
 		}
 		if !ok {
@@ -1076,10 +1179,14 @@ func (t *typer) step(n node) *proto.APLAction {
 
 // A cast's or channel's spell and its `on` unit, both typed whatever either gives.
 func (t *typer) spellAndTarget(spell, target node) (*proto.ActionID, *proto.UnitReference, bool) {
+	pop := t.in("spellId")
 	id := t.actionID(spell, NamespaceSpell)
+	pop()
 	var unit *proto.UnitReference
 	if target != nil {
+		pop := t.in("target")
 		unit = t.unit(target)
+		pop()
 	}
 	return id, unit, id != nil && (target == nil || unit != nil)
 }
@@ -1092,8 +1199,13 @@ func (t *typer) groupStep(s *groupStep) *proto.APLAction {
 	t.groupUses = append(t.groupUses, use)
 	ref := &proto.APLActionGroupReference{GroupName: s.name.value}
 	ok := true
-	for _, b := range s.with {
-		v := t.value(b.value)
+	for i, b := range s.with {
+		pop := t.in("groupReference", "variables", i)
+		v := t.valueIn(b.value, "value")
+		if v != nil {
+			t.mark(b.span)
+		}
+		pop()
 		ok = ok && v != nil
 		ref.Variables = append(ref.Variables, &proto.APLValueVariable{Name: b.placeholder.name, Value: v})
 	}
@@ -1128,7 +1240,11 @@ func (t *typer) actionTerm(n node) *proto.APLAction {
 	case *actionNode:
 		return t.action(n)
 	case *callNode, *rawNode, *noneNode:
-		return t.step(n)
+		out := t.step(n)
+		if out != nil {
+			t.mark(n.pos())
+		}
+		return out
 	}
 	t.report("wrong-type", "an action goes here", n.pos())
 	return nil
@@ -1166,6 +1282,7 @@ func (t *typer) rawField(f *field, r *rawNode, whole bool) (protoreflect.Value, 
 		return protoreflect.Value{}, false
 	}
 	t.noteRaw(r, holder)
+	t.mark(r.span)
 	if f.Repeated && !whole {
 		return holder.Get(f.desc).List().Get(0), true
 	}
@@ -1435,6 +1552,14 @@ func (t *typer) entry(s stmt, fields []*placed, holder func(*placed) protoreflec
 		}
 		return p
 	}
+	// Types what follows at the JSON path of p's next value.
+	at := func(p *placed) func() {
+		keys := p.keys()
+		if p.isList() {
+			keys = append(keys, holder(p).Get(p.desc).List().Len())
+		}
+		return t.in(keys...)
+	}
 	put := func(p *placed, v protoreflect.Value, ok bool) {
 		if !ok {
 			return
@@ -1459,7 +1584,9 @@ func (t *typer) entry(s stmt, fields []*placed, holder func(*placed) protoreflec
 			t.report("wrong-type", p.Siml+" takes one value", s.values[1].pos())
 		default:
 			for _, value := range s.values {
+				pop := at(p)
 				v, ok := t.single(p.field, value)
+				pop()
 				put(p, v, ok)
 			}
 		}
@@ -1469,7 +1596,9 @@ func (t *typer) entry(s stmt, fields []*placed, holder func(*placed) protoreflec
 			switch {
 			case p == nil:
 			case fl.value != nil:
+				pop := at(p)
 				v, ok := t.single(p.field, fl.value)
+				pop()
 				put(p, v, ok)
 			default:
 				v, ok := t.bareFlag(p.field, fl.span)
@@ -1478,7 +1607,9 @@ func (t *typer) entry(s stmt, fields []*placed, holder func(*placed) protoreflec
 		}
 	case *messageEntryStmt:
 		if p := find(s.name.text, s.name.span, false); p != nil {
+			pop := at(p)
 			v, ok := t.single(p.field, &callNode{span: s.span, name: s.name, args: s.args})
+			pop()
 			put(p, v, ok)
 		}
 	case *rawEntryStmt:
@@ -1492,7 +1623,9 @@ func (t *typer) entry(s stmt, fields []*placed, holder func(*placed) protoreflec
 			if p == nil {
 				continue
 			}
+			pop := t.in(p.keys()...)
 			v, ok := t.rawField(p.field, &rawNode{span: s.value.span, json: string(e.value)}, p.Repeated)
+			pop()
 			if !ok || !p.isList() {
 				put(p, v, ok)
 				continue

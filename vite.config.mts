@@ -42,6 +42,7 @@ function serveExternalAssets() {
 		'/forever/net_worker.js': '/forever/net_worker.js',
 		'/forever/lib.wasm.gz': '/forever/lib.wasm.gz',
 		'/forever/highs.wasm': '/forever/highs.wasm',
+		'/forever/siml_names.json': '/forever/siml_names.json',
 	};
 
 	return {

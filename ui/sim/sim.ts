@@ -36,7 +36,18 @@ import {
 	UnitReference_Type as UnitType,
 	WeaponType,
 } from '@generated/proto/common';
-import { DatabaseFilters, RaidFilterOption, SimSettings as SimSettingsProto, SourceFilterOption } from '@generated/proto/ui';
+import {
+	DatabaseFilters,
+	RaidFilterOption,
+	SimlFormatRequest,
+	SimlFormatResult,
+	SimlParseRequest,
+	SimlParseResult,
+	SimlPrintRequest,
+	SimlPrintResult,
+	SimSettings as SimSettingsProto,
+	SourceFilterOption,
+} from '@generated/proto/ui';
 import { getLang } from '@i18n/locale_service';
 import { SimRequest } from '@worker/types';
 
@@ -455,6 +466,19 @@ export class Sim {
 			bulkSettings,
 		});
 		return await this.workerPool.bulkCandidates(request);
+	}
+
+	// SIML (sim/siml/SPEC.md), read and written by the sim.
+	simlParse(request: SimlParseRequest): Promise<SimlParseResult> {
+		return this.workerPool.simlParse(request);
+	}
+
+	simlPrint(request: SimlPrintRequest): Promise<SimlPrintResult> {
+		return this.workerPool.simlPrint(request);
+	}
+
+	simlFormat(request: SimlFormatRequest): Promise<SimlFormatResult> {
+		return this.workerPool.simlFormat(request);
 	}
 
 	// Stats for a hypothetical gear set, without touching the player's own current stats or

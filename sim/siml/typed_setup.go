@@ -33,6 +33,7 @@ type typedFile struct {
 	categories   []string                        // In the site's order.
 	typer        *typer
 	written      map[stmt]protoreflect.Message // What each row and var line writes; invalid when it does not read.
+	paths        map[stmt][]any                // Each row's and var line's JSON path within the rotation, as if every statement read.
 	entries      map[stmt][]entryWrite         // What each entry line and slot row writes.
 	withs        map[stmt][]*proto.APLValue    // The values each use line's with list gives, nil where one does not read.
 	declarations []*variableDecl
@@ -96,6 +97,7 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 		present:  presentSections(ix, tree),
 		typer:    t,
 		written:  map[stmt]protoreflect.Message{},
+		paths:    map[stmt][]any{},
 		entries:  map[stmt][]entryWrite{},
 		withs:    map[stmt][]*proto.APLValue{},
 	}
@@ -109,6 +111,9 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 	for _, s := range tree.top {
 		if s, ok := s.(*talentsStmt); ok {
 			f.player().TalentsString = s.talents.value
+			pop := t.in("player", "talentsString")
+			t.mark(s.talents.span)
+			pop()
 			break
 		}
 	}
@@ -345,6 +350,7 @@ func (f *typedFile) slotRow(s *slotRowStmt, slots *placed, taken map[int32]bool)
 	} else {
 		item = newMessage(itemSpec.desc)
 		row := &SlotRow{Slot: proto.ItemSlot(slot.Number)}
+		at := append(slots.keys(), int(slot.Number))
 		for _, part := range []struct {
 			field    string
 			written  *name
@@ -358,7 +364,13 @@ func (f *typedFile) slotRow(s *slotRowStmt, slots *placed, taken map[int32]bool)
 			if part.written == nil {
 				continue
 			}
+			fd := itemSpec.byProto[part.field].desc
+			pop := t.in(slices.Concat(at, []any{fd.JSONName()})...)
 			r, ok := t.lookup(*part.written, part.ns, part.position)
+			if ok {
+				t.mark(part.written.span)
+			}
+			pop()
 			if !ok {
 				item = nil
 				continue
@@ -369,7 +381,6 @@ func (f *typedFile) slotRow(s *slotRowStmt, slots *placed, taken map[int32]bool)
 				row.Item = r.id
 			}
 			if item != nil {
-				fd := itemSpec.byProto[part.field].desc
 				item.Set(fd, intValue(fd, int64(r.id)))
 			}
 		}
@@ -377,6 +388,9 @@ func (f *typedFile) slotRow(s *slotRowStmt, slots *placed, taken map[int32]bool)
 	if item == nil {
 		return nil
 	}
+	pop := t.in(append(slots.keys(), int(slot.Number))...)
+	t.mark(s.span)
+	pop()
 	items := mutableAt(f.settings.ProtoReflect(), slots.at).Mutable(slots.desc).List()
 	for items.Len() <= int(slot.Number) {
 		items.Append(items.NewElement())
@@ -592,9 +606,10 @@ func (f *typedFile) setVariables(rotation *proto.APLRotation, with []varBind, pa
 		case !res.found:
 			t.report("with-unknown-variable", fmt.Sprintf("%s declares no variable %s%s", path, written, didYouMean(b.variable.name, names)), b.variable.span)
 		default:
-			value := t.value(b.value)
+			k := slices.Index(names, res.name)
+			value := t.valueIn(b.value, slices.Concat(jsonKeys(t.ix.rotationPath), []any{"valueVariables", k, "value"})...)
 			if value != nil {
-				rotation.ValueVariables[slices.Index(names, res.name)].Value = value
+				rotation.ValueVariables[k].Value = value
 			}
 			values = append(values, value)
 		}

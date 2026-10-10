@@ -1,0 +1,84 @@
+package siml
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/wowsims/forever/sim/core/proto"
+)
+
+// The site's requests (proto/ui.proto), which it sends to lib.wasm or to the web server. Neither reads other files,
+// so a use line is refused.
+
+// Reads req.Text as the file at req.Path, with names.
+func ParseRequest(req *proto.SimlParseRequest, names *Names) (result *proto.SimlParseResult) {
+	defer recovered(func(message string) { result = &proto.SimlParseResult{Error: message} })
+	f, err := Parse(req.Path, []byte(req.Text), names, nil)
+	var diags Diagnostics
+	if errors.As(err, &diags) {
+		return &proto.SimlParseResult{Spec: f.Spec, Diagnostics: diagnosticProtos(diags)}
+	} else if err != nil {
+		return &proto.SimlParseResult{Error: err.Error()}
+	}
+	return &proto.SimlParseResult{Settings: f.Settings, Spec: f.Spec, Categories: f.Categories, Diagnostics: diagnosticProtos(f.Warnings)}
+}
+
+// Prints req.Settings as a file of req.Section, with names. A print that does not read back as a file of that kind
+// gives no text, and the diagnostics of the read.
+func PrintRequest(req *proto.SimlPrintRequest, names *Names) (result *proto.SimlPrintResult) {
+	defer recovered(func(message string) { result = &proto.SimlPrintResult{Error: message} })
+	path := "wowsims.siml"
+	if req.Section != "" {
+		path = "x." + req.Section + ".siml"
+	}
+	kind, err := KindOf(path)
+	if err != nil {
+		return &proto.SimlPrintResult{Error: err.Error()}
+	}
+	text := Print(kind, req.Spec, req.Settings, req.Categories, names)
+	_, err = Parse(path, text, names, nil)
+	var diags Diagnostics
+	if errors.As(err, &diags) {
+		return &proto.SimlPrintResult{Diagnostics: diagnosticProtos(diags)}
+	} else if err != nil {
+		return &proto.SimlPrintResult{Error: err.Error()}
+	}
+	return &proto.SimlPrintResult{Text: string(text)}
+}
+
+// Re-prints req.Text, the file at req.Path, in canonical form, with names.
+func FormatRequest(req *proto.SimlFormatRequest, names *Names) (result *proto.SimlFormatResult) {
+	defer recovered(func(message string) { result = &proto.SimlFormatResult{Error: message} })
+	text, err := Format(req.Path, []byte(req.Text), names)
+	var diags Diagnostics
+	if errors.As(err, &diags) {
+		return &proto.SimlFormatResult{Diagnostics: diagnosticProtos(diags)}
+	} else if err != nil {
+		return &proto.SimlFormatResult{Error: err.Error()}
+	}
+	return &proto.SimlFormatResult{Text: string(text)}
+}
+
+// Hands a panic's message to fail, so a request the reader or printer cannot take answers with an error rather than
+// ending the process that serves it. Deferred.
+func recovered(fail func(message string)) {
+	if r := recover(); r != nil {
+		fail(fmt.Sprint(r))
+	}
+}
+
+func diagnosticProtos(diags Diagnostics) []*proto.SimlDiagnostic {
+	out := make([]*proto.SimlDiagnostic, len(diags))
+	for i, d := range diags {
+		out[i] = &proto.SimlDiagnostic{
+			StartLine: int32(d.Start.Line),
+			StartCol:  int32(d.Start.Col),
+			EndLine:   int32(d.End.Line),
+			EndCol:    int32(d.End.Col),
+			Warning:   d.Severity == Warning,
+			Code:      d.Code,
+			Message:   d.Message,
+		}
+	}
+	return out
+}

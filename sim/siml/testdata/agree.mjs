@@ -12,7 +12,9 @@
 // the loader's message for the file's kind (null when there is an error), the formatted text (null when format finds
 // an error), the printed text (--print only), the diagnostics and the raw-ref diagnostics of SPEC.md §7.3, each as
 // {"line", "col", "severity", "code", "message"}, and the names the file writes that mean something, each as
-// {"line", "col", "name", "namespace"}.
+// {"line", "col", "name", "namespace"}; "spans" and "refs" are the parse's spans and every name it reads, each as
+// "LINE:COL-LINE:COL" and its path joined with /, a ref with its namespace and name, and "-" for a path outside the
+// loader's message.
 
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -84,5 +86,8 @@ for (const file of positionals) {
 	line.names = parsed.refs
 		.filter(r => !unknown.has(at(r.range)))
 		.map(r => ({ line: r.range.start.line + 1, col: r.range.start.character + 1, name: r.name, namespace: r.namespace }));
+	const range = r => `${r.start.line + 1}:${r.start.character + 1}-${r.end.line + 1}:${r.end.character + 1}`;
+	line.spans = parsed.spans.map(s => `${range(s.range)} ${s.path.join('/')}`);
+	line.refs = parsed.refs.map(r => `${range(r.range)} ${r.namespace} ${r.name} ${r.path === undefined ? '-' : r.path.join('/')}`);
 	process.stdout.write(`${JSON.stringify(line)}\n`);
 }

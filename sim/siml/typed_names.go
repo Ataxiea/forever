@@ -21,6 +21,8 @@ type nameRef struct {
 	id       int32
 	actionID *proto.ActionID // What a spell-like name writes: a new message of its own.
 	row      *SlotRow
+	path     []any // The JSON path, from IndividualSimSettings, of the field it fills.
+	known    bool  // Whether the namespace holds it.
 }
 
 // What a namespace holds, as messages name it: "battle_shout is a spell".
@@ -36,9 +38,10 @@ var namespaceThings = map[Namespace]string{
 }
 
 // What n means in ns for the file (SPEC.md §7.2); false, and unknown-name, when ns holds no such name. position is
-// what takes the name, for the message: "this position", a field's name, "a slot".
+// what takes the name, for the message: "this position", a field's name, "a slot". A name the namespace does not hold
+// goes into refs here; the caller adds one it holds.
 func (t *typer) lookup(n name, ns Namespace, position string) (nameRef, bool) {
-	r := nameRef{span: n.span, name: n.text, ns: ns}
+	r := nameRef{span: n.span, name: n.text, ns: ns, path: append([]any{}, t.at...)}
 	var ok bool
 	switch ns {
 	case NamespaceItem:
@@ -51,8 +54,10 @@ func (t *typer) lookup(n name, ns Namespace, position string) (nameRef, bool) {
 		r.actionID, ok = t.names.Spell(t.class, ns, n.text)
 		r.id = r.actionID.GetSpellId()
 	}
+	r.known = ok
 	if !ok {
 		t.report("unknown-name", t.unknownName(n.text, ns, position), n.span)
+		t.refs = append(t.refs, r)
 	}
 	return r, ok
 }

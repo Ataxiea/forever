@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -26,6 +27,7 @@ import (
 	proto "github.com/wowsims/forever/sim/core/proto"
 	reforgeoptimizer "github.com/wowsims/forever/sim/core/reforge_optimizer"
 	"github.com/wowsims/forever/sim/core/simsignals"
+	"github.com/wowsims/forever/sim/siml"
 
 	googleProto "google.golang.org/protobuf/proto"
 )
@@ -126,6 +128,36 @@ var handlers = map[string]apiHandler{
 		triggered := simsignals.AbortById(requestId)
 		return &proto.AbortResponse{RequestId: requestId, WasTriggered: triggered}
 	}},
+	"/simlParse": simlHandler(func() *proto.SimlParseRequest { return &proto.SimlParseRequest{} }, siml.ParseRequest,
+		func(e string) *proto.SimlParseResult { return &proto.SimlParseResult{Error: e} }),
+	"/simlPrint": simlHandler(func() *proto.SimlPrintRequest { return &proto.SimlPrintRequest{} }, siml.PrintRequest,
+		func(e string) *proto.SimlPrintResult { return &proto.SimlPrintResult{Error: e} }),
+	"/simlFormat": simlHandler(func() *proto.SimlFormatRequest { return &proto.SimlFormatRequest{} }, siml.FormatRequest,
+		func(e string) *proto.SimlFormatResult { return &proto.SimlFormatResult{Error: e} }),
+}
+
+// The site the server serves, which holds the name table SIML requests read with.
+var siteFS fs.FS
+
+// sim/siml/names.json, as the site serves it, read on the first SIML request: the server is built without the
+// with_db tag, so it holds no table of its own.
+var simlNames = sync.OnceValues(func() (*siml.Names, error) {
+	data, err := fs.ReadFile(siteFS, "forever/siml_names.json")
+	if err != nil {
+		return nil, err
+	}
+	return siml.ParseNames(data)
+})
+
+// The handler of a SIML request, which answers with failed when the name table does not read.
+func simlHandler[Req, Res googleProto.Message](newReq func() Req, handle func(Req, *siml.Names) Res, failed func(string) Res) apiHandler {
+	return apiHandler{msg: func() googleProto.Message { return newReq() }, handle: func(msg googleProto.Message) googleProto.Message {
+		names, err := simlNames()
+		if err != nil {
+			return failed(err.Error())
+		}
+		return handle(msg.(Req), names)
+	}}
 }
 
 var asyncAPIHandlers = map[string]asyncAPIHandler{
@@ -361,9 +393,11 @@ func (s *server) runServer(useFS bool, host string, launchBrowser bool, simName 
 	if useFS {
 		log.Printf("Using local file system for development.")
 		fs = http.FileServer(http.Dir("./dist"))
+		siteFS = os.DirFS("./dist")
 	} else {
 		log.Printf("Embedded file server running.")
 		fs = http.FileServer(http.FS(dist.FS))
+		siteFS = dist.FS
 	}
 
 	for route := range handlers {

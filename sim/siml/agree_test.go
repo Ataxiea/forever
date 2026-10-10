@@ -56,6 +56,8 @@ type agreeLine struct {
 	Diagnostics []agreeDiagnostic `json:"diagnostics"`
 	RawRefs     []agreeDiagnostic `json:"rawRefs"`
 	Names       []agreeName       `json:"names"`
+	Spans       []string          `json:"spans"`
+	Refs        []string          `json:"refs"`
 }
 
 // The diagnostics as the lines of a .diag file, with the message of each, except bad-raw, whose text comes from each
@@ -96,6 +98,41 @@ func goNameLines(f *File) []string {
 		out[i] = agreeName{n.Start.Line, n.Start.Col, n.Name, string(n.Namespace)}
 	}
 	return nameLines(out)
+}
+
+// A range as agree.mjs prints it: "LINE:COL-LINE:COL".
+func agreeRange(r Range) string {
+	return fmt.Sprintf("%d:%d-%d:%d", r.Start.Line, r.Start.Col, r.End.Line, r.End.Col)
+}
+
+func agreePath(path []any) string {
+	parts := make([]string, len(path))
+	for i, k := range path {
+		parts[i] = fmt.Sprint(k)
+	}
+	return strings.Join(parts, "/")
+}
+
+// A Doc's spans as agree.mjs prints a parse's.
+func goSpanLines(d *Doc) []string {
+	lines := []string{}
+	for _, s := range d.Spans() {
+		lines = append(lines, agreeRange(s.Range)+" "+agreePath(s.Path))
+	}
+	return lines
+}
+
+// A Doc's refs as agree.mjs prints a parse's.
+func goRefLines(d *Doc) []string {
+	lines := []string{}
+	for _, r := range d.Refs() {
+		path := "-"
+		if r.Path != nil {
+			path = agreePath(r.Path)
+		}
+		lines = append(lines, fmt.Sprintf("%s %s %s %s", agreeRange(Range{r.Start, r.End}), r.Namespace, r.Name, path))
+	}
+	return lines
 }
 
 // Every .siml under ui/specs.
@@ -159,6 +196,13 @@ func agree(t *testing.T, ts agreeLine, path string, src []byte, names *Names, op
 	}
 	if got, want := goNameLines(f), nameLines(ts.Names); !slices.Equal(got, want) {
 		t.Errorf("the names differ\ngo:\n%s\nts:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	doc := Analyze(path, src, names, open)
+	if got := goSpanLines(doc); !slices.Equal(got, ts.Spans) {
+		t.Errorf("the spans differ\ngo:\n%s\nts:\n%s", strings.Join(got, "\n"), strings.Join(ts.Spans, "\n"))
+	}
+	if got := goRefLines(doc); !slices.Equal(got, ts.Refs) {
+		t.Errorf("the refs differ\ngo:\n%s\nts:\n%s", strings.Join(got, "\n"), strings.Join(ts.Refs, "\n"))
 	}
 
 	switch tsLoaded := string(ts.JSON) != "null"; {

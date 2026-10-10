@@ -79,6 +79,13 @@ jobs:
             - name: Generate TS sources 🧬
               run: make ui/generated/proto/api.ts go-to-ts
 
+            # Vite reads .siml imports with `wowsimcli siml serve` (tools/vite/siml.mts); one build here spares the
+            # unit tests, Storybook and the bundle a `go run` each.
+            - name: Build wowsimcli for the SIML imports
+              run: |
+                  go build -o "$RUNNER_TEMP/wowsimcli" ./cmd/wowsimcli
+                  echo "WOWSIMCLI=$RUNNER_TEMP/wowsimcli" >> "$GITHUB_ENV"
+
             - name: Type check 🧠
               run: npm run type-check
 

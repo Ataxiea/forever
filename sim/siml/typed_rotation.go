@@ -1,6 +1,7 @@
 package siml
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/wowsims/forever/sim/core/proto"
@@ -35,6 +36,17 @@ func (f *typedFile) typeRotation() rotationTyping {
 	set := map[*field]bool{}
 	var out rotationTyping
 	var group *proto.APLGroup
+	base := jsonKeys(t.ix.rotationPath)
+	// Each list's next element, counting the statements that do not read, and the current group's path.
+	var vars, prepull, priority, groupVars, groupActions int
+	var groupAt []any
+	// Types a row or var line at the next element of a list, path being the list's within the rotation.
+	at := func(s stmt, next *int, path ...any) func() {
+		path = append(path, *next)
+		*next++
+		f.paths[s] = path
+		return t.in(slices.Concat(base, path)...)
+	}
 
 	declare := func(s *varStmt, in scope) *proto.APLValueVariable {
 		d := &variableDecl{span: s.variable.span, name: s.variable.name, scope: in}
@@ -44,12 +56,13 @@ func (f *typedFile) typeRotation() rotationTyping {
 			v = &proto.APLValueVariable{Name: s.variable.name}
 		} else {
 			t.decl = d
-			value := t.value(s.value)
+			value := t.valueIn(s.value, "value")
 			t.decl = nil
 			if value != nil {
 				v = &proto.APLValueVariable{Name: s.variable.name, Value: value}
 			}
 		}
+		t.mark(s.span)
 		f.written[s] = v.ProtoReflect()
 		return v
 	}
@@ -65,15 +78,25 @@ func (f *typedFile) typeRotation() rotationTyping {
 				r.Groups = append(r.Groups, group)
 				t.scope = scope{group: s.group.value, inGroup: true}
 				out.groups = append(out.groups, nameUse{span: s.group.span, name: s.group.value})
+				groupAt, groupVars, groupActions = []any{"groups", len(r.Groups) - 1}, 0, 0
+				pop := t.in(slices.Concat(base, groupAt)...)
+				t.mark(s.span)
+				pop()
 			}
 		case *varStmt:
 			if !inSection || section == sectionAPL {
 				r := f.rotation()
-				if v := declare(s, scope{}); v != nil {
+				pop := at(s, &vars, "valueVariables")
+				v := declare(s, scope{})
+				pop()
+				if v != nil {
 					r.ValueVariables = append(r.ValueVariables, v)
 				}
 			} else if section == sectionGroup && group != nil {
-				if v := declare(s, t.scope); v != nil {
+				pop := at(s, &groupVars, slices.Concat(groupAt, []any{"variables"})...)
+				v := declare(s, t.scope)
+				pop()
+				if v != nil {
 					group.Variables = append(group.Variables, v)
 				}
 			}
@@ -81,20 +104,29 @@ func (f *typedFile) typeRotation() rotationTyping {
 			switch {
 			case section == sectionPrepull:
 				r := f.rotation()
+				pop := at(s, &prepull, "prepullActions")
+				t.mark(s.span)
 				item := t.prepullAction(s)
+				pop()
 				f.written[s] = item.ProtoReflect()
 				if item != nil {
 					r.PrepullActions = append(r.PrepullActions, item)
 				}
 			case section == sectionPriority:
 				r := f.rotation()
+				pop := at(s, &priority, "priorityList")
+				t.mark(s.span)
 				item := t.listItem(s)
+				pop()
 				f.written[s] = item.ProtoReflect()
 				if item != nil {
 					r.PriorityList = append(r.PriorityList, item)
 				}
 			case section == sectionGroup && group != nil:
+				pop := at(s, &groupActions, slices.Concat(groupAt, []any{"actions"})...)
+				t.mark(s.span)
 				item := t.listItem(s)
+				pop()
 				f.written[s] = item.ProtoReflect()
 				if item != nil {
 					group.Actions = append(group.Actions, item)
@@ -129,7 +161,9 @@ func (t *typer) listItem(s *rowStmt) *proto.APLListItem {
 		return nil
 	}
 	// A time outside prepull: is unexpected-time, and is not read.
+	pop := t.in("action")
 	action := t.action(s.action)
+	pop()
 	if action == nil {
 		return nil
 	}
@@ -148,15 +182,26 @@ func (t *typer) prepullAction(s *rowStmt) *proto.APLPrepullAction {
 		}
 		return nil
 	}
+	pop := t.in("action")
 	action := t.action(s.action)
+	pop()
 	var doAt *proto.APLValue
 	if s.doAt != nil {
-		doAt = t.value(s.doAt)
+		doAt = t.valueIn(s.doAt, "doAtValue")
 	}
 	if action == nil || s.doAt != nil && doAt == nil {
 		return nil
 	}
 	return &proto.APLPrepullAction{Action: action, DoAtValue: doAt, Hide: s.hide}
+}
+
+// The JSON names of a path of fields.
+func jsonKeys(path []protoreflect.FieldDescriptor) []any {
+	keys := make([]any, len(path))
+	for i, fd := range path {
+		keys[i] = fd.JSONName()
+	}
+	return keys
 }
 
 // The message the path of message fields reaches from m, made where missing.

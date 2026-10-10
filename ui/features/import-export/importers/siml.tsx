@@ -1,6 +1,6 @@
 import { Player as PlayerProto } from '@generated/proto/api';
 import { APLRotation_Type as APLRotationType } from '@generated/proto/apl';
-import { EquipmentSpec } from '@generated/proto/common';
+import { EquipmentSpec, Spec } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { SIM_CATEGORY_KEYS, SimSettingCategories } from '@sim/constants/sim_settings';
@@ -9,7 +9,7 @@ import type { IndividualSimHost } from '@sim/sim_host';
 import { toastManager } from '@ui-kit/Toast';
 
 import { SIML_ROTATION_FILE } from '../exporters/siml';
-import { loadSiml, located } from '../load_siml';
+import { located, parseSiml, specField } from '../siml_client';
 import { type ImporterDefinition, ImportProblems } from './types';
 
 // What text with no file name reads as: a full setup, or any part of one (sim/siml/SPEC.md §1).
@@ -23,9 +23,8 @@ const CATEGORY_OF_KEY = new Map([...SIM_CATEGORY_KEYS].map(([category, key]) => 
  * is refused with each problem at its line and column; `use` is among them, as the site reads no other files.
  */
 export const importSiml = async (host: IndividualSimHost<any>, text: string, path: string): Promise<void> => {
-	const { siml, specField } = await loadSiml();
-	const parsed = siml.parse(text, { path });
-	const errors = parsed.diagnostics.filter(d => d.severity === 'error');
+	const parsed = await parseSiml(host.sim, path, text);
+	const errors = parsed.diagnostics.filter(d => !d.warning);
 	if (errors.length) throw new ImportProblems(i18n.t('import.siml.error_problems'), errors.map(located));
 
 	const categories = parsed.categories.map(key => CATEGORY_OF_KEY.get(key)!);
@@ -35,7 +34,7 @@ export const importSiml = async (host: IndividualSimHost<any>, text: string, pat
 	if (host.simDisabled && categories.every(category => category === SimSettingCategories.Encounter)) {
 		throw new Error(i18n.t('import.siml.error_nothing_here'));
 	}
-	const settings = IndividualSimSettings.fromJson(parsed.settings!);
+	const settings = parsed.settings ?? IndividualSimSettings.create();
 	// A section file with no spec line, such as an x.encounter.siml, sets no player, and `fromProto` loads nothing
 	// without one.
 	const player = (settings.player ??= PlayerProto.create());
@@ -44,11 +43,15 @@ export const importSiml = async (host: IndividualSimHost<any>, text: string, pat
 		throw new Error(i18n.t('import.siml.error_unknown_type'));
 	}
 
-	const page = specField(host.player.getSpec());
-	if (parsed.spec && parsed.spec !== page) {
-		toastManager.add({ variant: 'warning', body: i18n.t('import.siml.warning_spec', { file: parsed.spec, page }), delay: 8000 });
+	const page = host.player.getSpec();
+	if (parsed.spec !== Spec.SpecUnknown && parsed.spec !== page) {
+		toastManager.add({
+			variant: 'warning',
+			body: i18n.t('import.siml.warning_spec', { file: specField(parsed.spec), page: specField(page) }),
+			delay: 8000,
+		});
 	}
-	const warnings = parsed.diagnostics.filter(d => d.severity === 'warning');
+	const warnings = parsed.diagnostics.filter(d => d.warning);
 	if (warnings.length) {
 		toastManager.add({
 			variant: 'warning',

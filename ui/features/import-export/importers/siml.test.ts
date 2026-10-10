@@ -1,13 +1,18 @@
-// The SIML importer reads real text with the committed name table, and loads into a host that records what it
-// is given: which categories, and the settings they come from.
-import { Spec } from '@generated/proto/common';
-import type { IndividualSimSettings } from '@generated/proto/ui';
+// The SIML importer loads what the sim reads from the text into a host that records what it is given: which
+// categories, and the settings they come from. The sim's reading itself is tested in Go (sim/siml/api_test.go).
+import { Player } from '@generated/proto/api';
+import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
+import { ConsumesSpec, EquipmentSpec, ItemSpec, Spec } from '@generated/proto/common';
+import { IndividualSimSettings, SimlDiagnostic, SimlParseResult } from '@generated/proto/ui';
 import { SimSettingCategories } from '@sim/constants/sim_settings';
 import { fakeHost } from '@testing/sim/fake_host';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SIML_IMPORTER, SIML_ROTATION_IMPORTER } from './siml';
 import { ImportProblems } from './types';
+
+const parseSiml = vi.hoisted(() => vi.fn());
+vi.mock('../siml_client', async importOriginal => ({ ...(await importOriginal<typeof import('../siml_client')>()), parseSiml }));
 
 const loadLeftovers = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('@sim/proto/database', () => ({ Database: { loadLeftoversIfNecessary: loadLeftovers } }));
@@ -46,123 +51,146 @@ const problems = async (promise: Promise<void>) => {
 	return (error as ImportProblems).problems;
 };
 
-const ROTATION = `siml 1
-spec hunter
+// What the sim reads from a text: settings, the letters of the categories it holds, and its spec line.
+const reads = (player: Partial<Player>, categories: string[], spec = Spec.SpecHunter, diagnostics: SimlDiagnostic[] = []) =>
+	parseSiml.mockResolvedValue(
+		SimlParseResult.create({ settings: IndividualSimSettings.create({ player: Player.create(player) }), categories, spec, diagnostics }),
+	);
 
-priority:
-  cast multi_shot
-`;
+const rotation = APLRotation.fromJson({ type: 'TypeAPL', priorityList: [{ action: { castSpell: { spellId: { spellId: 2643 } } } }] });
+const readsRotation = () => reads({ rotation }, ['r']);
+const readsGear = () => reads({ equipment: EquipmentSpec.create({ items: [ItemSpec.create({ id: 16566 })] }) }, ['g'], Spec.SpecUnknown);
+
+const pathRead = () => parseSiml.mock.calls[0][1];
 
 beforeEach(() => {
 	toasts.length = 0;
 	fromProto.mockClear();
 	loadLeftovers.mockClear();
+	parseSiml.mockReset();
 });
 
 describe('a rotation', () => {
 	it('loads the rotation alone, so the gear and the talents stay as they are', async () => {
-		await SIML_ROTATION_IMPORTER.onImport(hunter, ROTATION);
+		readsRotation();
+		await SIML_ROTATION_IMPORTER.onImport(hunter, 'the text');
+		expect(parseSiml).toHaveBeenCalledWith(hunter.sim, 'rotation.apl.siml', 'the text');
 		const { settings, categories } = loaded();
 		expect(categories).toEqual([SimSettingCategories.Rotation]);
 		expect(settings.player?.rotation?.priorityList).toHaveLength(1);
-		expect(settings.player?.equipment).toBeUndefined();
 		expect(loadLeftovers).not.toHaveBeenCalled();
 	});
 
 	it('reads as an x.apl.siml whatever the uploaded file is named', async () => {
-		await SIML_ROTATION_IMPORTER.onImport(hunter, ROTATION, 'wowsims.siml');
-		expect(loaded().categories).toEqual([SimSettingCategories.Rotation]);
+		readsRotation();
+		await SIML_ROTATION_IMPORTER.onImport(hunter, 'the text', 'wowsims.siml');
+		expect(pathRead()).toBe('rotation.apl.siml');
 	});
 
 	it('refuses a type the player would load as Auto', async () => {
-		const unknown = 'siml 1\nspec hunter\n\ntype unknown\n\npriority:\n  cast multi_shot\n';
-		await expect(SIML_ROTATION_IMPORTER.onImport(hunter, unknown)).rejects.toThrow('import.siml.error_unknown_type');
+		reads({ rotation: APLRotation.create({ type: APLRotationType.TypeUnknown }) }, ['r']);
+		await expect(SIML_ROTATION_IMPORTER.onImport(hunter, 'the text')).rejects.toThrow('import.siml.error_unknown_type');
 		expect(fromProto).not.toHaveBeenCalled();
 	});
 });
 
 describe('pasted text', () => {
-	it('reads as a full setup, and an empty section resets its category', async () => {
-		await SIML_IMPORTER.onImport(hunter, `siml 1\nspec hunter\ntalents "-0053"\n\nconsumables:\n\npriority:\n  cast multi_shot\n`);
+	it('reads as a full setup, and loads each category it holds', async () => {
+		reads({ talentsString: '-0053', rotation, consumables: ConsumesSpec.create() }, ['t', 'r', 'c']);
+		await SIML_IMPORTER.onImport(hunter, 'the text');
+		expect(pathRead()).toBe('wowsims.siml');
 		const { settings, categories } = loaded();
 		expect(categories).toEqual([SimSettingCategories.Talents, SimSettingCategories.Rotation, SimSettingCategories.Consumes]);
 		expect(settings.player?.talentsString).toBe('-0053');
-		expect(settings.player?.consumables).toEqual(expect.objectContaining({ potId: 0, foodId: 0 }));
 	});
 
 	it('refuses text that holds no category, which would load every one', async () => {
-		await expect(SIML_IMPORTER.onImport(hunter, 'siml 1\nspec hunter\n')).rejects.toThrow('import.siml.error_empty');
+		reads({}, []);
+		await expect(SIML_IMPORTER.onImport(hunter, 'the text')).rejects.toThrow('import.siml.error_empty');
+		expect(fromProto).not.toHaveBeenCalled();
+	});
+
+	it('refuses with what the sim could not take at all', async () => {
+		parseSiml.mockRejectedValue(new Error('no SIML name table is read'));
+		await expect(SIML_IMPORTER.onImport(hunter, 'the text')).rejects.toThrow('no SIML name table is read');
 		expect(fromProto).not.toHaveBeenCalled();
 	});
 });
 
 describe('an uploaded file', () => {
 	it('reads as the kind its name gives, and loads the leftover items its gear needs', async () => {
-		await SIML_IMPORTER.onImport(hunter, 'siml 1\n\nhead lieutenant_commanders_chain_helmet + falcons_call\n', 'p1.gear.siml');
-		const { settings, categories } = loaded();
-		expect(categories).toEqual([SimSettingCategories.Gear]);
-		expect(settings.player?.equipment?.items).toHaveLength(17);
+		readsGear();
+		await SIML_IMPORTER.onImport(hunter, 'the text', 'p1.gear.siml');
+		expect(pathRead()).toBe('p1.gear.siml');
+		expect(loaded().categories).toEqual([SimSettingCategories.Gear]);
 		expect(loadLeftovers).toHaveBeenCalledTimes(1);
-		expect(loadLeftovers.mock.calls[0][0].items[0].id).toBe(settings.player!.equipment!.items[0].id);
+		expect(loadLeftovers.mock.calls[0][0].items[0].id).toBe(16566);
 	});
 });
 
 describe('a file a browser renamed on download', () => {
-	it.each(['p1.gear (1).siml', 'p1.gear(1).siml', 'P1.GEAR.siml', 'P1.Gear (12).siml'])('reads %s as a gear file', async name => {
-		await SIML_IMPORTER.onImport(hunter, 'siml 1\n\nhead lieutenant_commanders_chain_helmet\n', name);
-		expect(loaded().categories).toEqual([SimSettingCategories.Gear]);
-	});
-
-	it.each(['rotation.apl (1).siml', 'rotation.apl(1).siml', 'Rotation.APL.siml'])('reads %s as a rotation', async name => {
-		await SIML_IMPORTER.onImport(hunter, ROTATION, name);
-		expect(loaded().categories).toEqual([SimSettingCategories.Rotation]);
+	it.each([
+		['p1.gear (1).siml', 'p1.gear.siml'],
+		['p1.gear(1).siml', 'p1.gear.siml'],
+		['P1.GEAR.siml', 'p1.gear.siml'],
+		['P1.Gear (12).siml', 'p1.gear.siml'],
+		['rotation.apl (1).siml', 'rotation.apl.siml'],
+		['rotation.apl(1).siml', 'rotation.apl.siml'],
+		['Rotation.APL.siml', 'rotation.apl.siml'],
+	])('reads %s as %s', async (name, path) => {
+		readsGear();
+		await SIML_IMPORTER.onImport(hunter, 'the text', name);
+		expect(pathRead()).toBe(path);
 	});
 });
 
 describe('a gear planner', () => {
-	const ENCOUNTER = 'siml 1\n\nencounter:\n  duration 180\n';
+	const readsEncounter = (...more: string[]) => reads({}, [...more, 'e'], Spec.SpecUnknown);
 	const planner = fakeHost({ player: { getSpec: () => Spec.SpecHolyPaladin }, simDisabled: true, fromProto });
 
 	it('refuses a file holding only the encounter, which it does not import', async () => {
-		await expect(SIML_IMPORTER.onImport(planner, ENCOUNTER, 'raid.encounter.siml')).rejects.toThrow('import.siml.error_nothing_here');
+		readsEncounter();
+		await expect(SIML_IMPORTER.onImport(planner, 'the text', 'raid.encounter.siml')).rejects.toThrow('import.siml.error_nothing_here');
 		expect(fromProto).not.toHaveBeenCalled();
 	});
 
 	it('imports a file holding the encounter and more', async () => {
-		await SIML_IMPORTER.onImport(planner, `siml 1\nspec holy_paladin\ntalents "-0053"\n\nencounter:\n  duration 180\n`);
+		readsEncounter('t');
+		await SIML_IMPORTER.onImport(planner, 'the text');
 		expect(loaded().categories).toEqual([SimSettingCategories.Talents, SimSettingCategories.Encounter].sort());
 	});
 
 	it('leaves a page that sims to import the encounter', async () => {
-		await SIML_IMPORTER.onImport(hunter, ENCOUNTER, 'raid.encounter.siml');
+		readsEncounter();
+		await SIML_IMPORTER.onImport(hunter, 'the text', 'raid.encounter.siml');
 		expect(loaded().categories).toEqual([SimSettingCategories.Encounter]);
 	});
 });
 
 describe('what the importer refuses or warns of', () => {
-	it('shows an unknown name at its line and column, with the did-you-mean', async () => {
-		expect(await problems(SIML_IMPORTER.onImport(hunter, 'siml 1\nspec hunter\n\npriority:\n  cast hunters_mrak\n'))).toEqual([
-			'5:8 no spell is named hunters_mrak; did you mean hunters_mark?',
-		]);
-		expect(fromProto).not.toHaveBeenCalled();
-	});
+	const problem = (line: number, col: number, message: string, warning = false) =>
+		SimlDiagnostic.create({ startLine: line, startCol: col, endLine: line, endCol: col + 1, warning, code: 'x', message });
 
-	it('refuses `use`, as the site reads no other files', async () => {
-		const [problem] = await problems(SIML_IMPORTER.onImport(hunter, 'siml 1\nspec hunter\n\nuse "default.apl.siml"\n'));
-		expect(problem).toMatch(/^4:5 this host reads no other files/);
+	it('lists the errors at their lines and columns', async () => {
+		parseSiml.mockResolvedValue(
+			SimlParseResult.create({ spec: Spec.SpecHunter, diagnostics: [problem(5, 8, 'no spell is named hunters_mrak; did you mean hunters_mark?')] }),
+		);
+		expect(await problems(SIML_IMPORTER.onImport(hunter, 'the text'))).toEqual(['5:8 no spell is named hunters_mrak; did you mean hunters_mark?']);
 		expect(fromProto).not.toHaveBeenCalled();
 	});
 
 	it("warns that the text is for another spec than the page's, and imports it", async () => {
-		await SIML_IMPORTER.onImport(hostFor(Spec.SpecDpsWarrior), ROTATION);
+		readsRotation();
+		await SIML_IMPORTER.onImport(hostFor(Spec.SpecDpsWarrior), 'the text');
 		expect(toasts).toEqual([{ variant: 'warning', body: 'import.siml.warning_spec {"file":"hunter","page":"dps_warrior"}', delay: 8000 }]);
 		expect(loaded().categories).toEqual([SimSettingCategories.Rotation]);
 	});
 
 	it('lists the warnings in a toast, and imports', async () => {
-		await SIML_ROTATION_IMPORTER.onImport(hunter, `${ROTATION}  group "Nowhere"\n`);
+		reads({ rotation }, ['r'], Spec.SpecHunter, [problem(6, 3, 'no group is named Nowhere', true)]);
+		await SIML_ROTATION_IMPORTER.onImport(hunter, 'the text');
 		expect(toasts).toHaveLength(1);
 		expect(toasts[0].variant).toBe('warning');
-		expect(loaded().settings.player?.rotation?.priorityList).toHaveLength(2);
+		expect(loaded().settings.player?.rotation?.priorityList).toHaveLength(1);
 	});
 });

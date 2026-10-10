@@ -7,11 +7,3 @@ declare module '*.siml' {
 	const json: any;
 	export default json;
 }
-
-// The schema and the name table SIML is read with, for createSiml.
-declare module 'virtual:siml-data' {
-	import type { NameTable, SimlSchema } from '@sim/siml';
-
-	export const schema: SimlSchema;
-	export const names: NameTable;
-}

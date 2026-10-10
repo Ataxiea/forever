@@ -36,6 +36,7 @@ func init() {
 		simlSubcommand("fmt [-check | -w] <files or folders>", "format .siml files, or check that they are in canonical form", simlFmt),
 		simlSubcommand("verify <old.json> <new.siml>", "check that a .siml file reads back as the JSON file it was printed from", simlVerify),
 		simlSubcommand("sim < request.json", "sim the text of an .apl.siml for the APL editor: a JSON request on stdin, a JSON result on stdout", simlSim),
+		simlSubcommand("serve [-names <names.json>]", "read .siml texts for the Vite plugin: one JSON request a line on stdin, one JSON response a line on stdout", simlServe),
 	)
 }
 

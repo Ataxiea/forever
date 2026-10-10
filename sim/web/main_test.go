@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	_ "github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/siml"
 	googleProto "google.golang.org/protobuf/proto"
 )
 
@@ -109,4 +111,52 @@ func TestIndividualSim(t *testing.T) {
 	}
 
 	log.Printf("RESULT: %#v", rsr)
+}
+
+// The SIML routes, read with the committed name table in place of the one the site serves.
+func TestSimlRoutes(t *testing.T) {
+	simlNames = func() (*siml.Names, error) {
+		data, err := os.ReadFile("../siml/names.json")
+		if err != nil {
+			return nil, err
+		}
+		return siml.ParseNames(data)
+	}
+	post := func(route string, req, result googleProto.Message) {
+		t.Helper()
+		msgBytes, err := googleProto.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := http.Post("http://localhost:3339"+route, "application/x-protobuf", bytes.NewReader(msgBytes))
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := googleProto.Unmarshal(body, result); err != nil {
+			t.Fatalf("%s answered %d %q: %v", route, r.StatusCode, body, err)
+		}
+	}
+
+	const text = "siml 1\nspec hunter\n\npriority:\n  cast multi_shot\n"
+	parsed := &proto.SimlParseResult{}
+	post("/simlParse", &proto.SimlParseRequest{Path: "rotation.apl.siml", Text: text}, parsed)
+	if parsed.Error != "" || parsed.Spec != proto.Spec_SpecHunter || len(parsed.Categories) != 1 || parsed.Categories[0] != "r" {
+		t.Fatalf("/simlParse gave %v", parsed)
+	}
+
+	printed := &proto.SimlPrintResult{}
+	post("/simlPrint", &proto.SimlPrintRequest{Section: "apl", Spec: proto.Spec_SpecHunter, Settings: parsed.Settings}, printed)
+	if printed.Text != text {
+		t.Errorf("/simlPrint gave %v, want %q", printed, text)
+	}
+
+	formatted := &proto.SimlFormatResult{}
+	post("/simlFormat", &proto.SimlFormatRequest{Path: "rotation.apl.siml", Text: text}, formatted)
+	if formatted.Text != text {
+		t.Errorf("/simlFormat gave %v, want %q", formatted, text)
+	}
 }

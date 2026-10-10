@@ -16,6 +16,7 @@ AUTO_GEN_FILES_TS_DEPS := sim/core/base_stats.go sim/core/bulk/candidates.go sim
 
 $(OUT_DIR)/.dirstamp: \
   $(OUT_DIR)/lib.wasm.gz \
+  $(OUT_DIR)/siml_names.json \
   ui/generated/proto/api.ts \
   $(ASSETS) \
   $(OUT_DIR)/bundle/.dirstamp
@@ -127,6 +128,12 @@ $(OUT_DIR)/lib.wasm.gz: sim/wasm/* sim/core/proto/api.pb.go $(filter-out sim/cor
 	fi
 	gzip -9 -f -n $(OUT_DIR)/lib.wasm
 
+# The SIML name table, which the site's workers and the web server read SIML with: lib.wasm and the server are built
+# without the with_db tag, so neither holds one.
+$(OUT_DIR)/siml_names.json: sim/siml/names.json
+	mkdir -p $(@D)
+	cp $< $@
+
 $(OUT_DIR)/assets/%: assets/%
 	mkdir -p $(@D)
 	cp $< $@
@@ -163,7 +170,7 @@ buffs-proto:
 wowsimforever: binary_dist devserver
 
 .PHONY: devserver
-devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json ui/generated/siml/schema.json
+devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json ui/generated/siml/schema.json $(OUT_DIR)/siml_names.json
 	@echo "Starting server compile now..."
 	@if go build -o wowsimforever$(BIN_EXT) ./sim/web ; then \
 		printf "\033[1;32mBuild Completed Successfully\033[0m\n"; \

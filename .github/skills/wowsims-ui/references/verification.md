@@ -48,7 +48,8 @@ point of the layout, and `lint:js` is the only thing enforcing them anywhere.
 `.github/workflows/run_tests.yml` has two jobs:
 
 - **`build-ui`**: `npm ci` and `test:locales`, then `fmt`, `lint:js`, `lint:css`, a
-  `make ui/generated/proto/api.ts go-to-ts` generate step, `type-check`, `test:unit`, the SIML
+  `make ui/generated/proto/api.ts go-to-ts` generate step, a `go build` of `wowsimcli` exported as
+  `WOWSIMCLI` for the SIML imports (`running-locally.md`), `type-check`, `test:unit`, the SIML
   extension's `npm run check` and `npm test` in `tools/vscode-apl`, `storybook:build`, and finally
   `make dist/forever/.dirstamp`. On a pull request from this
   repository two more steps upload `dist` to Cloudflare Pages and keep one comment on the pull
@@ -163,9 +164,10 @@ the `@source not` lines in `ui/STYLING.md` §7).
 `ui/generated/proto/*` (`make ui/generated/proto/api.ts`) and the `*_auto_gen.ts` files
 (`make go-to-ts`, which runs `go run ./tools/database/gen_db -gen=go-to-ts`) — today three:
 `ui/sim/player/classes/capabilities_auto_gen.ts`, `ui/sim/bulk/constants_auto_gen.ts` and
-`ui/sim/wasm/bulk_sim/constants_auto_gen.ts`. `make go-to-ts` also writes `ui/generated/siml/schema.json`,
-which the SIML Vite plugin reads in every build, `vitest` run and Storybook build. Copying them from a
-built checkout works and is faster. Never run `gen_db` concurrently with another copy of itself.
+`ui/sim/wasm/bulk_sim/constants_auto_gen.ts`. `make go-to-ts` also writes `ui/generated/siml/schema.json`.
+Copying them from a built checkout works and is faster. Never run `gen_db` concurrently with another copy of
+itself. Every build, `vitest` run and Storybook build also needs Go itself, for the `.siml` imports
+(`running-locally.md`).
 
 The wart to watch for is a `AUTO_GEN_FILES_TS` entry the generator does not actually write: a stale
 path there makes the prerequisite never appear, so every `make` that depends on it re-runs `gen_db`

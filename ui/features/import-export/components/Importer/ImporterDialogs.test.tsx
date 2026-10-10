@@ -1,4 +1,7 @@
+import { Player } from '@generated/proto/api';
+import { APLRotation } from '@generated/proto/apl';
 import { Spec } from '@generated/proto/common';
+import { IndividualSimSettings, SimlDiagnostic, SimlParseResult } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { SimSettingCategories } from '@sim/constants/sim_settings';
 import { WOWHEAD_GEAR_PLANNER_URL } from '@sim/proto/wowhead';
@@ -13,6 +16,9 @@ vi.hoisted(() => {
 });
 
 import { renderWithHost } from '@testing/react';
+
+const parseSiml = vi.hoisted(() => vi.fn());
+vi.mock('../../siml_client', async importOriginal => ({ ...(await importOriginal<typeof import('../../siml_client')>()), parseSiml }));
 
 import {
 	ADDON_IMPORTER,
@@ -79,11 +85,26 @@ describe('the SIML rotation importer dialog', () => {
 	};
 
 	it('imports the rotation the text holds, and nothing else', async () => {
+		const rotation = APLRotation.fromJson({ type: 'TypeAPL', priorityList: [{ action: { castSpell: { spellId: { spellId: 2643 } } } }] });
+		parseSiml.mockResolvedValue(
+			SimlParseResult.create({
+				settings: IndividualSimSettings.create({ player: Player.create({ rotation }) }),
+				spec: Spec.SpecHunter,
+				categories: ['r'],
+			}),
+		);
 		const fromProto = importText('siml 1\nspec hunter\n\npriority:\n  cast multi_shot\n');
 		await waitFor(() => expect(fromProto).toHaveBeenCalledWith(expect.anything(), [SimSettingCategories.Rotation]));
+		expect(parseSiml).toHaveBeenLastCalledWith(expect.anything(), 'rotation.apl.siml', 'siml 1\nspec hunter\n\npriority:\n  cast multi_shot\n');
 	});
 
 	it('lists a name that does not read at its line and column, under the text', async () => {
+		const message = 'no spell is named multi_shto; did you mean multi_shot?';
+		parseSiml.mockResolvedValue(
+			SimlParseResult.create({
+				diagnostics: [SimlDiagnostic.create({ startLine: 5, startCol: 8, endLine: 5, endCol: 18, code: 'unknown-name', message })],
+			}),
+		);
 		const fromProto = importText('siml 1\nspec hunter\n\npriority:\n  cast multi_shto\n');
 		const problems = await screen.findByTestId('importer-problems');
 		expect(problems.querySelector('li')!.textContent).toBe('5:8 no spell is named multi_shto; did you mean multi_shot?');

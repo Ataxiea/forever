@@ -1,5 +1,6 @@
 import { APLRotation } from '@generated/proto/apl';
 import { Spec } from '@generated/proto/common';
+import { SimlPrintResult } from '@generated/proto/ui';
 import { renderWithHost } from '@testing/react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,9 @@ import { describe, expect, it, vi } from 'vitest';
 vi.hoisted(() => {
 	(globalThis as unknown as { fetch: unknown }).fetch = () => Promise.reject(new Error('offline'));
 });
+
+const printSiml = vi.hoisted(() => vi.fn());
+vi.mock('../../siml_client', async importOriginal => ({ ...(await importOriginal<typeof import('../../siml_client')>()), printSiml }));
 
 import { SIML_ROTATION_EXPORTER } from '../../exporters/siml';
 import { SIML_ROTATION_IMPORTER } from '../../importers/siml';
@@ -31,6 +35,7 @@ describe('SimlRotationActions', () => {
 		renderActions(() => Promise.resolve());
 		const exportButton = screen.getByTestId('siml-rotation-export');
 		await waitFor(() => expect(exportButton.hasAttribute('disabled')).toBe(false));
+		printSiml.mockResolvedValue(SimlPrintResult.create({ text: 'siml 1\nspec hunter\n\npriority:\n  cast multi_shot\n' }));
 		fireEvent.click(exportButton);
 		expect(screen.getByTestId('sim-dialog-title').textContent).toBe(SIML_ROTATION_EXPORTER.title);
 		await waitFor(() =>

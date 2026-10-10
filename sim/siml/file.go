@@ -58,6 +58,8 @@ type NameRef struct {
 	Start, End Position
 	ID         int32    // The spell id, item id, enchant effect id or random suffix id it means.
 	Row        *SlotRow // The slot row it is written on, if any.
+	Path       []any    // The JSON path, within the loader's message (SPEC.md §1), of the field it fills; nil outside it.
+	Known      bool     // Whether its namespace holds it; Doc.Refs gives the names it does not hold too.
 }
 
 // A slot row: its slot, and the item its suffix and enchant are on.
@@ -89,41 +91,7 @@ func (f *File) Equipment() *proto.EquipmentSpec { return f.Settings.GetPlayer().
 // when the file has an error, which then holds its warnings too, and the file holds what read. open reads the files
 // that use lines name, at paths read against path; with no open, a use line is use-refused.
 func Parse(path string, src []byte, names *Names, open Opener) (*File, error) {
-	ix, err := loadIndex()
-	if err != nil {
-		return nil, err
-	}
-	kind := kindOf(path)
-	self := resolveUse("", path)
-	typed := readFile(ix, names, sourceText(src), kind, &uses{refused: open == nil, path: self, open: open, chain: []string{self}})
-	lines := typed.tree.lines
-	f := &File{Path: path, Kind: kind}
-	if typed.spec != nil {
-		f.Spec = typed.spec.Spec
-	}
-	refs := typed.typer.refs
-	slices.SortFunc(refs, func(a, b nameRef) int { return a.start - b.start })
-	for _, r := range refs {
-		f.Names = append(f.Names, NameRef{
-			Name:      r.name,
-			Namespace: r.ns,
-			Start:     lines.position(r.start),
-			End:       lines.position(r.end),
-			ID:        r.id,
-			Row:       r.row,
-		})
-	}
-	var raw []diag
-	for _, at := range typed.typer.rawRefs {
-		raw = append(raw, errorAt("raw-ref", "a file under ui/specs writes ids by name: format writes the names the table holds, and make sim/siml/names.json names what the sim registers", at))
-	}
-	f.RawRefs = lines.diagnostics(path, raw)
-	diags := lines.diagnostics(path, typed.diags)
-	if hasError(typed.diags) {
-		return f, diags
-	}
-	f.Settings, f.Categories, f.Warnings = typed.settings, typed.categories, diags
-	return f, nil
+	return Analyze(path, src, names, open).File()
 }
 
 // Reads and parses the file at path with the committed name table, reading the files its use lines name from the

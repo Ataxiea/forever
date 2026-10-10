@@ -18,6 +18,9 @@ export enum SimRequest {
 	raidSimRequestSplit = 'raidSimRequestSplit',
 	raidSimResultCombination = 'raidSimResultCombination',
 	abortById = 'abortById',
+	simlParse = 'simlParse',
+	simlPrint = 'simlPrint',
+	simlFormat = 'simlFormat',
 }
 
 // The endpoints that run asynchronously (progress-id handshake + progress polling). Single

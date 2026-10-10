@@ -15,6 +15,22 @@ target before copying a command out of here:
 `vite serve --host` and `vite.build-workers.mts` alongside it, and reloads the Go binary through
 `air`. Use it unless you need something the sections below describe.
 
+## `.siml` imports need Go
+
+`tools/vite/siml.mts` reads every `.siml` import (the presets under `ui/specs`) with the Go reader: the first one
+starts `wowsimcli siml serve -names sim/siml/names.json`, one per vite or vitest process, which answers each file
+over stdin and stdout until the process ends. It runs the binary `$WOWSIMCLI` names, or else
+`go run ./cmd/wowsimcli` from the repository root, so the dev server, `vitest`, Storybook and `vite build` all need Go
+on the PATH. `go run` costs about 0.3 s once the build cache holds the package, and a few seconds before; CI builds
+the binary once and exports `WOWSIMCLI`:
+
+```
+go build -o /tmp/wowsimcli ./cmd/wowsimcli && export WOWSIMCLI=/tmp/wowsimcli
+```
+
+No `with_db` tag is needed: the server reads the name table from `sim/siml/names.json`, again when it changes. A
+change to the Go reader itself takes effect on the next vite start.
+
 ## Two things a plain `vite` dev server cannot do
 
 **It cannot run sims.** The worker's backend fetch fails on localhost. Sims need the Go host.
@@ -47,6 +63,7 @@ Simulate, reference swap and timeline tooltips all work.
 ```
 make binary_dist/dist.go          # stub package so ./sim/web compiles — no built checkout needed
 make wasm                         # dist/forever/lib.wasm.gz (needs Go)
+make dist/forever/siml_names.json # the name table the SIML import and export dialogs fetch
 npx tsx vite.build-workers.mts    # dist/forever/*_worker.js
 npx vite build                    # dist/forever bundle + the 18 per-spec index.html
 cp -r assets dist/forever/assets      # `make` does this; a plain `vite build` does not

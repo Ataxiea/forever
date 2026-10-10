@@ -22,6 +22,7 @@ import {
 	StatWeightsRequest,
 	StatWeightsResult,
 } from '@generated/proto/api';
+import { SimlFormatRequest, SimlFormatResult, SimlParseRequest, SimlParseResult, SimlPrintRequest, SimlPrintResult } from '@generated/proto/ui';
 import { AsyncSimRequest, SimRequest, WorkerReceiveMessage, WorkerSendMessage } from '@worker/types';
 
 import { REPO_NAME } from '../constants/other';
@@ -213,6 +214,18 @@ export class WorkerPool {
 	async raidSimResultCombination(request: RaidSimResultCombinationRequest): Promise<RaidSimResult> {
 		const result = await this.makeApiCall(SimRequest.raidSimResultCombination, RaidSimResultCombinationRequest.toBinary(request));
 		return RaidSimResult.fromBinary(result);
+	}
+
+	async simlParse(request: SimlParseRequest): Promise<SimlParseResult> {
+		return SimlParseResult.fromBinary(await this.makeApiCall(SimRequest.simlParse, SimlParseRequest.toBinary(request)));
+	}
+
+	async simlPrint(request: SimlPrintRequest): Promise<SimlPrintResult> {
+		return SimlPrintResult.fromBinary(await this.makeApiCall(SimRequest.simlPrint, SimlPrintRequest.toBinary(request)));
+	}
+
+	async simlFormat(request: SimlFormatRequest): Promise<SimlFormatResult> {
+		return SimlFormatResult.fromBinary(await this.makeApiCall(SimRequest.simlFormat, SimlFormatRequest.toBinary(request)));
 	}
 
 	/**
