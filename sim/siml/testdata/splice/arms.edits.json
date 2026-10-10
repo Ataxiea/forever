@@ -1,7 +1,0 @@
-[
-	{ "op": "set", "path": ["priorityList", 0, "hide"] },
-	{ "op": "move", "path": ["priorityList"], "from": 13, "to": 10 },
-	{ "op": "set", "path": ["priorityList", 26, "action", "condition", "and", "vals", 1, "cmp", "rhs", "const", "val"], "value": "80" },
-	{ "op": "set", "path": ["groups", 9, "actions", 5] },
-	{ "op": "insert", "path": ["groups", 6, "actions"], "index": 2, "value": { "action": { "castSpell": { "spellId": { "spellId": 12975 } } } } }
-]
