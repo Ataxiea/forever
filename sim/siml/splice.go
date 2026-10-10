@@ -43,10 +43,10 @@ type TextEdit struct {
 // error or uses another file, a path leads through an index or a field that does not exist, or the edited rotation has
 // an error.
 func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
-	if d.typed == nil {
+	f := d.typed
+	if f == nil {
 		return nil, d.err
 	}
-	f := d.typed
 	if f.kind.Section != sectionAPL {
 		return nil, errors.New("the panel edits the rotation of an x.apl.siml file")
 	}
@@ -70,8 +70,7 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 
 	w := func() *spliceWriter { return newSpliceWriter(d, m) }
 	if before := declaredBy(m.rotation).variables; !slices.Equal(before, declaredBy(m.json()).variables) {
-		p := &printer{ix: d.ix, names: d.names, class: f.typer.class, declarations: before}
-		for _, s := range w().unsettled(p) {
+		for _, s := range w().unsettled(before) {
 			s.dirty = true
 		}
 	}
@@ -85,49 +84,39 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 				return nil, errors.New("the edited rotation has an error: " + diag.Message)
 			}
 		}
-		// A statement that does not read as its JSON is printed from it, and one printed already is written as raw JSON.
 		got := back.settings.GetPlayer().GetRotation()
 		var misread []*spliceSlot
 		for _, list := range m.lists() {
-			holder := got.ProtoReflect()
-			if list.group != nil {
-				groups := got.GetGroups()
-				g := slices.Index(m.groups, list.group)
-				if g >= len(groups) {
-					misread = append(misread, list.slots...)
-					continue
-				}
-				holder = groups[g].ProtoReflect()
+			var read []protoreflect.Message
+			if list.group == nil {
+				read = elements(got.ProtoReflect(), list.key)
+			} else if g := slices.Index(m.groups, list.group); g < len(got.GetGroups()) {
+				read = elements(got.GetGroups()[g].ProtoReflect(), list.key)
 			}
-			read := elements(holder, list.key)
 			for k, s := range list.slots {
 				if len(read) != len(list.slots) || d.ix.comparedJSON(read[k]) != d.ix.comparedJSON(s.msg) {
 					misread = append(misread, s)
 				}
 			}
 		}
+		if len(misread) == 0 {
+			if d.ix.comparedJSON(got.ProtoReflect()) != d.ix.comparedJSON(m.json().ProtoReflect()) {
+				break
+			}
+			changes := out.edits()
+			edits := make([]TextEdit, len(changes))
+			for i, c := range changes {
+				edits[i] = TextEdit{Range: Range{d.lines.position(c.start), d.lines.position(c.end)}, NewText: c.text}
+			}
+			return edits, nil
+		}
 		if slices.ContainsFunc(misread, func(s *spliceSlot) bool { return s.raw }) {
 			break
 		}
-		if len(misread) > 0 {
-			for _, s := range misread {
-				if s.dirty || s.unit == nil {
-					s.raw = true
-				} else {
-					s.dirty = true
-				}
-			}
-			continue
+		// A statement that does not read as its JSON is printed from it, and one printed already is written as raw JSON.
+		for _, s := range misread {
+			s.raw, s.dirty = s.dirty, true
 		}
-		if d.ix.comparedJSON(got.ProtoReflect()) != d.ix.comparedJSON(m.json().ProtoReflect()) {
-			break
-		}
-		changes := out.edits()
-		edits := make([]TextEdit, len(changes))
-		for i, c := range changes {
-			edits[i] = TextEdit{Range: Range{d.lines.position(c.start), d.lines.position(c.end)}, NewText: c.text}
-		}
-		return edits, nil
 	}
 	return nil, errors.New("the edited rotation does not read back as its JSON")
 }
@@ -164,14 +153,6 @@ type lineInsert struct {
 var blankSpliceLine = spliceLine{from: -1}
 
 func headerLine(text string) spliceLine { return spliceLine{text: text, from: -1, header: true} }
-
-func newLines(texts []string) []spliceLine {
-	out := make([]spliceLine, len(texts))
-	for i, t := range texts {
-		out[i] = spliceLine{text: t, from: -1}
-	}
-	return out
-}
 
 // A change by byte offsets of the text.
 type offsetEdit struct {
@@ -254,11 +235,11 @@ func (e *lineEdits) drop(first, last int) {
 // Puts lines in front of line at, as lines of block when they belong to one.
 func (e *lineEdits) insert(at int, lines []spliceLine, block *lineBlock) {
 	phase := 1
-	switch {
-	case block != nil && at == block.first:
-		phase = 2
-	case block != nil:
+	if block != nil {
 		phase = 0
+		if at == block.first {
+			phase = 2
+		}
 	}
 	here := append(e.inserts[at], lineInsert{lines: lines, phase: phase, block: block})
 	slices.SortStableFunc(here, func(a, b lineInsert) int { return a.phase - b.phase })
@@ -275,9 +256,10 @@ func (e *lineEdits) moveOut(block *lineBlock) []spliceLine {
 			}
 		}
 		if i <= block.last && !e.dropped[i] {
-			out = append(out, spliceLine{text: e.line(i), from: -1, header: e.headers[i]})
+			out = append(out, e.written(i, i)...)
 		}
 	}
+	e.drop(block.first, block.last)
 	e.moved[block] = true
 	return out
 }
@@ -312,24 +294,10 @@ func (e *lineEdits) edits() []offsetEdit {
 // The new text.
 func (e *lineEdits) result() string {
 	text := e.src
-	edits := e.edits()
-	for i := len(edits) - 1; i >= 0; i-- {
-		x := edits[i]
+	for _, x := range slices.Backward(e.edits()) {
 		text = text[:x.start] + x.text + text[x.end:]
 	}
 	return text
-}
-
-func (e *lineEdits) gone(i int) bool {
-	if e.dropped[i] {
-		return true
-	}
-	for b := range e.moved {
-		if i >= b.first && i <= b.last {
-			return true
-		}
-	}
-	return false
 }
 
 func (e *lineEdits) sequence() []spliceLine {
@@ -340,7 +308,7 @@ func (e *lineEdits) sequence() []spliceLine {
 				out = append(out, x.lines...)
 			}
 		}
-		if i < e.count && !e.gone(i) {
+		if i < e.count && !e.dropped[i] {
 			out = append(out, spliceLine{text: e.line(i), from: i, header: e.headers[i]})
 		}
 	}
@@ -400,24 +368,14 @@ func (e *lineEdits) tidy(lines []spliceLine) []spliceLine {
 
 func (e *lineEdits) asWritten(run []spliceLine, before, after *spliceLine) bool {
 	first := run[0].from
-	if first < 0 {
-		return false
-	}
 	for k, l := range run {
-		if l.from != first+k {
+		if first < 0 || l.from != first+k {
 			return false
 		}
 	}
 	last := first + len(run) - 1
-	beforeOK := first == 0
-	if before != nil {
-		beforeOK = before.from >= 0 && before.from == first-1
-	}
-	afterOK := last == e.count-1
-	if after != nil {
-		afterOK = after.from >= 0 && after.from == last+1
-	}
-	return beforeOK && afterOK
+	return (before == nil && first == 0 || before != nil && first > 0 && before.from == first-1) &&
+		(after == nil && last == e.count-1 || after != nil && after.from == last+1)
 }
 
 // Lines in place of the text's lines from to to, exclusive.
@@ -447,19 +405,16 @@ func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
 		}
 	}
 	var out []lineChange
-	var change *lineChange
+	open := false // Whether the last line looked at is in a change.
 	for i, j := 0, 0; i < len(old) || j < len(lines); {
 		if i < len(old) && j < len(lines) && old[i] == lines[j] {
-			if change != nil {
-				out = append(out, *change)
-			}
-			change = nil
-			i, j = i+1, j+1
+			i, j, open = i+1, j+1, false
 			continue
 		}
-		if change == nil {
-			change = &lineChange{from: from + i, to: from + i}
+		if !open {
+			out, open = append(out, lineChange{from: from + i, to: from + i}), true
 		}
+		change := &out[len(out)-1]
 		if j < len(lines) && (i == len(old) || common[i][j+1] >= common[i+1][j]) {
 			change.lines = append(change.lines, lines[j])
 			j++
@@ -467,9 +422,6 @@ func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
 			i++
 			change.to = from + i
 		}
-	}
-	if change != nil {
-		out = append(out, *change)
 	}
 	return out
 }
@@ -512,8 +464,8 @@ type spliceSlot struct {
 	json  any                  // Its JSON, as the edits leave it.
 	msg   protoreflect.Message // What json reads as; nil until read.
 	unit  *spliceUnit          // Its statement in the text.
-	dirty bool                 // Printed again.
-	raw   bool                 // Printed as raw JSON.
+	dirty bool                 // Printed again, as every slot the text does not hold is.
+	raw   bool                 // Printed as raw JSON, which only a dirty slot is.
 }
 
 type spliceList struct {
@@ -531,7 +483,7 @@ type spliceList struct {
 type spliceGroup struct {
 	name      string
 	renamed   bool
-	header    *spliceUnit
+	header    *headerStmt // Its header in the text.
 	block     *lineBlock
 	variables *spliceList
 	actions   *spliceList
@@ -561,13 +513,8 @@ func unitOf(s stmt, header *headerStmt, lines *lineMap) *spliceUnit {
 	for k := len(above) - 1; k >= 0 && above[k].kind != triviaBlank && above[k].line == first-1; k-- {
 		first--
 	}
-	u := &spliceUnit{statement: s, first: first, last: lines.line(b.end)}
-	for _, t := range above {
-		if t.kind == triviaComment && t.line >= first {
-			u.comments = append(u.comments, t)
-		}
-	}
-	return u
+	comments := slices.DeleteFunc(above, func(t trivia) bool { return t.kind != triviaComment || t.line < first })
+	return &spliceUnit{statement: s, first: first, last: lines.line(b.end), comments: comments}
 }
 
 // The last line of a section's header and statements.
@@ -608,7 +555,8 @@ func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 	fill := func(list *spliceList, holder protoreflect.Message, path ...any) {
 		for i, msg := range elements(holder, list.key) {
 			s := statements[pathKey(slices.Concat(path, []any{list.key, i}))]
-			list.old = append(list.old, &spliceSlot{json: messageJSON(ix, msg), msg: msg, unit: unitOf(s, headers[s], lines)})
+			v, _ := decodeJSON([]byte(ix.jsonText(msg)))
+			list.old = append(list.old, &spliceSlot{json: v, msg: msg, unit: unitOf(s, headers[s], lines)})
 		}
 		list.slots = slices.Clone(list.old)
 		if k := slices.IndexFunc(list.old, func(s *spliceSlot) bool { return s.unit.header == nil }); k >= 0 {
@@ -616,45 +564,36 @@ func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 		}
 	}
 	sectionNamed := func(name string) *section {
-		for _, s := range f.tree.sections {
-			if s.name == name {
-				return s
-			}
+		if k := slices.IndexFunc(f.tree.sections, func(s *section) bool { return s.name == name }); k >= 0 {
+			return f.tree.sections[k]
 		}
 		return nil
 	}
 	rotation := m.rotation.ProtoReflect()
 	m.own = []*spliceList{
-		m.list("valueVariables", false, false, f.tree.sections[0]),
-		m.list("prepullActions", true, true, sectionNamed(sectionPrepull)),
-		m.list("priorityList", true, false, sectionNamed(sectionPriority)),
+		newSpliceList("valueVariables", false, false, f.tree.sections[0]),
+		newSpliceList("prepullActions", true, true, sectionNamed(sectionPrepull)),
+		newSpliceList("priorityList", true, false, sectionNamed(sectionPriority)),
 	}
 	for _, list := range m.own {
 		fill(list, rotation)
 	}
-	g := 0
 	for _, s := range f.tree.sections {
 		if s.name != sectionGroup || s.group == nil {
 			continue
 		}
-		group := m.group(s.group.value, false, s, unitOf(s.header, nil, lines))
+		g := len(m.old)
+		group := m.group(s.group.value, false, s)
 		holder := m.rotation.Groups[g].ProtoReflect()
 		fill(group.variables, holder, "groups", g)
 		fill(group.actions, holder, "groups", g)
 		m.old = append(m.old, group)
-		g++
 	}
 	m.groups = slices.Clone(m.old)
 	return m
 }
 
 func pathKey(path []any) string { return fmt.Sprint(path) }
-
-// m's JSON, as a value the edits change.
-func messageJSON(ix *schemaIndex, m protoreflect.Message) any {
-	v, _ := decodeJSON([]byte(ix.jsonText(m)))
-	return v
-}
 
 func decodeJSON(text []byte) (any, error) {
 	dec := json.NewDecoder(bytes.NewReader(text))
@@ -664,7 +603,7 @@ func decodeJSON(text []byte) (any, error) {
 	return v, err
 }
 
-func (m *rotationModel) list(key string, row, prepull bool, s *section) *spliceList {
+func newSpliceList(key string, row, prepull bool, s *section) *spliceList {
 	message := (&proto.APLValueVariable{}).ProtoReflect().Descriptor()
 	switch {
 	case prepull:
@@ -679,13 +618,15 @@ func (m *rotationModel) list(key string, row, prepull bool, s *section) *spliceL
 	return &spliceList{key: key, message: message, row: row, prepull: prepull, section: s, indent: indent}
 }
 
-func (m *rotationModel) group(name string, renamed bool, s *section, header *spliceUnit) *spliceGroup {
-	g := &spliceGroup{name: name, renamed: renamed, header: header}
-	g.variables = m.list("variables", false, false, s)
-	g.actions = m.list("actions", true, false, s)
+// A group, from its section in the text, or with none for a new one.
+func (m *rotationModel) group(name string, renamed bool, s *section) *spliceGroup {
+	g := &spliceGroup{name: name, renamed: renamed}
+	g.variables = newSpliceList("variables", false, false, s)
+	g.actions = newSpliceList("actions", true, false, s)
 	g.variables.group, g.actions.group = g, g
-	if header != nil && s != nil {
-		g.block = &lineBlock{first: header.first, last: lastLine(s, m.lines)}
+	if s != nil {
+		g.header = s.header
+		g.block = &lineBlock{first: unitOf(s.header, nil, m.lines).first, last: lastLine(s, m.lines)}
 	}
 	return g
 }
@@ -694,7 +635,7 @@ func (m *rotationModel) group(name string, renamed bool, s *section, header *spl
 func (m *rotationModel) newGroup(value any) *spliceGroup {
 	object, _ := value.(map[string]any)
 	name, _ := object["name"].(string)
-	g := m.group(name, true, nil, nil)
+	g := m.group(name, true, nil)
 	g.variables.slots = newSlots(object["variables"])
 	g.actions.slots = newSlots(object["actions"])
 	return g
@@ -784,14 +725,13 @@ func (m *rotationModel) locate(path []any) (spliceTarget, string) {
 	t := spliceTarget{index: -1, group: -1}
 	element := func(list *spliceList, at int) (spliceTarget, string) {
 		t.list = list
-		if at >= len(path) {
-			return t, ""
+		if at < len(path) {
+			i, ok := pathIndex(path[at], len(list.slots))
+			if !ok {
+				return t, describePath(path[:at+1]) + " does not exist"
+			}
+			t.index, t.rest = i, path[at+1:]
 		}
-		i, ok := pathIndex(path[at], len(list.slots))
-		if !ok {
-			return t, describePath(path[:at+1]) + " does not exist"
-		}
-		t.index, t.rest = i, path[at+1:]
 		return t, ""
 	}
 	if len(path) > 0 && path[0] == "groups" {
@@ -803,7 +743,6 @@ func (m *rotationModel) locate(path []any) (spliceTarget, string) {
 		if !ok {
 			return t, describePath(path[:2]) + " does not exist"
 		}
-		group := m.groups[g]
 		switch {
 		case len(path) == 2:
 			t.group = g
@@ -812,9 +751,9 @@ func (m *rotationModel) locate(path []any) (spliceTarget, string) {
 			t.group, t.name = g, true
 			return t, ""
 		case path[2] == "variables":
-			return element(group.variables, 3)
+			return element(m.groups[g].variables, 3)
 		case path[2] == "actions":
-			return element(group.actions, 3)
+			return element(m.groups[g].actions, 3)
 		}
 	} else if len(path) > 0 {
 		for _, list := range m.own {
@@ -887,47 +826,33 @@ func (m *rotationModel) apply(e AplEdit) string {
 		}
 		return ""
 	}
-	if e.Op != "insert" && e.Op != "move" {
+	insert := e.Op == "insert"
+	switch {
+	case !insert && e.Op != "move":
 		return fmt.Sprintf("no edit is named %q: an edit is set, insert or move", e.Op)
-	}
-	if t.group >= 0 {
+	case t.group >= 0:
 		return describePath(path) + " is no list"
-	}
-	if e.Op == "insert" && !has {
+	case insert && !has:
 		return "nothing to insert at " + describePath(slices.Concat(path, []any{e.Index}))
-	}
-	if t.list != nil && t.index >= 0 {
-		s := t.list.slots[t.index]
-		if e.Op == "insert" {
-			return changed(s, func(root any) (any, string) { return insertIn(root, t.rest, e.Index, value, path) })
-		}
-		return changed(s, func(root any) (any, string) {
-			list, ok := jsonAt(root, t.rest)
+	case t.index >= 0 && insert:
+		return changed(t.list.slots[t.index], func(root any) (any, string) { return insertIn(root, t.rest, e.Index, value, path) })
+	case t.index >= 0:
+		return changed(t.list.slots[t.index], func(root any) (any, string) {
+			list, _ := jsonAt(root, t.rest)
 			items, isList := list.([]any)
-			if !ok || !isList {
+			if !isList {
 				return root, describePath(path) + " is no list"
 			}
 			return root, moveIn(items, e.From, e.To, path)
 		})
+	case t.groups && insert:
+		return insertAt(&m.groups, e.Index, m.newGroup(value), path)
+	case t.groups:
+		return moveIn(m.groups, e.From, e.To, path)
+	case insert:
+		return insertAt(&t.list.slots, e.Index, newSlot(value), path)
 	}
-	if t.groups {
-		if e.Op == "move" {
-			return moveIn(m.groups, e.From, e.To, path)
-		}
-		if e.Index < 0 || e.Index > len(m.groups) {
-			return fmt.Sprintf("%s holds %d, so nothing goes in at %d", describePath(path), len(m.groups), e.Index)
-		}
-		m.groups = slices.Insert(m.groups, e.Index, m.newGroup(value))
-		return ""
-	}
-	if e.Op == "move" {
-		return moveIn(t.list.slots, e.From, e.To, path)
-	}
-	if e.Index < 0 || e.Index > len(t.list.slots) {
-		return fmt.Sprintf("%s holds %d, so nothing goes in at %d", describePath(path), len(t.list.slots), e.Index)
-	}
-	t.list.slots = slices.Insert(t.list.slots, e.Index, newSlot(value))
-	return ""
+	return moveIn(t.list.slots, e.From, e.To, path)
 }
 
 // Applies change to a slot's JSON, which the slot is then printed from.
@@ -940,28 +865,23 @@ func changed(s *spliceSlot, change func(any) (any, string)) string {
 }
 
 func setIn(root any, rest []any, value any, has bool, path []any) (any, string) {
-	at := rest[:len(rest)-1]
-	key := rest[len(rest)-1]
-	parent, ok := jsonAt(root, at)
-	if items, isList := parent.([]any); ok && isList {
-		if i, ok := pathIndex(key, len(items)); ok {
-			if !has {
-				return jsonPut(root, at, slices.Delete(items, i, i+1)), ""
-			}
-			items[i] = cloneJSON(value)
+	at, key := rest[:len(rest)-1], rest[len(rest)-1]
+	parent, _ := jsonAt(root, at)
+	switch parent := parent.(type) {
+	case []any:
+		if i, ok := pathIndex(key, len(parent)); ok && has {
+			parent[i] = cloneJSON(value)
 			return root, ""
+		} else if ok {
+			return jsonPut(root, at, slices.Delete(parent, i, i+1)), ""
 		}
-	}
-	if object, isObject := parent.(map[string]any); ok && isObject {
-		if k, isString := key.(string); isString {
-			if _, in := object[k]; has || in {
-				if has {
-					object[k] = cloneJSON(value)
-				} else {
-					delete(object, k)
-				}
-				return root, ""
-			}
+	case map[string]any:
+		if k, isString := key.(string); isString && has {
+			parent[k] = cloneJSON(value)
+			return root, ""
+		} else if _, in := parent[k]; isString && in {
+			delete(parent, k)
+			return root, ""
 		}
 	}
 	return root, describePath(path) + " does not exist"
@@ -979,13 +899,22 @@ func insertIn(root any, rest []any, index int, value any, path []any) (any, stri
 		}
 	}
 	items, isList := list.([]any)
-	if !ok || !isList {
+	if !isList {
 		return root, describePath(path) + " is no list"
 	}
-	if index < 0 || index > len(items) {
-		return root, fmt.Sprintf("%s holds %d, so nothing goes in at %d", describePath(path), len(items), index)
+	if problem := insertAt(&items, index, cloneJSON(value), path); problem != "" {
+		return root, problem
 	}
-	return jsonPut(root, rest, slices.Insert(items, index, cloneJSON(value))), ""
+	return jsonPut(root, rest, items), ""
+}
+
+// Puts x into list at index.
+func insertAt[T any](list *[]T, index int, x T, path []any) string {
+	if index < 0 || index > len(*list) {
+		return fmt.Sprintf("%s holds %d, so nothing goes in at %d", describePath(path), len(*list), index)
+	}
+	*list = slices.Insert(*list, index, x)
+	return ""
 }
 
 // Moves the element from of list to to, in place.
@@ -1067,7 +996,7 @@ func cloneJSON(v any) any {
 
 // A path key as a list index below length: a whole number, as Go or a JSON decoder gives it.
 func pathIndex(k any, length int) (int, bool) {
-	var i int
+	i, whole := -1, true
 	switch n := k.(type) {
 	case int:
 		i = n
@@ -1076,35 +1005,26 @@ func pathIndex(k any, length int) (int, bool) {
 	case int64:
 		i = int(n)
 	case float64:
-		if n != float64(int(n)) {
-			return 0, false
-		}
-		i = int(n)
+		i, whole = int(n), n == float64(int(n))
 	case json.Number:
 		x, err := n.Int64()
-		if err != nil {
-			return 0, false
-		}
-		i = int(x)
-	default:
-		return 0, false
+		i, whole = int(x), err == nil
 	}
-	return i, i >= 0 && i < length
+	return i, whole && i >= 0 && i < length
 }
 
 // A path as messages write it: priorityList[3].action.
 func describePath(path []any) string {
 	var b strings.Builder
 	for i, k := range path {
-		switch k.(type) {
-		case string:
-			if i > 0 {
-				b.WriteByte('.')
-			}
-			fmt.Fprint(&b, k)
-		default:
+		if _, isName := k.(string); !isName {
 			fmt.Fprintf(&b, "[%v]", k)
+			continue
 		}
+		if i > 0 {
+			b.WriteByte('.')
+		}
+		fmt.Fprint(&b, k)
 	}
 	return b.String()
 }
@@ -1116,21 +1036,20 @@ func stable[T comparable](now, old []T) map[T]bool {
 	order := make([]int, len(now))
 	length := make([]int, len(now))
 	prev := make([]int, len(now))
+	best := -1
 	for i, x := range now {
 		order[i], length[i], prev[i] = slices.Index(old, x), 1, -1
-	}
-	for i := range order {
 		for j := range i {
 			if order[j] < order[i] && length[j]+1 > length[i] {
 				length[i], prev[i] = length[j]+1, j
 			}
 		}
+		if best < 0 || length[i] > length[best] {
+			best = i
+		}
 	}
 	kept := map[T]bool{}
-	if len(now) == 0 {
-		return kept
-	}
-	for i := slices.Index(length, slices.Max(length)); i >= 0; i = prev[i] {
+	for i := best; i >= 0; i = prev[i] {
 		kept[now[i]] = true
 	}
 	return kept
@@ -1148,7 +1067,6 @@ func nearest[T comparable](list []T, k, step int, kept map[T]bool) (T, bool) {
 }
 
 type spliceWriter struct {
-	doc     *Doc
 	tree    *syntaxTree
 	lines   *lineMap
 	model   *rotationModel
@@ -1159,7 +1077,6 @@ type spliceWriter struct {
 func newSpliceWriter(d *Doc, m *rotationModel) *spliceWriter {
 	f := d.typed
 	return &spliceWriter{
-		doc:     d,
 		tree:    f.tree,
 		lines:   f.tree.lines,
 		model:   m,
@@ -1175,25 +1092,27 @@ func groupScope(g *spliceGroup) scope {
 	return scope{group: g.name, inGroup: true}
 }
 
-// The slots the edits leave as they are whose statements are in canonical form under before, which prints with the
-// variables the rotation declares before the edits, and not under the writer's printer: how a variable reference is
-// written depends on the others (SPEC.md §12.3).
-func (w *spliceWriter) unsettled(before *printer) []*spliceSlot {
+// The slots the edits leave as they are whose statements are in canonical form with the variables the rotation
+// declares before the edits, before, and not with those it declares after them: how a variable reference is written
+// depends on the others (SPEC.md §12.3).
+func (w *spliceWriter) unsettled(before []declared) []*spliceSlot {
+	p := *w.printer
+	p.declarations = before
 	var out []*spliceSlot
 	for _, list := range w.model.lists() {
 		was := scope{}
 		if g := list.group; g != nil && g.header != nil {
-			was = scope{group: g.header.statement.(*headerStmt).group.value, inGroup: true}
+			was = scope{group: g.header.group.value, inGroup: true}
 		}
 		for _, s := range list.slots {
-			if s.unit == nil || s.unit.header != nil || s.dirty {
+			if s.dirty || s.unit.header != nil {
 				continue
 			}
 			written := w.out.written(s.unit.first, s.unit.last)
 			same := func(lines []spliceLine) bool {
 				return slices.EqualFunc(lines, written, func(a, b spliceLine) bool { return a.text == b.text })
 			}
-			if same(w.render(s, list, before, was)) && !same(w.render(s, list, w.printer, groupScope(list.group))) {
+			if same(w.render(s, list, &p, was)) && !same(w.render(s, list, w.printer, groupScope(list.group))) {
 				out = append(out, s)
 			}
 		}
@@ -1217,20 +1136,13 @@ func (w *spliceWriter) list(list *spliceList) {
 	if list.group != nil {
 		block = list.group.block
 	}
-	changed := len(slots) != len(old)
-	for i, s := range slots {
-		changed = changed || i >= len(old) || s != old[i] || s.dirty || s.raw
-	}
 	// A statement written on its section's header line stays there while it stays first and as written, and its group
 	// keeps its name; otherwise it goes on a line of its own.
 	var onHeader *headerStmt
 	if len(old) > 0 {
 		onHeader = old[0].unit.header
 	}
-	split := onHeader != nil && (len(slots) == 0 || slots[0] != old[0] || old[0].dirty || old[0].raw || list.group != nil && list.group.renamed)
-	if !changed && !split {
-		return
-	}
+	split := onHeader != nil && (len(slots) == 0 || slots[0] != old[0] || old[0].dirty || list.group != nil && list.group.renamed)
 	if split {
 		line := w.lines.line(onHeader.start)
 		out.drop(line, w.lines.line(onHeader.end))
@@ -1241,13 +1153,9 @@ func (w *spliceWriter) list(list *spliceList) {
 		out.insert(line, []spliceLine{headerLine(text)}, block)
 		old[0].dirty = true // It is printed from its JSON on its own line.
 	}
-	kept := map[*spliceSlot]bool{}
-	for _, s := range slots {
-		kept[s] = true
-	}
 	lined := func(s *spliceSlot) bool { return s.unit != nil && !(split && s.unit.header != nil) }
 	for _, s := range old {
-		if !kept[s] && lined(s) {
+		if lined(s) && !slices.Contains(slots, s) {
 			out.drop(s.unit.first, s.unit.last)
 		}
 	}
@@ -1255,15 +1163,11 @@ func (w *spliceWriter) list(list *spliceList) {
 	home, hasHome := w.home(list)
 	var fresh []spliceLine
 	for k, s := range slots {
-		if anchors[s] {
-			if s.dirty || s.raw {
-				out.drop(s.unit.first, s.unit.last)
-				out.insert(s.unit.first, w.render(s, list, w.printer, groupScope(list.group)), block)
-			}
+		if anchors[s] && !s.dirty {
 			continue
 		}
 		var lines []spliceLine
-		if lined(s) && !s.dirty && !s.raw {
+		if lined(s) && !s.dirty {
 			lines = out.written(s.unit.first, s.unit.last)
 		} else {
 			lines = w.render(s, list, w.printer, groupScope(list.group))
@@ -1271,13 +1175,18 @@ func (w *spliceWriter) list(list *spliceList) {
 		if lined(s) {
 			out.drop(s.unit.first, s.unit.last)
 		}
-		if prev, ok := nearest(slots, k, -1, anchors); ok {
+		prev, hasPrev := nearest(slots, k, -1, anchors)
+		next, hasNext := nearest(slots, k, 1, anchors)
+		switch {
+		case anchors[s]:
+			out.insert(s.unit.first, lines, block)
+		case hasPrev:
 			out.insert(prev.unit.last+1, lines, block)
-		} else if next, ok := nearest(slots, k, 1, anchors); ok {
+		case hasNext:
 			out.insert(next.unit.first, lines, block)
-		} else if hasHome {
+		case hasHome:
 			out.insert(home, lines, block)
-		} else {
+		default:
 			fresh = append(fresh, lines...)
 		}
 	}
@@ -1299,7 +1208,7 @@ func (w *spliceWriter) home(list *spliceList) (int, bool) {
 		if list.row {
 			return g.block.last + 1, true
 		}
-		return w.lines.line(g.header.statement.base().end) + 1, true
+		return w.lines.line(g.header.end) + 1, true
 	}
 	if s := list.section; s != nil && (s.header != nil || len(s.body) > 0) {
 		return lastLine(s, w.lines) + 1, true
@@ -1310,46 +1219,33 @@ func (w *spliceWriter) home(list *spliceList) (int, bool) {
 // A section the text does not hold, after the sections that come before it (SPEC.md §12.1): its place, and the lines
 // in front of its statements. The value variables of an x.apl.siml are lines at the top level.
 func (w *spliceWriter) newSection(list *spliceList) (int, []spliceLine) {
-	implied := w.tree.sections[0]
 	switch {
 	case !list.row:
-		return w.after(implied), []spliceLine{blankSpliceLine}
+		return w.after(), []spliceLine{blankSpliceLine}
 	case list.prepull:
-		return w.after(implied), []spliceLine{blankSpliceLine, headerLine(sectionPrepull + ":")}
+		return w.after(), []spliceLine{blankSpliceLine, headerLine(sectionPrepull + ":")}
 	}
-	return w.after(slices.Concat([]*section{implied}, w.sections(sectionPrepull))...), []spliceLine{blankSpliceLine, headerLine(sectionPriority + ":")}
+	return w.after(sectionPrepull), []spliceLine{blankSpliceLine, headerLine(sectionPriority + ":")}
 }
 
-// The line after the top-level statements and the given sections.
-func (w *spliceWriter) after(sections ...*section) int {
+// The line after the top-level statements, the section no header names, and the sections named names.
+func (w *spliceWriter) after(names ...string) int {
 	last := -1
 	for _, s := range w.tree.top {
 		last = max(last, w.lines.line(s.base().end))
 	}
-	for _, s := range sections {
-		last = max(last, lastLine(s, w.lines))
+	for i, s := range w.tree.sections {
+		if i == 0 || slices.Contains(names, s.name) {
+			last = max(last, lastLine(s, w.lines))
+		}
 	}
 	return last + 1
 }
 
-func (w *spliceWriter) sections(name string) []*section {
-	var out []*section
-	for _, s := range w.tree.sections {
-		if s.name == name {
-			out = append(out, s)
-		}
-	}
-	return out
-}
-
 func (w *spliceWriter) groups() {
 	out, m := w.out, w.model
-	current := map[*spliceGroup]bool{}
-	for _, g := range m.groups {
-		current[g] = true
-	}
 	for _, g := range m.old {
-		if !current[g] {
+		if !slices.Contains(m.groups, g) {
 			out.drop(g.block.first, g.block.last)
 		}
 	}
@@ -1357,13 +1253,12 @@ func (w *spliceWriter) groups() {
 		if g.header == nil {
 			continue
 		}
-		header := g.header.statement.(*headerStmt)
-		if g.renamed && header.body == nil {
+		if g.renamed && g.header.body == nil {
 			text := sectionGroup + " " + jsonString(g.name) + ":"
-			if k := slices.IndexFunc(header.inner, func(t trivia) bool { return t.kind == triviaComment }); k >= 0 {
-				text += " " + trailingText(header.inner[k])
+			if k := slices.IndexFunc(g.header.inner, func(t trivia) bool { return t.kind == triviaComment }); k >= 0 {
+				text += " " + trailingText(g.header.inner[k])
 			}
-			line := w.lines.line(header.start)
+			line := w.lines.line(g.header.start)
 			out.drop(line, line)
 			out.insert(line, []spliceLine{headerLine(text)}, g.block)
 		}
@@ -1386,8 +1281,7 @@ func (w *spliceWriter) groups() {
 		} else if next, ok := nearest(m.groups, k, 1, anchors); ok {
 			out.insert(next.block.first, append(lines, blankSpliceLine), nil)
 		} else {
-			at := w.after(slices.Concat([]*section{w.tree.sections[0]}, w.sections(sectionPrepull), w.sections(sectionPriority))...)
-			out.insert(at, slices.Concat([]spliceLine{blankSpliceLine}, lines), nil)
+			out.insert(w.after(sectionPrepull, sectionPriority), slices.Concat([]spliceLine{blankSpliceLine}, lines), nil)
 		}
 	}
 }
@@ -1429,21 +1323,18 @@ func (w *spliceWriter) render(s *spliceSlot, list *spliceList, p *printer, sc sc
 		if u.header != nil {
 			host = u.header.base()
 		}
-		var inner []trivia
-		for _, t := range host.inner {
-			if t.kind == triviaComment {
-				inner = append(inner, t)
-			}
-		}
+		inner := slices.DeleteFunc(slices.Clone(host.inner), func(t trivia) bool { return t.kind != triviaComment })
 		if len(inner) == 1 && inner[0].line == w.lines.line(host.end) {
-			trailing := *ps
-			trailing.trailing = trailingText(inner[0])
-			ps = &trailing
+			ps.trailing = trailingText(inner[0])
 		} else {
 			for _, c := range inner {
 				above = append(above, commentLine(c, indent).line)
 			}
 		}
 	}
-	return newLines(append(above, statementLines(ps)...))
+	var out []spliceLine
+	for _, t := range append(above, statementLines(ps)...) {
+		out = append(out, spliceLine{text: t, from: -1})
+	}
+	return out
 }

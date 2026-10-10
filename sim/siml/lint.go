@@ -65,29 +65,57 @@ type Finding struct {
 	Message  string `json:"message"`
 }
 
-// A JSON object with its keys in the order protojson writes them.
-type lintObject struct {
-	keys   []string
-	values map[string]any
+// A JSON object: its keys and values in the order protojson writes them.
+type lintObject []lintField
+
+type lintField struct {
+	key   string
+	value any
 }
 
-func (o *lintObject) get(key string) (any, bool) {
-	if o == nil {
-		return nil, false
+func (o lintObject) get(key string) (any, bool) {
+	for _, f := range o {
+		if f.key == key {
+			return f.value, true
+		}
 	}
-	v, ok := o.values[key]
-	return v, ok
+	return nil, false
 }
 
-func (o *lintObject) value(key string) any {
+func (o lintObject) value(key string) any {
 	v, _ := o.get(key)
 	return v
 }
 
-// m as protojson reads it: fields in declaration order, enums by name, 64-bit integers as strings, every other number
-// as a float64.
-func lintJSON(m protoreflect.Message) *lintObject {
-	o := &lintObject{values: map[string]any{}}
+// The message at key; empty when there is none.
+func (o lintObject) object(key string) lintObject {
+	v, _ := o.value(key).(lintObject)
+	return v
+}
+
+// The messages of the list at key.
+func (o lintObject) list(key string) []lintObject {
+	items, _ := o.value(key).([]any)
+	objects := make([]lintObject, len(items))
+	for i, item := range items {
+		objects[i], _ = item.(lintObject)
+	}
+	return objects
+}
+
+// The kind an action or value is: its one key other than an action's condition and the editor's uuid.
+func (o lintObject) kind() string {
+	for _, f := range o {
+		if f.key != "condition" && f.key != "uuid" {
+			return f.key
+		}
+	}
+	return ""
+}
+
+// m as protojson writes it: JSON names, fields in declaration order, enums by name.
+func lintJSON(m protoreflect.Message) lintObject {
+	var o lintObject
 	fields := m.Descriptor().Fields()
 	for i := range fields.Len() {
 		fd := fields.Get(i)
@@ -104,19 +132,17 @@ func lintJSON(m protoreflect.Message) *lintObject {
 			}
 			x = items
 		case fd.IsMap():
-			entries := &lintObject{values: map[string]any{}}
+			var entries lintObject
 			v.Map().Range(func(k protoreflect.MapKey, e protoreflect.Value) bool {
-				entries.keys = append(entries.keys, k.String())
-				entries.values[k.String()] = lintScalar(fd.MapValue(), e)
+				entries = append(entries, lintField{k.String(), lintScalar(fd.MapValue(), e)})
 				return true
 			})
-			slices.SortFunc(entries.keys, compareObjectKeys)
+			slices.SortFunc(entries, func(a, b lintField) int { return compareObjectKeys(a.key, b.key) })
 			x = entries
 		default:
 			x = lintScalar(fd, v)
 		}
-		o.keys = append(o.keys, fd.JSONName())
-		o.values[fd.JSONName()] = x
+		o = append(o, lintField{fd.JSONName(), x})
 	}
 	return o
 }
@@ -129,60 +155,32 @@ func lintScalar(fd protoreflect.FieldDescriptor, v protoreflect.Value) any {
 		if e := fd.Enum().Values().ByNumber(v.Enum()); e != nil {
 			return string(e.Name())
 		}
-		return float64(v.Enum())
-	case protoreflect.BoolKind:
-		return v.Bool()
-	case protoreflect.StringKind:
-		return v.String()
-	case protoreflect.BytesKind:
-		return string(v.Bytes())
-	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		return v.Float()
-	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind:
-		return strconv.FormatInt(v.Int(), 10)
-	case protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
-		return strconv.FormatUint(v.Uint(), 10)
-	case protoreflect.Uint32Kind, protoreflect.Fixed32Kind:
-		return float64(v.Uint())
 	}
-	return float64(v.Int())
+	return v.Interface()
 }
 
-func asObject(v any) (*lintObject, bool) {
-	o, ok := v.(*lintObject)
-	return o, ok
-}
-
-func asArray(v any) []any {
-	items, _ := v.([]any)
-	return items
-}
-
-// The JSON text of v with object keys sorted and uuids left out: equal for two values sameJSON finds equal.
+// v written out with uuids left out: the same for two values the sim reads the same, as a uuid only tags a value for
+// the editor.
 func canonicalJSON(v any) string {
 	var b strings.Builder
 	var write func(v any)
 	write = func(v any) {
 		switch x := v.(type) {
-		case *lintObject:
-			keys := slices.DeleteFunc(slices.Clone(x.keys), func(k string) bool { return k == "uuid" })
-			slices.Sort(keys)
+		case lintObject:
 			b.WriteByte('{')
-			for i, k := range keys {
-				if i > 0 {
+			for _, f := range x {
+				if f.key != "uuid" {
+					b.WriteString(jsonString(f.key) + ":")
+					write(f.value)
 					b.WriteByte(',')
 				}
-				b.WriteString(jsonString(k) + ":")
-				write(x.values[k])
 			}
 			b.WriteByte('}')
 		case []any:
 			b.WriteByte('[')
-			for i, item := range x {
-				if i > 0 {
-					b.WriteByte(',')
-				}
+			for _, item := range x {
 				write(item)
+				b.WriteByte(',')
 			}
 			b.WriteByte(']')
 		case string:
@@ -195,69 +193,42 @@ func canonicalJSON(v any) string {
 	return b.String()
 }
 
-// Equal as the sim reads them: a uuid only tags a value for the editor.
-func sameJSON(a, b any) bool { return canonicalJSON(a) == canonicalJSON(b) }
-
-// The kind an action or value is: its one key other than ignore and the editor's uuid.
-func lintKind(v any, ignore string) string {
-	o, ok := asObject(v)
-	if !ok {
-		return ""
-	}
-	for _, k := range o.keys {
-		if k != ignore && k != "uuid" {
-			return k
-		}
-	}
-	return ""
-}
-
-func actionKindOf(action any) string { return lintKind(action, "condition") }
-
-func valueKindOf(value any) string { return lintKind(value, "") }
-
-// Where a row sits: the list it belongs to, for the checks that compare rows of one list.
+// Where a row sits: whether it is hidden, and the list it belongs to.
 type lintScope struct {
-	hidden bool
-	list   string // prepullActions, priorityList or groupActions.
-	group  int    // The groups index a group row belongs to, -1 for none.
+	hidden  bool
+	prepull bool
+	group   int // The groups index a group row belongs to, -1 for none.
 }
 
 type actionSite struct {
 	path   []any
-	action *lintObject
-	scope  *lintScope
+	action lintObject
+	scope  lintScope
 	nested bool // Inside a sequence or a schedule rather than a row's own action.
 }
 
 type valueSite struct {
 	path      []any
-	value     *lintObject
-	scope     *lintScope // Nil for a value variable's value.
-	condition bool       // The condition of an action, as opposed to an operand or an action's setting.
+	value     lintObject
+	scope     lintScope
+	condition bool // The condition of an action, as opposed to an operand or an action's setting.
 }
 
 type nameSite struct {
 	path  []any // The name string itself.
 	name  string
-	scope *lintScope
-}
-
-// The values a group reference sets, by name, in the order it sets them.
-type setValues struct {
-	names []string
-	paths map[string][]any
+	scope lintScope
 }
 
 type groupRefSite struct {
 	nameSite
-	variables setValues
+	variables map[string][]any // The path of the value it sets, by name.
 }
 
 type missingSite struct {
 	path  []any
 	what  string
-	scope *lintScope
+	scope lintScope
 }
 
 type collected struct {
@@ -277,7 +248,6 @@ var (
 	actionValueFields = map[string]bool{"interruptIf": true, "maxOverlap": true, "duration": true, "condition": true, "rangeFromTarget": true}
 	// The fields of a value body that hold values.
 	valueValueFields = map[string]bool{"val": true, "lhs": true, "rhs": true, "targetEnergy": true, "maxOverlap": true, "offset": true}
-	valueListFields  = map[string]bool{"vals": true}
 	sequenceValues   = map[string]bool{"sequenceIsComplete": true, "sequenceIsReady": true, "sequenceTimeToReady": true}
 	// The action kinds whose value the sim reads with no check, and fails without: the move's range and duration.
 	requiredValues = map[string]struct{ field, what string }{
@@ -307,94 +277,61 @@ func nameOf(v any) string {
 
 func at(path []any, keys ...any) []any { return slices.Concat(path, keys) }
 
-func collect(apl *lintObject) *collected {
+func collect(apl lintObject) *collected {
 	out := &collected{}
-	var visitValue func(value any, path []any, scope *lintScope, condition bool)
-	visitValue = func(value any, path []any, scope *lintScope, condition bool) {
-		o, ok := asObject(value)
+	var visitValue func(value any, path []any, scope lintScope, condition bool)
+	visitValue = func(value any, path []any, scope lintScope, condition bool) {
+		o, ok := value.(lintObject)
 		if !ok {
 			return
 		}
 		out.values = append(out.values, valueSite{path, o, scope, condition})
-		kind := valueKindOf(o)
-		if kind == "" {
-			return
-		}
-		body, ok := asObject(o.value(kind))
-		if !ok {
-			return
-		}
-		here := at(path, kind)
+		kind := o.kind()
+		body, here := o.object(kind), at(path, kind)
 		// A reference with no name set reads as one to the name "", which nothing has.
-		switch kind {
-		case "variableRef":
-			out.variableRefs = append(out.variableRefs, nameSite{at(here, "name"), nameOf(body.value("name")), scope})
-		case "actionGroupUsed":
-			out.groupUsed = append(out.groupUsed, nameSite{at(here, "name"), nameOf(body.value("name")), scope})
-		}
-		if name, ok := body.value("name").(string); kind == "variablePlaceholder" && ok {
-			out.placeholders = append(out.placeholders, nameSite{at(here, "name"), name, scope})
-		}
-		if sequenceValues[kind] {
+		name := nameSite{at(here, "name"), nameOf(body.value("name")), scope}
+		switch {
+		case kind == "variableRef":
+			out.variableRefs = append(out.variableRefs, name)
+		case kind == "actionGroupUsed":
+			out.groupUsed = append(out.groupUsed, name)
+		case kind == "variablePlaceholder" && name.name != "":
+			out.placeholders = append(out.placeholders, name)
+		case sequenceValues[kind]:
 			out.sequenceRefs = append(out.sequenceRefs, nameSite{at(here, "sequenceName"), nameOf(body.value("sequenceName")), scope})
 		}
-		for _, field := range body.keys {
-			child := body.values[field]
-			if valueValueFields[field] {
-				visitValue(child, at(here, field), scope, false)
-			} else if valueListFields[field] {
-				for i, item := range asArray(child) {
-					visitValue(item, at(here, field, i), scope, false)
-				}
+		for _, f := range body {
+			if valueValueFields[f.key] {
+				visitValue(f.value, at(here, f.key), scope, false)
 			}
+		}
+		for i, item := range body.list("vals") {
+			visitValue(item, at(here, "vals", i), scope, false)
 		}
 	}
 
-	var visitAction func(action any, path []any, scope *lintScope, nested bool)
-	visitAction = func(action any, path []any, scope *lintScope, nested bool) {
-		site, ok := asObject(action)
-		if !ok {
-			site = &lintObject{values: map[string]any{}}
-		}
-		out.actions = append(out.actions, actionSite{path, site, scope, nested})
-		if condition, ok := site.get("condition"); ok {
-			visitValue(condition, at(path, "condition"), scope, true)
-		}
-		kind := actionKindOf(site)
-		if kind == "" {
-			return
-		}
-		body, ok := asObject(site.value(kind))
-		if !ok {
-			if r, ok := requiredValues[kind]; ok {
-				out.missing = append(out.missing, missingSite{at(path, kind), r.what, scope})
-			}
-			return
-		}
-		here := at(path, kind)
-		if kind == "groupReference" {
-			variables := setValues{paths: map[string][]any{}}
-			for i, variable := range asArray(body.value("variables")) {
-				v, ok := asObject(variable)
-				if !ok {
-					continue
-				}
+	var visitAction func(action lintObject, path []any, scope lintScope, nested bool)
+	visitAction = func(action lintObject, path []any, scope lintScope, nested bool) {
+		out.actions = append(out.actions, actionSite{path, action, scope, nested})
+		visitValue(action.value("condition"), at(path, "condition"), scope, true)
+		kind := action.kind()
+		body, here := action.object(kind), at(path, kind)
+		switch kind {
+		case "groupReference":
+			variables := map[string][]any{}
+			for i, v := range body.list("variables") {
 				path := at(here, "variables", i, "value")
 				if name, ok := v.value("name").(string); ok {
-					if _, set := variables.paths[name]; !set {
-						variables.names = append(variables.names, name)
-					}
-					variables.paths[name] = path
+					variables[name] = path
 				}
 				visitValue(v.value("value"), path, scope, false)
 			}
 			out.groupReferences = append(out.groupReferences, groupRefSite{nameSite{at(here, "groupName"), nameOf(body.value("groupName")), scope}, variables})
-			return
-		}
-		if name, ok := body.value("name").(string); kind == "sequence" && ok {
-			out.sequences = append(out.sequences, nameSite{at(here, "name"), name, scope})
-		}
-		if kind == "resetSequence" {
+		case "sequence":
+			if name, ok := body.value("name").(string); ok {
+				out.sequences = append(out.sequences, nameSite{at(here, "name"), name, scope})
+			}
+		case "resetSequence":
 			out.sequenceRefs = append(out.sequenceRefs, nameSite{at(here, "sequenceName"), nameOf(body.value("sequenceName")), scope})
 		}
 		if r, ok := requiredValues[kind]; ok {
@@ -402,74 +339,39 @@ func collect(apl *lintObject) *collected {
 				out.missing = append(out.missing, missingSite{here, r.what, scope})
 			}
 		}
-		for _, field := range body.keys {
-			child := body.values[field]
+		for _, f := range body {
 			switch {
-			case actionValueFields[field]:
-				visitValue(child, at(here, field), scope, false)
-			case field == "innerAction":
-				visitAction(child, at(here, field), scope, true)
-			case field == "actions":
-				for i, item := range asArray(child) {
-					visitAction(item, at(here, field, i), scope, true)
-				}
+			case actionValueFields[f.key]:
+				visitValue(f.value, at(here, f.key), scope, false)
+			case f.key == "innerAction":
+				visitAction(body.object(f.key), at(here, f.key), scope, true)
 			}
+		}
+		for i, item := range body.list("actions") {
+			visitAction(item, at(here, "actions", i), scope, true)
 		}
 	}
 
-	for i, row := range asArray(apl.value("prepullActions")) {
-		r, ok := asObject(row)
-		if !ok {
-			continue
-		}
-		scope := &lintScope{hidden: r.value("hide") == true, list: "prepullActions", group: -1}
-		visitAction(r.value("action"), []any{"prepullActions", i, "action"}, scope, false)
-		visitValue(r.value("doAtValue"), []any{"prepullActions", i, "doAtValue"}, scope, false)
+	for i, row := range apl.list("prepullActions") {
+		scope := lintScope{hidden: row.value("hide") == true, prepull: true, group: -1}
+		visitAction(row.object("action"), []any{"prepullActions", i, "action"}, scope, false)
+		visitValue(row.value("doAtValue"), []any{"prepullActions", i, "doAtValue"}, scope, false)
 	}
-	for i, row := range asArray(apl.value("priorityList")) {
-		if r, ok := asObject(row); ok {
-			visitAction(r.value("action"), []any{"priorityList", i, "action"}, &lintScope{hidden: r.value("hide") == true, list: "priorityList", group: -1}, false)
-		}
+	for i, row := range apl.list("priorityList") {
+		visitAction(row.object("action"), []any{"priorityList", i, "action"}, lintScope{hidden: row.value("hide") == true, group: -1}, false)
 	}
-	for g, group := range asArray(apl.value("groups")) {
-		o, ok := asObject(group)
-		if !ok {
-			continue
+	for g, group := range apl.list("groups") {
+		for v, variable := range group.list("variables") {
+			visitValue(variable.value("value"), []any{"groups", g, "variables", v, "value"}, lintScope{group: g}, false)
 		}
-		for v, variable := range asArray(o.value("variables")) {
-			if x, ok := asObject(variable); ok {
-				visitValue(x.value("value"), []any{"groups", g, "variables", v, "value"}, &lintScope{list: "groupActions", group: g}, false)
-			}
-		}
-		for i, row := range asArray(o.value("actions")) {
-			if r, ok := asObject(row); ok {
-				visitAction(r.value("action"), []any{"groups", g, "actions", i, "action"}, &lintScope{hidden: r.value("hide") == true, list: "groupActions", group: g}, false)
-			}
+		for i, row := range group.list("actions") {
+			visitAction(row.object("action"), []any{"groups", g, "actions", i, "action"}, lintScope{hidden: row.value("hide") == true, group: g}, false)
 		}
 	}
-	for i, variable := range asArray(apl.value("valueVariables")) {
-		if x, ok := asObject(variable); ok {
-			visitValue(x.value("value"), []any{"valueVariables", i, "value"}, nil, false)
-		}
+	for i, variable := range apl.list("valueVariables") {
+		visitValue(variable.value("value"), []any{"valueVariables", i, "value"}, lintScope{group: -1}, false)
 	}
 	return out
-}
-
-func live(scope *lintScope) bool { return scope == nil || !scope.hidden }
-
-func inGroup(scope *lintScope) (int, bool) {
-	if scope == nil || scope.group < 0 {
-		return 0, false
-	}
-	return scope.group, true
-}
-
-// Whether a live row of group g reads the placeholder name.
-func groupReadsPlaceholder(c *collected, g int, name string) bool {
-	return slices.ContainsFunc(c.placeholders, func(p nameSite) bool {
-		group, ok := inGroup(p.scope)
-		return live(p.scope) && ok && group == g && p.name == name
-	})
 }
 
 // --- Constants
@@ -537,17 +439,9 @@ func constNumber(val string) (float64, bool) {
 	return n, ok && strings.TrimFunc(val, isJSSpace) != "" && isFinite(n)
 }
 
-// A const value's text; false when value is no const. A const with no val is "".
-func constOf(value any) (string, bool) {
-	if valueKindOf(value) != "const" {
-		return "", false
-	}
-	body, ok := asObject(value.(*lintObject).value("const"))
-	if !ok {
-		return "", false
-	}
-	val, _ := body.value("val").(string)
-	return val, true
+// A const value's text, a missing val being ""; false when value is no const.
+func constOf(value lintObject) (string, bool) {
+	return nameOf(value.object("const").value("val")), value.kind() == "const"
 }
 
 // What a constant reads as for a condition: true or false in any case, otherwise true unless empty (a const of "0"
@@ -571,52 +465,39 @@ var compareConstants = map[string]func(a, b float64) bool{
 
 // Whether a value present in the file is one the sim builds: an empty value, or an operator whose operands are all
 // empty, comes out as nothing.
-func absent(value any) bool {
-	kind := valueKindOf(value)
-	if kind == "" {
+func absent(value lintObject) bool {
+	body := value.object(value.kind())
+	switch value.kind() {
+	case "":
 		return true
-	}
-	body, ok := asObject(value.(*lintObject).value(kind))
-	switch kind {
 	case "and", "or":
-		return !ok || !slices.ContainsFunc(asArray(body.value("vals")), func(v any) bool { return !absent(v) })
+		return !slices.ContainsFunc(body.list("vals"), func(v lintObject) bool { return !absent(v) })
 	case "not":
-		return !ok || absent(body.value("val"))
+		return absent(body.object("val"))
 	case "cmp":
-		return !ok || absent(body.value("lhs")) || absent(body.value("rhs"))
+		return absent(body.object("lhs")) || absent(body.object("rhs"))
 	}
 	return false
 }
 
-// The value's truth if it is the same whatever happens in the fight, read as a condition; false when it is not.
-func constantTruth(value any) (truth, known bool) {
-	kind := valueKindOf(value)
-	if kind == "" {
+// The value's truth if it is the same whatever happens in the fight, read as a condition; false when it is not or the
+// sim does not build it.
+func constantTruth(value lintObject) (truth, known bool) {
+	if absent(value) {
 		return false, false
 	}
-	if kind == "const" {
+	kind := value.kind()
+	body := value.object(kind)
+	switch kind {
+	case "const":
 		val, _ := constOf(value)
 		return constBool(val), true
-	}
-	body, ok := asObject(value.(*lintObject).value(kind))
-	if !ok {
-		return false, false
-	}
-	switch kind {
 	case "not":
-		if absent(body.value("val")) {
-			return false, false
-		}
-		truth, known := constantTruth(body.value("val"))
+		truth, known := constantTruth(body.object("val"))
 		return !truth, known
 	case "and", "or":
-		vals := slices.DeleteFunc(slices.Clone(asArray(body.value("vals"))), absent)
-		if len(vals) == 0 {
-			return false, false
-		}
-		decisive := kind == "or"
-		all := true
-		for _, val := range vals {
+		decisive, all := kind == "or", true
+		for _, val := range slices.DeleteFunc(body.list("vals"), absent) {
 			truth, known := constantTruth(val)
 			if known && truth == decisive {
 				return decisive, true
@@ -625,19 +506,13 @@ func constantTruth(value any) (truth, known bool) {
 		}
 		return !decisive, all
 	case "cmp":
-		lhs, lok := constOf(body.value("lhs"))
-		rhs, rok := constOf(body.value("rhs"))
-		op, _ := body.value("op").(string)
-		compare := compareConstants[op]
-		if !lok || !rok || compare == nil {
-			return false, false
-		}
+		lhs, lok := constOf(body.object("lhs"))
+		rhs, rok := constOf(body.object("rhs"))
 		a, aok := constNumber(lhs)
 		b, bok := constNumber(rhs)
-		if !aok || !bok {
-			return false, false
+		if compare := compareConstants[nameOf(body.value("op"))]; lok && rok && aok && bok && compare != nil {
+			return compare(a, b), true
 		}
-		return compare(a, b), true
 	}
 	return false, false
 }
@@ -650,29 +525,21 @@ type constantPart struct {
 
 // The most specific operators inside a condition that read the same whatever happens, when the condition as a whole
 // does not.
-func constantParts(value any, path []any, found []constantPart) []constantPart {
-	kind := valueKindOf(value)
-	if kind == "" || kind == "const" {
-		return found
-	}
-	body, ok := asObject(value.(*lintObject).value(kind))
-	if !ok {
-		return found
-	}
+func constantParts(value lintObject, path []any, found []constantPart) []constantPart {
+	kind := value.kind()
+	body := value.object(kind)
 	switch kind {
+	case "", "const":
+		return found
 	case "cmp", "not", "and", "or":
-		if !absent(value) {
-			if truth, known := constantTruth(value); known {
-				return append(found, constantPart{path, truth, kind})
-			}
+		if truth, known := constantTruth(value); known {
+			return append(found, constantPart{path, truth, kind})
 		}
 	}
 	for _, field := range []string{"val", "lhs", "rhs"} {
-		if v, ok := body.get(field); ok {
-			found = constantParts(v, at(path, kind, field), found)
-		}
+		found = constantParts(body.object(field), at(path, kind, field), found)
 	}
-	for i, val := range asArray(body.value("vals")) {
+	for i, val := range body.list("vals") {
 		found = constantParts(val, at(path, kind, "vals", i), found)
 	}
 	return found
@@ -701,47 +568,32 @@ func Lint(r *proto.APLRotation) []Finding {
 	}
 	c := collect(apl)
 
-	var groups []*lintObject
-	for _, group := range asArray(apl.value("groups")) {
-		o, ok := asObject(group)
-		if !ok {
-			o = &lintObject{values: map[string]any{}}
-		}
-		groups = append(groups, o)
-	}
-	groupNames := map[string]bool{}
-	for _, g := range groups {
-		if name, ok := g.value("name").(string); ok {
-			groupNames[name] = true
-		}
-	}
-	referencedGroups := map[string]bool{}
+	groups := apl.list("groups")
+	referencedGroups, usedGroups := map[string]bool{}, map[string]bool{}
 	for _, ref := range c.groupReferences {
 		referencedGroups[ref.name] = true
 	}
-	usedGroups := map[string]bool{}
 	for _, ref := range c.groupUsed {
 		usedGroups[ref.name] = true
 	}
 	groupIndex := func(name string) int {
-		return slices.IndexFunc(groups, func(g *lintObject) bool { n, ok := g.value("name").(string); return ok && n == name })
+		return slices.IndexFunc(groups, func(g lintObject) bool { return g.value("name") == name })
+	}
+	// The placeholders each group's live rows read.
+	groupPlaceholders := make([][]string, len(groups))
+	for _, p := range c.placeholders {
+		if g := p.scope.group; g >= 0 && !p.scope.hidden && !slices.Contains(groupPlaceholders[g], p.name) {
+			groupPlaceholders[g] = append(groupPlaceholders[g], p.name)
+		}
 	}
 
 	// Toggle groups: every row's action empty.
-	toggles := map[int]bool{}
-	for g, group := range groups {
-		rows := asArray(group.value("actions"))
-		toggles[g] = len(rows) > 0 && !slices.ContainsFunc(rows, func(row any) bool {
-			o, _ := asObject(row)
-			return actionKindOf(o.value("action")) != ""
-		})
+	toggle := func(g int) bool {
+		rows := groups[g].list("actions")
+		return len(rows) > 0 && !slices.ContainsFunc(rows, func(row lintObject) bool { return row.object("action").kind() != "" })
 	}
-
 	for _, site := range c.actions {
-		if !live(site.scope) || actionKindOf(site.action) != "" {
-			continue
-		}
-		if g, ok := inGroup(site.scope); !site.nested && ok && toggles[g] {
+		if site.scope.hidden || site.action.kind() != "" || !site.nested && site.scope.group >= 0 && toggle(site.scope.group) {
 			continue
 		}
 		report(site.path, "error", "empty-action", "No action set; the sim skips this.")
@@ -750,18 +602,16 @@ func Lint(r *proto.APLRotation) []Finding {
 	// The reference values that fill a placeholder: the sim fails on an empty one.
 	filling := map[string]bool{}
 	for _, ref := range c.groupReferences {
-		g := groupIndex(ref.name)
-		if g < 0 {
-			continue
-		}
-		for _, name := range ref.variables.names {
-			if groupReadsPlaceholder(c, g, name) {
-				filling[fmt.Sprint(ref.variables.paths[name])] = true
+		if g := groupIndex(ref.name); g >= 0 {
+			for name, path := range ref.variables {
+				if slices.Contains(groupPlaceholders[g], name) {
+					filling[fmt.Sprint(path)] = true
+				}
 			}
 		}
 	}
 	for _, site := range c.values {
-		if !live(site.scope) || valueKindOf(site.value) != "" {
+		if site.scope.hidden || site.value.kind() != "" {
 			continue
 		}
 		n := len(site.path)
@@ -783,27 +633,26 @@ func Lint(r *proto.APLRotation) []Finding {
 		}
 	}
 	for _, site := range c.missing {
-		if live(site.scope) {
+		if !site.scope.hidden {
 			report(site.path, "error", "empty-value", "No "+site.what+" set; the sim fails to run.")
 		}
 	}
 
 	for _, ref := range c.groupReferences {
-		if groupNames[ref.name] {
-			continue
-		}
-		if ref.name != "" {
+		switch {
+		case groupIndex(ref.name) >= 0:
+		case ref.name != "":
 			report(ref.path, "error", "undefined-group", fmt.Sprintf("No group is named \"%s\".", ref.name))
-		} else {
+		default:
 			report(ref.path, "error", "undefined-group", "No group name set; the sim skips this.")
 		}
 	}
 	for _, ref := range c.groupUsed {
 		switch {
-		case !live(ref.scope):
-		case !groupNames[ref.name] && ref.name != "":
+		case ref.scope.hidden:
+		case groupIndex(ref.name) < 0 && ref.name != "":
 			report(ref.path, "warning", "group-never-used", fmt.Sprintf("No group is named \"%s\", so this is always false.", ref.name))
-		case !groupNames[ref.name]:
+		case groupIndex(ref.name) < 0:
 			report(ref.path, "warning", "group-never-used", "No group name set, so this is always false.")
 		case !referencedGroups[ref.name]:
 			report(ref.path, "warning", "group-never-used", fmt.Sprintf("No row references group \"%s\", so this is always false.", ref.name))
@@ -818,7 +667,7 @@ func Lint(r *proto.APLRotation) []Finding {
 	// Sequences: the sim finds them among the live priority list and group rows.
 	liveSequences, anySequences := map[string]bool{}, map[string]bool{}
 	for _, seq := range c.sequences {
-		if live(seq.scope) && (seq.scope == nil || seq.scope.list != "prepullActions") {
+		if !seq.scope.hidden && !seq.scope.prepull {
 			liveSequences[seq.name] = true
 		}
 		anySequences[seq.name] = true
@@ -836,61 +685,36 @@ func Lint(r *proto.APLRotation) []Finding {
 	}
 
 	// Variables.
-	var variables []*lintObject
-	for _, variable := range asArray(apl.value("valueVariables")) {
-		o, ok := asObject(variable)
-		if !ok {
-			o = &lintObject{values: map[string]any{}}
-		}
-		variables = append(variables, o)
-	}
-	variableNames := map[string]bool{}
+	variables := apl.list("valueVariables")
+	variableNames, referencedVariables := map[string]bool{}, map[string]bool{}
 	for i, variable := range variables {
-		name, ok := variable.value("name").(string)
-		if !ok {
-			continue
-		}
-		if variableNames[name] {
-			report([]any{"valueVariables", i, "name"}, "warning", "duplicate-variable", fmt.Sprintf("An earlier variable is also named \"%s\"; references read that one.", name))
-		}
-		variableNames[name] = true
-	}
-	// What a group's variables and its references set. The sim reads a group row's references as the value variables'
-	// and lets these replace one only where a value variable of the name exists.
-	groupVariables := make([]map[string]bool, len(groups))
-	for g, group := range groups {
-		names := map[string]bool{}
-		for _, variable := range asArray(group.value("variables")) {
-			if o, ok := asObject(variable); ok {
-				if name, ok := o.value("name").(string); ok {
-					names[name] = true
-				}
+		if name, ok := variable.value("name").(string); ok {
+			if variableNames[name] {
+				report([]any{"valueVariables", i, "name"}, "warning", "duplicate-variable", fmt.Sprintf("An earlier variable is also named \"%s\"; references read that one.", name))
 			}
+			variableNames[name] = true
 		}
-		groupName, hasName := group.value("name").(string)
-		for _, ref := range c.groupReferences {
-			if hasName && ref.name == groupName {
-				for _, name := range ref.variables.names {
-					names[name] = true
-				}
-			}
-		}
-		groupVariables[g] = names
 	}
-	referencedVariables := map[string]bool{}
 	for _, ref := range c.variableRefs {
 		referencedVariables[ref.name] = true
 	}
+	// Whether group g's variables or a reference to it set name. The sim reads a group row's references as the value
+	// variables' and lets these replace one only where a value variable of the name exists.
+	groupSets := func(g int, name string) bool {
+		return slices.ContainsFunc(groups[g].list("variables"), func(v lintObject) bool { return v.value("name") == name }) ||
+			slices.ContainsFunc(c.groupReferences, func(ref groupRefSite) bool {
+				_, set := ref.variables[name]
+				return set && groups[g].value("name") == ref.name
+			})
+	}
 	for _, ref := range c.variableRefs {
-		if variableNames[ref.name] {
-			continue
-		}
-		g, ok := inGroup(ref.scope)
 		message := fmt.Sprintf("No variable is named \"%s\".", ref.name)
 		switch {
+		case variableNames[ref.name]:
+			continue
 		case ref.name == "":
 			message = "No variable name set; the sim drops this."
-		case ok && groupVariables[g][ref.name]:
+		case ref.scope.group >= 0 && groupSets(ref.scope.group, ref.name):
 			message = fmt.Sprintf("Only the group's variables or a reference to it set \"%s\"; they replace a value variable of that name, and there is none, so the sim drops this.", ref.name)
 		}
 		report(ref.path, "error", "undefined-variable", message)
@@ -902,16 +726,8 @@ func Lint(r *proto.APLRotation) []Finding {
 	}
 
 	// Placeholders: each live reference to a group must fill every placeholder the group's live rows read.
-	groupPlaceholders := make([][]string, len(groups))
 	for _, p := range c.placeholders {
-		if !live(p.scope) {
-			continue
-		}
-		if g, ok := inGroup(p.scope); ok {
-			if !slices.Contains(groupPlaceholders[g], p.name) {
-				groupPlaceholders[g] = append(groupPlaceholders[g], p.name)
-			}
-		} else {
+		if !p.scope.hidden && p.scope.group < 0 {
 			report(p.path, "warning", "placeholder-outside", fmt.Sprintf("Placeholder \"%s\" is outside a group; nothing fills it, so it reads as 0 or false.", p.name))
 		}
 	}
@@ -922,7 +738,7 @@ func Lint(r *proto.APLRotation) []Finding {
 		}
 		var missing []string
 		for _, name := range groupPlaceholders[g] {
-			if _, set := ref.variables.paths[name]; !set {
+			if _, set := ref.variables[name]; !set {
 				missing = append(missing, fmt.Sprintf("\"%s\"", name))
 			}
 		}
@@ -933,109 +749,68 @@ func Lint(r *proto.APLRotation) []Finding {
 
 	lintPrepull(apl, variables, report)
 	lintConditions(c, report)
-	lintShadowed(apl, report)
+	lintShadowed(c, report)
 	return findings
 }
 
-// The seconds a Do At value reads as before the fight: a constant, a variable holding one, or arithmetic on those.
-// False when it reads something only the fight knows; NaN for a constant that is no number.
-func constantSeconds(value any, variables []*lintObject, seen []string) (float64, bool) {
-	kind := valueKindOf(value)
-	if kind == "" {
-		return 0, false
-	}
-	if kind == "const" {
+// The seconds a Do At value reads as before the fight, known for a constant, a variable holding one, or arithmetic on
+// those, NaN for a constant that is no number; static when it reads nothing of the fight: constants, those durations,
+// and variables and arithmetic on them.
+func doAtSeconds(value lintObject, variables []lintObject, seen []string) (seconds float64, known, static bool) {
+	kind := value.kind()
+	body := value.object(kind)
+	switch {
+	case kind == "const":
 		val, _ := constOf(value)
 		if n, ok := constNumber(val); ok {
-			return n, true
+			return n, true, true
 		}
-		return math.NaN(), true
-	}
-	body, ok := asObject(value.(*lintObject).value(kind))
-	if !ok {
-		return 0, false
-	}
-	switch kind {
-	case "variableRef":
+		return math.NaN(), true, true
+	case staticDurations[kind]:
+		return 0, false, true
+	case kind == "variableRef":
 		name, ok := body.value("name").(string)
-		if !ok || slices.Contains(seen, name) {
-			return 0, false
+		k := slices.IndexFunc(variables, func(v lintObject) bool { return v.value("name") == name })
+		if !ok || slices.Contains(seen, name) || k < 0 {
+			return 0, false, false
 		}
-		k := slices.IndexFunc(variables, func(v *lintObject) bool { n, ok := v.value("name").(string); return ok && n == name })
-		if k < 0 {
-			return 0, false
-		}
-		return constantSeconds(variables[k].value("value"), variables, append(slices.Clone(seen), name))
-	case "math":
-		a, aok := constantSeconds(body.value("lhs"), variables, seen)
-		b, bok := constantSeconds(body.value("rhs"), variables, seen)
-		if !aok || !bok {
-			return 0, false
-		}
-		switch body.value("op") {
-		case "OpAdd":
-			return a + b, true
-		case "OpSub":
-			return a - b, true
-		case "OpMul":
-			return a * b, true
-		case "OpDiv":
-			return a / b, true
-		}
-		return 0, false
-	case "max", "min":
-		vals := asArray(body.value("vals"))
-		if len(vals) == 0 {
-			return 0, false
-		}
-		var all []float64
-		for _, val := range vals {
-			n, ok := constantSeconds(val, variables, seen)
-			if !ok {
-				return 0, false
+		return doAtSeconds(variables[k].object("value"), variables, append(slices.Clone(seen), name))
+	case kind == "math":
+		a, aKnown, aStatic := doAtSeconds(body.object("lhs"), variables, seen)
+		b, bKnown, bStatic := doAtSeconds(body.object("rhs"), variables, seen)
+		if aKnown && bKnown {
+			switch body.value("op") {
+			case "OpAdd":
+				return a + b, true, true
+			case "OpSub":
+				return a - b, true, true
+			case "OpMul":
+				return a * b, true, true
+			case "OpDiv":
+				return a / b, true, true
 			}
-			all = append(all, n)
 		}
-		// Math.max and Math.min give NaN when any value is NaN.
-		if slices.ContainsFunc(all, math.IsNaN) {
-			return math.NaN(), true
+		return 0, false, aStatic && bStatic
+	case kind == "max" || kind == "min":
+		vals := body.list("vals")
+		known, static := len(vals) > 0, len(vals) > 0
+		all := make([]float64, len(vals))
+		for i, val := range vals {
+			var valKnown, valStatic bool
+			all[i], valKnown, valStatic = doAtSeconds(val, variables, seen)
+			known, static = known && valKnown, static && valStatic
 		}
-		if kind == "max" {
-			return slices.Max(all), true
+		switch {
+		case !known:
+			return 0, false, static
+		case slices.ContainsFunc(all, math.IsNaN): // Math.max and Math.min give NaN when any value is NaN.
+			return math.NaN(), true, true
+		case kind == "max":
+			return slices.Max(all), true, true
 		}
-		return slices.Min(all), true
+		return slices.Min(all), true, true
 	}
-	return 0, false
-}
-
-// Whether a Do At value reads nothing of the fight: constants, those durations, and variables and arithmetic on them.
-func isStatic(value any, variables []*lintObject, seen []string) bool {
-	kind := valueKindOf(value)
-	if kind == "" {
-		return false
-	}
-	if kind == "const" || staticDurations[kind] {
-		return true
-	}
-	body, ok := asObject(value.(*lintObject).value(kind))
-	if !ok {
-		return false
-	}
-	switch kind {
-	case "variableRef":
-		name, ok := body.value("name").(string)
-		if !ok || slices.Contains(seen, name) {
-			return false
-		}
-		k := slices.IndexFunc(variables, func(v *lintObject) bool { n, ok := v.value("name").(string); return ok && n == name })
-		return k >= 0 && isStatic(variables[k].value("value"), variables, append(slices.Clone(seen), name))
-	case "math":
-		return isStatic(body.value("lhs"), variables, seen) && isStatic(body.value("rhs"), variables, seen)
-	case "max", "min":
-		vals := asArray(body.value("vals"))
-		return len(vals) > 0 && !slices.ContainsFunc(vals, func(v any) bool { return !isStatic(v, variables, seen) })
-	}
-	return false
+	return 0, false, false
 }
 
 // Seconds rounded to milliseconds, as a time: -1.5s.
@@ -1044,83 +819,62 @@ func formatSeconds(seconds float64) string {
 	return jsNumber(rounded, 64) + "s"
 }
 
-func lintPrepull(apl *lintObject, variables []*lintObject, report lintReport) {
-	var latest *struct {
-		seconds float64
-		row     int
-	}
-	for i, row := range asArray(apl.value("prepullActions")) {
-		r, ok := asObject(row)
-		if !ok || r.value("hide") == true {
+func lintPrepull(apl lintObject, variables []lintObject, report lintReport) {
+	latest, latestRow := 0.0, -1
+	for i, row := range apl.list("prepullActions") {
+		if row.value("hide") == true {
 			continue
 		}
-		var condition any
-		hasCondition := false
-		if action, ok := asObject(r.value("action")); ok {
-			condition, hasCondition = action.get("condition")
-		}
-		if _, isConst := constOf(condition); hasCondition && !absent(condition) && !isConst {
+		if condition := row.object("action").object("condition"); !absent(condition) && condition.kind() != "const" {
 			report([]any{"prepullActions", i, "action", "condition"}, "warning", "prepull-condition", "The sim does not read a prepull row's condition; the action runs at its Do At time.")
 		}
 		path := []any{"prepullActions", i, "doAtValue"}
-		doAt, hasDoAt := r.get("doAtValue")
-		if !hasDoAt || absent(doAt) {
-			if !hasDoAt {
+		if absent(row.object("doAtValue")) {
+			if _, set := row.get("doAtValue"); !set {
 				path = []any{"prepullActions", i}
 			}
 			report(path, "warning", "prepull-no-time", "No Do At time; the sim skips this prepull row.")
 			continue
 		}
-		seconds, ok := constantSeconds(doAt, variables, nil)
+		seconds, known, static := doAtSeconds(row.object("doAtValue"), variables, nil)
 		switch {
-		case !ok:
-			if !isStatic(doAt, variables, nil) {
+		case !known:
+			if !static {
 				report(path, "warning", "prepull-not-time", `Do At is read once, before the fight, where a value of the fight is not there to read and can fail the sim: write a time such as "-1.5s".`)
 			}
-			continue
 		case math.IsNaN(seconds):
 			report(path, "warning", "prepull-not-time", "Do At is not a time; the sim reads it as 0s.")
-			continue
 		case seconds > 0:
 			report(path, "warning", "prepull-positive-time", fmt.Sprintf("Do At %s is after the pull; the sim ignores this prepull row. Prepull times are 0s or earlier.", formatSeconds(seconds)))
-			continue
-		}
-		if latest != nil && seconds < latest.seconds {
-			report(path, "info", "prepull-order", fmt.Sprintf("Runs at %s, before row %d above it at %s: prepull rows run in time order, not list order.", formatSeconds(seconds), latest.row+1, formatSeconds(latest.seconds)))
-		}
-		if latest == nil || seconds >= latest.seconds {
-			latest = &struct {
-				seconds float64
-				row     int
-			}{seconds, i}
+		case latestRow >= 0 && seconds < latest:
+			report(path, "info", "prepull-order", fmt.Sprintf("Runs at %s, before row %d above it at %s: prepull rows run in time order, not list order.", formatSeconds(seconds), latestRow+1, formatSeconds(latest)))
+		default:
+			latest, latestRow = seconds, i
 		}
 	}
 }
 
 func lintConditions(c *collected, report lintReport) {
 	for _, site := range c.values {
-		if !site.condition || !live(site.scope) || absent(site.value) {
+		if !site.condition || site.scope.hidden || absent(site.value) {
 			continue
 		}
 		truth, known := constantTruth(site.value)
 		switch {
+		case known && !truth && site.value.kind() == "const":
+			report(site.path, "info", "never-runs", "Always false: this never runs. The sim still keeps its spell out of automatic cooldown use.")
 		case known && !truth:
-			if _, literal := constOf(site.value); literal {
-				report(site.path, "info", "never-runs", "Always false: this never runs. The sim still keeps its spell out of automatic cooldown use.")
-			} else {
-				report(site.path, "warning", "never-runs", "Always false: this never runs.")
-			}
-			continue
+			report(site.path, "warning", "never-runs", "Always false: this never runs.")
 		case known:
 			report(site.path, "info", "always-true", "Always true: the same as no condition.")
-			continue
-		}
-		for _, part := range constantParts(site.value, site.path, nil) {
-			what := "comparison"
-			if part.kind != "cmp" {
-				what = fmt.Sprintf("\"%s\"", part.kind)
+		default:
+			for _, part := range constantParts(site.value, site.path, nil) {
+				what := "comparison"
+				if part.kind != "cmp" {
+					what = fmt.Sprintf("\"%s\"", part.kind)
+				}
+				report(part.path, "info", "always-true", fmt.Sprintf("This %s is always %t.", what, part.truth))
 			}
-			report(part.path, "info", "always-true", fmt.Sprintf("This %s is always %t.", what, part.truth))
 		}
 	}
 }
@@ -1128,64 +882,36 @@ func lintConditions(c *collected, report lintReport) {
 // A row is shadowed when an earlier live row of the same list takes the same action, with no condition or the same
 // one: the later row is only reached when that action cannot run, and then it cannot either. Prepull rows each run at
 // their own time, and stateful actions keep a state per row, so neither is compared. Earlier rows are kept by their
-// kind and action, so each row is compared only with those that take the same action.
-func lintShadowed(apl *lintObject, report lintReport) {
-	type list struct {
-		rows []any
-		path []any
-	}
-	lists := []list{{asArray(apl.value("priorityList")), []any{"priorityList"}}}
-	for g, group := range asArray(apl.value("groups")) {
-		if o, ok := asObject(group); ok {
-			lists = append(lists, list{asArray(o.value("actions")), []any{"groups", g, "actions"}})
-		}
-	}
+// list, kind and action, so each row is compared only with those that take the same action.
+func lintShadowed(c *collected, report lintReport) {
 	// A row's condition, when it has one the sim builds.
-	conditionOf := func(action *lintObject) (any, bool) {
-		condition, ok := action.get("condition")
-		if !ok || absent(condition) {
-			return nil, false
-		}
-		return condition, true
+	conditionOf := func(action lintObject) (lintObject, bool) {
+		condition := action.object("condition")
+		return condition, !absent(condition)
 	}
-	type earlier struct {
-		action *lintObject
-		index  int
-	}
-	for _, l := range lists {
-		taken := map[string][]earlier{}
-		for i, row := range l.rows {
-			r, ok := asObject(row)
-			if !ok || r.value("hide") == true {
-				continue
-			}
-			action, ok := asObject(r.value("action"))
-			if !ok {
-				continue
-			}
-			kind := actionKindOf(action)
-			if kind == "" || statefulKinds[kind] {
-				continue
-			}
-			condition, hasCondition := conditionOf(action)
-			if truth, known := constantTruth(condition); hasCondition && known && !truth {
-				continue
-			}
-			key := kind + " " + canonicalJSON(action.value(kind))
-			k := slices.IndexFunc(taken[key], func(e earlier) bool {
-				before, has := conditionOf(e.action)
-				truth, known := constantTruth(before)
-				return !has || known && truth || hasCondition && sameJSON(before, condition)
-			})
-			if k >= 0 {
-				by := taken[key][k]
-				how := "the same condition"
-				if _, has := conditionOf(by.action); !has {
-					how = "no condition"
-				}
-				report(at(l.path, i), "warning", "shadowed-row", fmt.Sprintf("%s above takes this action with %s, so this row never runs.", rowLabel(at(l.path, by.index)), how))
-			}
-			taken[key] = append(taken[key], earlier{action, i})
+	taken := map[string][]actionSite{}
+	for _, site := range c.actions {
+		kind := site.action.kind()
+		if site.nested || site.scope.hidden || site.scope.prepull || kind == "" || statefulKinds[kind] {
+			continue
 		}
+		condition, hasCondition := conditionOf(site.action)
+		if truth, known := constantTruth(condition); hasCondition && known && !truth {
+			continue
+		}
+		key := fmt.Sprint(site.scope.group, " ", kind, " ", canonicalJSON(site.action.value(kind)))
+		k := slices.IndexFunc(taken[key], func(e actionSite) bool {
+			before, has := conditionOf(e.action)
+			truth, known := constantTruth(before)
+			return !has || known && truth || hasCondition && canonicalJSON(before) == canonicalJSON(condition)
+		})
+		if k >= 0 {
+			how := "the same condition"
+			if _, has := conditionOf(taken[key][k].action); !has {
+				how = "no condition"
+			}
+			report(site.path[:len(site.path)-1], "warning", "shadowed-row", fmt.Sprintf("%s above takes this action with %s, so this row never runs.", rowLabel(taken[key][k].path), how))
+		}
+		taken[key] = append(taken[key], site)
 	}
 }
