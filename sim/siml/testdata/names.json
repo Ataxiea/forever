@@ -2,110 +2,110 @@
 	"classes": {
 		"druid": {
 			"spell": {
-				"x": {"spellId": 5, "registeredBy": []}
+				"x": { "spellId": 5, "registeredBy": [] }
 			}
 		},
 		"hunter": {
 			"aura": {
-				"rapid_fire": {"spellId": 3045, "registeredBy": ["hunter"]},
-				"steady_shot": {"spellId": 900001, "registeredBy": []},
-				"target_spell": {"spellId": 990205, "registeredBy": ["hunter"]},
-				"x": {"spellId": 5, "registeredBy": []}
+				"rapid_fire": { "spellId": 3045, "registeredBy": ["hunter"] },
+				"steady_shot": { "spellId": 900001, "registeredBy": [] },
+				"target_spell": { "spellId": 990205, "registeredBy": ["hunter"] },
+				"x": { "spellId": 5, "registeredBy": [] }
 			},
 			"pet_aura": {
-				"aura_spell": {"spellId": 990201, "registeredBy": ["hunter"]},
-				"frenzy": {"spellId": 19615, "registeredBy": ["hunter"]},
-				"x": {"spellId": 5, "registeredBy": []}
+				"aura_spell": { "spellId": 990201, "registeredBy": ["hunter"] },
+				"frenzy": { "spellId": 19615, "registeredBy": ["hunter"] },
+				"x": { "spellId": 5, "registeredBy": [] }
 			},
 			"spell": {
-				"aimed_shot": {"spellId": 20904, "rank": 6, "registeredBy": ["hunter"]},
-				"arcane_shot": {"spellId": 14287, "rank": 8, "registeredBy": ["hunter"]},
-				"aspect_of_the_hawk": {"spellId": 25296, "rank": 7, "registeredBy": ["hunter"]},
-				"aura_spell": {"spellId": 990201, "registeredBy": ["hunter"]},
-				"hunter_shot": {"spellId": 900010, "registeredBy": ["hunter"]},
-				"hunters_mark": {"spellId": 14325, "rank": 4, "registeredBy": ["hunter"]},
-				"item_spell": {"spellId": 990202, "registeredBy": ["hunter"]},
-				"mongoose_bite": {"spellId": 14271, "rank": 4, "registeredBy": ["hunter"]},
-				"multi_shot": {"spellId": 2643, "registeredBy": ["hunter"]},
-				"none_spell": {"spellId": 990203, "registeredBy": ["hunter"]},
-				"pet1_spell": {"spellId": 990204, "registeredBy": ["hunter"]},
-				"rapid_fire": {"spellId": 3045, "registeredBy": ["hunter"]},
-				"serpent_sting": {"spellId": 25295, "rank": 9, "registeredBy": ["hunter"]},
-				"spell_5_second_rule": {"spellId": 900004, "registeredBy": []},
-				"steady_shot": {"spellId": 900001, "registeredBy": []},
-				"steady_shot_900002": {"spellId": 900002, "registeredBy": []},
-				"steady_shot_tag1": {"spellId": 900001, "tag": 1, "registeredBy": []},
-				"strider_kick": {"spellId": 1317257, "rank": 1, "registeredBy": ["hunter"]},
-				"summon_hawk": {"spellId": 1293527, "rank": 4, "registeredBy": ["hunter"]},
-				"target_spell": {"spellId": 990205, "registeredBy": ["hunter"]},
-				"volley": {"spellId": 14295, "registeredBy": []},
-				"x": {"spellId": 5, "registeredBy": []}
+				"aimed_shot": { "spellId": 20904, "rank": 6, "registeredBy": ["hunter"] },
+				"arcane_shot": { "spellId": 14287, "rank": 8, "registeredBy": ["hunter"] },
+				"aspect_of_the_hawk": { "spellId": 25296, "rank": 7, "registeredBy": ["hunter"] },
+				"aura_spell": { "spellId": 990201, "registeredBy": ["hunter"] },
+				"hunter_shot": { "spellId": 900010, "registeredBy": ["hunter"] },
+				"hunters_mark": { "spellId": 14325, "rank": 4, "registeredBy": ["hunter"] },
+				"item_spell": { "spellId": 990202, "registeredBy": ["hunter"] },
+				"mongoose_bite": { "spellId": 14271, "rank": 4, "registeredBy": ["hunter"] },
+				"multi_shot": { "spellId": 2643, "registeredBy": ["hunter"] },
+				"none_spell": { "spellId": 990203, "registeredBy": ["hunter"] },
+				"pet1_spell": { "spellId": 990204, "registeredBy": ["hunter"] },
+				"rapid_fire": { "spellId": 3045, "registeredBy": ["hunter"] },
+				"serpent_sting": { "spellId": 25295, "rank": 9, "registeredBy": ["hunter"] },
+				"spell_5_second_rule": { "spellId": 900004, "registeredBy": [] },
+				"steady_shot": { "spellId": 900001, "registeredBy": [] },
+				"steady_shot_900002": { "spellId": 900002, "registeredBy": [] },
+				"steady_shot_tag1": { "spellId": 900001, "tag": 1, "registeredBy": [] },
+				"strider_kick": { "spellId": 1317257, "rank": 1, "registeredBy": ["hunter"] },
+				"summon_hawk": { "spellId": 1293527, "rank": 4, "registeredBy": ["hunter"] },
+				"target_spell": { "spellId": 990205, "registeredBy": ["hunter"] },
+				"volley": { "spellId": 14295, "registeredBy": [] },
+				"x": { "spellId": 5, "registeredBy": [] }
 			},
 			"target_aura": {
-				"hunters_mark": {"spellId": 14325, "registeredBy": ["hunter"]},
-				"steady_shot": {"spellId": 900001, "registeredBy": []},
-				"target_spell": {"spellId": 990205, "registeredBy": ["hunter"]},
-				"x": {"spellId": 5, "registeredBy": []}
+				"hunters_mark": { "spellId": 14325, "registeredBy": ["hunter"] },
+				"steady_shot": { "spellId": 900001, "registeredBy": [] },
+				"target_spell": { "spellId": 990205, "registeredBy": ["hunter"] },
+				"x": { "spellId": 5, "registeredBy": [] }
 			},
 			"target_spell": {
-				"x": {"spellId": 5, "registeredBy": []}
+				"x": { "spellId": 5, "registeredBy": [] }
 			}
 		},
 		"paladin": {
 			"spell": {
-				"retribution_aura": {"spellId": 10301, "rank": 5, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]}
+				"retribution_aura": { "spellId": 10301, "rank": 5, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"] }
 			}
 		},
 		"shaman": {
 			"spell": {
-				"grace_of_air_totem": {"spellId": 25359, "rank": 3, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
-				"mana_spring_totem": {"spellId": 10497, "rank": 4, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
-				"strength_of_earth_totem": {"spellId": 25361, "rank": 5, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]}
+				"grace_of_air_totem": { "spellId": 25359, "rank": 3, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"] },
+				"mana_spring_totem": { "spellId": 10497, "rank": 4, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"] },
+				"strength_of_earth_totem": { "spellId": 25361, "rank": 5, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"] }
 			}
 		},
 		"warrior": {
 			"aura": {
-				"battle_shout": {"spellId": 25289, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"battle_shout_external": {"spellId": 25289, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"battle_stance": {"spellId": 2457, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"berserker_stance": {"spellId": 2458, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"last_stand": {"spellId": 12975, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"overpower": {"spellId": 1282733, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"shield_wall": {"spellId": 871, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"windfury_totem": {"spellId": 10610, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"windfury_totem_10612": {"spellId": 10612, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]}
+				"battle_shout": { "spellId": 25289, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"battle_shout_external": { "spellId": 25289, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"battle_stance": { "spellId": 2457, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"berserker_stance": { "spellId": 2458, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"last_stand": { "spellId": 12975, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"overpower": { "spellId": 1282733, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"shield_wall": { "spellId": 871, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"windfury_totem": { "spellId": 10610, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"windfury_totem_10612": { "spellId": 10612, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"] }
 			},
 			"spell": {
-				"battle_shout": {"spellId": 25289, "rank": 7, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"battle_stance": {"spellId": 2457, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"berserker_rage": {"spellId": 18499, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"berserker_stance": {"spellId": 2458, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"berserking": {"spellId": 20554, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"blood_fury": {"spellId": 20572, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"bloodrage": {"spellId": 2687, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"charge": {"spellId": 11578, "rank": 3, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"cleave": {"spellId": 20569, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"death_wish": {"spellId": 12328, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"execute": {"spellId": 20662, "rank": 5, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"hamstring": {"spellId": 7373, "rank": 3, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"heroic_strike": {"spellId": 25286, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"intercept": {"spellId": 20617, "rank": 3, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"last_stand": {"spellId": 12975, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"mortal_strike": {"spellId": 21553, "rank": 4, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"overpower": {"spellId": 11585, "rank": 4, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"recklessness": {"spellId": 1719, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"rend": {"spellId": 11574, "rank": 7, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"retaliation": {"spellId": 20230, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"shield_wall": {"spellId": 871, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"slam": {"spellId": 11605, "rank": 5, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"spearing_strike": {"spellId": 1310222, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"sunder_armor": {"spellId": 11597, "rank": 5, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"sweeping_strikes": {"spellId": 12723, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"whirlwind": {"spellId": 1680, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"]}
+				"battle_shout": { "spellId": 25289, "rank": 7, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"battle_stance": { "spellId": 2457, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"berserker_rage": { "spellId": 18499, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"berserker_stance": { "spellId": 2458, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"berserking": { "spellId": 20554, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"blood_fury": { "spellId": 20572, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"bloodrage": { "spellId": 2687, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"charge": { "spellId": 11578, "rank": 3, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"cleave": { "spellId": 20569, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"death_wish": { "spellId": 12328, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"execute": { "spellId": 20662, "rank": 5, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"hamstring": { "spellId": 7373, "rank": 3, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"heroic_strike": { "spellId": 25286, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"intercept": { "spellId": 20617, "rank": 3, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"last_stand": { "spellId": 12975, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"mortal_strike": { "spellId": 21553, "rank": 4, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"overpower": { "spellId": 11585, "rank": 4, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"recklessness": { "spellId": 1719, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"rend": { "spellId": 11574, "rank": 7, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"retaliation": { "spellId": 20230, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"shield_wall": { "spellId": 871, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"slam": { "spellId": 11605, "rank": 5, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"spearing_strike": { "spellId": 1310222, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"sunder_armor": { "spellId": 11597, "rank": 5, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"sweeping_strikes": { "spellId": 12723, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"whirlwind": { "spellId": 1680, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"] }
 			},
 			"target_aura": {
-				"rend": {"spellId": 11574, "registeredBy": ["dps_warrior", "protection_warrior"]},
-				"sunder_armor": {"spellId": 11597, "registeredBy": ["dps_warrior", "protection_warrior"]}
+				"rend": { "spellId": 11574, "registeredBy": ["dps_warrior", "protection_warrior"] },
+				"sunder_armor": { "spellId": 11597, "registeredBy": ["dps_warrior", "protection_warrior"] }
 			}
 		}
 	},
@@ -156,7 +156,25 @@
 		},
 		"sample": {
 			"effectId": 4242,
-			"slots": ["head", "neck", "shoulder", "back", "chest", "wrist", "hands", "waist", "legs", "feet", "finger1", "finger2", "trinket1", "trinket2", "main_hand", "off_hand", "ranged"]
+			"slots": [
+				"head",
+				"neck",
+				"shoulder",
+				"back",
+				"chest",
+				"wrist",
+				"hands",
+				"waist",
+				"legs",
+				"feet",
+				"finger1",
+				"finger2",
+				"trinket1",
+				"trinket2",
+				"main_hand",
+				"off_hand",
+				"ranged"
+			]
 		},
 		"weapon_crusader": {
 			"effectId": 1900,
@@ -211,21 +229,34 @@
 	},
 	"shared": {
 		"aura": {
-			"sample": {"spellId": 4242, "registeredBy": []}
+			"sample": { "spellId": 4242, "registeredBy": [] }
 		},
 		"pet_aura": {
-			"sample": {"spellId": 4242, "registeredBy": []}
+			"sample": { "spellId": 4242, "registeredBy": [] }
 		},
 		"spell": {
-			"jom_gabbar": {"spellId": 29602, "registeredBy": ["dps_warrior", "elemental_shaman", "enhancement_shaman", "holy_paladin", "hunter", "protection_paladin", "protection_warrior", "restoration_shaman", "retribution_paladin"]},
-			"sample": {"spellId": 4242, "registeredBy": []},
-			"shared_shot": {"spellId": 900010, "registeredBy": ["hunter"]}
+			"jom_gabbar": {
+				"spellId": 29602,
+				"registeredBy": [
+					"dps_warrior",
+					"elemental_shaman",
+					"enhancement_shaman",
+					"holy_paladin",
+					"hunter",
+					"protection_paladin",
+					"protection_warrior",
+					"restoration_shaman",
+					"retribution_paladin"
+				]
+			},
+			"sample": { "spellId": 4242, "registeredBy": [] },
+			"shared_shot": { "spellId": 900010, "registeredBy": ["hunter"] }
 		},
 		"target_aura": {
-			"sample": {"spellId": 4242, "registeredBy": []}
+			"sample": { "spellId": 4242, "registeredBy": [] }
 		},
 		"target_spell": {
-			"sample": {"spellId": 4242, "registeredBy": []}
+			"sample": { "spellId": 4242, "registeredBy": [] }
 		}
 	},
 	"suffixes": {
