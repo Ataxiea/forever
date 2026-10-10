@@ -285,3 +285,11 @@ func TestDatabaseNamesAndIcons(t *testing.T) {
 		t.Error("no items")
 	}
 }
+
+// Whether a lies before b.
+func before(a, b Position) bool {
+	return a.Line < b.Line || a.Line == b.Line && a.Character < b.Character
+}
+
+// Whether r holds p, its ends included.
+func contains(r Range, p Position) bool { return !before(p, r.Start) && !before(r.End, p) }

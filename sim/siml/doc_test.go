@@ -122,17 +122,6 @@ func TestDocOffsets(t *testing.T) {
 	}
 }
 
-func TestDocSections(t *testing.T) {
-	d := Analyze(splicePath, []byte(docText), corpusNames(t), nil)
-	sections := d.Sections()
-	if len(sections) != 2 || sections[0].Name != "apl" || sections[0].Header != nil || sections[1].Name != "priority" {
-		t.Fatalf("the sections are %+v", sections)
-	}
-	if want := (Range{Position{6, 1}, Position{8, 18}}); sections[1].Range != want || *sections[1].Header != (Range{Position{6, 1}, Position{6, 10}}) {
-		t.Errorf("priority: is at %v, its header at %v", sections[1].Range, *sections[1].Header)
-	}
-}
-
 var refsText = textLines(
 	"siml 1",
 	"spec hunter",

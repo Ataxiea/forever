@@ -20,15 +20,6 @@ type PathSpan struct {
 	Range Range
 }
 
-// A section of a file: from its header, or from the top of a section file for the section its name implies, to its
-// last statement.
-type DocSection struct {
-	Name   string
-	Group  string // The group a group "Name": header names.
-	Header *Range // Nil for the section a section file implies when no header names it.
-	Range  Range  // Empty, at its header or the top, when it holds no statement.
-}
-
 // A file's text, read. Its spans and the paths of its names lead into the loader's message (SPEC.md §1): the
 // APLRotation of an x.apl.siml, the EquipmentSpec of an x.gear.siml, and the IndividualSimSettings of any other file.
 type Doc struct {
@@ -167,34 +158,6 @@ func (d *Doc) RotationJSON() json.RawMessage {
 		return nil
 	}
 	return json.RawMessage(d.ix.jsonText(d.file.Rotation().ProtoReflect()))
-}
-
-// The sections in file order.
-func (d *Doc) Sections() []DocSection {
-	if d.typed == nil {
-		return nil
-	}
-	out := make([]DocSection, len(d.typed.tree.sections))
-	for i, s := range d.typed.tree.sections {
-		at := span{}
-		if s.header != nil {
-			at = s.header.span
-			r := d.rangeOf(at)
-			out[i].Header = &r
-		}
-		end := at.end
-		for _, b := range s.body {
-			end = max(end, b.base().end)
-		}
-		if s.header == nil && len(s.body) > 0 {
-			at.start = s.body[0].base().start
-		}
-		out[i].Name, out[i].Range = s.name, d.rangeOf(span{at.start, end})
-		if s.group != nil {
-			out[i].Group = s.group.value
-		}
-	}
-	return out
 }
 
 // The position of a byte offset of Text.

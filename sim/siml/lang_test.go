@@ -170,7 +170,7 @@ func TestQuickFixSkipsListOperand(t *testing.T) {
 	}
 }
 
-func TestIsIdentifierFor(t *testing.T) {
+func TestIdentifierRefusal(t *testing.T) {
 	for _, c := range []struct {
 		kind, name string
 		ok         bool
@@ -181,8 +181,8 @@ func TestIsIdentifierFor(t *testing.T) {
 		{"group", "a}b", true},
 		{"sequence", "", false},
 	} {
-		if got := IsIdentifierFor(c.kind, c.name); got != c.ok {
-			t.Errorf("IsIdentifierFor(%q, %q) = %v", c.kind, c.name, got)
+		if got := identifierRefusal(c.kind, c.name) == ""; got != c.ok {
+			t.Errorf("identifierRefusal(%q, %q) is empty: %v", c.kind, c.name, got)
 		}
 	}
 }

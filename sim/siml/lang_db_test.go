@@ -496,8 +496,8 @@ func TestOutlineAndFolding(t *testing.T) {
 	if len(symbols[1].Children) != 1 || symbols[1].Children[0].Name != "S" {
 		t.Errorf("priority holds %v", symbols[1].Children)
 	}
-	if !slices.ContainsFunc(d.Folding(), func(r Range) bool { return r.Start.Line == 6 && r.End.Line == 10 }) {
-		t.Errorf("no fold over the priority section: %v", d.Folding())
+	if !slices.ContainsFunc(d.Folds(), func(f Fold) bool { return f.StartLine == 6 && f.EndLine == 10 }) {
+		t.Errorf("no fold over the priority section: %v", d.Folds())
 	}
 }
 

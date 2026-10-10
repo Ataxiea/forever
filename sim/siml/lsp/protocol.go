@@ -156,14 +156,6 @@ func toTextEdits(edits []siml.TextEdit) []TextEdit {
 	return out
 }
 
-// Whether a lies before b.
-func before(a, b Position) bool {
-	return a.Line < b.Line || a.Line == b.Line && a.Character < b.Character
-}
-
-// Whether r holds p, its ends included.
-func contains(r Range, p Position) bool { return !before(p, r.Start) && !before(r.End, p) }
-
 func completionItem(c siml.Completion) CompletionItem {
 	item := CompletionItem{
 		Label:      c.Label,

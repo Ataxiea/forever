@@ -385,17 +385,6 @@ func sameOccurrence(a occurrence, aFile string, b occurrence, bFile string) bool
 	return a.kind == "group" || a.kind == "sequence" || a.scope == b.scope
 }
 
-func (d *Doc) publicOccurrence(o occurrence) Occurrence {
-	path := d.path
-	if o.file != "" {
-		path = o.file
-	}
-	return Occurrence{
-		Kind: o.kind, Name: o.name, Range: d.rangeOf(o.span), Declaration: o.definition, Path: path,
-		Group: o.scope.group, InGroup: o.scope.inGroup, Resolved: o.resolved,
-	}
-}
-
 func (d *Doc) occurrenceAt(offset int) (occurrence, bool) {
 	for _, o := range d.occurrences() {
 		if o.holds(offset) {
@@ -611,10 +600,6 @@ func spelled(kind, name string) string {
 	return jsonString(name)
 }
 
-// Whether name can be written as a name of kind (variable, placeholder, group or sequence): it is not empty, and a
-// variable's or placeholder's holds no } or line break, which no spelling of one writes.
-func IsIdentifierFor(kind, name string) bool { return identifierRefusal(kind, name) == "" }
-
 func identifierRefusal(kind, name string) string {
 	if name == "" {
 		return "A name cannot be empty."
@@ -683,15 +668,6 @@ func (d *Doc) Rename(at Position, newName string) ([]FileEdits, error) {
 		out[i].Edits = append(out[i].Edits, TextEdit{Range: f.doc.rangeOf(f.o.span), NewText: spelled(f.o.kind, newName)})
 	}
 	return out, nil
-}
-
-// Groups, sequences, variables and placeholders: each declaration and use, in file order.
-func (d *Doc) occurrencesPublic() []Occurrence {
-	var out []Occurrence
-	for _, o := range d.occurrences() {
-		out = append(out, d.publicOccurrence(o))
-	}
-	return out
 }
 
 // The sections and the group's and file's variables, for the outline.
