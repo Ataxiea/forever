@@ -3,9 +3,7 @@ import './style.css';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import type { AplDatabase, Named } from '../db';
-import type { LintFinding } from '../lint/index';
-import type { AplEdit, FromPanel, PanelState, Registered, ToPanel } from '../protocol';
+import type { AplDatabase, AplEdit, Finding, FromPanel, Named, PanelState, Registered, ToPanel } from '../protocol';
 import { applyEdit, shiftKeys } from './apply';
 import { CommitInput } from './commit_input';
 import { DbContext } from './db';
@@ -154,7 +152,7 @@ function SimDetails() {
 }
 
 // The lint findings for the file, which rows show as markers.
-const FindingsContext = createContext<LintFinding[]>([]);
+const FindingsContext = createContext<Finding[]>([]);
 
 const RANK = { error: 0, warning: 1, info: 2 } as const;
 
@@ -177,7 +175,7 @@ function RowFindings({ rowKey }: { rowKey: string }) {
 function FindingsBadge() {
 	const findings = useContext(FindingsContext);
 	if (findings.length === 0) return null;
-	const count = (severity: LintFinding['severity']) => findings.filter(f => f.severity === severity).length;
+	const count = (severity: Finding['severity']) => findings.filter(f => f.severity === severity).length;
 	return (
 		<span className="badge" title={findings.map(f => `${f.path.join('/')}: ${f.message}`).join('\n')}>
 			{[
@@ -634,7 +632,7 @@ interface Doc {
 	version: number;
 	rotation: JsonObject;
 	readOnly?: string;
-	findings: LintFinding[];
+	findings: Finding[];
 }
 
 function Root() {

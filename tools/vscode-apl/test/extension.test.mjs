@@ -2,23 +2,28 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { before, test } from 'node:test';
+import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { activateBuilt, fakeVscode } from './vscode.mjs';
+import { activateBuilt, fakeVscode, serverRunning } from './vscode.mjs';
 
-// The built extension's host, run against a stand-in vscode module: the panel's messages go in as its page would send
-// them, and the documents are in memory.
+// The extension's host, run against a stand-in vscode module and the SIML server it builds: the panel's messages go in
+// as its page would send them, and the documents are in memory.
 
 const fixtures = fileURLToPath(new URL('fixtures/', import.meta.url));
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 let stand;
+let extension;
 
 before(async () => {
 	stand = fakeVscode();
-	await activateBuilt(stand);
+	extension = await activateBuilt(stand);
+	await reopen('default.apl.siml');
+	await serverRunning(stand);
 });
+
+after(() => extension.deactivate());
 
 // A fixture's document read from disk again, the one an earlier test left open closed.
 async function reopen(file) {
@@ -68,9 +73,12 @@ function changedLines(before, after) {
 	};
 }
 
-test('the extension registers every contributed command and the panel before it starts the language server', () => {
+test('the extension registers every contributed command and the panel, and starts the server it built', () => {
 	assert.deepEqual([...stand.state.commands.keys()].sort(), manifest.contributes.commands.map(c => c.command).sort());
 	assert.deepEqual(stand.state.serializers, ['wowsims-apl.editor']);
+	const [client] = stand.state.clients;
+	assert.deepEqual(client.server.args, ['siml', 'lsp']);
+	assert.equal(client.server.options.cwd, fileURLToPath(new URL('../../../', import.meta.url)).replace(/[\\/]$/, ''));
 });
 
 test('the panel opens on an .apl.siml and reads its rotation, its findings and the names its spec registers', async () => {
@@ -83,6 +91,7 @@ test('the panel opens on an .apl.siml and reads its rotation, its findings and t
 	assert.ok(Array.isArray(rotation.findings));
 	const init = panel.posted.find(m => m.type === 'init');
 	assert.equal(init.fileName, 'default.apl.siml');
+	assert.equal(init.db.spells[71]?.[0], 'Defensive Stance');
 	const registered = panel.posted.find(m => m.type === 'registered').registered;
 	assert.equal(registered.status, 'ready');
 	assert.equal(registered.spec, 'hunter');
@@ -245,21 +254,23 @@ test('Insert Pattern puts no condition on a prepull row, whose condition the sim
 	panel.dispose();
 });
 
-test("the panel's page loads its bundle, or names the command that builds it", async () => {
-	const extension = mkdtempSync(join(tmpdir(), 'wowsims-apl-'));
+test("the panel's page loads its bundle, or names the command that builds it until the panel opens again", async () => {
+	const installed = mkdtempSync(join(tmpdir(), 'wowsims-apl-'));
+	const other = fakeVscode();
+	const otherExtension = await activateBuilt(other, installed);
 	try {
-		const other = fakeVscode();
-		await activateBuilt(other, extension);
 		const page = async file => {
 			const document = await other.vscode.workspace.openTextDocument(other.vscode.Uri.file(`${fixtures}${file}`));
 			await other.state.commands.get('wowsims-apl.openToSide')(document.uri);
 			return other.state.panels.at(-1).webview.html;
 		};
 		assert.match(await page('default.apl.siml'), /run <code>make vscode-apl<\/code>/);
-		mkdirSync(join(extension, 'out'));
-		writeFileSync(join(extension, 'out', 'webview.js'), '');
-		assert.match(await page('hawks.apl.siml'), /<script nonce="[^"]+" src="[^"]+webview\.js"><\/script>/);
+		mkdirSync(join(installed, 'out'));
+		writeFileSync(join(installed, 'out', 'webview.js'), '');
+		assert.match(await page('default.apl.siml'), /<script nonce="[^"]+" src="[^"]+webview\.js"><\/script>/, 'the same panel, its page built again');
+		assert.equal(other.state.panels.length, 1);
 	} finally {
-		rmSync(extension, { recursive: true, force: true });
+		await otherExtension.deactivate();
+		rmSync(installed, { recursive: true, force: true });
 	}
 });

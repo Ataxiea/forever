@@ -3,20 +3,18 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdir
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
 
-import { simlGrammarText } from './grammar.mjs';
+import { buildPanel, bundleExtension } from './bundle.mjs';
 import { manifestText } from './manifest.mjs';
-import { buildPanel } from './panel.mjs';
 
 const source = dirname(dirname(fileURLToPath(import.meta.url)));
 const repository = join(source, '..', '..');
 const installed = join(repository, '.vscode', 'extensions', 'wowsims-apl');
-const schemaPath = join(repository, 'ui', 'generated', 'siml', 'schema.json');
+// The committed outputs, which the extension's sources decide; `--check` holds the committed build to them.
+const outputs = ['package.json', 'README.md', 'language-configuration.json', join('out', 'extension.js')];
+// The grammar is committed too, but written by `go run ./cmd/wowsimcli siml grammar` (the makefile's vscode-apl rule)
+// and checked by that command's test.
 const grammar = join('syntaxes', 'siml.tmLanguage.json');
-// The committed outputs, which the extension's sources, the SIML module and the schema decide; `--check` holds the
-// committed build to them.
-const outputs = ['package.json', 'README.md', 'language-configuration.json', grammar, join('out', 'extension.js'), join('out', 'lsp.js')];
 // The panel's page also takes in the generated protos, the site's APL model and its English strings, so it is built
 // here but not committed (.gitignore): a change to those needs no extension rebuild in the same commit.
 const panel = [join('out', 'webview.js'), join('out', 'webview.css')];
@@ -32,40 +30,17 @@ function typecheck(project) {
 	}
 }
 
-// A Node bundle of one entry: the extension, which VS Code loads, or the language server it starts.
-function nodeBundle(entry, outfile) {
-	return build({
-		absWorkingDir: source,
-		entryPoints: [entry],
-		outfile,
-		bundle: true,
-		platform: 'node',
-		format: 'cjs',
-		target: 'node20',
-		external: ['vscode'],
-		minify: true,
-		logLevel: 'warning',
-	});
-}
-
 async function buildInto(target) {
-	if (!existsSync(schemaPath)) {
-		console.error(`${relative(process.cwd(), schemaPath)} is missing: run make ui/generated/siml/schema.json`);
-		process.exit(1);
-	}
 	typecheck('tsconfig.json');
 	typecheck('tsconfig.webview.json');
 
-	rmSync(target, { recursive: true, force: true });
+	rmSync(join(target, 'out'), { recursive: true, force: true });
 	mkdirSync(join(target, 'out'), { recursive: true });
-	await nodeBundle('src/extension.ts', join(target, 'out', 'extension.js'));
-	await nodeBundle('src/lsp.ts', join(target, 'out', 'lsp.js'));
+	await bundleExtension(join(target, 'out', 'extension.js'));
 	await buildPanel(join(target, 'out'));
 	writeFileSync(join(target, 'package.json'), manifestText(JSON.parse(readFileSync(join(source, 'package.json'), 'utf8'))));
 	copyFileSync(join(source, 'README.md'), join(target, 'README.md'));
 	copyFileSync(join(source, 'language-configuration.json'), join(target, 'language-configuration.json'));
-	mkdirSync(join(target, 'syntaxes'), { recursive: true });
-	writeFileSync(join(target, grammar), simlGrammarText(JSON.parse(readFileSync(schemaPath, 'utf8'))));
 }
 
 function filesUnder(dir) {
@@ -82,7 +57,7 @@ if (process.argv.includes('--check')) {
 			const committed = join(installed, file);
 			return !existsSync(committed) || !readFileSync(committed).equals(readFileSync(join(fresh, file)));
 		});
-		const extra = existsSync(installed) ? filesUnder(installed).filter(file => !outputs.includes(file) && !panel.includes(file)) : [];
+		const extra = existsSync(installed) ? filesUnder(installed).filter(file => !outputs.includes(file) && !panel.includes(file) && file !== grammar) : [];
 		if (stale.length > 0 || extra.length > 0) {
 			const where = relative(process.cwd(), installed);
 			for (const file of stale) {

@@ -524,6 +524,7 @@ func (f *typedFile) readUses(u *uses) usedFiles {
 		diags := file.tree.lines.diagnostics(path, file.diags)
 		if i := slices.IndexFunc(diags, func(d Diagnostic) bool { return d.Severity == Error }); i >= 0 {
 			t.report(diags[i].Code, fmt.Sprintf("%s:%d:%d: %s", path, diags[i].Start.Line, diags[i].Start.Col, diags[i].Message), at)
+			t.diags[len(t.diags)-1].related = &RelatedLocation{Path: path, Range: Range{diags[i].Start, diags[i].End}}
 			continue
 		}
 		if f.spec != nil && file.spec != nil && f.spec.Field != file.spec.Field {

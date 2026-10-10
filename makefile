@@ -404,8 +404,9 @@ webworkers:
 vscode-spelldata:
 	cd tools/vscode-spelldata && npm ci --no-audit --no-fund && npm run build
 
-# The SIML extension: its grammar is generated from the SIML schema, and its panel bundles the site's APL model with the
-# generated protos and the root packages. The language server reads the schema and the name table at run time.
+# The SIML extension: its panel bundles the site's APL model with the generated protos and the root packages, and
+# wowsimcli writes its grammar. The language server it starts, `wowsimcli siml lsp`, reads the name table at run time.
 .PHONY: vscode-apl
-vscode-apl: ui/generated/proto/api.ts ui/generated/siml/schema.json sim/siml/names.json node_modules
+vscode-apl: ui/generated/proto/api.ts sim/siml/names.json node_modules
 	cd tools/vscode-apl && npm ci --no-audit --no-fund && npm run build
+	go run ./cmd/wowsimcli siml grammar -o .vscode/extensions/wowsims-apl/syntaxes/siml.tmLanguage.json

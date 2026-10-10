@@ -1,8 +1,8 @@
 # Editing rotations in VS Code
 
 A rotation is an `.apl.siml` file, the text form `sim/siml/SPEC.md` describes. `make vscode-apl` builds the workspace
-extension, whose language server checks, completes, explains and formats every `*.siml` file; see
-`tools/vscode-apl/README.md`.
+extension, which starts the SIML language server (`wowsimcli siml lsp`) that checks, completes, explains and formats
+every `*.siml` file; see `tools/vscode-apl/README.md`.
 
 A rotation with one prepull cast and one priority row looks like
 

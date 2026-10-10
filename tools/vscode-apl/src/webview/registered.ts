@@ -1,7 +1,6 @@
 import type { ACTION_ID_SET } from '@features/apl/model/action_id_sets';
 import { createContext, useContext } from 'react';
 
-import { auraNamespaceOf } from '../lang/siml';
 import type { ActionIdJson, Registered, RegisteredName } from '../protocol';
 import { isObject, type Json } from './model';
 
@@ -24,8 +23,14 @@ export function idKey(json: Json | ActionIdJson | undefined): string | undefined
 const ITEM_ONLY = new Set<ACTION_ID_SET>(['potions', 'conjured_items']);
 const ITEM_SETS = new Set<ACTION_ID_SET>(['spells', 'castable_spells']);
 
-// What an ActionID field offers, in the namespace the parser reads its name in (`fieldNamespace` in
-// ui/sim/siml/names.ts): an aura id among the auras of the unit the field's JSON names (the player's with none), a
+// The auras a unit of `type` (a UnitReference type's JSON name) carries, as the parser reads an aura's name on it: the
+// pet's, the player's (with no unit too), or the target's.
+function auraNamespaceOf(type: string | undefined): 'aura' | 'pet_aura' | 'target_aura' {
+	if (type === 'Pet') return 'pet_aura';
+	return type === undefined || ['Self', 'Player', 'AllPlayers', 'Unknown'].includes(type) ? 'aura' : 'target_aura';
+}
+
+// What an ActionID field offers, in the namespace the parser reads its name in (SPEC.md §7.2): an aura id among the auras of the unit the field's JSON names (the player's with none), a
 // boss spell's id among the target's spells, and any other id among the spec's spells, with the items with a use
 // where the site's set takes one. Each prints as its name.
 export function offeredFor(

@@ -1,9 +1,45 @@
-import type { AplDatabase } from './db';
-import type { AplEdit, JsonObject, JsonPath } from './lang/siml.ts';
-import type { LintFinding } from './lint/index';
-import type { SimResult } from './sim/tool';
+// What the extension and the panel's page send each other, and the shapes of the SIML server's requests they carry
+// (sim/siml/lsp/panel.go, patterns.go and sim.go).
 
-export type { AplEdit, JsonObject, JsonPath };
+export type JsonPath = Array<string | number>;
+export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
+export interface JsonObject {
+	[key: string]: JsonValue;
+}
+
+// An edit of the rotation's JSON, which siml/splice makes in the text.
+export type AplEdit =
+	| { op: 'set'; path: JsonPath; value?: unknown } // No value removes the property or element.
+	| { op: 'insert'; path: JsonPath; index: number; value: unknown } // `path` names the array.
+	| { op: 'move'; path: JsonPath; from: number; to: number }; // Within one array; `to` is the index the element ends at.
+
+// Zero-based, as the protocol counts.
+export interface Range {
+	start: { line: number; character: number };
+	end: { line: number; character: number };
+}
+
+export interface TextEdit {
+	range: Range;
+	newText: string;
+}
+
+// A diagnostic of the file, at the rotation path of the text it is about.
+export interface Finding {
+	path: JsonPath;
+	severity: 'error' | 'warning' | 'info';
+	code: string;
+	message: string;
+}
+
+// What the panel shows for an id: the name and the icon file name from the database.
+export type Named = [name: string, icon: string];
+
+// siml/database: the spell and item names and icons of the repository's database.
+export interface AplDatabase {
+	spells: Record<number, Named>;
+	items: Record<number, Named>;
+}
 
 // An ActionID as JSON: a spell's id, tag and rank, an item's id, or another action.
 export interface ActionIdJson {
@@ -35,6 +71,55 @@ export type Registered =
 	| { status: 'ready'; spec: string; registered: RegisteredSpec } // `spec` is the field of Player's spec oneof.
 	| { status: 'unavailable'; reason: string };
 
+// siml/rotation: the rotation an .apl.siml reads as at a document version. `rotation` is left out while the text has
+// errors; `spans` are the text of each JSON path; `used` the files its `use` lines read.
+export interface RotationResult {
+	version: number;
+	rotation?: JsonObject;
+	readOnly?: string;
+	className?: string;
+	findings: Finding[];
+	spans: { path: JsonPath; range: Range }[];
+	used: string[];
+	registered: Registered;
+}
+
+// siml/patterns: a common shape Insert Pattern offers, and the values it asks for.
+export interface AplPlaceholder {
+	name: string;
+	label: string;
+	kind: 'spell' | 'aura' | 'target_aura' | 'duration' | 'number' | 'group' | 'variable' | 'choice';
+	default?: unknown;
+	optional?: boolean;
+	existing?: boolean;
+	options?: string[];
+}
+
+export interface AplPattern {
+	id: string;
+	label: string;
+	description: string;
+	target: 'row' | 'condition' | 'group' | 'prepull';
+	placeholders: AplPlaceholder[];
+}
+
+// siml/sim: the result `wowsimcli siml sim` writes, rows keyed by their JSON path joined with '/'.
+export interface SimRun {
+	dps: { mean: number; stdev: number };
+	iterations: number;
+	duration: number; // Average iteration length in seconds.
+	rows: Record<string, { executions: number; hidden?: boolean }>;
+	spells: { id: ActionIdJson; name?: string; dps: number; casts: number; pet?: string }[];
+	timeline?: { timeMs: number; path: string; label?: string; via?: string }[];
+}
+
+export interface SimResult extends SimRun {
+	character: { source: string; race: string; talents: string; gear?: string; warnings?: string[] };
+	compare?: SimRun;
+	difference?: { delta: number; percent: number; stderr: number; z: number; significant: boolean }; // Set with compare.
+	baseline?: 'saved' | 'HEAD'; // What a compare's base was.
+}
+
 // What the extension sends the panel.
 export type ToPanel =
 	| { type: 'init'; db: AplDatabase; fileName: string; uri: string }
@@ -48,7 +133,7 @@ export type ToPanel =
 			rotation?: JsonObject;
 			readOnly?: string;
 			className?: string;
-			findings: LintFinding[];
+			findings: Finding[];
 	  }
 	| { type: 'cursor'; path: JsonPath }
 	| { type: 'registered'; registered: Registered }

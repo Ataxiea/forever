@@ -142,8 +142,8 @@ states the rule in `SPEC.md`, and adds a corpus case under `sim/siml/testdata/` 
 `TestAgreement` checks that the two implementations give the same results over it and over every committed file. A
 change to one implementation that leaves the other behind, or one with no case, is a finding. So is a change that gives
 existing text another meaning without a new `siml` major version (`SPEC.md` §14).
-A grammar change also updates the editor's partial parser, `tools/vscode-apl/src/lang/context.ts`, which reads a
-statement up to the cursor for completion; `cd tools/vscode-apl && npm test` runs its cases.
+A grammar change also updates the editor's partial parser, `sim/siml/lang_context.go`, which reads a statement up to
+the cursor for completion; `go test --tags=with_db ./sim/siml/...` runs its cases (`lang_db_test.go`).
 
 ```
 go test ./sim/siml/...                     # the corpus and the agreement test; no database needed

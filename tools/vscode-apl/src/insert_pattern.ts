@@ -1,12 +1,8 @@
 import * as vscode from 'vscode';
 
-import { isAplSiml, readOnlyReason, spliceApl } from './apl';
-import { aplDatabase } from './db';
-import { documentFor, readDocument, vscodeRange } from './host';
-import { pathAt } from './lang/document';
-import type { JsonObject, JsonPath, RegisteredName } from './protocol';
-import { registeredFor } from './registered';
-import { APL_PATTERNS, type AplPattern, type AplPlaceholder, patternEdits, placementAt } from './snippets/patterns';
+import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, spansOf } from './host';
+import type { AplDatabase, AplPattern, AplPlaceholder, JsonObject, JsonPath, Registered, RegisteredName, TextEdit } from './protocol';
+import { request } from './server';
 
 const SECONDS = /^-?\d+(\.\d+)?(ms|s)?$/;
 
@@ -80,13 +76,9 @@ async function ask(placeholder: AplPlaceholder, names: Names, taken: { groups: s
 	return answer === undefined && placeholder.optional ? null : answer;
 }
 
-// The spec's names for the pickers, each with its ActionID, tag and rank included.
-function namePicks(document: vscode.TextDocument): Names {
-	const read = readDocument(document);
-	const registered = 'error' in read ? undefined : registeredFor(read);
-	if (registered?.status !== 'ready') return { spell: [], aura: [], target_aura: [] };
-	const root = 'error' in read ? undefined : read.ws.root;
-	const db = root ? aplDatabase(root) : { spells: {}, items: {} };
+// The spec's names for the pickers, each with its ActionID, tag and rank included, and its game name from the database.
+function namePicks(registered: Registered, db: AplDatabase): Names {
+	if (registered.status !== 'ready') return { spell: [], aura: [], target_aura: [] };
 	const picks = (entries: RegisteredName[]) =>
 		entries.map(entry => ({
 			label: (entry.id.spellId !== undefined && db.spells[entry.id.spellId]?.[0]) || entry.name,
@@ -97,48 +89,45 @@ function namePicks(document: vscode.TextDocument): Names {
 	return { spell: picks(spells), aura: picks(auras), target_aura: picks(targetAuras) };
 }
 
+// Whether a path is in a priority or group row, which a condition pattern goes onto.
+const onRow = (path: JsonPath) =>
+	(path[0] === 'priorityList' && typeof path[1] === 'number' && path[1] >= 0) ||
+	(path[0] === 'groups' && path[2] === 'actions' && typeof path[3] === 'number' && path[3] >= 0);
+
 // Inserts a pattern at a rotation path: after the row it is in, or onto that row's condition. The values are asked
-// first; the text is read again after, and a pattern whose place the text moved meanwhile is not inserted.
+// first; the server places the pattern in the text as it read it then, and refuses one whose text moved meanwhile.
 export async function insertPattern(uri: vscode.Uri, path: JsonPath): Promise<void> {
-	const pattern = (
-		await vscode.window.showQuickPick(
-			APL_PATTERNS.map(p => ({ label: p.label, detail: p.description, description: p.target, pattern: p })),
-			{ title: 'Insert APL pattern', matchOnDetail: true },
-		)
-	)?.pattern;
-	if (!pattern) return;
-	const placement = placementAt(path, pattern.target);
-	if (pattern.target === 'condition' && !placement.condition) {
-		void vscode.window.showInformationMessage(`${pattern.label} is a condition: put the cursor on a priority or group row to add it there.`);
-		return;
+	try {
+		const patterns = await request<AplPattern[]>(uri, 'siml/patterns', {});
+		const pattern = (
+			await vscode.window.showQuickPick(
+				patterns.map(p => ({ label: p.label, detail: p.description, description: p.target, pattern: p })),
+				{ title: 'Insert APL pattern', matchOnDetail: true },
+			)
+		)?.pattern;
+		if (!pattern) return;
+		if (pattern.target === 'condition' && !onRow(path)) {
+			void vscode.window.showInformationMessage(`${pattern.label} is a condition: put the cursor on a priority or group row to add it there.`);
+			return;
+		}
+		const document = await documentFor(uri);
+		const version = document.version;
+		const read = await readRotation(document);
+		if (read.readOnly) {
+			void vscode.window.showWarningMessage(`Cannot insert a pattern: ${read.readOnly}`);
+			return;
+		}
+		const rotation: JsonObject = read.rotation ?? {};
+		const names = (list: unknown) => (Array.isArray(list) ? list.map(item => String((item as JsonObject)?.name ?? '')) : []);
+		const taken = { groups: names(rotation.groups), variables: names(rotation.valueVariables) };
+		const db = await request<AplDatabase>(uri, 'siml/database', { uri: uri.toString() });
+		const values = await askAll(pattern, namePicks(read.registered, db), taken);
+		if (!values) return;
+		const { edits } = await request<{ edits: TextEdit[] }>(uri, 'siml/insertPattern', { uri: uri.toString(), version, id: pattern.id, values, path });
+		await applyEdits(await documentFor(uri), edits);
+	} catch (e) {
+		void vscode.window.showWarningMessage((e as Error).message);
 	}
-
-	let document = await documentFor(uri);
-	const version = document.version;
-	const first = readDocument(document);
-	if ('error' in first || readOnlyReason(first)) {
-		void vscode.window.showWarningMessage(`Cannot insert a pattern: ${'error' in first ? first.error : readOnlyReason(first)}`);
-		return;
-	}
-	const rotation: JsonObject = first.parse.rotation ?? {};
-	const names = (list: unknown) => (Array.isArray(list) ? list.map(item => String((item as JsonObject)?.name ?? '')) : []);
-	const taken = { groups: names(rotation.groups), variables: names(rotation.valueVariables) };
-	const values = await askAll(pattern, namePicks(document), taken);
-	if (!values) return;
-
-	document = await documentFor(uri);
-	if (document.version !== version) {
-		void vscode.window.showWarningMessage('The rotation changed while the pattern was being filled in; insert it again.');
-		return;
-	}
-	const result = spliceApl(first, patternEdits(rotation, pattern, values, placement));
-	if ('error' in result) {
-		void vscode.window.showWarningMessage(`The pattern was not inserted: ${result.error}.`);
-		return;
-	}
-	const edit = new vscode.WorkspaceEdit();
-	for (const e of result.edits) edit.replace(document.uri, vscodeRange(e.range), e.newText);
-	await vscode.workspace.applyEdit(edit);
 }
 
 // Every placeholder's value, or undefined when the reader cancels one that is not optional.
@@ -157,9 +146,8 @@ export function registerInsertPattern(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('wowsims-apl.insertPattern', async () => {
 			const editor = vscode.window.activeTextEditor;
 			if (!editor || !isAplSiml(editor.document.uri.path)) return;
-			const read = readDocument(editor.document);
-			const path = 'error' in read ? [] : pathAt(read, editor.document.offsetAt(editor.selection.active));
-			await insertPattern(editor.document.uri, path);
+			const spans = await spansOf(editor.document).catch(() => []);
+			await insertPattern(editor.document.uri, pathAt(editor.document, spans, editor.selection.active));
 		}),
 	);
 }

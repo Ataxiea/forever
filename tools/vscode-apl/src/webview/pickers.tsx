@@ -2,7 +2,7 @@ import type { ACTION_ID_SET } from '@features/apl/model/action_id_sets';
 import type { UNIT_SET } from '@features/apl/model/unit_sets';
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AplDatabase } from '../db';
+import type { AplDatabase } from '../protocol';
 import { CommitInput } from './commit_input';
 import { iconUrl, IdChip, useDb } from './db';
 import { useEditor } from './editor_context';

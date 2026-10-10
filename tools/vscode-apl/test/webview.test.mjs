@@ -8,17 +8,18 @@ import vm from 'node:vm';
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 
-import { buildPanel } from '../scripts/panel.mjs';
-import { activateBuilt, fakeVscode } from './vscode.mjs';
+import { buildPanel } from '../scripts/bundle.mjs';
+import { activateBuilt, fakeVscode, serverRunning } from './vscode.mjs';
 
-// The panel, bundled from its sources as the build bundles it, mounted in happy-dom and talking to the built extension
-// host through the stand-in for VS Code, as it talks to the extension in a webview: what a click or a key in the panel
-// does to the text.
+// The panel, bundled from its sources as the build bundles it, mounted in happy-dom and talking to the extension host
+// and its SIML server through the stand-in for VS Code, as it talks to the extension in a webview: what a click or a
+// key in the panel does to the text.
 
 const out = mkdtempSync(join(tmpdir(), 'wowsims-apl-panel-'));
 const fixture = fileURLToPath(new URL('fixtures/default.apl.siml', import.meta.url));
 
 let stand;
+let extension;
 let panel;
 let document_;
 const sent = [];
@@ -42,9 +43,10 @@ before(async () => {
 	await buildPanel(out);
 	GlobalRegistrator.register({ url: 'https://panel.test/' });
 	stand = fakeVscode();
-	await activateBuilt(stand);
+	extension = await activateBuilt(stand);
 	const uri = stand.vscode.Uri.file(fixture);
 	document_ = await stand.vscode.workspace.openTextDocument(uri);
+	await serverRunning(stand);
 	await stand.state.commands.get('wowsims-apl.openToSide')(uri);
 	panel = stand.state.panels.at(-1);
 	panel.onPost = message => window.dispatchEvent(new MessageEvent('message', { data: message }));
@@ -61,6 +63,7 @@ before(async () => {
 });
 
 after(async () => {
+	await extension.deactivate();
 	await GlobalRegistrator.unregister();
 	rmSync(out, { recursive: true, force: true });
 });

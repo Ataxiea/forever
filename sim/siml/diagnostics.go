@@ -7,17 +7,21 @@ import (
 )
 
 // Whether a diagnostic stops a file from loading: a file with an error yields no proto, and one with only
-// warnings does.
+// warnings does. Information is the editor's: a rotation lint that points something out (Lint's info).
 type Severity int
 
 const (
 	Error Severity = iota
 	Warning
+	Information
 )
 
 func (s Severity) String() string {
-	if s == Warning {
+	switch s {
+	case Warning:
 		return "warning"
+	case Information:
+		return "info"
 	}
 	return "error"
 }
@@ -31,6 +35,13 @@ type Diagnostic struct {
 	Severity   Severity
 	Code       string // A code of SPEC.md §13, such as unknown-name.
 	Message    string
+	Related    *RelatedLocation // For an error of a used file reported at the use line: where it is in that file.
+}
+
+// A place in another file that a diagnostic is about.
+type RelatedLocation struct {
+	Path  string
+	Range Range
 }
 
 // "path:line:col code message", without the path when there is none.
@@ -58,6 +69,7 @@ type diag struct {
 	span
 	severity      Severity
 	code, message string
+	related       *RelatedLocation
 }
 
 func hasError(diags []diag) bool {
@@ -91,6 +103,7 @@ func (m *lineMap) diagnostics(path string, diags []diag) Diagnostics {
 			Severity: d.severity,
 			Code:     d.code,
 			Message:  d.message,
+			Related:  d.related,
 		}
 	}
 	return out

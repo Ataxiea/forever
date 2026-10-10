@@ -134,6 +134,12 @@ go run --tags=with_db ./cmd/wowsimcli siml verify x.apl.json x.apl.siml         
 # as JSON on stdout (the request and result are described in cmd/wowsimcli/cmd/siml_sim.go)
 echo '{"siml": "...", "path": "ui/specs/hunter/dps/apls/default.apl.siml"}' | go run --tags=with_db ./cmd/wowsimcli siml sim
 
+# The SIML language server on stdin and stdout, run from the repository root; the VS Code extension builds and starts
+# it (tools/vscode-apl/README.md)
+go run --tags=with_db ./cmd/wowsimcli siml lsp
+# Write the extension's TextMate grammar, which make vscode-apl does
+go run ./cmd/wowsimcli siml grammar -o .vscode/extensions/wowsims-apl/syntaxes/siml.tmLanguage.json
+
 # Add names for newly registered spells and new database rows to the SIML name table; commit it with the change
 make sim/siml/names.json
 ```

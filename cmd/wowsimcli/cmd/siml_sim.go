@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/simsignals"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/siml"
 )
@@ -134,7 +136,7 @@ func simlSim(out, errOut io.Writer, args []string) error {
 	if req, err := readRequest(os.Stdin); err != nil {
 		res.Error = fmt.Sprintf("reading the request: %v", err)
 	} else {
-		res = runSimlSim(".", req)
+		res = runSimlSim(context.Background(), ".", req)
 	}
 	return json.NewEncoder(out).Encode(res)
 }
@@ -148,7 +150,8 @@ func readRequest(r io.Reader) (simlSimRequest, error) {
 	return req, err
 }
 
-func runSimlSim(root string, req simlSimRequest) simlSimResult {
+// The sim of req in the repository at root; it stops with an error when ctx is done.
+func runSimlSim(ctx context.Context, root string, req simlSimRequest) simlSimResult {
 	if req.Path == "" {
 		return simlSimResult{Error: "the request needs the siml text of an .apl.siml and its path"}
 	}
@@ -200,13 +203,13 @@ func runSimlSim(root string, req simlSimRequest) simlSimResult {
 	char.info.Warnings = append(char.info.Warnings, warnings...)
 
 	res := simlSimResult{Character: &char.info}
-	res.simResult, err = simAPL(base, folder, rotation, req)
+	res.simResult, err = simAPL(ctx, base, folder, rotation, req)
 	if err != nil {
 		res.Error = err.Error()
 		return res
 	}
 	if compare != nil {
-		res.Compare, err = simAPL(base, folder, compare, req)
+		res.Compare, err = simAPL(ctx, base, folder, compare, req)
 		if err != nil {
 			res.Error = "compare: " + err.Error()
 		}
@@ -301,7 +304,7 @@ func label(action *core.APLAction) string {
 }
 
 // Sims rotation as the APL of the one player of base, an individual sim request for the spec folder under ui/specs.
-func simAPL(base *proto.RaidSimRequest, folder string, rotation *proto.APLRotation, req simlSimRequest) (*simResult, error) {
+func simAPL(ctx context.Context, base *proto.RaidSimRequest, folder string, rotation *proto.APLRotation, req simlSimRequest) (*simResult, error) {
 	rotation = cloneProto(rotation)
 	rotation.Type = proto.APLRotation_TypeAPL
 
@@ -316,7 +319,10 @@ func simAPL(base *proto.RaidSimRequest, folder string, rotation *proto.APLRotati
 	core.APLActionExecuted = rec.executed
 	defer func() { core.APLActionExecuted = nil }()
 
-	simRes := core.RunRaidSim(makeRequest(req.Iterations))
+	simRes := runRaidSim(ctx, makeRequest(req.Iterations))
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if simRes.Error != nil {
 		return nil, fmt.Errorf("the sim cannot run %s: %s", folder, simError(simRes.Error))
 	}
@@ -336,7 +342,7 @@ func simAPL(base *proto.RaidSimRequest, folder string, rotation *proto.APLRotati
 	if req.Timeline {
 		rec = &recorder{record: true, limit: req.TimelineLimit}
 		core.APLActionExecuted = rec.executed
-		if timelineRes := core.RunRaidSim(makeRequest(1)); timelineRes.Error != nil {
+		if timelineRes := runRaidSim(ctx, makeRequest(1)); timelineRes.Error != nil {
 			return nil, fmt.Errorf("%s", simError(timelineRes.Error))
 		}
 		out.Timeline = rec.timeline
@@ -345,6 +351,14 @@ func simAPL(base *proto.RaidSimRequest, folder string, rotation *proto.APLRotati
 		}
 	}
 	return out, nil
+}
+
+// The sim of request, aborted when ctx is done.
+func runRaidSim(ctx context.Context, request *proto.RaidSimRequest) *proto.RaidSimResult {
+	signals := simsignals.CreateSignals()
+	stop := context.AfterFunc(ctx, signals.Abort.Trigger)
+	defer stop()
+	return core.RunSim(request, nil, signals)
 }
 
 // The message of a sim error without the stack trace the sim appends to a panic.

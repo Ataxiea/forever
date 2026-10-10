@@ -3,20 +3,29 @@
 The editor support for SIML, the text form of a rotation (`x.apl.siml`), a gear set (`x.gear.siml`) and a whole sim
 setup (`x.siml`). `sim/siml/SPEC.md` is the language. The extension is two parts:
 
-- a **language server**, `out/lsp.js`, which serves every `*.siml` file to VS Code and to any editor that speaks the
-  Language Server Protocol;
-- a **panel** that shows an `.apl.siml` rotation as it reads, edits it through the text, and sims it.
+- the client of the **SIML language server**, `wowsimcli siml lsp` (`sim/siml/lsp`, its analysis in
+  `sim/siml/lang_*.go`), which serves every `*.siml` file to VS Code and to any editor that speaks the Language Server
+  Protocol;
+- a **panel** that shows an `.apl.siml` rotation as it reads, edits it through the text, and sims it, each through the
+  server's requests.
 
 ## The language server
 
-It reads each file with the SIML module (`ui/sim/siml`), the schema the protos derive
-(`ui/generated/siml/schema.json`), the name table (`sim/siml/names.json`) and the item database
-(`assets/database/db.json`), all from the repository the file sits in. A fresh `make sim/siml/names.json`, schema or
-`make db` needs no rebuild: the next request reads it, and the open files are checked again when the editor reports the
-change.
+On activation the extension builds the server from the repository each open `*.siml` file is in,
+`go build --tags=with_db -o <storage>/<hash of the root>/wowsimcli ./cmd/wowsimcli` in the repository root, under a
+_Building the SIML server_ notification; a build that is up to date relinks nothing. It then starts
+`wowsimcli siml lsp` in the root for that repository's `file:` and `untitled:` `*.siml` documents. A build that fails
+puts the compiler's output in the _WoWSims SIML_ output, and the server stays down until _WoWSims: Restart SIML
+Server_, which builds and starts it again; run it after pulling Go changes too. `wowsims-apl.server` names a prebuilt
+binary to run instead.
+
+The server reads each file with `sim/siml`, the name table (`sim/siml/names.json`) and the item database
+(`assets/database/db.json`), all from the repository the file sits in. A fresh `make sim/siml/names.json` or `make db`
+needs no restart: the open files are checked again when the editor reports the change, and the panel reads the
+rotation again with them.
 
 - **Diagnostics.** The parser's errors and warnings, each with its did-you-mean; a name the file's spec registers for
-  no build; the rotation lints of `src/lint` at the text of the node each is about; and a slot row whose item goes in
+  no build; the rotation lints at the text of the node each is about; and a slot row whose item goes in
   another slot, whose suffix the item does not roll, or whose enchant fits neither the slot nor the item. Under
   `ui/specs` warnings are errors and a raw ref is one, as the repository's checks hold them.
 - **Completion.** Sections and the top lines; a section's fields, an enum's values and a flag list's flags; the
@@ -41,22 +50,23 @@ change.
 
 ### Another editor
 
-Build the extension (below), then start `node .vscode/extensions/wowsims-apl/out/lsp.js --stdio` for files that end in
-`.siml`, with the language id `siml`. The server needs no settings: it finds the repository above each file it is
-given, or takes the workspace folder when that holds `sim/siml/names.json`. Hovers run go for a spell's game files
-row; the initialization option `goBinary` names the binary (default `go`, looked up on the PATH, then GOROOT and the
-usual install folders), and `workspace/didChangeConfiguration` with `{"wowsims-apl": {"goBinary": "..."}}` changes it.
+Build the server, `go build --tags=with_db -o wowsimcli ./cmd/wowsimcli`, and start `wowsimcli siml lsp` in the
+repository root for files that end in `.siml`, with the language id `siml`; it logs on stderr. The server needs no
+settings: it finds the repository above each file it is given, and reads an untitled file in the first workspace
+folder's. Hovers run go for a spell's game files row; the initialization option `goBinary` names the binary, and
+`workspace/didChangeConfiguration` with `{"settings": {"wowsims-apl": {"goBinary": "..."}}}` changes it.
 
-The server provides: incremental sync, `publishDiagnostics`, completion (triggered on space, `(`, `.`, `"`, `$`,
-`%`, `,`, `=`, `[` and `+`), hover, definition, references, rename with prepare, document symbols, document links,
-folding ranges, full semantic tokens, formatting and code actions. When the client registers file watchers
-dynamically, the server watches the schema, the table and the database through `workspace/didChangeWatchedFiles`.
+The server provides: full sync, `publishDiagnostics`, completion, hover, definition, references, rename with prepare,
+document symbols, document links, folding ranges, full semantic tokens, formatting and code actions. When the client
+registers file watchers dynamically, the server watches the table, the database and the `*.siml` files through
+`workspace/didChangeWatchedFiles`. The panel's requests (`siml/rotation`, `siml/splice`, `siml/database`,
+`siml/patterns`, `siml/insertPattern`, `siml/sim`) are in `sim/siml/lsp/panel.go`.
 
 For Neovim, for example:
 
 ```lua
 vim.filetype.add({ extension = { siml = 'siml' } })
-vim.lsp.config('siml', { cmd = { 'node', '/path/to/forever/.vscode/extensions/wowsims-apl/out/lsp.js', '--stdio' }, filetypes = { 'siml' } })
+vim.lsp.config('siml', { cmd = { '/path/to/wowsimcli', 'siml', 'lsp' }, cmd_cwd = '/path/to/forever', filetypes = { 'siml' } })
 vim.lsp.enable('siml')
 ```
 
@@ -68,17 +78,19 @@ vim.lsp.enable('siml')
 | WoWSims: Sim This APL                | sims the rotation as it is in the editor, unsaved edits included                  |
 | WoWSims: Compare APL With Saved      | sims the saved file, or `HEAD` when nothing is unsaved, against the editor's text |
 | WoWSims: Insert APL Pattern          | inserts a common shape after the row the cursor is on                             |
+| WoWSims: Restart SIML Server         | builds the server again and restarts it                                           |
 
 A rotation kept as JSON prints as SIML with
 `go run --tags=with_db ./cmd/wowsimcli siml print -kind apl -spec <spec> <file.apl.json>`.
 
 ## Settings
 
-|                               |                                                                                                           |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `wowsims-apl.goBinary`        | the `go` binary for sims and spell hovers; `go` looks on the PATH, then GOROOT and the usual install dirs |
-| `wowsims-apl.simIterations`   | iterations per sim run from the editor (1000)                                                             |
-| `wowsims-apl.simSettingsFile` | settings exported from the site, as JSON or SIML, the character sims from the editor run with             |
+|                               |                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `wowsims-apl.goBinary`        | the `go` binary that builds the server and reads spell hovers; `go` looks on the PATH, then GOROOT and the usual install dirs |
+| `wowsims-apl.server`          | a prebuilt `wowsimcli` (built with `--tags=with_db`) to run as the server instead of building one                             |
+| `wowsims-apl.simIterations`   | iterations per sim run from the editor (1000)                                                                                 |
+| `wowsims-apl.simSettingsFile` | settings exported from the site, as JSON or SIML, the character sims from the editor run with                                 |
 
 ## The panel
 
@@ -93,27 +105,29 @@ the spec on the file's `spec` line registers, in the namespace the parser reads 
 field points at, a boss spell among the target's spells. Fields that take an item offer the items with a use. Each
 choice is written as its name.
 
-- **Edits go through the text.** Each change is made with the SIML module's `splice`: only the statements it touches
+- **Edits go through the text.** Each change is made with the server's `siml/splice`: only the statements it touches
   are printed again, and every other line, comment and blank line stays as written. Undo, the dirty marker and git
   work as they do for a hand edit. The panel shows its change at once and the text catches up.
 - **Read-only.** While the text has an error the panel shows the rotation as it last read, says where the first error
   is, and makes no edits. A rotation put together with another file (`use "default.apl.siml" with …`) is shown with
   the rows it uses and is edited as text.
-- **Refused edits.** An edit `splice` cannot make, such as one through a row that does not exist or one that leaves
+- **Refused edits.** An edit the server cannot splice, such as one through a row that does not exist or one that leaves
   the rotation with an error, is not made, and a warning says why. An edit the panel made before it saw someone else's
   change to the text is dropped, and the panel shows the text as it is.
 
 The forms are the site's own: the panel bundles `ui/features/apl/model` and the generated protos. The panel's rows
 carry the file's diagnostics, the same the Problems panel lists.
 
-**▶ Sim** and **⇄ Compare** run `go run --tags=with_db ./cmd/wowsimcli siml sim` with the editor's text and the file's
-path: `use` lines are read against it from disk, so each used file must be saved first, and a sim is refused while one
-has unsaved changes. The character is the spec's `defaults.siml`, with the one preset build (`builds/*.siml`) whose
+**▶ Sim** and **⇄ Compare** run the request of `wowsimcli siml sim` in the server (`siml/sim`), one at a time, with the
+editor's text and the file's path; cancelling the notification or stopping the server stops the sim. The `use` lines
+are read against the path from disk, so each used file must be saved first, and a sim is refused while one has unsaved
+changes. The character is the spec's `defaults.siml`, with the one preset build (`builds/*.siml`) whose
 rotation is the saved file's loaded over it (`turret.apl.siml` takes `builds/mm.siml`); a rotation no build has, or
 several have, such as `arms.apl.siml`, is simmed on the defaults. A settings file (`wowsims-apl.simSettingsFile`)
 supplies the character instead, a preset build loaded over its spec's `defaults.siml` the same way. The panel then
 shows the DPS, how often each row ran per fight, the damage by spell and a timeline of one fight; the editor shows
-each row's count at the end of its line.
+each row's count at the end of its line. A compare sims the saved file, or `HEAD` when nothing is unsaved, as the
+base.
 
 _Insert APL Pattern_ (or **+ pattern** in the panel) asks for each value of a common shape, its default filled in, and
 inserts it: refresh a DoT, keep a debuff up, an execute block, a toggle group, a prepull sequence and more. A condition
@@ -125,18 +139,21 @@ The source is `tools/vscode-apl`; `.vscode/extensions/wowsims-apl` is its build 
 From the repository root:
 
 ```
-make vscode-apl                                    # npm ci, typecheck, bundle, the manifest, the grammar and the panel
+make vscode-apl                                    # npm ci, typecheck, bundle, the manifest and the panel; the grammar
 cd tools/vscode-apl && npm run check && npm test   # the committed output matches a fresh build; the tests
 ```
 
-The build needs the root `node_modules`, the generated protos and `ui/generated/siml/schema.json`, which the grammar
-is generated from (`make` builds them). VS Code (1.91 or later) treats `.vscode/extensions/wowsims-apl` as a
+The build needs the root `node_modules` and the generated protos (`make` builds them). The grammar,
+`syntaxes/siml.tmLanguage.json`, is written by `go run ./cmd/wowsimcli siml grammar -o <file>`, whose test checks the
+committed one. VS Code (1.91 or later) treats `.vscode/extensions/wowsims-apl` as a
 workspace extension: opening the repository shows an _Install Workspace Extension_ prompt once.
 
 The panel's page (`out/webview.js` and `out/webview.css`) bundles the generated protos, the site's APL model and its
 English strings, so it is not committed: run `make vscode-apl` once, and again after those change. Until then the
 panel says to. `npm run check` builds the page too, but compares only the committed output.
 
-The tests run the built extension and language server: `test/extension.test.mjs` drives the extension's host against
-the stand-in for VS Code in `test/vscode.mjs`, `test/webview.test.mjs` the panel's page bundled from its sources, and
-`test/lsp.test.mjs` the server over stdio. The sims in `test/sim.test.mjs` need go.
+The tests bundle the extension from its sources as the build does and run it against the stand-in for VS Code in
+`test/vscode.mjs`, whose language client starts the server the extension builds, so they need go:
+`test/extension.test.mjs` drives the extension's host, `test/webview.test.mjs` the panel's page bundled from its
+sources, and `test/sim.test.mjs` the sims. The server's own cases are Go tests, in `sim/siml/lsp` and
+`sim/siml/lang_*_test.go`.

@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react';
 
-import type { AplDatabase } from '../db';
+import type { AplDatabase } from '../protocol';
 import type { Json } from './model';
 import { isObject } from './model';
 import { idKey, registeredKeys, useRegistered } from './registered';

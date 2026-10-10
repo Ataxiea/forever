@@ -1,40 +1,19 @@
-import { join } from 'node:path';
+import type * as vscode from 'vscode';
 
-import * as vscode from 'vscode';
-import { LanguageClient, TransportKind } from 'vscode-languageclient/node';
-
-import { forgetDocument } from './host';
+import { registerHost } from './host';
 import { registerInsertPattern } from './insert_pattern';
 import { registerPanel } from './panel';
+import { registerServer, stopServers } from './server';
 import { registerSim } from './simulate';
 
-// The SIML language server's client.
-let client: LanguageClient | undefined;
-
-// Starts the SIML language server (out/lsp.js) for every *.siml file, with this extension as its client.
-async function startClient(context: vscode.ExtensionContext): Promise<void> {
-	const server = { module: context.asAbsolutePath(join('out', 'lsp.js')), transport: TransportKind.ipc };
-	client = new LanguageClient(
-		'wowsims-siml',
-		'WoWSims SIML',
-		{ run: server, debug: server },
-		{
-			documentSelector: [{ language: 'siml' }],
-			initializationOptions: { goBinary: vscode.workspace.getConfiguration('wowsims-apl').get<string>('goBinary', 'go') },
-			synchronize: { configurationSection: 'wowsims-apl' },
-		},
-	);
-	await client.start();
-}
-
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export function activate(context: vscode.ExtensionContext): void {
+	registerHost(context);
 	registerSim(context);
 	registerInsertPattern(context);
 	registerPanel(context);
-	context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(forgetDocument));
-	await startClient(context);
+	registerServer(context);
 }
 
-export function deactivate(): Promise<void> | undefined {
-	return client?.stop();
+export function deactivate(): Promise<void> {
+	return stopServers(true);
 }

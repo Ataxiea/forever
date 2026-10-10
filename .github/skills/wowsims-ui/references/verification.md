@@ -26,8 +26,7 @@ not a misconfigured invocation.
 Add `npm run test:locales` whenever you touched `assets/locales/**` or `schemas/**`, and
 `npm run lint:css` (stylelint over `ui/**/*.css`) whenever you touched a stylesheet. There is no
 SCSS in the tree. `ui/sim/siml` implements the SIML language beside the Go package `sim/siml`, so a change
-there follows `wowsims-review` step 6: `go test ./sim/siml/...` runs the agreement test between the two, and
-`make vscode-apl` rebuilds the committed extension, which bundles the module.
+there follows `wowsims-review` step 6: `go test ./sim/siml/...` runs the agreement test between the two.
 
 What each one is actually for:
 

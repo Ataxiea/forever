@@ -31,6 +31,10 @@
 			{
 				"command": "wowsims-apl.insertPattern",
 				"title": "WoWSims: Insert APL Pattern"
+			},
+			{
+				"command": "wowsims-apl.restartServer",
+				"title": "WoWSims: Restart SIML Server"
 			}
 		],
 		"menus": {
@@ -79,7 +83,12 @@
 				"wowsims-apl.goBinary": {
 					"type": "string",
 					"default": "go",
-					"description": "The go binary that sims from the editor (cmd/wowsimcli siml sim) and reads a spell's game files row for hovers (tools/spelldata). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+					"description": "The go binary that builds the SIML server (cmd/wowsimcli) and that the server reads a spell's game files row with for hovers (tools/spelldata). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+				},
+				"wowsims-apl.server": {
+					"type": "string",
+					"default": "",
+					"description": "A wowsimcli binary built with --tags=with_db to run as the SIML server (`wowsimcli siml lsp`) instead of the one the extension builds from the repository. Run WoWSims: Restart SIML Server after changing it."
 				},
 				"wowsims-apl.simIterations": {
 					"type": "number",

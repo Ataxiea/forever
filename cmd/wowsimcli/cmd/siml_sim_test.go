@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -104,7 +105,7 @@ func TestCharacterFromRepoLoadsTheBuildOfTheRotation(t *testing.T) {
 func TestSimlSimCountsEveryRowAndKeepsPathsAcrossHiddenRows(t *testing.T) {
 	rotation, text := printedAPL(t, "hunter/dps", "default", proto.Spec_SpecHunter)
 	path := tempPath(t, "default.apl.siml")
-	res := runSimlSim(root, simlSimRequest{SIML: text, Path: path, Iterations: 20, Timeline: true, TimelineLimit: 25})
+	res := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: path, Iterations: 20, Timeline: true, TimelineLimit: 25})
 	if res.Error != "" {
 		t.Fatal(res.Error)
 	}
@@ -136,7 +137,7 @@ func TestSimlSimCountsEveryRowAndKeepsPathsAcrossHiddenRows(t *testing.T) {
 	}
 	rotation.PriorityList[first].Hide = true
 	names, _ := siml.DefaultNames()
-	hidden := runSimlSim(root, simlSimRequest{SIML: printRotation(proto.Spec_SpecHunter, rotation, names), Path: path, Iterations: 20})
+	hidden := runSimlSim(context.Background(), root, simlSimRequest{SIML: printRotation(proto.Spec_SpecHunter, rotation, names), Path: path, Iterations: 20})
 	if row := hidden.Rows["priorityList/"+strconv.Itoa(first)]; !row.Hidden || row.Executions != 0 {
 		t.Errorf("hidden row %d: %+v", first, row)
 	}
@@ -150,13 +151,13 @@ func TestSimlSimCountsEveryRowAndKeepsPathsAcrossHiddenRows(t *testing.T) {
 func TestSIMLSimsWhatTheRotationItWasPrintedFromSims(t *testing.T) {
 	rotation, text := printedAPL(t, "hunter/dps", "default", proto.Spec_SpecHunter)
 	req := simlSimRequest{SIML: text, Path: tempPath(t, "default.apl.siml"), Iterations: 50, Seed: 3}
-	fromSIML := runSimlSim(root, req)
+	fromSIML := runSimlSim(context.Background(), root, req)
 	if fromSIML.Error != "" {
 		t.Fatal(fromSIML.Error)
 	}
 	char := hunterCharacter(t, "ui/specs/hunter/dps/apls/default.apl.siml")
 	base, _ := core.IndividualSimRequest(char.settings, &proto.SimOptions{RandomSeed: req.Seed})
-	direct, err := simAPL(base, "hunter/dps", rotation, req)
+	direct, err := simAPL(context.Background(), base, "hunter/dps", rotation, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +169,7 @@ func TestSIMLSimsWhatTheRotationItWasPrintedFromSims(t *testing.T) {
 func TestSimlSimComparesOnTheSameSeed(t *testing.T) {
 	_, text := printedAPL(t, "hunter/dps", "default", proto.Spec_SpecHunter)
 	path := tempPath(t, "default.apl.siml")
-	res := runSimlSim(root, simlSimRequest{SIML: text, Path: path, Compare: &compared{SIML: text}, Iterations: 10, Seed: 7})
+	res := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: path, Compare: &compared{SIML: text}, Iterations: 10, Seed: 7})
 	if res.Error != "" || res.Compare == nil {
 		t.Fatalf("error %q, compare %v", res.Error, res.Compare)
 	}
@@ -176,7 +177,7 @@ func TestSimlSimComparesOnTheSameSeed(t *testing.T) {
 		t.Errorf("the same APL twice: %v and %v", res.DPS, res.Compare.DPS)
 	}
 	_, warrior := printedAPL(t, "warrior/dps", "arms", proto.Spec_SpecDpsWarrior)
-	if res := runSimlSim(root, simlSimRequest{SIML: text, Path: path, Compare: &compared{SIML: warrior}, Iterations: 2}); !strings.Contains(res.Error, "compare: its spec is SpecDpsWarrior") {
+	if res := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: path, Compare: &compared{SIML: warrior}, Iterations: 2}); !strings.Contains(res.Error, "compare: its spec is SpecDpsWarrior") {
 		t.Errorf("a warrior rotation to compare with a hunter one: %q", res.Error)
 	}
 }
@@ -188,8 +189,8 @@ func TestUseLinesAreReadAgainstThePath(t *testing.T) {
 		t.Fatal(err)
 	}
 	using := "siml 1\nspec hunter\nuse \"default.apl.siml\" with $use_summon_hawk = true\n"
-	direct := runSimlSim(root, simlSimRequest{SIML: text, Path: path, Iterations: 10})
-	used := runSimlSim(root, simlSimRequest{SIML: using, Path: filepath.Join(filepath.Dir(path), "hawks.apl.siml"), Iterations: 10})
+	direct := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: path, Iterations: 10})
+	used := runSimlSim(context.Background(), root, simlSimRequest{SIML: using, Path: filepath.Join(filepath.Dir(path), "hawks.apl.siml"), Iterations: 10})
 	if used.Error != "" || direct.Error != "" {
 		t.Fatalf("errors %q and %q", used.Error, direct.Error)
 	}
@@ -207,26 +208,26 @@ func TestSettingsFileSuppliesTheCharacter(t *testing.T) {
 	}
 	_, text := printedAPL(t, "hunter/dps", "default", proto.Spec_SpecHunter)
 	apl := tempPath(t, "default.apl.siml")
-	fromRepo := runSimlSim(root, simlSimRequest{SIML: text, Path: apl, Iterations: 10})
-	fromFile := runSimlSim(root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: path})
+	fromRepo := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: apl, Iterations: 10})
+	fromFile := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: path})
 	if fromFile.Error != "" || fromFile.DPS != fromRepo.DPS || fromFile.Character.Source != path {
 		t.Errorf("from the file: %v (%s), from the repo: %v", fromFile.DPS, fromFile.Error, fromRepo.DPS)
 	}
 	// An x.siml with no encounter is simmed against the default target, which the warnings say.
 	defaults := filepath.Join(root, "ui/specs/hunter/dps/defaults.siml")
-	fromSIML := runSimlSim(root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: defaults})
+	fromSIML := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: defaults})
 	if fromSIML.Error != "" || fromSIML.DPS != fromRepo.DPS || len(fromSIML.Character.Warnings) != 1 {
 		t.Errorf("from defaults.siml: %v (%s, warnings %q), from the repo: %v", fromSIML.DPS, fromSIML.Error, fromSIML.Character.Warnings, fromRepo.DPS)
 	}
 	// A preset build is loaded over its spec's defaults, as with no settings file.
 	build := filepath.Join(root, "ui/specs/hunter/dps/builds/sv.siml")
-	fromBuild := runSimlSim(root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: build})
+	fromBuild := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: build})
 	if want := build + " over " + defaults; fromBuild.Error != "" || fromBuild.Character.Source != want || fromBuild.Character.Race != "RaceOrc" ||
 		fromBuild.Character.Talents != "1-00531500114-52225303000021005" || !slices.Contains(fromBuild.Character.Warnings, build+" names no race, so it is a preset build: simmed over "+defaults) {
 		t.Errorf("from a preset build: %s, character %+v", fromBuild.Error, fromBuild.Character)
 	}
 	_, warrior := printedAPL(t, "warrior/dps", "arms", proto.Spec_SpecDpsWarrior)
-	if res := runSimlSim(root, simlSimRequest{SIML: warrior, Path: tempPath(t, "arms.apl.siml"), SettingsFile: path}); !strings.Contains(res.Error, "not a warrior/dps character") {
+	if res := runSimlSim(context.Background(), root, simlSimRequest{SIML: warrior, Path: tempPath(t, "arms.apl.siml"), SettingsFile: path}); !strings.Contains(res.Error, "not a warrior/dps character") {
 		t.Errorf("a hunter file for a warrior rotation: %q", res.Error)
 	}
 }
@@ -239,15 +240,15 @@ func TestSimlSimReportsWhatCannotBeSimmed(t *testing.T) {
 		"siml 1\nspec hunter\n\npriority:\n  cast nope\n": path + ":5:8 unknown-name no spell is named nope",
 		"siml 1\nspec hunter\n":                           "",
 	} {
-		res := runSimlSim(root, simlSimRequest{SIML: text, Path: path, Iterations: 2})
+		res := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: path, Iterations: 2})
 		if want == "" && res.Error != "" || want != "" && !strings.Contains(res.Error, want) {
 			t.Errorf("%q: error %q, want %q", text, res.Error, want)
 		}
 	}
-	if res := runSimlSim(root, simlSimRequest{SIML: "siml 1\nspec hunter\n", Path: tempPath(t, "default.gear.siml")}); !strings.Contains(res.Error, "is not an .apl.siml") {
+	if res := runSimlSim(context.Background(), root, simlSimRequest{SIML: "siml 1\nspec hunter\n", Path: tempPath(t, "default.gear.siml")}); !strings.Contains(res.Error, "is not an .apl.siml") {
 		t.Errorf("a gear file: %q", res.Error)
 	}
-	if res := runSimlSim(root, simlSimRequest{SIML: "siml 1\nspec hunter\n"}); !strings.Contains(res.Error, "needs the siml text of an .apl.siml and its path") {
+	if res := runSimlSim(context.Background(), root, simlSimRequest{SIML: "siml 1\nspec hunter\n"}); !strings.Contains(res.Error, "needs the siml text of an .apl.siml and its path") {
 		t.Errorf("no path: %q", res.Error)
 	}
 }

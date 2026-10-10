@@ -1,7 +1,17 @@
+import { resolve } from 'node:path';
+
 import * as vscode from 'vscode';
 
-import { readApl, usedFiles } from './apl';
-import { type Parsed, readDisk, samePath } from './lang/document';
+import type { JsonPath, Range, RotationResult } from './protocol';
+import { onServerStarted, request } from './server';
+
+export const isAplSiml = (path: string) => path.endsWith('.apl.siml');
+
+// Whether two paths name the same file, without case on Windows.
+export function samePath(a: string, b: string): boolean {
+	const [x, y] = [resolve(a), resolve(b)];
+	return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y;
+}
 
 // The open document of a file, looked up when it is needed: VS Code closes a document that no editor shows, and a
 // later open gives a new one.
@@ -10,28 +20,63 @@ export async function documentFor(uri: vscode.Uri): Promise<vscode.TextDocument>
 	return vscode.workspace.textDocuments.find(d => d.uri.toString() === key) ?? (await vscode.workspace.openTextDocument(uri));
 }
 
-// A file `use` names: an open editor's text, else the file on disk.
-const open = (path: string) => vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file' && samePath(d.uri.fsPath, path))?.getText() ?? readDisk(path);
+// The last rotation the server read for each document, whose spans the cursor, Reveal and the sim's counts look up
+// while the document is at its version. The server's own reads are never kept here: siml/rotation reads them afresh.
+const reads = new Map<string, RotationResult>();
 
-const reads = new Map<string, { text: string; read: Parsed | { error: string } }>();
-
-// A document's text parsed, once for each text it holds; a text with `use` lines each time, since the files it uses
-// change on their own.
-export function readDocument(document: vscode.TextDocument): Parsed | { error: string } {
-	const key = document.uri.toString();
-	const text = document.getText();
-	const cached = reads.get(key);
-	if (cached?.text === text) return cached.read;
-	const read = readApl(document.uri.fsPath, text, open);
-	if ('error' in read || usedFiles(read).length === 0) reads.set(key, { text, read });
+// The rotation a document's text reads as, from the server.
+export async function readRotation(document: vscode.TextDocument): Promise<RotationResult> {
+	const read = await request<RotationResult>(document.uri, 'siml/rotation', { uri: document.uri.toString() });
+	reads.set(document.uri.toString(), read);
 	return read;
+}
+
+// The text of each JSON path of the document at its version.
+export async function spansOf(document: vscode.TextDocument): Promise<RotationResult['spans']> {
+	const read = reads.get(document.uri.toString());
+	return read?.version === document.version ? read.spans : (await readRotation(document)).spans;
+}
+
+// The path of the shortest span around a position, the deeper of two the same length; [] outside every span.
+export function pathAt(document: vscode.TextDocument, spans: RotationResult['spans'], position: vscode.Position): JsonPath {
+	const offset = document.offsetAt(position);
+	let best: { path: JsonPath; size: number } | undefined;
+	for (const span of spans) {
+		if (span.range.start.line > position.line || span.range.end.line < position.line) continue;
+		const [start, end] = [document.offsetAt(vscodeRange(span.range).start), document.offsetAt(vscodeRange(span.range).end)];
+		if (offset < start || offset > end) continue;
+		if (!best || end - start < best.size || (end - start === best.size && span.path.length > best.path.length))
+			best = { path: span.path, size: end - start };
+	}
+	return best?.path ?? [];
+}
+
+// The text a JSON path is written at.
+export function spanFor(spans: RotationResult['spans'], path: JsonPath): Range | undefined {
+	const key = path.join('/');
+	return spans.find(span => span.path.join('/') === key)?.range;
 }
 
 export function forgetDocument(document: vscode.TextDocument): void {
 	reads.delete(document.uri.toString());
 }
 
-// A range of the SIML module, as VS Code's.
-export function vscodeRange(range: { start: { line: number; character: number }; end: { line: number; character: number } }): vscode.Range {
+// A protocol range, as VS Code's.
+export function vscodeRange(range: Range): vscode.Range {
 	return new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
+}
+
+// Applies the server's text edits to a document as one change; the version it leaves, or undefined when VS Code
+// refused it.
+export async function applyEdits(document: vscode.TextDocument, edits: { range: Range; newText: string }[]): Promise<number | undefined> {
+	const edit = new vscode.WorkspaceEdit();
+	for (const e of edits) edit.replace(document.uri, vscodeRange(e.range), e.newText);
+	return (await vscode.workspace.applyEdit(edit)) ? document.version : undefined;
+}
+
+export function registerHost(context: vscode.ExtensionContext): void {
+	context.subscriptions.push(
+		vscode.workspace.onDidCloseTextDocument(forgetDocument),
+		onServerStarted(() => reads.clear()),
+	);
 }

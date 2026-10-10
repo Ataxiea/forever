@@ -4,14 +4,10 @@ import { basename } from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { isAplSiml, movedOnlyBy, panelFindings, readOnlyReason, spliceApl, usedFiles } from './apl';
-import { aplDatabase } from './db';
-import { documentFor, readDocument, vscodeRange } from './host';
+import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, samePath, spanFor, spansOf, vscodeRange } from './host';
 import { insertPattern } from './insert_pattern';
-import { pathAt, samePath, spanFor } from './lang/document';
-import { repositoryRoot } from './lang/workspace';
-import type { FromPanel, PanelState, ToPanel } from './protocol';
-import { registeredFor } from './registered';
+import type { AplDatabase, FromPanel, PanelState, TextEdit, ToPanel } from './protocol';
+import { onServerStarted, request } from './server';
 import { onSimRecord, simDocument, type SimRecord, simRecord } from './simulate';
 
 const VIEW_TYPE = 'wowsims-apl.editor';
@@ -22,16 +18,17 @@ const SETTLE_MS = 60;
 // One panel per rotation file; opening the editor for a file that has one reveals it.
 const panels = new Map<string, vscode.WebviewPanel>();
 
-// The panel's page. Its bundle is built by `make vscode-apl` and not committed, so a checkout may not have it yet.
-function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-	if (!existsSync(vscode.Uri.joinPath(extensionUri, 'out', 'webview.js').fsPath)) {
-		return `<!doctype html>
+// The page shown while the panel's bundle is missing; opening the panel again looks for the bundle again.
+const PLACEHOLDER = `<!doctype html>
 <html lang="en">
 <body>
 <p>The panel is not built yet: run <code>make vscode-apl</code> in the repository, then open the panel again.</p>
 </body>
 </html>`;
-	}
+
+// The panel's page. Its bundle is built by `make vscode-apl` and not committed, so a checkout may not have it yet.
+function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+	if (!existsSync(vscode.Uri.joinPath(extensionUri, 'out', 'webview.js').fsPath)) return PLACEHOLDER;
 	const nonce = randomBytes(16).toString('base64');
 	const asset = (file: string) => webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', file));
 	const csp = [
@@ -67,30 +64,25 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	// The last of the panel's edits made or refused, and the document versions its own edits made.
 	let handled = 0;
 	const own = new Set<number>();
-	let spec: string | undefined;
-	// The files the rotation's `use` lines name, whose text it is read with.
+	// The names last posted to the pickers, as JSON.
+	let registered: string | undefined;
+	// The files the rotation's `use` lines read, whose text it is read with.
 	let used: string[] = [];
 	const uses = (file: vscode.Uri) => file.scheme === 'file' && used.some(path => samePath(path, file.fsPath));
 
-	const postRotation = (document: vscode.TextDocument) => {
-		const read = readDocument(document);
-		if ('error' in read) {
-			post({ type: 'rotation', version: document.version, handled, readOnly: read.error, findings: [] });
+	const postRotation = async (document: vscode.TextDocument) => {
+		const version = document.version;
+		const read = await readRotation(document).catch((e: Error) => e);
+		if (read instanceof Error) {
+			post({ type: 'rotation', version, handled, readOnly: read.message, findings: [] });
 			return;
 		}
-		used = usedFiles(read);
-		post({
-			type: 'rotation',
-			version: document.version,
-			handled,
-			rotation: read.parse.rotation,
-			readOnly: readOnlyReason(read),
-			className: read.cls,
-			findings: panelFindings(read),
-		});
-		if (read.parse.spec !== undefined && read.parse.spec !== spec) {
-			spec = read.parse.spec;
-			post({ type: 'registered', registered: registeredFor(read) });
+		used = read.used;
+		const { rotation, readOnly, className, findings } = read;
+		post({ type: 'rotation', version: read.version, handled, rotation, readOnly, className, findings });
+		if (JSON.stringify(read.registered) !== registered) {
+			registered = JSON.stringify(read.registered);
+			post({ type: 'registered', registered: read.registered });
 		}
 	};
 	const postSim = (version: number, record: SimRecord | undefined = simRecord(key), running = false) =>
@@ -105,7 +97,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		settle = setTimeout(async () => {
 			if (editing) return;
 			const document = await documentFor(uri);
-			postRotation(document);
+			await postRotation(document);
 			postSim(document.version);
 		}, SETTLE_MS);
 	};
@@ -114,18 +106,18 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	// own edits have moved past is made on the text as it is; the panel computed it with those edits applied. One that
 	// someone else's change moved past is dropped.
 	const make = async (message: Extract<FromPanel, { type: 'edit' }>, document: vscode.TextDocument) => {
-		if (!movedOnlyBy(own, message.version, document.version)) return;
-		const read = readDocument(document);
-		const result = 'error' in read ? read : spliceApl(read, message.edits);
-		if ('error' in result) {
-			void vscode.window.showWarningMessage(`The panel's edit was not made: ${result.error}.`);
+		for (let version = message.version + 1; version <= document.version; version++) if (!own.has(version)) return;
+		if (message.version > document.version) return;
+		let edits: TextEdit[];
+		try {
+			({ edits } = await request<{ edits: TextEdit[] }>(uri, 'siml/splice', { uri: key, version: document.version, edits: message.edits }));
+		} catch (e) {
+			void vscode.window.showWarningMessage(`The panel's edit was not made: ${(e as Error).message}.`);
 			return;
 		}
-		if (result.edits.length === 0) return;
-		const workspaceEdit = new vscode.WorkspaceEdit();
-		for (const e of result.edits) workspaceEdit.replace(document.uri, vscodeRange(e.range), e.newText);
-		const before = document.version;
-		if (await vscode.workspace.applyEdit(workspaceEdit)) for (let version = before + 1; version <= document.version; version++) own.add(version);
+		if (edits.length === 0) return;
+		const version = await applyEdits(document, edits);
+		if (version !== undefined) own.add(version);
 	};
 	const edit = async (message: Extract<FromPanel, { type: 'edit' }>) => {
 		editing = true;
@@ -134,15 +126,14 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		} finally {
 			editing = false;
 			handled = message.seq;
-			postRotation(await documentFor(uri));
+			await postRotation(await documentFor(uri));
 		}
 	};
 	let edits = Promise.resolve();
 
 	const reveal = async (path: (string | number)[]) => {
 		const document = await documentFor(uri);
-		const read = readDocument(document);
-		const range = 'error' in read ? undefined : spanFor(read, path);
+		const range = spanFor(await spansOf(document).catch(() => []), path);
 		if (!range) return;
 		const visible = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === key);
 		const editor = await vscode.window.showTextDocument(document, { viewColumn: visible?.viewColumn ?? vscode.ViewColumn.One, preserveFocus: true });
@@ -157,11 +148,11 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 				case 'ready': {
 					// A page loaded again counts its edits from the start.
 					const document = await documentFor(uri);
-					const root = repositoryRoot(uri.fsPath);
 					handled = 0;
-					spec = undefined;
-					post({ type: 'init', db: root ? aplDatabase(root) : { spells: {}, items: {} }, fileName: basename(uri.fsPath), uri: key });
-					postRotation(document);
+					registered = undefined;
+					const db = await request<AplDatabase>(uri, 'siml/database', { uri: key }).catch(() => ({ spells: {}, items: {} }));
+					post({ type: 'init', db, fileName: basename(uri.fsPath), uri: key });
+					await postRotation(document);
 					postSim(document.version);
 					break;
 				}
@@ -193,11 +184,17 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		onSimRecord(changedUri => {
 			if (changedUri === key) changed();
 		}),
-		vscode.window.onDidChangeTextEditorSelection(event => {
+		// The server checks the file again when the name table or the database changes, and a restarted server reads
+		// it afresh.
+		vscode.languages.onDidChangeDiagnostics(event => {
+			if (event.uris.some(changedUri => changedUri.toString() === key)) changed();
+		}),
+		onServerStarted(changed),
+		vscode.window.onDidChangeTextEditorSelection(async event => {
 			const document = event.textEditor.document;
 			if (document.uri.toString() !== key || event.kind === vscode.TextEditorSelectionChangeKind.Command) return;
-			const read = readDocument(document);
-			if (!('error' in read)) post({ type: 'cursor', path: pathAt(read, document.offsetAt(event.selections[0].active)) });
+			const spans = await spansOf(document).catch(() => undefined);
+			if (spans) post({ type: 'cursor', path: pathAt(document, spans, event.selections[0].active) });
 		}),
 	];
 
@@ -217,6 +214,7 @@ async function openToSide(extensionUri: vscode.Uri, uri: vscode.Uri | undefined)
 	}
 	const open = panels.get(chosen.toString());
 	if (open) {
+		if (open.webview.html === PLACEHOLDER) open.webview.html = html(open.webview, extensionUri);
 		open.reveal(vscode.ViewColumn.Beside, true);
 		return;
 	}

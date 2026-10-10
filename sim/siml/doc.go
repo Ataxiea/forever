@@ -3,6 +3,7 @@ package siml
 import (
 	"encoding/json"
 	"slices"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -36,16 +37,20 @@ type Doc struct {
 	lines *lineMap
 	ix    *schemaIndex
 	names *Names
+	open  Opener     // How the text's use lines are read, which the language services read used files with too.
 	typed *typedFile // Nil when the schema does not read.
 	file  *File
 	err   error
 	root  []any // The loader's message's JSON path from IndividualSimSettings.
+
+	spansOnce sync.Once
+	spanIndex map[string]Range // The first span of each path within the loader's message, for SpanFor.
 }
 
 // Reads src as the file at path, as Parse does; the result holds the diagnostics, and an error only when the schema
 // itself does not read.
 func Analyze(path string, src []byte, names *Names, open Opener) *Doc {
-	d := &Doc{path: path, src: sourceText(src), names: names}
+	d := &Doc{path: path, src: sourceText(src), names: names, open: open}
 	d.lines = newLineMap(d.src)
 	ix, err := loadIndex()
 	if err != nil {
@@ -215,17 +220,21 @@ func (d *Doc) Offset(p Position) int {
 // The text of the innermost node a rotation path leads into: the path's own span, else the deepest span that holds
 // it. The path is within the rotation, in a file of any kind.
 func (d *Doc) SpanFor(path []any) (Range, bool) {
+	d.spansOnce.Do(func() {
+		d.spanIndex = map[string]Range{}
+		for _, s := range d.Spans() {
+			if _, ok := d.spanIndex[pathKey(s.Path)]; !ok {
+				d.spanIndex[pathKey(s.Path)] = s.Range
+			}
+		}
+	})
 	full := slices.Concat(d.rotationBase(), path)
-	var best *PathSpan
-	for _, s := range d.Spans() {
-		if hasPrefix(full, s.Path) && (best == nil || len(s.Path) > len(best.Path)) {
-			best = &s
+	for n := len(full); n >= 0; n-- {
+		if r, ok := d.spanIndex[pathKey(full[:n])]; ok {
+			return r, true
 		}
 	}
-	if best == nil {
-		return Range{}, false
-	}
-	return best.Range, true
+	return Range{}, false
 }
 
 // The rotation path the text at p writes: the path of the shortest span around it, the deeper one of two the same

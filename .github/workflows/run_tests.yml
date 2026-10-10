@@ -92,8 +92,9 @@ jobs:
             - name: Unit tests 🧪
               run: npm run test:unit
 
-            # The SIML extension bundles ui/sim/siml and generates its grammar from the schema go-to-ts writes, so
-            # `check` builds it afresh and fails when the committed build in .vscode/extensions differs.
+            # `check` builds the SIML extension afresh and fails when the committed build in .vscode/extensions
+            # differs. The tests build the SIML server (`go build --tags=with_db ./cmd/wowsimcli`) as the extension
+            # does, and run the panel and the sims against it.
             - name: Test the SIML extension
               run: |
                   cd tools/vscode-apl

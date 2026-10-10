@@ -37,6 +37,8 @@ func init() {
 		simlSubcommand("verify <old.json> <new.siml>", "check that a .siml file reads back as the JSON file it was printed from", simlVerify),
 		simlSubcommand("sim < request.json", "sim the text of an .apl.siml for the APL editor: a JSON request on stdin, a JSON result on stdout", simlSim),
 		simlSubcommand("serve [-names <names.json>]", "read .siml texts for the Vite plugin: one JSON request a line on stdin, one JSON response a line on stdout", simlServe),
+		simlSubcommand("lsp", "serve the SIML language server on stdin and stdout", simlLSP),
+		simlSubcommand("grammar -o <file>", "write the TextMate grammar of SIML, built from the schema", simlGrammar),
 	)
 }
 
