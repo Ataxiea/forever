@@ -1,15 +1,15 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLAction, APLListItem, APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
-import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { Cooldowns, EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat, TristateEffect } from '@generated/proto/common';
+import { APLAction, APLListItem, APLRotation } from '@generated/proto/apl';
+import { Cooldowns, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { FeralBearDruid_Rotation as DruidRotation } from '@generated/proto/druid';
-import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as FeralBearInputs from './inputs';
 import * as Presets from './presets';
 
@@ -72,7 +72,7 @@ export default defineSpec<Spec.SpecFeralBearDruid>({
 	),
 
 	defaults: {
-		gear: EquipmentSpec.create(),
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecFeralBearDruid, Defaults),
 		epWeights: new Stats(),
 		statCaps: (() => {
 			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 8);
@@ -80,39 +80,6 @@ export default defineSpec<Spec.SpecFeralBearDruid>({
 			const critImmunityCap = new Stats().withPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent, 5.6);
 			return hitCap.add(expCap).add(critImmunityCap);
 		})(),
-		other: Presets.OtherDefaults,
-		consumables: Presets.DefaultConsumables,
-		rotationType: APLRotationType.TypeAPL,
-		aplRotation: Presets.ROTATION_DEFAULT.rotation.rotation!,
-		talents: SavedTalents.create(),
-		specOptions: Presets.DefaultOptions,
-		raidBuffs: RaidBuffs.create({
-			arcaneBrilliance: true,
-			giftOfTheWild: true,
-			prayerOfFortitude: true,
-			prayerOfShadowProtection: true,
-			prayerOfSpirit: true,
-		}),
-		partyBuffs: PartyBuffs.create({
-			battleShout: TristateEffect.TristateEffectRegular,
-			windfuryTotem: true,
-			manaSpringTotem: TristateEffect.TristateEffectRegular,
-			strengthOfEarthTotem: true,
-		}),
-		individualBuffs: IndividualBuffs.create({
-			greaterBlessingOfKings: true,
-			greaterBlessingOfMight: true,
-			thorns: true,
-		}),
-		debuffs: Debuffs.create({
-			exposeArmor: true,
-			faerieFire: true,
-			giftOfArthas: false,
-			curseOfRecklessness: true,
-			insectSwarm: true,
-			judgementOfWisdom: true,
-			sunderArmor: true,
-		}),
 	},
 
 	playerIconInputs: [],

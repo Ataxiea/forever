@@ -10,7 +10,7 @@ ASSETS := $(patsubst assets/%,$(OUT_DIR)/assets/%,$(ASSETS_INPUT))
 # Recursive wildcard function. Needs to be '=' instead of ':=' because of recursion.
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 GOROOT := $(shell go env GOROOT)
-UI_SRC := $(shell find ui -name '*.ts' -o -name '*.tsx' -o -name '*.css' -o -name '*.html')
+UI_SRC := $(shell find ui -name '*.ts' -o -name '*.tsx' -o -name '*.css' -o -name '*.html' -o -name '*.siml')
 AUTO_GEN_FILES_TS := ui/sim/player/classes/capabilities_auto_gen.ts ui/sim/bulk/constants_auto_gen.ts ui/sim/wasm/bulk_sim/constants_auto_gen.ts ui/sim/proto/sim_tables_auto_gen.ts
 AUTO_GEN_FILES_TS_DEPS := sim/core/base_stats.go sim/core/bulk/candidates.go sim/core/bulk/statistics.go sim/core/consumes_imbues.go sim/core/database.go tools/database/gen_character_constants_ts.go tools/database/gen_bulksim_constants.ts.go tools/database/gen_sim_tables_ts.go sim/core/proto/api.pb.go
 
@@ -27,9 +27,12 @@ $(OUT_DIR)/bundle/.dirstamp: \
   vite.config.mts \
   vite.build-workers.mts \
   tools/vite/spec_pages.mts \
+  tools/vite/siml.mts \
   node_modules \
   tsconfig.json \
-  ui/generated/proto/api.ts
+  ui/generated/proto/api.ts \
+  ui/generated/siml/schema.json \
+  sim/siml/names.json
 	node_modules/typescript/bin/tsc --noEmit
 	npx tsx vite.build-workers.mts
 	npx vite build
@@ -55,6 +58,19 @@ ui/generated/proto/api.ts: proto/*.proto node_modules
 	npx protoc --ts_opt generate_dependencies --ts_out ui/generated/proto --proto_path proto proto/api.proto
 	npx protoc --ts_out ui/generated/proto --proto_path proto proto/test.proto
 	npx protoc --ts_out ui/generated/proto --proto_path proto proto/ui.proto
+
+# The SIML schema the TypeScript module reads, derived from the protos and sim/siml/forms.json.
+ui/generated/siml/schema.json: proto/*.proto sim/core/proto/api.pb.go $(filter-out %_test.go,$(wildcard sim/siml/*.go)) sim/siml/forms.json
+	go run ./sim/siml/cmd/simlschema -o $@
+
+# The SIML name table, generated from what the sim registers and the database. The generator keeps every name the
+# committed table holds and adds the new ones, so commit the table with the change that adds them. It writes the
+# table only when an entry changes, and the stamp records the run, so a Go change that adds no name rebuilds nothing
+# that reads the table.
+sim/siml/names.json: sim/siml/.names.stamp ;
+sim/siml/.names.stamp: $(filter-out %_test.go,$(call rwildcard,sim,*.go)) $(wildcard assets/database/*.json assets/database/*.bin) $(wildcard ui/sim/talents/trees/*.json)
+	go run --tags=with_db ./sim/siml/cmd/simlnames -w
+	touch $@
 
 .PHONY: package.json
 
@@ -87,7 +103,7 @@ host_%: $(OUT_DIR) node_modules $(AUTO_GEN_FILES_TS)
 	npx http-server $(OUT_DIR)/..
 
 .PHONY: wasm
-wasm: $(OUT_DIR)/lib.wasm.gz
+wasm: $(OUT_DIR)/lib.wasm.gz sim/siml/names.json
 
 # Builds the generic .wasm, with all items included.
 # Published gzipped: Cloudflare Pages caps files at 25 MiB.
@@ -132,7 +148,7 @@ binary_dist: $(OUT_DIR)/.dirstamp
 
 # Rebuild the protobuf generated code.
 .PHONY: proto
-proto: sim/core/proto/api.pb.go ui/generated/proto/api.ts
+proto: sim/core/proto/api.pb.go ui/generated/proto/api.ts ui/generated/siml/schema.json
 
 # The buff messages come from the checked-in manifest, not from hand-edited proto. The manifest
 # imports the compiled protos, so this is run by hand after a manifest edit rather than as a
@@ -146,7 +162,7 @@ buffs-proto:
 wowsimforever: binary_dist devserver
 
 .PHONY: devserver
-devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go
+devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json
 	@echo "Starting server compile now..."
 	@if go build -o wowsimforever$(BIN_EXT) ./sim/web ; then \
 		printf "\033[1;32mBuild Completed Successfully\033[0m\n"; \
@@ -216,7 +232,7 @@ $(AUTO_GEN_FILES_TS): $(AUTO_GEN_FILES_TS_DEPS)
 	go run ./tools/database/gen_db -gen=go-to-ts
 
 .PHONY: go-to-ts
-go-to-ts: $(AUTO_GEN_FILES_TS)
+go-to-ts: $(AUTO_GEN_FILES_TS) ui/generated/siml/schema.json
 
 .PHONY: character-constants-ts
 character-constants-ts: go-to-ts
@@ -380,7 +396,8 @@ webworkers:
 vscode-spelldata:
 	cd tools/vscode-spelldata && npm ci --no-audit --no-fund && npm run build
 
-# The APL panel bundles the site's APL model, so it needs the generated protos and the root packages.
+# The SIML extension: its grammar is generated from the SIML schema, and its panel bundles the site's APL model with the
+# generated protos and the root packages. The language server reads the schema and the name table at run time.
 .PHONY: vscode-apl
-vscode-apl: ui/generated/proto/api.ts node_modules
+vscode-apl: ui/generated/proto/api.ts ui/generated/siml/schema.json sim/siml/names.json node_modules
 	cd tools/vscode-apl && npm ci --no-audit --no-fund && npm run build

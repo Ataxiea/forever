@@ -1,7 +1,7 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
-import { Cooldowns, EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
+import { APLRotation } from '@generated/proto/apl';
+import { Cooldowns, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
@@ -9,9 +9,9 @@ import { SpecRotation } from '@sim/proto/spec_types';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as MageInputs from './inputs';
 import * as Presets from './presets';
-import { DefaultConsumables, DefaultDebuffs, DefaultIndividualBuffs, DefaultPartyBuffs, DefaultRaidBuffs } from './presets';
 
 export default defineSpec<Spec.SpecMage>({
 	spec: Spec.SpecMage,
@@ -90,29 +90,12 @@ export default defineSpec<Spec.SpecMage>({
 	],
 
 	defaults: {
-		// Default equipped gear.
-		gear: EquipmentSpec.create(),
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecMage, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		statCaps: (() => {
 			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentArcane, 17);
 		})(),
-		// Default consumes settings.
-		consumables: DefaultConsumables,
-		// Default talents.
-		talents: SavedTalents.create(),
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		other: Presets.OtherDefaults,
-		// Default raid/party buffs settings.
-		raidBuffs: DefaultRaidBuffs,
-
-		partyBuffs: DefaultPartyBuffs,
-		individualBuffs: DefaultIndividualBuffs,
-
-		rotationType: APLRotation_Type.TypeSimple,
-		simpleRotation: Presets.ArcaneMageSimpleRotation,
-		debuffs: DefaultDebuffs,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
@@ -150,7 +133,7 @@ export default defineSpec<Spec.SpecMage>({
 		// }
 	},
 
-	// TODO: To be implemented. The default APL (apls/default.apl.json) is an empty stub, so
+	// TODO: To be implemented. The default APL (apls/default.apl.siml) is an empty stub, so
 	// there are no value variables or actions left to clone and adjust.
 	simpleRotation: (_player: Player<Spec.SpecMage>, _simple: SpecRotation<Spec.SpecMage>, _cooldowns: Cooldowns): APLRotation => {
 		// const actions = AplUtils.simpleCooldownActions(cooldowns);

@@ -1,0 +1,2 @@
+# This directory is for the SIML schema that sim/siml/cmd/simlschema generates from the *.proto files in /proto.
+*.json

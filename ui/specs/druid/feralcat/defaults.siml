@@ -1,0 +1,30 @@
+siml 1
+spec feral_cat_druid
+
+settings:
+  race night_elf
+  profession1 engineering
+  profession2 enchanting
+  reaction_time_ms 250
+
+consumables:
+  pot major_frenzy_potion
+  food swiftstrike_steak
+  conjured demonic_rune
+  mh_imbue dense_weightstone
+  extra goblin_sapper_charge, scroll_of_strength_iv
+  elixir elixir_of_the_mongoose, elixir_of_the_sages
+
+buffs: greater_blessing_of_kings, greater_blessing_of_might
+
+party_buffs: battle_shout, mana_spring_totem, strength_of_earth_totem, windfury_totem
+
+raid_buffs:
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  prayer_of_shadow_protection
+
+debuffs:
+  judgement_of_wisdom, curse_of_recklessness, faerie_fire, expose_armor, sunder_armor
+  gift_of_arthas
+
+apl: type auto

@@ -1,0 +1,22 @@
+siml 1
+spec enhancement_shaman
+
+prepull:
+  -8s cast grace_of_air_totem
+  -7s cast flametongue_totem
+  -6s cast strength_of_earth_totem
+  -5s cast mana_spring_totem
+
+priority:
+  autocast_other_cooldowns
+  cast other.potion
+  cast grace_of_air_totem if totem_remaining_time(air) <= 0s
+  cast strength_of_earth_totem if totem_remaining_time(earth) <= 0s
+  cast fire_nova if aura(clearcasting).is_active(include_reaction_time=true)
+  cast lightning_shield if not aura(lightning_shield).is_active
+  cast searing_totem if totem_remaining_time(fire) <= 0s
+  cast stormstrike
+  cast lightning_bolt if aura(maelstrom_weapon).is_known and aura(maelstrom_weapon).num_stacks >= 5
+  cast flame_shock if not dot(flame_shock).is_active
+  cast earth_shock
+  cast fire_nova if current_mana_percent > 10%

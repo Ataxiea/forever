@@ -1,12 +1,13 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
-import { EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
+import { APLRotation } from '@generated/proto/apl';
+import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecBalanceDruid>({
@@ -54,27 +55,13 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 	),
 
 	defaults: {
-		// Default equipped gear.
-		gear: EquipmentSpec.create(),
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecBalanceDruid, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		// Default stat caps for stat weights tab. (also needed for reforging since we don't want to reforge above stat caps)
 		statCaps: (() => {
 			return new Stats().withPseudoStat(PseudoStat.PseudoStatSpellHitPercent, 17);
 		})(),
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: SavedTalents.create(),
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		// Default raid/party buffs settings.
-		raidBuffs: Presets.DefaultRaidBuffs,
-		partyBuffs: Presets.DefaultPartyBuffs,
-		individualBuffs: Presets.DefaultIndividualBuffs,
-		debuffs: Presets.DefaultDebuffs,
-		other: Presets.OtherDefaults,
-		rotationType: APLRotation_Type.TypeAuto,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.

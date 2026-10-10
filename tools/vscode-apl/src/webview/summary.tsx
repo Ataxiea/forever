@@ -1,9 +1,8 @@
+import type { AplFieldSpec } from '@features/apl/model/field_specs';
 import { Fragment, type ReactNode } from 'react';
 
 import { IdChip } from './db';
-import type { AplFieldSpec } from '@features/apl/model/field_specs';
-
-import { type Family, type Json, type JsonObject, enumNumber, fieldInfo, humanize, isObject, kindMessage, kindModel, kindOf, resolve } from './model';
+import { enumNumber, type Family, fieldInfo, humanize, isObject, type Json, type JsonObject, kindMessage, kindModel, kindOf, resolve } from './model';
 
 const COMPARE: Record<string, string> = { OpEq: '=', OpNe: '≠', OpGe: '≥', OpGt: '>', OpLe: '≤', OpLt: '<' };
 const MATH: Record<string, string> = { OpAdd: '+', OpSub: '−', OpMul: '×', OpDiv: '÷' };

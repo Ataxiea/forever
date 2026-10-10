@@ -6789,6 +6789,25 @@
 					"additionalProperties": false,
 					"required": ["title", "label", "name_label", "save_button", "delete", "alerts"]
 				},
+				"siml": {
+					"type": "object",
+					"properties": {
+						"title": {
+							"type": "string"
+						},
+						"tooltip": {
+							"type": "string"
+						},
+						"export_button": {
+							"type": "string"
+						},
+						"import_button": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["title", "tooltip", "export_button", "import_button"]
+				},
 				"options": {
 					"type": "object",
 					"properties": {
@@ -7314,7 +7333,7 @@
 				}
 			},
 			"additionalProperties": false,
-			"required": ["title", "common", "apl", "auto", "simple", "cooldowns", "saved_rotations", "options"]
+			"required": ["title", "common", "apl", "auto", "simple", "cooldowns", "saved_rotations", "siml", "options"]
 		},
 		"results_tab": {
 			"type": "object",
@@ -8070,15 +8089,65 @@
 					},
 					"additionalProperties": false,
 					"required": ["title", "description", "addon_link", "feature_description", "instructions", "upload_button", "import_button"]
+				},
+				"siml": {
+					"type": "object",
+					"properties": {
+						"title": {
+							"type": "string"
+						},
+						"description": {
+							"type": "string"
+						},
+						"instructions": {
+							"type": "string"
+						},
+						"error_problems": {
+							"type": "string"
+						},
+						"error_empty": {
+							"type": "string"
+						},
+						"error_unknown_type": {
+							"type": "string"
+						},
+						"warning_spec": {
+							"type": "string"
+						},
+						"warnings": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["title", "description", "instructions", "error_problems", "error_empty", "error_unknown_type", "warning_spec", "warnings"]
+				},
+				"siml_rotation": {
+					"type": "object",
+					"properties": {
+						"title": {
+							"type": "string"
+						},
+						"description": {
+							"type": "string"
+						},
+						"instructions": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["title", "description", "instructions"]
 				}
 			},
 			"additionalProperties": false,
-			"required": ["title", "json", "wowhead", "addon"]
+			"required": ["title", "json", "wowhead", "addon", "siml", "siml_rotation"]
 		},
 		"export": {
 			"type": "object",
 			"properties": {
 				"title": {
+					"type": "string"
+				},
+				"error": {
 					"type": "string"
 				},
 				"link": {
@@ -8194,6 +8263,26 @@
 					"additionalProperties": false,
 					"required": ["title", "description", "instructions", "copy_button", "copy_tooltip"]
 				},
+				"siml": {
+					"type": "object",
+					"properties": {
+						"title": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["title"]
+				},
+				"siml_rotation": {
+					"type": "object",
+					"properties": {
+						"title": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["title"]
+				},
 				"categories": {
 					"type": "object",
 					"properties": {
@@ -8294,7 +8383,7 @@
 				}
 			},
 			"additionalProperties": false,
-			"required": ["title", "link", "json", "wowhead", "pawn_ep", "cli", "categories"]
+			"required": ["title", "error", "link", "json", "wowhead", "pawn_ep", "cli", "siml", "siml_rotation", "categories"]
 		},
 		"info": {
 			"type": "object",

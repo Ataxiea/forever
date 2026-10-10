@@ -1,0 +1,111 @@
+siml 1
+spec dps_warrior
+
+var ${Delay Check} =
+    spell(mortal_strike).time_to_ready >= 1.5s
+    and (not action_group_used("Stance Dance ON/OFF") or spell(whirlwind).time_to_ready >= 1.5s)
+
+prepull:
+  -4.5s cast berserker_rage
+  -4s group "Pre-pull: Stance"
+  -3s cast bloodrage
+  -3s cast battle_shout
+  -0.9s group "Pre-pull: Move"
+
+priority:
+  group "Recklessness ON/OFF"
+  # group "Stance Dance ON/OFF"
+  group "Hamstring Weave ON/OFF"
+  group "Engineering"
+  group "CD: Trinkets"
+  group "Sunder Armor" if number_targets == 1
+  # group "Sunder Armor: Refresh" if number_targets == 1
+  cast other.potion
+  group "CD: Racials"
+  cast death_wish
+  cast mortal_strike if action_group_used("Stance Dance ON/OFF")
+  cast recklessness if and(action_group_used("Recklessness ON/OFF"))
+  cast sweeping_strikes if and(number_targets > 1)
+  cast battle_stance
+      if not action_group_used("Stance Dance ON/OFF")
+      and aura(battle_stance).is_inactive
+  cast rend
+      if not is_execute_phase(e20)
+      and aura(battle_stance).is_active
+      and dot(rend).remaining_time <= 1.5s
+  cast overpower if aura(battle_stance).is_active
+  cast mortal_strike if not action_group_used("Stance Dance ON/OFF")
+  cast spearing_strike if not is_execute_phase(e20) and aura(battle_stance).is_active
+  cast berserker_stance
+      if action_group_used("Stance Dance ON/OFF")
+      and aura(battle_stance).is_active
+      and aura(overpower).is_inactive
+      and (is_execute_phase(e20) or dot(rend).remaining_time > 1.5s)
+  cast slam if not is_execute_phase(e20) and spell(slam).cast_time < 1.5s
+  cast slam
+      if not is_execute_phase(e20)
+      and spell(slam).cast_time >= 1.5s
+      and auto_time_since_last(main_hand_auto) <= input_delay + 300ms
+  cast whirlwind if action_group_used("Stance Dance ON/OFF")
+  cast hamstring
+      if action_group_used("Hamstring Weave ON/OFF")
+      and aura(windfury_totem_10612).is_known
+      and not is_execute_phase(e20)
+      and aura(windfury_totem).is_inactive
+  cast execute if is_execute_phase(e20)
+  cast battle_stance
+      if action_group_used("Stance Dance ON/OFF")
+      and not is_execute_phase(e20)
+      and aura(berserker_stance).is_active
+      and (aura(overpower).is_active(include_reaction_time=true) or dot(rend).remaining_time <= 1.5s)
+  cast cleave if number_targets > 1 and or(current_rage >= 40)
+  cast heroic_strike if not is_execute_phase(e20) and current_rage >= 80
+  cast bloodrage if current_rage < 90
+  cast battle_shout
+      if $delay_check
+      and not aura(battle_shout_external).is_known
+      and aura(battle_shout).remaining_time <= 10s
+  # cast recklessness if false
+  # cast retaliation if false
+  # cast shield_wall if false
+
+group "Pre-pull: Stance":
+  cast battle_stance if not action_group_used("Stance Dance ON/OFF")
+
+group "Pre-pull: Move":
+  cast charge if aura(battle_stance).is_active
+  cast intercept if aura(berserker_stance).is_active
+
+group "Recklessness ON/OFF":
+  none
+
+group "Stance Dance ON/OFF":
+  none
+
+group "Hamstring Weave ON/OFF":
+  none
+
+group "Engineering":
+  cast item.goblin_sapper_charge
+  cast item.crystal_charge
+  cast item.ez_thro_dynamite_ii
+
+group "CD: Racials":
+  cast blood_fury
+  cast berserking
+  cast last_stand
+
+group "Sunder Armor":
+  cast sunder_armor if target.aura(sunder_armor).num_stacks(include_reaction_time=true) < 5
+
+group "Sunder Armor: Refresh":
+  cast sunder_armor if $delay_check and target.aura(sunder_armor).remaining_time <= 10s
+
+group "CD: Trinkets":
+  cast_all_stat_buff_cooldowns(stat_type2=attack_power, stat_type3=haste_rating)
+  cast_all_stat_buff_cooldowns(crit_rating, stat_type2=armor_penetration, stat_type3=-1)
+  cast item.badge_of_the_swarmguard
+  cast item.slayers_crest
+  cast item.kiss_of_the_spider
+  cast item.shard_of_the_fallen_star
+  cast item.everlook_pathcarver

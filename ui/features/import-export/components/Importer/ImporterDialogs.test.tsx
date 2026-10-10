@@ -1,6 +1,8 @@
+import { Spec } from '@generated/proto/common';
 import i18n from '@i18n/config';
+import { SimSettingCategories } from '@sim/constants/sim_settings';
 import { WOWHEAD_GEAR_PLANNER_URL } from '@sim/proto/wowhead';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -12,10 +14,19 @@ vi.hoisted(() => {
 
 import { renderWithHost } from '@testing/react';
 
-import { ADDON_IMPORTER, BULK_GEAR_IMPORTER, JSON_IMPORTER, SIXTY_UPGRADES_IMPORTER, WOWHEAD_GEAR_PLANNER_IMPORTER } from '../../importers';
+import {
+	ADDON_IMPORTER,
+	BULK_GEAR_IMPORTER,
+	JSON_IMPORTER,
+	SIML_IMPORTER,
+	SIML_ROTATION_IMPORTER,
+	SIXTY_UPGRADES_IMPORTER,
+	WOWHEAD_GEAR_PLANNER_IMPORTER,
+} from '../../importers';
 import { AddonImporterDialog } from './AddonImporterDialog';
 import { BulkGearImporterDialog } from './BulkGearImporterDialog';
 import { JsonImporterDialog } from './JsonImporterDialog';
+import { SimlImporterDialog, SimlRotationImporterDialog } from './SimlImporterDialog';
 import { SixtyUpgradesImporterDialog } from './SixtyUpgradesImporterDialog';
 import type { ImporterDialogProps } from './types';
 import { WowheadImporterDialog } from './WowheadImporterDialog';
@@ -24,6 +35,8 @@ const CASES: Array<[string, ComponentType<ImporterDialogProps>, string, string]>
 	['AddonImporterDialog', AddonImporterDialog, ADDON_IMPORTER.title, i18n.t('import.addon.instructions')],
 	['BulkGearImporterDialog', BulkGearImporterDialog, BULK_GEAR_IMPORTER.title, i18n.t('bulk_tab.import_modal.description_line1')],
 	['JsonImporterDialog', JsonImporterDialog, JSON_IMPORTER.title, i18n.t('import.json.instructions')],
+	['SimlImporterDialog', SimlImporterDialog, SIML_IMPORTER.title, i18n.t('import.siml.instructions')],
+	['SimlRotationImporterDialog', SimlRotationImporterDialog, SIML_ROTATION_IMPORTER.title, i18n.t('import.siml_rotation.instructions')],
 	[
 		'SixtyUpgradesImporterDialog',
 		SixtyUpgradesImporterDialog,
@@ -53,5 +66,27 @@ describe('importer dialog links', () => {
 		const link = screen.getByRole('link', { name: i18n.t('import.addon.addon_link') });
 		expect(link.getAttribute('target')).toBe('_blank');
 		expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+	});
+});
+
+describe('the SIML rotation importer dialog', () => {
+	const importText = (text: string) => {
+		const fromProto = vi.fn();
+		renderWithHost(<SimlRotationImporterDialog open onOpenChange={() => {}} />, { player: { getSpec: () => Spec.SpecHunter }, fromProto });
+		screen.getByTestId<HTMLTextAreaElement>('importer-textarea').value = text;
+		fireEvent.click(screen.getByTestId('import-button'));
+		return fromProto;
+	};
+
+	it('imports the rotation the text holds, and nothing else', async () => {
+		const fromProto = importText('siml 1\nspec hunter\n\npriority:\n  cast multi_shot\n');
+		await waitFor(() => expect(fromProto).toHaveBeenCalledWith(expect.anything(), [SimSettingCategories.Rotation]));
+	});
+
+	it('lists a name that does not read at its line and column, under the text', async () => {
+		const fromProto = importText('siml 1\nspec hunter\n\npriority:\n  cast multi_shto\n');
+		const problems = await screen.findByTestId('importer-problems');
+		expect(problems.querySelector('li')!.textContent).toBe('5:8 no spell is named multi_shto; did you mean multi_shot?');
+		expect(fromProto).not.toHaveBeenCalled();
 	});
 });

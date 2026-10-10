@@ -6,6 +6,8 @@ import {
 	JsonImporterDialog,
 	LINK_EXPORTER,
 	PAWN_EP_EXPORTER,
+	SIML_EXPORTER,
+	SimlImporterDialog,
 	SIXTY_UPGRADES_EP_EXPORTER,
 	SixtyUpgradesImporterDialog,
 	WOWHEAD_GEAR_PLANNER_EXPORTER,
@@ -25,6 +27,7 @@ const WowheadExporterDialog = exporterDialog(WOWHEAD_GEAR_PLANNER_EXPORTER);
 const SixtyUpgradesExporterDialog = exporterDialog(SIXTY_UPGRADES_EP_EXPORTER);
 const PawnExporterDialog = exporterDialog(PAWN_EP_EXPORTER);
 const CliExporterDialog = exporterDialog(CLI_EXPORTER);
+const SimlExporterDialog = exporterDialog(SIML_EXPORTER);
 
 export const SimImportExport = () => {
 	// The menus open from the first frame but every dialog reads the item database, so the entries
@@ -40,6 +43,7 @@ export const SimImportExport = () => {
 						<ImportExportItem label="60U" dialog={SixtyUpgradesImporterDialog} />
 						<ImportExportItem label="WoWHead" dialog={WowheadImporterDialog} />
 						<ImportExportItem label="Addon" dialog={AddonImporterDialog} />
+						<ImportExportItem label="SIML" dialog={SimlImporterDialog} />
 					</>
 				)}
 			</ImportExportMenu>
@@ -52,6 +56,7 @@ export const SimImportExport = () => {
 						<ImportExportItem label="60U EP" dialog={SixtyUpgradesExporterDialog} />
 						<ImportExportItem label="Pawn EP" dialog={PawnExporterDialog} />
 						<ImportExportItem label="CLI" dialog={CliExporterDialog} />
+						<ImportExportItem label="SIML" dialog={SimlExporterDialog} />
 					</>
 				)}
 			</ImportExportMenu>

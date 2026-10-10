@@ -1,11 +1,9 @@
 import * as PresetUtils from '@app/preset_utils';
-import * as Consumables from '@features/settings/model/consumables_auto_gen';
-import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, Spec } from '@generated/proto/common';
-import { Mage_Options as MageOptions, Mage_Rotation, MageArmor } from '@generated/proto/mage';
+import { Spec } from '@generated/proto/common';
+import { Mage_Rotation } from '@generated/proto/mage';
 import { SavedTalents } from '@generated/proto/ui';
 
-import DefaultApl from './apls/default.apl.json';
+import DefaultApl from './apls/default.apl.siml';
 
 // Preset options for this spec.
 // Eventually we will import these values for the raid sim too, so its good to
@@ -27,47 +25,3 @@ export const Talents = {
 		talentsString: '',
 	}),
 };
-
-export const DefaultOptions = MageOptions.create({
-	classOptions: {
-		defaultMageArmor: MageArmor.MageArmorMageArmor,
-	},
-});
-
-export const OtherDefaults = {
-	distanceFromTarget: 20,
-	profession1: Profession.Engineering,
-	profession2: Profession.Tailoring,
-};
-
-export const DefaultConsumables = ConsumesSpec.create({
-	elixirIds: [Consumables.GreaterArcaneElixir.id, Consumables.ElixirOfTheSages.id],
-	foodId: Consumables.NightfinSoup.id,
-	mhImbueId: Consumables.BrilliantWizardOil.id,
-	potId: Consumables.MajorManaPotion.id,
-});
-
-export const DefaultRaidBuffs = RaidBuffs.create({
-	prayerOfSpirit: true,
-	arcaneBrilliance: true,
-	giftOfTheWild: true,
-	prayerOfFortitude: true,
-	prayerOfShadowProtection: true,
-});
-
-export const DefaultPartyBuffs = PartyBuffs.create({
-	manaSpringTotem: 2,
-	manaTideTotems: 1,
-});
-
-export const DefaultIndividualBuffs = IndividualBuffs.create({
-	greaterBlessingOfKings: true,
-	greaterBlessingOfWisdom: true,
-	innervates: 1,
-	greaterBlessingOfSalvation: true,
-});
-
-export const DefaultDebuffs = Debuffs.create({
-	curseOfElements: true,
-	judgementOfWisdom: true,
-});

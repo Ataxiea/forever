@@ -546,8 +546,8 @@ func (config CharacterSuiteConfig) defaultPlayerAndRaid() (*proto.Player, *proto
 }
 
 // FullCharacterTestSuiteGenerator generates a full test suite for a character.
-// Also accepts JSON build config, Example:
-// core.GetTestBuildFromJSON(proto.Class_ClassWarrior, "../../../ui/specs/warrior/arms/builds", "default", ItemFilter, proto.Stat_StatStrength, nil)
+// Also accepts a build read from a full setup .siml, Example:
+// core.GetTestBuild(proto.Class_ClassShaman, "../../../ui/specs/shaman/elemental/builds", "testing", ItemFilter, nil, nil)
 func FullCharacterTestSuiteGenerator(configs []CharacterSuiteConfig) []TestGenerator {
 	testIndex := 0
 	return MapSlice(configs, func(config CharacterSuiteConfig) TestGenerator {

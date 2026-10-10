@@ -8,7 +8,6 @@ import (
 
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var WITH_DB = false
@@ -656,26 +655,6 @@ func (equipment Equipment) inArea(areaTypes []proto.AreaType) Equipment {
 type ItemStringSpec struct {
 	Name    string
 	Enchant string
-}
-
-func EquipmentSpecFromJsonString(jsonString string) *proto.EquipmentSpec {
-	es := &proto.EquipmentSpec{}
-
-	data := []byte(jsonString)
-	if err := protojson.Unmarshal(data, es); err != nil {
-		panic(err)
-	}
-	return es
-}
-
-func ItemSwapFromJsonString(jsonString string) *proto.ItemSwap {
-	is := &proto.ItemSwap{}
-
-	data := []byte(jsonString)
-	if err := protojson.Unmarshal(data, is); err != nil {
-		panic(err)
-	}
-	return is
 }
 
 func (equipment *Equipment) Stats(spec proto.Spec) stats.Stats {

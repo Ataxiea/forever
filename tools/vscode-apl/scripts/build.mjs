@@ -1,102 +1,71 @@
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
+import { simlGrammarText } from './grammar.mjs';
 import { manifestText } from './manifest.mjs';
+import { buildPanel } from './panel.mjs';
 
 const source = dirname(dirname(fileURLToPath(import.meta.url)));
 const repository = join(source, '..', '..');
 const installed = join(repository, '.vscode', 'extensions', 'wowsims-apl');
-const schemaPath = join(repository, 'schemas', 'apl_rotation.schema.json');
-const outputs = ['package.json', 'README.md', join('out', 'extension.js'), join('out', 'webview.js'), join('out', 'webview.css')];
+const schemaPath = join(repository, 'ui', 'generated', 'siml', 'schema.json');
+const grammar = join('syntaxes', 'siml.tmLanguage.json');
+// The committed outputs, which the extension's sources, the SIML module and the schema decide; `--check` holds the
+// committed build to them.
+const outputs = ['package.json', 'README.md', 'language-configuration.json', grammar, join('out', 'extension.js'), join('out', 'lsp.js')];
+// The panel's page also takes in the generated protos, the site's APL model and its English strings, so it is built
+// here but not committed (.gitignore): a change to those needs no extension rebuild in the same commit.
+const panel = [join('out', 'webview.js'), join('out', 'webview.css')];
 
-// The site's i18n config imports its strings from a vite plugin's virtual module; the panel takes the
-// English ones, which is the language the site's APL labels are written in.
-const i18nLoader = {
-	name: 'i18next-loader',
-	setup(bundle) {
-		bundle.onResolve({ filter: /^virtual:i18next-loader$/ }, args => ({ path: args.path, namespace: 'i18next-loader' }));
-		bundle.onLoad({ filter: /.*/, namespace: 'i18next-loader' }, () => {
-			const dir = join(repository, 'assets', 'locales', 'en');
-			const en = Object.fromEntries(
-				readdirSync(dir)
-					.filter(file => file.endsWith('.json'))
-					.sort()
-					.map(file => [basename(file, '.json'), JSON.parse(readFileSync(join(dir, file), 'utf8'))]),
-			);
-			return { contents: `export default ${JSON.stringify({ en })};`, loader: 'js' };
-		});
-	},
-};
-
-// The JSON Schema `.vscode/settings.json` gives `*.apl.json` files, built from the generated protos'
-// reflection so the JSON editor completes and checks field and enum names.
-async function schemaText() {
-	const bundled = await build({
-		absWorkingDir: source,
-		entryPoints: ['src/schema.ts'],
-		bundle: true,
-		write: false,
-		platform: 'node',
-		format: 'esm',
-		tsconfig: join(repository, 'tsconfig.json'),
-		logLevel: 'warning',
-	});
-	const { aplRotationSchema } = await import(`data:text/javascript;base64,${Buffer.from(bundled.outputFiles[0].text).toString('base64')}`);
-	return `${JSON.stringify(aplRotationSchema(), null, '\t')}\n`;
-}
-
+// tsc runs through node: the `.bin` entry is a shell script on Windows, which cannot be spawned without a shell.
 function typecheck(project) {
-	const tsc = spawnSync(join(source, 'node_modules', '.bin', 'tsc'), ['--noEmit', '-p', join(source, project)], { stdio: 'inherit' });
+	const tsc = spawnSync(process.execPath, [join(source, 'node_modules', 'typescript', 'bin', 'tsc'), '--noEmit', '-p', join(source, project)], {
+		stdio: 'inherit',
+	});
+	if (tsc.error) console.error(tsc.error.message);
 	if (tsc.status !== 0) {
 		process.exit(tsc.status ?? 1);
 	}
 }
 
-async function buildInto(target) {
-	typecheck('tsconfig.json');
-	typecheck('tsconfig.webview.json');
-
-	rmSync(target, { recursive: true, force: true });
-	mkdirSync(join(target, 'out'), { recursive: true });
-	await build({
+// A Node bundle of one entry: the extension, which VS Code loads, or the language server it starts.
+function nodeBundle(entry, outfile) {
+	return build({
 		absWorkingDir: source,
-		entryPoints: ['src/extension.ts'],
-		outfile: join(target, 'out', 'extension.js'),
+		entryPoints: [entry],
+		outfile,
 		bundle: true,
 		platform: 'node',
 		format: 'cjs',
 		target: 'node20',
 		external: ['vscode'],
-		// jsonc-parser's main build is UMD and requires its own files at run time, which a bundle cannot
-		// follow; its ES module build bundles whole.
-		mainFields: ['module', 'main'],
 		minify: true,
 		logLevel: 'warning',
 	});
-	// The webview imports the site's APL model through the repository's path aliases and packages.
-	await build({
-		absWorkingDir: source,
-		entryPoints: { webview: 'src/webview/main.tsx' },
-		outdir: join(target, 'out'),
-		bundle: true,
-		platform: 'browser',
-		format: 'iife',
-		target: 'es2022',
-		tsconfig: join(repository, 'tsconfig.json'),
-		jsx: 'automatic',
-		plugins: [i18nLoader],
-		define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' },
-		loader: { '.svg': 'empty', '.png': 'empty', '.jpg': 'empty', '.webp': 'empty' },
-		minify: true,
-		legalComments: 'none',
-		logLevel: 'warning',
-	});
+}
+
+async function buildInto(target) {
+	if (!existsSync(schemaPath)) {
+		console.error(`${relative(process.cwd(), schemaPath)} is missing: run make ui/generated/siml/schema.json`);
+		process.exit(1);
+	}
+	typecheck('tsconfig.json');
+	typecheck('tsconfig.webview.json');
+
+	rmSync(target, { recursive: true, force: true });
+	mkdirSync(join(target, 'out'), { recursive: true });
+	await nodeBundle('src/extension.ts', join(target, 'out', 'extension.js'));
+	await nodeBundle('src/lsp.ts', join(target, 'out', 'lsp.js'));
+	await buildPanel(join(target, 'out'));
 	writeFileSync(join(target, 'package.json'), manifestText(JSON.parse(readFileSync(join(source, 'package.json'), 'utf8'))));
 	copyFileSync(join(source, 'README.md'), join(target, 'README.md'));
+	copyFileSync(join(source, 'language-configuration.json'), join(target, 'language-configuration.json'));
+	mkdirSync(join(target, 'syntaxes'), { recursive: true });
+	writeFileSync(join(target, grammar), simlGrammarText(JSON.parse(readFileSync(schemaPath, 'utf8'))));
 }
 
 function filesUnder(dir) {
@@ -113,10 +82,7 @@ if (process.argv.includes('--check')) {
 			const committed = join(installed, file);
 			return !existsSync(committed) || !readFileSync(committed).equals(readFileSync(join(fresh, file)));
 		});
-		if (!existsSync(schemaPath) || readFileSync(schemaPath, 'utf8') !== (await schemaText())) {
-			stale.push(relative(installed, schemaPath));
-		}
-		const extra = existsSync(installed) ? filesUnder(installed).filter(file => !outputs.includes(file)) : [];
+		const extra = existsSync(installed) ? filesUnder(installed).filter(file => !outputs.includes(file) && !panel.includes(file)) : [];
 		if (stale.length > 0 || extra.length > 0) {
 			const where = relative(process.cwd(), installed);
 			for (const file of stale) {
@@ -134,6 +100,5 @@ if (process.argv.includes('--check')) {
 	}
 } else {
 	await buildInto(installed);
-	writeFileSync(schemaPath, await schemaText());
-	console.log(`built ${relative(process.cwd(), installed)} and ${relative(process.cwd(), schemaPath)}`);
+	console.log(`built ${relative(process.cwd(), installed)}`);
 }

@@ -1,0 +1,5 @@
+siml 1
+spec balance_druid
+
+// Halfway between two shortest decimals: the one whose last digit is even.
+okf_uptime 0.000244140625

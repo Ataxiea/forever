@@ -1,0 +1,18 @@
+siml 1
+spec hunter
+
+// $x reads its exact name first, else the one name in scope that folds to x; ${Exact} reads the exact name.
+var ${Melee weave} = true
+var $exact = 1
+var ${Exact} = 2
+var $weave_again = $melee_weave and ${Melee weave}
+var $raw = `{"const": {"val": "3"}}`
+
+priority:
+  group "G" if $exact > $Exact
+  group "G" with %p = $melee_weave, %{Q r} = 1s
+
+group "G":
+  var ${Melee weave} = false
+  var ${In group} = $melee_weave
+  cast x if $in_group and %p and %{Q r} > 0s and $exact == 1

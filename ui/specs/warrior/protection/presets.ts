@@ -1,15 +1,11 @@
 import * as PresetUtils from '@app/preset_utils';
-import * as Consumables from '@features/settings/model/consumables_auto_gen';
-import { ConsumesSpec, HealingModel, Profession, PseudoStat, Race, Stat } from '@generated/proto/common';
+import { PseudoStat, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
-import { ProtectionWarrior_Options as ProtectionWarriorOptions, WarriorStance } from '@generated/proto/warrior';
 import { Stats } from '@sim/proto/stats';
-import { OtherDefaults as SimUIOtherDefaults } from '@sim/spec_config';
 
-import * as WarriorPresets from '../shared/presets';
-import GenericApl from './apls/default.apl.json';
-import PreBiSGearJson from './gear_sets/prebis.gear.json';
-import PreBiSThreatGearJson from './gear_sets/prebis_threat.gear.json';
+import GenericApl from './apls/default.apl.siml';
+import PreBiSGearJson from './gear_sets/prebis.gear.siml';
+import PreBiSThreatGearJson from './gear_sets/prebis_threat.gear.siml';
 
 // Preset options for this spec.
 // Eventually we will import these values for the raid sim too, so its good to
@@ -87,46 +83,3 @@ export const PreBiSThreatEpWeights = PresetUtils.makePresetEpWeights(
 		},
 	),
 );
-
-export const DefaultOptions = ProtectionWarriorOptions.create({
-	classOptions: {
-		queueDelay: 250,
-		startingRage: 0,
-		useBattleShout: true,
-		defaultStance: WarriorStance.WarriorStanceDefensive,
-		hasBsT2: true,
-		stanceSnapshot: true,
-	},
-});
-
-export const DefaultConsumables = ConsumesSpec.create({
-	...WarriorPresets.DefaultConsumables,
-	elixirIds: [
-		Consumables.ElixirOfFerocity.id,
-		Consumables.ElixirOfTheMongoose.id,
-		Consumables.WinterfallFirewater.id,
-		Consumables.ElixirOfGreaterDefense.id,
-		Consumables.ElixirOfThePhalanx.id,
-	],
-	mhImbueId: Consumables.DenseSharpeningStone.id,
-	conjuredId: Consumables.MajorHealthstone9421.id,
-	extraIds: [Consumables.GoblinSapperCharge.id, Consumables.RumseyRum.id],
-});
-
-// Classic Era Molten Core logs: the healing that lands on the main tank, overhealing included, comes to 2.4 x
-// its damage taken, in heals about 0.3 s apart, 1.5% of it as absorbs. The HPS is 2.4 x the defense cap gear's
-// damage taken per second against the default target; the Inspiration uptime is not from the logs.
-export const OtherDefaults: Partial<SimUIOtherDefaults> = {
-	profession1: Profession.Engineering,
-	profession2: Profession.Blacksmithing,
-	race: Race.RaceOrc,
-	distanceFromTarget: 0,
-	healingModel: HealingModel.create({
-		hps: 815,
-		cadenceSeconds: 0.3,
-		cadenceVariation: 0.64,
-		absorbFrac: 0.015,
-		burstWindow: 6,
-		inspirationUptime: 0.25,
-	}),
-};

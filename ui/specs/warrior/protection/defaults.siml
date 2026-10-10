@@ -1,0 +1,49 @@
+siml 1
+spec protection_warrior
+talents "35300003-05-050531120300021351"
+use "gear_sets/prebis.gear.siml"
+
+settings:
+  race orc
+  profession1 engineering
+  profession2 blacksmithing
+  reaction_time_ms 100
+  in_front_of_target
+  // Classic Era Molten Core logs: the healing that lands on the main tank, overhealing included,
+  // comes to 2.4 x its damage taken, in heals about 0.3 s apart, 1.5% of it as absorbs. The HPS is
+  // 2.4 x the defense cap gear's damage taken per second against the default target; the
+  // Inspiration uptime is not from the logs.
+  healing_model(hps=815,
+      cadence_seconds=0.3,
+      cadence_variation=0.64,
+      absorb_frac=0.015,
+      burst_window=6,
+      inspiration_uptime=0.25)
+  default_stance defensive
+  stance_snapshot, has_bs_t2, use_battle_shout
+  queue_delay 250
+  tanks player1
+
+consumables:
+  pot major_frenzy_potion
+  food smoked_desert_dumplings
+  conjured major_healthstone
+  explosive ez_thro_dark_bomb
+  mh_imbue dense_sharpening_stone
+  extra goblin_sapper_charge, rumsey_rum
+  elixir elixir_of_ferocity,
+      elixir_of_the_mongoose,
+      winterfall_firewater,
+      elixir_of_greater_defense,
+      elixir_of_the_phalanx
+
+buffs: greater_blessing_of_kings, greater_blessing_of_might
+
+party_buffs: leader_of_the_pack, strength_of_earth_totem, windfury_totem
+
+raid_buffs: gift_of_the_wild, prayer_of_fortitude, prayer_of_shadow_protection
+
+debuffs:
+  curse_of_recklessness, faerie_fire, expose_armor, insect_swarm, curse_of_weakness, vindication
+
+apl: type auto

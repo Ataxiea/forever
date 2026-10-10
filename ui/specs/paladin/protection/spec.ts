@@ -1,14 +1,15 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
-import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
+import { APLRotation } from '@generated/proto/apl';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecProtectionPaladin>({
@@ -80,8 +81,7 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		// Default equipped gear.
-		gear: Presets.GEAR_DEFAULT.gear,
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecProtectionPaladin, Defaults),
 		softCapBreakpoints: [
 			StatCap.fromPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent, {
 				breakpoints: [5.6],
@@ -91,20 +91,6 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 		],
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: SavedTalents.create(),
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		other: Presets.OtherDefaults,
-		// Default raid/party buffs settings.
-		raidBuffs: Presets.DefaultRaidBuffs,
-		partyBuffs: Presets.DefaultPartyBuffs,
-		individualBuffs: Presets.DefaultIndividualBuffs,
-		debuffs: Presets.DefaultDebuffs,
-		rotationType: APLRotation_Type.TypeAPL,
-		aplRotation: Presets.APL_PRESET.rotation.rotation!,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.

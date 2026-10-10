@@ -1,0 +1,36 @@
+siml 1
+spec feral_bear_druid
+use "apls/default.apl.siml"
+
+settings:
+  race night_elf
+  profession1 engineering
+  profession2 enchanting
+  reaction_time_ms 250
+  in_front_of_target
+  healing_model(hps=2200,
+      cadence_seconds=0.4,
+      cadence_variation=1.2,
+      absorb_frac=0.02,
+      burst_window=6,
+      inspiration_uptime=0.25)
+  tanks player1
+
+consumables:
+  pot greater_stoneshield_potion
+  food dirges_kickin_chimaerok_chops
+  conjured major_healthstone
+  mh_imbue dense_weightstone
+  extra goblin_sapper_charge, scroll_of_strength_iv, scroll_of_protection_iv
+  elixir elixir_of_the_mongoose, gift_of_arthas
+
+buffs: greater_blessing_of_kings, greater_blessing_of_might, thorns
+
+party_buffs: battle_shout, mana_spring_totem, strength_of_earth_totem, windfury_totem
+
+raid_buffs:
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  prayer_of_shadow_protection
+
+debuffs:
+  judgement_of_wisdom, curse_of_recklessness, faerie_fire, expose_armor, sunder_armor, insect_swarm

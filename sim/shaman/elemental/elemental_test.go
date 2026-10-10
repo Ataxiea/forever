@@ -45,7 +45,7 @@ func TestElemental(t *testing.T) {
 
 // The Testing build's gear, talents and rotation, which the UI's Testing gear set, Standard talents and
 // Default rotation read too.
-var testingBuild = core.GetTestBuildFromJSON(proto.Class_ClassShaman, "../../../ui/specs/shaman/elemental/builds", "testing",
+var testingBuild = core.GetTestBuild(proto.Class_ClassShaman, "../../../ui/specs/shaman/elemental/builds", "testing",
 	core.ItemFilter{}, nil, nil)
 
 var DefaultTalents = testingBuild.Talents

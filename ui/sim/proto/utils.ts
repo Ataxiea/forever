@@ -1,6 +1,5 @@
 import { Player } from '@generated/proto/api';
-import { IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { Class, ConsumesSpec, Faction, Race, Spec, TristateEffect, UnitReference, UnitReference_Type } from '@generated/proto/common';
+import { Class, ConsumesSpec, Faction, Race, Spec, UnitReference, UnitReference_Type } from '@generated/proto/common';
 import { ResourceType } from '@generated/proto/spell';
 import { UIItem as Item } from '@generated/proto/ui';
 
@@ -127,25 +126,3 @@ export const orderedResourceTypes: Array<ResourceType> = [
 
 export const AL_CATEGORY_HARD_MODE = 'Hard Mode';
 export const AL_CATEGORY_TITAN_RUNE = 'Titan Rune';
-
-// The buffs every healer gear planner starts with: the caster stat buffs, the two caster totems
-// and the blessings. Nothing here depends on the class.
-export const defaultHealerRaidBuffs = (): RaidBuffs =>
-	RaidBuffs.create({
-		arcaneBrilliance: true,
-		giftOfTheWild: true,
-		prayerOfFortitude: true,
-		prayerOfSpirit: true,
-	});
-
-export const defaultHealerPartyBuffs = (): PartyBuffs =>
-	PartyBuffs.create({
-		manaSpringTotem: TristateEffect.TristateEffectRegular,
-	});
-
-export const defaultHealerIndividualBuffs = (): IndividualBuffs =>
-	IndividualBuffs.create({
-		greaterBlessingOfKings: true,
-		greaterBlessingOfWisdom: true,
-		greaterBlessingOfLight: true,
-	});

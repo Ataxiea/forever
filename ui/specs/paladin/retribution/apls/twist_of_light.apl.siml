@@ -1,0 +1,32 @@
+siml 1
+spec retribution_paladin
+
+var ${Use Exorcism} = true
+var ${Use Consecration} = true
+
+prepull:
+  -10s cast retribution_aura
+  -3s cast seal_of_command
+  -1.5s cast seal_of_the_crusader
+
+priority:
+  autocast_other_cooldowns
+  cast judgement
+  cast hammer_of_wrath
+      if spell(hammer_of_wrath).cast_time == 0s
+      or auto_time_since_last(main_hand_auto) < 0.2s
+  cast holy_strike if current_time > 0.5s
+  cast seal_of_command
+      if aura(echo_of_command).is_inactive(include_reaction_time=true)
+      and aura(seal_of_command_20920).is_inactive
+  cast seal_of_righteousness
+      if aura(echo_of_righteousness).is_inactive(include_reaction_time=true)
+      and aura(seal_of_righteousness_20293).is_inactive
+  group "Consecration" if $use_consecration
+  group "Exorcism" if $use_exorcism
+
+group "Exorcism":
+  cast exorcism if auto_time_to_next(main_hand_auto) > 1.5s and current_mana_percent >= 10%
+
+group "Consecration":
+  cast consecration if auto_time_to_next(main_hand_auto) > 1.5s and current_mana_percent >= 10%

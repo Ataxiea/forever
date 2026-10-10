@@ -3,6 +3,6 @@
 	"compilerOptions": {
 		"noEmit": true
 	},
-	"include": ["src/webview", "src/schema.ts", "../../ui/types"],
+	"include": ["src/webview", "../../ui/types"],
 	"exclude": []
 }

@@ -1,6 +1,7 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as other_inputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
-import { APLListItem, APLRotation, APLRotation_Type, APLValueVariable } from '@generated/proto/apl';
+import { APLListItem, APLRotation, APLValueVariable } from '@generated/proto/apl';
 import { Cooldowns, HandType, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { Hunter_Rotation_Playstyle as Playstyle } from '@generated/proto/hunter';
 import { PlayerClasses } from '@sim/player/classes';
@@ -11,6 +12,7 @@ import { SpecRotation } from '@sim/proto/spec_types';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as HunterInputs from './inputs';
 import * as Presets from './presets';
 
@@ -73,8 +75,7 @@ export default defineSpec<Spec.SpecHunter>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee, WeaponSkillGroup.Ranged],
 	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand, ItemSlot.ItemSlotRanged, ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2],
 	defaults: {
-		// Default equipped gear.
-		gear: Presets.P1Gear.gear,
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecHunter, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		softCapBreakpoints: [
@@ -84,20 +85,6 @@ export default defineSpec<Spec.SpecHunter>({
 				postCapEPs: [0],
 			}),
 		],
-		rotationType: APLRotation_Type.TypeSimple,
-		simpleRotation: Presets.DefaultSimpleRotation,
-		other: Presets.OtherDefaults,
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: Presets.SurvivalWeaveTalents.data,
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		// Default raid/party buffs settings.
-		raidBuffs: Presets.DefaultRaidBuffs,
-		partyBuffs: Presets.DefaultPartyBuffs,
-		individualBuffs: Presets.DefaultIndividualBuffs,
-		debuffs: Presets.DefaultDebuffs,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
@@ -119,15 +106,7 @@ export default defineSpec<Spec.SpecHunter>({
 	presets: {
 		epWeights: [],
 		// Preset talents that the user can quickly select.
-		talents: [
-			Presets.SurvivalWeaveTalents,
-			Presets.MarksmanshipWeaveTalents,
-			Presets.BeastMasteryWeaveTalents,
-			Presets.MarksmanshipTalents,
-			Presets.BeastMasteryTalents,
-			Presets.SurvivalTalents,
-			Presets.SurvivalMeleeTalents,
-		],
+		talents: Presets.BuildTalents,
 		// Preset rotations that the user can quickly select.
 		rotations: [
 			Presets.SimpleRotation,

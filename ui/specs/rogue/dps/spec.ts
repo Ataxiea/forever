@@ -1,10 +1,9 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
 import { APLRotation } from '@generated/proto/apl';
-import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat, TristateEffect } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
+import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import * as Mechanics from '@sim/constants/mechanics';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
@@ -12,6 +11,7 @@ import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecRogue>({
@@ -68,8 +68,7 @@ export default defineSpec<Spec.SpecRogue>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		// Default equipped gear.
-		gear: EquipmentSpec.create(),
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecRogue, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		statCaps: (() => {
@@ -85,33 +84,6 @@ export default defineSpec<Spec.SpecRogue>({
 
 			return [meleeHitSoftCapConfig];
 		})(),
-		other: Presets.OtherDefaults,
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: SavedTalents.create(),
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		// Default raid/party buffs settings.
-		raidBuffs: RaidBuffs.create({
-			giftOfTheWild: true,
-		}),
-		partyBuffs: PartyBuffs.create({
-			battleShout: TristateEffect.TristateEffectRegular,
-			strengthOfEarthTotem: true,
-			windfuryTotem: true,
-			leaderOfThePack: true,
-		}),
-		individualBuffs: IndividualBuffs.create({
-			greaterBlessingOfKings: true,
-			greaterBlessingOfMight: true,
-		}),
-		debuffs: Debuffs.create({
-			curseOfRecklessness: true,
-			faerieFire: true,
-			giftOfArthas: true,
-			sunderArmor: true,
-		}),
 	},
 
 	playerInputs: {

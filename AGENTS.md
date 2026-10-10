@@ -3,6 +3,8 @@
 WoWSims Forever: a Go simulator (`sim/`) with a React frontend (`ui/`), built on data extracted from the game
 files (`tools/database`, `sim/core/spelldata`).
 
+Rotations, gear sets and sim setups are SIML files (`*.siml`); `sim/siml/SPEC.md` is the language.
+
 **Rule: tests and stories never add code to the sim or the UI.** No export, prop, parameter, branch, flag or
 hook goes into `sim/` or `ui/` only so a unit test or a Storybook story can reach or cover something. A test
 or story works through the code's real surface, and a fixture or stub it needs lives with the tests.

@@ -1,81 +1,140 @@
-# WoWSims APL editor
+# WoWSims SIML
 
-Open an `.apl.json` rotation and click the tree icon in the editor's title bar (or _WoWSims: Open APL
-Editor to the Side_, `Ctrl+K A`): a panel opens beside the JSON, the way the Markdown preview does, and
-shows the rotation as it reads: the prepull list with its times, the priority list, the groups and the
-variables, each action with its condition written out (`if not Aura Active(target, Hunter's Mark)`) and
-every spell and item with its name and icon from `assets/database/db.json`.
+The editor support for SIML, the text form of a rotation (`x.apl.siml`), a gear set (`x.gear.siml`) and a whole sim
+setup (`x.siml`). `sim/siml/SPEC.md` is the language. The extension is two parts:
 
-The panel edits as well as shows:
+- a **language server**, `out/lsp.js`, which serves every `*.siml` file to VS Code and to any editor that speaks the
+  Language Server Protocol;
+- a **panel** that shows an `.apl.siml` rotation as it reads, edits it through the text, and sims it.
 
-- drag a row by its grip to reorder it, or Alt+↑/↓ on a focused row;
-- the eye hides a row (the sim skips it), and the row buttons duplicate or delete it;
-- the chevron opens a row's form: the action kind, its fields and its condition, each value a kind with
-  its own fields, nested as deep as the condition goes;
-- a spell or aura field offers only what the sim registers for the file's spec (see below), filed under
-  the site's categories, with the ids the rotation already names first;
-- `+ Add action`, `+ condition`, `+ value`, `+ group` and `+ variable` pick from the kinds the site
-  offers in that list, with the site's labels and descriptions.
+## The language server
 
-Clicking a row selects its JSON; moving the cursor in the JSON highlights its row.
+It reads each file with the SIML module (`ui/sim/siml`), the schema the protos derive
+(`ui/generated/siml/schema.json`), the name table (`sim/siml/names.json`) and the item database
+(`assets/database/db.json`), all from the repository the file sits in. A fresh `make sim/siml/names.json`, schema or
+`make db` needs no rebuild: the next request reads it, and the open files are checked again when the editor reports the
+change.
 
-## Registered spells
+- **Diagnostics.** The parser's errors and warnings, each with its did-you-mean; a name the file's spec registers for
+  no build; the rotation lints of `src/lint` at the text of the node each is about; and a slot row whose item goes in
+  another slot, whose suffix the item does not roll, or whose enchant fits neither the slot nor the item. Under
+  `ui/specs` warnings are errors and a raw ref is one, as the repository's checks hold them.
+- **Completion.** Sections and the top lines; a section's fields, an enum's values and a flag list's flags; the
+  action keywords and kinds of a row, and the time a prepull row starts with; values, accessor heads, their
+  properties and the properties' arguments; units; variables, groups, sequences and placeholders; and the names of
+  the table for the position: the spells and auras the file's spec registers, the class's first, then the shared ones
+  that gear, consumables and encounters add; `item.` with the items that have a use, `other.`, the items of a slot, the
+  suffixes of an item, the enchants that fit, and the consumables of a field.
+- **Hover.** A spell's or aura's game name, ids and the specs that register it, with its row of the game files from
+  `go run ./tools/spelldata <id>`; an item, an enchant or a suffix from the database; a kind's fields; a unit's JSON;
+  a variable's, group's or sequence's declaration.
+- **Navigation.** Go to definition, find references and rename for variables (both `$name` and `${Exact Name}`),
+  groups, sequences and placeholders; the outline of sections, variables and sequences; folding. A variable that a
+  `use … with` list sets leads to the file that declares it, and its references and renames take in the `with` lists
+  of the `.siml` files near that file. A rename to a name that cannot be written, or that another of its kind already
+  has, is refused. A `use` path links to the file it names, and go to definition opens it.
+- **Semantic tokens**, on top of the grammar: sections, fields, kinds, units, enum values and the table's names.
+- **Formatting** with `format`, the printer every committed file is a fixed point of.
+- **Code actions.** A word the parser does not know changes to a name its did-you-mean offers. An `and(…)` or `or(…)`
+  of one operand becomes the operand; an `and` in parentheses inside an `and` (or an `or` in an `or`) joins it. Each
+  changes the rotation's proto, so none is made without asking.
 
-A spell field offers the spells the sim registers for the spec the file sits in (`ui/specs/hunter/dps`
-is the hunter's), filtered the way the site filters them for that field: castable spells for Cast, spells
-with a DoT for the DoT values, channels for Channel, and so on. An aura field offers the auras of the unit
-it points at: the target's debuffs for the target, the pet's auras for the pet, the player's otherwise.
-Fields that take items also list the database's items, since what an item registers depends on the gear.
+### Another editor
 
-The lists come from `go run --tags=with_db ./tools/aplspells`, which the extension runs once per session
-(the first run compiles the sim). It builds every playable race of the spec at each talent rank (every
-talent at rank 1, then 2, and so on, capped at its own highest) with every raid buff, party buff and debuff
-on, and keeps every spell and aura `ComputeStats` reports. That is everything any build of the spec can
-register: talent-granted spells, rank-tagged auras, racials and external buffs. _WoWSims: Reload
-Registered APL Spells_ runs it again after a change to the sim.
+Build the extension (below), then start `node .vscode/extensions/wowsims-apl/out/lsp.js --stdio` for files that end in
+`.siml`, with the language id `siml`. The server needs no settings: it finds the repository above each file it is
+given, or takes the workspace folder when that holds `sim/siml/names.json`. Hovers run go for a spell's game files
+row; the initialization option `goBinary` names the binary (default `go`, looked up on the PATH, then GOROOT and the
+usual install folders), and `workspace/didChangeConfiguration` with `{"wowsims-apl": {"goBinary": "..."}}` changes it.
 
-An id already in the file that the spec does not register has a `!` on its chip. That is either a mistake
-or something gear registers: a trinket's use spell, a weapon's proc. Until the sim answers, for a file
-outside `ui/specs`, and for a spec the sim cannot build yet (one with code still to port), the picker lists
-the whole database and says why, with an id box for a raw spell id (`i<id>` an item).
+The server provides: incremental sync, `publishDiagnostics`, completion (triggered on space, `(`, `.`, `"`, `$`,
+`%`, `,`, `=`, `[` and `+`), hover, definition, references, rename with prepare, document symbols, document links,
+folding ranges, full semantic tokens, formatting and code actions. When the client registers file watchers
+dynamically, the server watches the schema, the table and the database through `workspace/didChangeWatchedFiles`.
 
-## How it edits
+For Neovim, for example:
 
-The JSON file is the only state. Every change in the panel is a small text edit the extension makes to
-the document, at the JSON path it changes: a new value goes in on one line, a moved row keeps its own
-text, a removed one takes its comma with it. The document then changes as if typed, so undo, the dirty
-marker and git work as they do for a hand edit, and the panel redraws from the new text. JSON files do
-not format on save in this repository; `npx oxfmt <file>` wraps an inserted line that runs long. While the JSON does not parse, the panel shows the last version that did and holds edits.
+```lua
+vim.filetype.add({ extension = { siml = 'siml' } })
+vim.lsp.config('siml', { cmd = { 'node', '/path/to/forever/.vscode/extensions/wowsims-apl/out/lsp.js', '--stdio' }, filetypes = { 'siml' } })
+vim.lsp.enable('siml')
+```
 
-The forms are the site's own: the panel bundles `ui/features/apl/model` (`actionKinds`, `valueKinds`,
-`resolveField`) and the generated protos, so a kind added to the site appears here on the next build,
-with its label, fields and defaults. The site reads only the class off the player for these, which the
-panel takes from the spec folder (`ui/specs/hunter/...`). Units, which the site lists from the raid and
-the encounter, are a type and an index here. A field the site has no picker for shows as JSON.
+## Commands
 
-## Schema
+|                                      |                                                                                   |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| WoWSims: Open APL Editor to the Side | the panel beside an `.apl.siml` file (`Ctrl+K A`)                                 |
+| WoWSims: Sim This APL                | sims the rotation as it is in the editor, unsaved edits included                  |
+| WoWSims: Compare APL With Saved      | sims the saved file, or `HEAD` when nothing is unsaved, against the editor's text |
+| WoWSims: Insert APL Pattern          | inserts a common shape after the row the cursor is on                             |
 
-The build also writes `schemas/apl_rotation.schema.json` from the generated protos, which
-`.vscode/settings.json` gives every `*.apl.json`: the JSON editor completes field, kind and enum names
-and marks a name the proto does not have.
+A rotation kept as JSON prints as SIML with
+`go run --tags=with_db ./cmd/wowsimcli siml print -kind apl -spec <spec> <file.apl.json>`.
 
 ## Settings
 
-|                        |                                                                                                             |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `wowsims-apl.goBinary` | the `go` binary that runs `tools/aplspells`; `go` looks on the PATH, then GOROOT and the usual install dirs |
+|                               |                                                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `wowsims-apl.goBinary`        | the `go` binary for sims and spell hovers; `go` looks on the PATH, then GOROOT and the usual install dirs |
+| `wowsims-apl.simIterations`   | iterations per sim run from the editor (1000)                                                             |
+| `wowsims-apl.simSettingsFile` | settings exported from the site, as JSON or SIML, the character sims from the editor run with             |
+
+## The panel
+
+Open an `.apl.siml` rotation and click the tree icon in the editor's title bar: a panel opens beside the text and
+shows the rotation as it reads, the prepull list with its times, the priority list, the groups and the variables, each
+action with its condition written out and every spell and item with its name and icon from the database.
+
+The panel edits as well as shows: drag a row by its grip, or Alt+↑/↓ on a focused row; the eye hides a row; a row's
+form edits its action kind, fields and condition; `+ Add action`, `+ condition`, `+ value`, `+ group` and
+`+ variable` pick from the kinds the site offers. A spell or aura field offers the names of `sim/siml/names.json` that
+the spec on the file's `spec` line registers, in the namespace the parser reads the field in: an aura by the unit the
+field points at, a boss spell among the target's spells. Fields that take an item offer the items with a use. Each
+choice is written as its name.
+
+- **Edits go through the text.** Each change is made with the SIML module's `splice`: only the statements it touches
+  are printed again, and every other line, comment and blank line stays as written. Undo, the dirty marker and git
+  work as they do for a hand edit. The panel shows its change at once and the text catches up.
+- **Read-only.** While the text has an error the panel shows the rotation as it last read, says where the first error
+  is, and makes no edits. A rotation put together with another file (`use "default.apl.siml" with …`) is shown with
+  the rows it uses and is edited as text.
+- **Refused edits.** An edit `splice` cannot make, such as one through a row that does not exist or one that leaves
+  the rotation with an error, is not made, and a warning says why. An edit the panel made before it saw someone else's
+  change to the text is dropped, and the panel shows the text as it is.
+
+The forms are the site's own: the panel bundles `ui/features/apl/model` and the generated protos. The panel's rows
+carry the file's diagnostics, the same the Problems panel lists.
+
+**▶ Sim** and **⇄ Compare** run `go run --tags=with_db ./tools/aplsim` with the editor's text and the file's path:
+`use` lines are read against it from disk, so each used file must be saved first, and a sim is refused while one has
+unsaved changes. The character is the spec's `defaults.siml`, with the one preset build (`builds/*.siml`) whose
+rotation is the saved file's loaded over it (`turret.apl.siml` takes `builds/mm.siml`); a rotation no build has, or
+several have, such as `arms.apl.siml`, is simmed on the defaults. The panel then shows the DPS, how often each row ran
+per fight, the damage by spell and a timeline of one fight; the editor shows each row's count at the end of its line.
+
+_Insert APL Pattern_ (or **+ pattern** in the panel) asks for each value of a common shape, its default filled in, and
+inserts it: refresh a DoT, keep a debuff up, an execute block, a toggle group, a prepull sequence and more. A condition
+pattern goes onto the priority or group row the cursor is on.
 
 ## Build and install
 
-The source is `tools/vscode-apl`; `.vscode/extensions/wowsims-apl` is its build output and is not
-edited by hand. From the repository root:
+The source is `tools/vscode-apl`; `.vscode/extensions/wowsims-apl` is its build output and is not edited by hand.
+From the repository root:
 
 ```
-make vscode-apl                                    # npm ci, typecheck, bundle, write the manifest and schema
-cd tools/vscode-apl && npm run check && npm test   # the committed output and schema match a fresh build
+make vscode-apl                                    # npm ci, typecheck, bundle, the manifest, the grammar and the panel
+cd tools/vscode-apl && npm run check && npm test   # the committed output matches a fresh build; the tests
 ```
 
-The build needs the root `node_modules` and the generated protos (`make` builds both). VS Code (1.91 or
-later) treats `.vscode/extensions/wowsims-apl` as a workspace extension: opening the repository shows an
-_Install Workspace Extension_ prompt once. A panel reads the database when it opens, so the names and
-icons from a fresh `make db` show in the next panel without a rebuild.
+The build needs the root `node_modules`, the generated protos and `ui/generated/siml/schema.json`, which the grammar
+is generated from (`make` builds them). VS Code (1.91 or later) treats `.vscode/extensions/wowsims-apl` as a
+workspace extension: opening the repository shows an _Install Workspace Extension_ prompt once.
+
+The panel's page (`out/webview.js` and `out/webview.css`) bundles the generated protos, the site's APL model and its
+English strings, so it is not committed: run `make vscode-apl` once, and again after those change. Until then the
+panel says to. `npm run check` builds the page too, but compares only the committed output.
+
+The tests run the built extension and language server: `test/extension.test.mjs` drives the extension's host against
+the stand-in for VS Code in `test/vscode.mjs`, `test/webview.test.mjs` the panel's page bundled from its sources, and
+`test/lsp.test.mjs` the server over stdio. The sims in `test/sim.test.mjs` need go.

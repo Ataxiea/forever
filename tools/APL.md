@@ -1,19 +1,18 @@
-# Editing APL files in VS Code
+# Editing rotations in VS Code
 
-`make vscode-apl` writes `schemas/apl_rotation.schema.json` from the generated protos, and
-`.vscode/settings.json` gives it to every `*.apl.json` file: the JSON editor completes field, kind and enum
-names and marks a name the proto does not have. The same command builds the APL panel, which shows the
-rotation beside the JSON and edits it; see `tools/vscode-apl/README.md`.
+A rotation is an `.apl.siml` file, the text form `sim/siml/SPEC.md` describes. `make vscode-apl` builds the workspace
+extension, whose language server checks, completes, explains and formats every `*.siml` file; see
+`tools/vscode-apl/README.md`.
 
-Create an APL file named `myrotation.apl.json`, replacing `myrotation` with whatever name you prefer. An
-empty rotation looks like
+A rotation with one prepull cast and one priority row looks like
 
 ```
-{
-    "type": "TypeAPL",
-    "prepullActions": [],
-    "priorityList": []
-}
-```
+siml 1
+spec hunter
 
-You can then add prepull actions and the main priority list.
+prepull:
+  -1s cast hunters_mark
+
+priority:
+  cast hunters_mark if not target.aura(hunters_mark).is_active
+```

@@ -1,14 +1,25 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-
-import { ActionID, UnitReference } from '@generated/proto/common';
-
 import type { ACTION_ID_SET } from '@features/apl/model/action_id_sets';
+import type { UNIT_SET } from '@features/apl/model/unit_sets';
+import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AplDatabase } from '../db';
+import { CommitInput } from './commit_input';
 import { iconUrl, IdChip, useDb } from './db';
 import { useEditor } from './editor_context';
-import { categoryLabel, idKey, ITEM_SETS, offeredFor, useRegistered, writtenId } from './registered';
-import { type Family, type Json, type JsonObject, enumChoices, enumJsonName, enumNumber, fieldInfo, isObject, kindsFor, submenuLabel } from './model';
+import {
+	enumChoices,
+	enumJsonName,
+	enumNumber,
+	type Family,
+	type fieldInfo,
+	isObject,
+	type Json,
+	type JsonObject,
+	kindsFor,
+	submenuLabel,
+	unitChoices,
+} from './model';
+import { idKey, offeredFor, useRegistered } from './registered';
 import { unitText } from './summary';
 
 export interface PickerOption {
@@ -112,17 +123,13 @@ export function SearchPicker({
 	);
 }
 
-const OTHER_IDS = enumChoices(fieldInfo(ActionID, 'otherId')).filter(choice => choice.value !== 0);
-
-function dbOption(db: AplDatabase, id: JsonObject, group: string, hint?: string): PickerOption {
+// An id as a picker option, with the game name and icon the database gives it, and its name in the table.
+function dbOption(db: AplDatabase, id: JsonObject, group: string, named: string, hint?: string): PickerOption {
 	const kind = typeof id.itemId === 'number' ? 'item' : typeof id.otherId === 'string' ? 'other' : 'spell';
 	const number = kind === 'item' ? id.itemId : id.spellId;
-	const [name, icon] =
-		kind === 'other'
-			? [String(id.otherId).replace(/^OtherAction/, ''), undefined]
-			: ((kind === 'item' ? db.items : db.spells)[number as number] ?? [`${kind} ${number}`, undefined]);
+	const [name, icon] = kind === 'other' ? [named, undefined] : ((kind === 'item' ? db.items : db.spells)[number as number] ?? [named, undefined]);
 	const tag = typeof id.tag === 'number' && id.tag ? ` · tag ${id.tag}` : '';
-	return { key: `${idKey(id)}`, label: name, hint: hint ?? `${kind} ${kind === 'other' ? id.otherId : number}${tag}`, icon, group, value: id };
+	return { key: `${idKey(id)}`, label: name, hint: hint ?? `${named} · ${kind} ${kind === 'other' ? id.otherId : number}${tag}`, icon, group, value: id };
 }
 
 // Names that more than one option shares, which then carry their rank, or their id where they have none.
@@ -136,86 +143,57 @@ function withRanks(options: PickerOption[], ranks: Map<string, number>): PickerO
 	});
 }
 
-// What the field may hold: the spells or auras the sim registers for the spec that the field's set lets
-// through, and for the sets that take one, an item from the database. Until the sim answers, or for a
-// spec it cannot build, the whole database, with the reason above the list.
+// What the field may hold: the names of sim/siml/names.json the spec registers in the namespace the field reads, and
+// for the sets that take one, the items with a use. Each option writes its ActionID as the table holds it, tag and rank
+// included, so the text names it.
 export function ActionIdPicker({
 	json,
 	onPick,
+	kind,
+	field,
 	set,
 	unit,
-	defaultUnitRef,
-	isPrepull,
 }: {
 	json: Json | undefined;
 	onPick: (value: Json) => void;
+	kind: string;
+	field: string;
 	set: ACTION_ID_SET;
 	unit: Json | undefined;
-	defaultUnitRef: 'self' | 'currentTarget';
-	isPrepull: boolean;
 }) {
 	const db = useDb();
 	const registered = useRegistered();
 	const { usedIds } = useEditor();
 	const options = useMemo(
 		() => () => {
+			if (registered.status !== 'ready') return [];
 			const used = new Set(usedIds);
 			const first = (list: PickerOption[]) => [...list.filter(o => used.has(o.key)), ...list.filter(o => !used.has(o.key))];
-			const items = ITEM_SETS.has(set) ? Object.keys(db.items).map(id => dbOption(db, { itemId: Number(id) }, 'item')) : [];
-			if (registered.status !== 'ready') {
-				const spells = Object.keys(db.spells).map(id => dbOption(db, { spellId: Number(id) }, 'spell'));
-				const others = OTHER_IDS.map(choice => dbOption(db, { otherId: choice.label }, 'other'));
-				return first([...spells, ...items, ...others]);
-			}
-			const scope = isPrepull ? 'priority' : 'prepull';
-			const offered = offeredFor(registered, set, unit, defaultUnitRef).filter(entry => entry.listScope !== scope);
-			const ranks = new Map(offered.map(entry => [`${idKey(entry.id)}`, typeof entry.id.rank === 'number' ? entry.id.rank : 0]));
-			const spells = withRanks(
-				offered.map(entry =>
-					dbOption(db, writtenId(entry.id), categoryLabel(entry.stats) ?? (typeof entry.id.otherId === 'string' ? 'other' : registered.spec)),
-				),
+			const offered = offeredFor(registered, { kind, name: field, set }, unit);
+			const ranks = new Map(offered.map(entry => [`${idKey(entry.id)}`, entry.id.rank ?? 0]));
+			const named = withRanks(
+				offered.map(entry => dbOption(db, entry.id as JsonObject, entry.id.itemId === undefined ? registered.spec : 'item', entry.name)),
 				ranks,
 			);
 			const placeholders =
-				set === 'castable_spells' ? [dbOption(db, { otherId: 'OtherActionPotion' }, 'placeholder', 'whichever potion the player has')] : [];
-			return first([...spells, ...placeholders, ...items]);
+				set === 'castable_spells'
+					? [dbOption(db, { otherId: 'OtherActionPotion' }, 'placeholder', 'other.potion', 'whichever potion the player has')]
+					: [];
+			return first([...named, ...placeholders]);
 		},
-		[db, usedIds, registered, set, unit, defaultUnitRef, isPrepull],
+		[db, usedIds, registered, kind, field, set, unit],
 	);
 	const note =
-		registered.status === 'loading'
-			? 'Loading the spells the sim registers for this spec; listing the database meanwhile.'
-			: registered.status === 'unavailable'
-				? `Listing the whole database: ${registered.reason}.`
-				: undefined;
-	const [raw, setRaw] = useState('');
-	const tag = isObject(json) && typeof json.tag === 'number' ? json.tag : undefined;
+		registered.status === 'ready' ? undefined : `Nothing to offer: ${registered.status === 'loading' ? 'the names are loading' : registered.reason}.`;
 	return (
 		<span className="id-picker">
 			<SearchPicker
 				trigger={<IdChip json={json} />}
 				options={options}
 				note={note}
-				onPick={value => onPick(tag && !(isObject(value) && 'tag' in value) ? { ...(value as object), tag } : value)}
-				placeholder={registered.status === 'ready' ? `Search what ${registered.spec} registers` : 'Search spells and items'}
+				onPick={onPick}
+				placeholder={registered.status === 'ready' ? `Search what ${registered.spec} registers` : 'Search names'}
 			/>
-			{registered.status === 'ready' ? null : (
-				<input
-					className="raw-id"
-					placeholder="id"
-					value={raw}
-					title="A spell id, or i<id> for an item"
-					onChange={e => setRaw(e.target.value)}
-					onKeyDown={e => {
-						if (e.key !== 'Enter') return;
-						const match = /^(i?)(\d+)$/.exec(raw.trim());
-						if (match) {
-							onPick(match[1] ? { itemId: Number(match[2]) } : { spellId: Number(match[2]) });
-							setRaw('');
-						}
-					}}
-				/>
-			)}
 		</span>
 	);
 }
@@ -252,37 +230,40 @@ export function KindPicker({
 	);
 }
 
-const UNIT_TYPE = fieldInfo(UnitReference, 'type');
 const INDEXED = new Set(['Target', 'Pet', 'Player']);
 
-// A unit reference: the kind's default (no reference), or a type and, for the indexed types, which one.
-export function UnitPicker({ json, onPick }: { json: Json | undefined; onPick: (value: Json | undefined) => void }) {
+// A unit reference: the kind's default (no reference), or one of the units the field's set offers and, for the
+// indexed types, which one. The index is written on Enter or when the box loses focus.
+export function UnitPicker({ json, set, onPick }: { json: Json | undefined; set: UNIT_SET; onPick: (value: Json | undefined) => void }) {
 	const type = isObject(json) && typeof json.type === 'string' ? json.type : '';
 	const index = isObject(json) && typeof json.index === 'number' ? json.index : 0;
+	const choices = useMemo(() => unitChoices(set), [set]);
+	const offered = choices.some(choice => choice.type === type);
 	return (
 		<span className="unit-picker">
 			<select
 				value={type}
-				onChange={e => onPick(e.target.value ? { type: e.target.value, ...(INDEXED.has(e.target.value) && index ? { index } : {}) } : undefined)}>
+				onChange={e => {
+					const choice = choices.find(c => c.type === e.target.value);
+					onPick(choice ? { ...choice, ...(INDEXED.has(e.target.value) && index ? { index } : {}) } : undefined);
+				}}>
 				<option value="">default</option>
-				{enumChoices(UNIT_TYPE)
-					.filter(choice => choice.value !== 0)
-					.map(choice => (
-						<option key={choice.label} value={choice.label}>
-							{unitText({ type: choice.label }) ?? choice.label}
-						</option>
-					))}
+				{choices.map(choice => (
+					<option key={String(choice.type)} value={String(choice.type)}>
+						{unitText({ type: choice.type }) ?? String(choice.type)}
+					</option>
+				))}
+				{type && !offered ? <option value={type}>{unitText(json) ?? type}</option> : null}
 			</select>
 			{INDEXED.has(type) ? (
-				<input
+				<CommitInput
 					type="number"
-					min={1}
 					className="narrow"
-					value={index + 1}
-					title="Which one, counting from 1"
-					onChange={e => {
-						const n = Math.max(0, Number(e.target.value) - 1);
-						onPick({ ...(json as object), index: n || undefined } as Json);
+					value={String(index + 1)}
+					onCommit={v => {
+						const n = Math.max(0, Math.trunc(Number(v)) - 1 || 0);
+						const { index: _index, ...rest } = json as JsonObject;
+						onPick(n ? { ...rest, index: n } : rest);
 					}}
 				/>
 			) : null}

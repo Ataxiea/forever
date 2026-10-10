@@ -1,16 +1,17 @@
-import { useEffect, useState, type ReactNode } from 'react';
-
 import type { AplFieldSpec } from '@features/apl/model/field_specs';
+import { type ReactNode, useEffect, useState } from 'react';
 
+import { CommitInput } from './commit_input';
 import { useEditor } from './editor_context';
+import { Icon } from './icons';
 import {
 	type Family,
-	type Json,
-	type JsonObject,
-	type JsonPath,
 	fieldInfo,
 	humanize,
 	isObject,
+	type Json,
+	type JsonObject,
+	type JsonPath,
 	kindMessage,
 	kindModel,
 	kindOf,
@@ -19,43 +20,6 @@ import {
 } from './model';
 import { ActionIdPicker, EnumSelect, KindPicker, UnitPicker } from './pickers';
 import { ActionText, ValueText } from './summary';
-import { Icon } from './icons';
-
-// A text box that writes on Enter or when it loses focus, not on every key, so one change is one edit.
-export function CommitInput({
-	value,
-	onCommit,
-	placeholder,
-	list,
-	className,
-	type = 'text',
-}: {
-	value: string;
-	onCommit: (value: string) => void;
-	placeholder?: string;
-	list?: string;
-	className?: string;
-	type?: string;
-}) {
-	const [draft, setDraft] = useState(value);
-	useEffect(() => setDraft(value), [value]);
-	const commit = () => draft !== value && onCommit(draft);
-	return (
-		<input
-			type={type}
-			className={className}
-			value={draft}
-			list={list}
-			placeholder={placeholder}
-			onChange={e => setDraft(e.target.value)}
-			onBlur={commit}
-			onKeyDown={e => {
-				if (e.key === 'Enter') commit();
-				if (e.key === 'Escape') setDraft(value);
-			}}
-		/>
-	);
-}
 
 // The JSON itself, for a field or kind the forms do not cover.
 function RawJson({ json, onCommit }: { json: Json | undefined; onCommit: (value: Json | undefined) => void }) {
@@ -123,17 +87,17 @@ function FieldEditor({
 					<ActionIdPicker
 						json={json}
 						onPick={set}
+						kind={kind}
+						field={spec.field}
 						set={spec.actionIdSet}
 						unit={spec.unitRefField ? body[spec.unitRefField] : undefined}
-						defaultUnitRef={spec.defaultUnitRef}
-						isPrepull={ctx.isPrepull}
 					/>
 				</Row>
 			);
 		case 'unit':
 			return (
 				<Row label={spec.label ?? (spec.field === 'target' ? 'Target' : label)} tooltip={spec.labelTooltip}>
-					<UnitPicker json={json} onPick={set} />
+					<UnitPicker json={json} set={spec.unitSet} onPick={set} />
 				</Row>
 			);
 		case 'boolean':

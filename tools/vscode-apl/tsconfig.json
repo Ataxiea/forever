@@ -1,14 +1,14 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"module": "Node16",
-		"moduleResolution": "Node16",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
 		"lib": ["ES2022"],
 		"strict": true,
 		"noEmit": true,
 		"skipLibCheck": true,
-		"types": ["node", "vscode"]
+		"types": ["node", "vscode"],
+		"allowImportingTsExtensions": true
 	},
-	"include": ["src/*.ts"],
-	"exclude": ["src/schema.ts"]
+	"include": ["src/*.ts"]
 }

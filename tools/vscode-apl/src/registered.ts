@@ -1,87 +1,35 @@
-import { execFile } from 'node:child_process';
-import { statSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { delimiter, join } from 'node:path';
+import { loadDatabase, usableItems } from './lang/database.ts';
+import type { Parsed } from './lang/document.ts';
+import type { SpellName, SpellNamespace } from './lang/siml.ts';
+import { registeredNames } from './lang/workspace.ts';
+import type { ActionIdJson, Registered, RegisteredName } from './protocol';
 
-import type { Registered, RegisteredSpec } from './protocol';
-
-type AllSpecs = Record<string, RegisteredSpec | { error: string }>;
-
-// VS Code started from a desktop launcher or a WSL/remote server does not read the shell profile, so a Go
-// install the terminal finds is often missing from its PATH.
-export function findGo(configured: string): string | undefined {
-	if (configured !== 'go') {
-		return configured;
-	}
-	const exe = process.platform === 'win32' ? 'go.exe' : 'go';
-	const candidates = [
-		...(process.env.PATH ?? '').split(delimiter).map(dir => join(dir, exe)),
-		...(process.env.GOROOT ? [join(process.env.GOROOT, 'bin', exe)] : []),
-		'/usr/local/go/bin/go',
-		'/usr/lib/go/bin/go',
-		'/opt/homebrew/bin/go',
-		join(homedir(), 'go', 'bin', exe),
-		'C:\\Program Files\\Go\\bin\\go.exe',
-	];
-	return candidates.find(path => path !== exe && isFile(path));
+// The ActionID a spell-like name of the table writes, as the parser reads it.
+function actionId(entry: SpellName): ActionIdJson {
+	return { spellId: entry.spellId, ...(entry.tag ? { tag: entry.tag } : {}), ...(entry.rank ? { rank: entry.rank } : {}) };
 }
 
-function isFile(path: string): boolean {
-	try {
-		return statSync(path).isFile();
-	} catch {
-		return false;
-	}
-}
-
-// One run of `tools/aplspells` per repository, shared by every panel until the cache is dropped.
-const runs = new Map<string, Promise<AllSpecs>>();
-
-function run(root: string, go: string): Promise<AllSpecs> {
-	return new Promise((resolve, reject) => {
-		execFile(go, ['run', '--tags=with_db', './tools/aplspells'], { cwd: root, maxBuffer: 64 << 20 }, (error, stdout, stderr) => {
-			if (error) {
-				reject(new Error(stderr.trim().split('\n').slice(-3).join('\n') || error.message));
-				return;
-			}
-			try {
-				resolve(JSON.parse(stdout) as AllSpecs);
-			} catch (e) {
-				reject(e as Error);
-			}
-		});
+// What the panel's pickers offer a file: the names of sim/siml/names.json its spec line's builds register, and the
+// items with a use the table names. Every one prints as its name.
+export function registeredFor(p: Parsed): Registered {
+	const spec = p.parse.spec;
+	if (spec === undefined) return { status: 'unavailable', reason: 'the file has no spec line' };
+	const list = (ns: SpellNamespace): RegisteredName[] =>
+		registeredNames(p.ws.table, p.cls, spec, ns).map(({ name, entry }) => ({ name, id: actionId(entry) }));
+	const items = usableItems(loadDatabase(p.ws.root)).flatMap(itemId => {
+		const name = p.ws.names.itemName(itemId);
+		return name ? [{ name: `item.${name}`, id: { itemId } }] : [];
 	});
-}
-
-export function forgetRegistered(): void {
-	runs.clear();
-}
-
-export async function registeredFor(root: string | undefined, spec: string | undefined, goSetting: string): Promise<Registered> {
-	if (!root || !spec) {
-		return { status: 'unavailable', reason: 'the file is not in a spec folder under ui/specs' };
-	}
-	const go = findGo(goSetting);
-	if (!go) {
-		return { status: 'unavailable', reason: 'no go binary found; set wowsims-apl.goBinary' };
-	}
-	let all = runs.get(root);
-	if (!all) {
-		all = run(root, go);
-		runs.set(root, all);
-		// A failed run is not kept, so the next panel tries again.
-		all.catch(() => runs.delete(root));
-	}
-	try {
-		const entry = (await all)[spec];
-		if (!entry) {
-			return { status: 'unavailable', reason: `the sim has no spec for ${spec}` };
-		}
-		if ('error' in entry) {
-			return { status: 'unavailable', reason: `the sim cannot build ${spec} yet (${entry.error})` };
-		}
-		return { status: 'ready', spec, registered: entry };
-	} catch (e) {
-		return { status: 'unavailable', reason: `tools/aplspells failed: ${(e as Error).message}` };
-	}
+	return {
+		status: 'ready',
+		spec,
+		registered: {
+			spells: list('spell'),
+			auras: list('aura'),
+			targetAuras: list('target_aura'),
+			petAuras: list('pet_aura'),
+			targetSpells: list('target_spell'),
+			items,
+		},
+	};
 }

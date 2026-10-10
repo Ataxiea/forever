@@ -1,6 +1,7 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
+import { APLRotation } from '@generated/proto/apl';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
@@ -8,6 +9,7 @@ import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecRetributionPaladin>({
@@ -72,8 +74,7 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		// Default equipped gear.
-		gear: Presets.TwistOfLightGearPreset.gear,
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecRetributionPaladin, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.TwistOfLightEpWeights.epWeights,
 		statCaps: (() => {
@@ -82,21 +83,6 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 
 			return hitCap.add(expCap);
 		})(),
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: Presets.TwistOfLightTalents.data,
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		other: Presets.OtherDefaults,
-		// Default raid/party buffs settings.
-		raidBuffs: Presets.DefaultRaidBuffs,
-		partyBuffs: Presets.DefaultPartyBuffs,
-		individualBuffs: Presets.DefaultIndividualBuffs,
-		debuffs: Presets.DefaultDebuffs,
-
-		rotationType: APLRotation_Type.TypeAuto,
-		aplRotation: Presets.TwistOfLightAplPreset.rotation.rotation!,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.

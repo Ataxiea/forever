@@ -1,5 +1,18 @@
+import { Player as PlayerProto } from '@generated/proto/api';
 import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
-import { Cooldowns, Encounter as EncounterProto, EquipmentSpec, HealingModel, ItemSwap, PseudoStat, Spec, Stat, UnitReference } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import {
+	ConsumesSpec,
+	Cooldowns,
+	Encounter as EncounterProto,
+	EquipmentSpec,
+	HealingModel,
+	ItemSwap,
+	PseudoStat,
+	Spec,
+	Stat,
+	UnitReference,
+} from '@generated/proto/common';
 import { IndividualSimSettings, SavedRotation, SavedTalents } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { Player } from '@sim/player/player';
@@ -21,8 +34,10 @@ import type {
 	PresetTalentsOptions,
 } from '@sim/presets/types';
 import { specTypeFunctions } from '@sim/proto/spec_functions';
-import type { SpecRotation } from '@sim/proto/spec_types';
+import type { SpecRotation, SpecTypeFunctions } from '@sim/proto/spec_types';
 import { Stats } from '@sim/proto/stats';
+import { getPlayerSpecFromPlayer } from '@sim/proto/utils';
+import type { IndividualSimUIConfig } from '@sim/spec_config';
 
 export type {
 	PresetBase,
@@ -202,16 +217,15 @@ export const makePresetItemSwapGearHelper = (name: string, itemSwap: ItemSwap): 
 	};
 };
 
+// Whether the settings set the spec's options. A SIML `settings:` section always does (sim/siml/SPEC.md §5.1), so
+// without them a file states none of the player's settings, as a build of only gear, talents and a rotation.
+const hasSpecOptions = ({ spec }: PlayerProto) =>
+	spec.oneofKind !== undefined && (spec as unknown as Record<string, { options?: unknown }>)[spec.oneofKind].options !== undefined;
+
 const makePresetSettingsHelper = (name: string, spec: Spec, simSettings: IndividualSimSettings): PresetSettings => {
 	const settings: PresetSettings = { name };
 
-	if (simSettings.player?.race) {
-		settings.race = simSettings.player.race;
-	}
-
 	if (simSettings.player) {
-		settings.specOptions = specTypeFunctions[spec].optionsFromPlayer(simSettings.player);
-
 		if (simSettings.player.buffs) {
 			settings.buffs = simSettings.player.buffs;
 		}
@@ -219,11 +233,18 @@ const makePresetSettingsHelper = (name: string, spec: Spec, simSettings: Individ
 		if (simSettings.player.consumables) {
 			settings.consumables = simSettings.player.consumables;
 		}
+	}
+
+	if (simSettings.player && hasSpecOptions(simSettings.player)) {
+		if (simSettings.player.race) {
+			settings.race = simSettings.player.race;
+		}
+
+		settings.specOptions = specTypeFunctions[spec].optionsFromPlayer(simSettings.player);
 
 		settings.playerOptions = {
 			inFrontOfTarget: simSettings.player.inFrontOfTarget,
 			distanceFromTarget: simSettings.player.distanceFromTarget,
-			enableItemSwap: simSettings.player.enableItemSwap,
 		};
 
 		// proto3 cannot tell an absent scalar from a zero one, so a JSON that never mentions these
@@ -244,10 +265,11 @@ const makePresetSettingsHelper = (name: string, spec: Spec, simSettings: Individ
 		if (!!simSettings.player.profession2) {
 			settings.playerOptions.profession2 = simSettings.player.profession2;
 		}
+	}
 
-		if (simSettings.player.itemSwap) {
-			settings.playerOptions.itemSwap = simSettings.player.itemSwap;
-		}
+	// An item swap set is gear, not a setting (sim/siml/SPEC.md §5.1), so a file states it with or without them.
+	if (simSettings.player?.itemSwap) {
+		settings.playerOptions = { ...settings.playerOptions, enableItemSwap: simSettings.player.enableItemSwap, itemSwap: simSettings.player.itemSwap };
 	}
 
 	if (simSettings.raidBuffs) {
@@ -264,6 +286,9 @@ const makePresetSettingsHelper = (name: string, spec: Spec, simSettings: Individ
 
 	return settings;
 };
+
+export const makePresetSettingsFromJSON = (name: string, spec: Spec, json: any): PresetSettings =>
+	makePresetSettingsHelper(name, spec, IndividualSimSettings.fromJson(json, { ignoreUnknownFields: true }));
 
 export const makePresetBuild = (name: string, options: PresetBuildOptions): PresetBuild => {
 	return { name, ...options };
@@ -318,4 +343,59 @@ export const makePresetBuildFromJSON = (
 	}
 
 	return makePresetBuild(name, { ...buildConfig, ...customBuildOptions });
+};
+
+type SpecSettingsDefaults<SpecType extends Spec> = Pick<
+	IndividualSimUIConfig<SpecType>['defaults'],
+	| 'gear'
+	| 'consumables'
+	| 'talents'
+	| 'specOptions'
+	| 'raidBuffs'
+	| 'partyBuffs'
+	| 'individualBuffs'
+	| 'debuffs'
+	| 'rotationType'
+	| 'aplRotation'
+	| 'simpleRotation'
+	| 'other'
+>;
+
+// The proto-backed part of a spec's `defaults`, from the IndividualSimSettings JSON of its defaults.siml. A message the
+// file does not hold is empty, and `other` holds 0 for what the file does not set, which applying the defaults reads
+// as unset.
+export const specDefaultsFromSettings = <SpecType extends Spec>(spec: SpecType, json: any): SpecSettingsDefaults<SpecType> => {
+	const settings = IndividualSimSettings.fromJson(json);
+	const player = settings.player;
+	if (!player?.spec.oneofKind || getPlayerSpecFromPlayer(player).specID !== spec) {
+		throw new Error(`The defaults are not ${Spec[spec]} settings.`);
+	}
+	const functions = specTypeFunctions[spec] as SpecTypeFunctions<SpecType>;
+	const rotation = player.rotation;
+
+	return {
+		gear: player.equipment ?? EquipmentSpec.create(),
+		consumables: player.consumables ?? ConsumesSpec.create(),
+		talents: SavedTalents.create({ talentsString: player.talentsString }),
+		specOptions: functions.optionsFromPlayer(player),
+		raidBuffs: settings.raidBuffs ?? RaidBuffs.create(),
+		partyBuffs: settings.partyBuffs ?? PartyBuffs.create(),
+		individualBuffs: player.buffs ?? IndividualBuffs.create(),
+		debuffs: settings.debuffs ?? Debuffs.create(),
+		...(rotation && { rotationType: rotation.type }),
+		...(rotation?.type === APLRotationType.TypeAPL && { aplRotation: rotation }),
+		...(rotation?.type === APLRotationType.TypeSimple && {
+			simpleRotation: functions.rotationFromJson(JSON.parse(rotation.simple?.specRotationJson || '{}')),
+		}),
+		other: {
+			race: player.race,
+			profession1: player.profession1,
+			profession2: player.profession2,
+			distanceFromTarget: player.distanceFromTarget,
+			reactionTime: player.reactionTimeMs,
+			channelClipDelay: player.channelClipDelayMs,
+			healingModel: player.healingModel,
+			iterationCount: settings.settings?.iterations,
+		},
+	};
 };

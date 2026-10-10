@@ -1,0 +1,21 @@
+siml 1
+spec dps_warrior
+talents "30325213132515201-0505-2"
+use "../gear_sets/prebis_arms.gear.siml"
+
+// The Pre-BiS Arms two-hander is an axe, so the main hand takes the sharpening stone and there
+// is no off hand.
+consumables:
+  pot major_frenzy_potion
+  food smoked_desert_dumplings
+  explosive ez_thro_dark_bomb
+  mh_imbue dense_sharpening_stone
+  extra goblin_sapper_charge
+  elixir elixir_of_ferocity, elixir_of_the_mongoose, winterfall_firewater
+
+simple:
+  spec=arms
+  use_overpower
+  sunder_armor help
+  use_rend, use_hamstring
+  cooldowns()

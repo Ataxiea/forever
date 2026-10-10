@@ -9,6 +9,7 @@ import (
 type APLAction struct {
 	condition APLValue
 	impl      APLActionImpl
+	Path      string // The row's JSON path in the APL ("priorityList/3", "groups/1/actions/0"); empty below the row.
 }
 
 func (action *APLAction) Finalize(rot *APLRotation) {

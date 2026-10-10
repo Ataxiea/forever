@@ -11,6 +11,7 @@ import { watchAndRun } from 'vite-plugin-watch-and-run';
 import { checker } from 'vite-plugin-checker';
 import i18nextLoader from 'vite-plugin-i18next-loader';
 
+import { simlPlugin } from './tools/vite/siml.mjs';
 import { SPEC_PAGE_TEMPLATE, specPages } from './tools/vite/spec_pages.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -161,6 +162,7 @@ export default defineConfig(({ command, mode }) => {
 			]),
 			serveExternalAssets(),
 			specPages(BASE_PATH),
+			simlPlugin(),
 			checker({
 				root: BASE_PATH,
 				typescript: { root: __dirname, tsconfigPath: 'tsconfig.json' },

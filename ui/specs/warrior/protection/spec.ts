@@ -1,7 +1,7 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
-import { Debuffs, RaidBuffs } from '@generated/proto/buffs';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
@@ -10,7 +10,7 @@ import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as WarriorInputs from '../shared/inputs';
-import * as WarriorPresets from '../shared/presets';
+import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecProtectionWarrior>({
@@ -79,8 +79,7 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		// Default equipped gear.
-		gear: Presets.PreBiSGear.gear,
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecProtectionWarrior, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.PreBiSEpWeights.epWeights,
 		statCaps: (() => {
@@ -90,28 +89,6 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 
 			return hitCap.add(expCap).add(critImmunityCap);
 		})(),
-		other: Presets.OtherDefaults,
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: Presets.ProtectionTalents.data,
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		// Default raid/party buffs settings.
-		raidBuffs: RaidBuffs.create({
-			...WarriorPresets.DefaultRaidBuffs,
-			prayerOfShadowProtection: true,
-		}),
-		partyBuffs: WarriorPresets.DefaultPartyBuffs,
-		individualBuffs: WarriorPresets.DefaultIndividualBuffs,
-		debuffs: Debuffs.create({
-			curseOfRecklessness: true,
-			faerieFire: true,
-			exposeArmor: true,
-			insectSwarm: true,
-			curseOfWeakness: true,
-			vindication: true,
-		}),
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.

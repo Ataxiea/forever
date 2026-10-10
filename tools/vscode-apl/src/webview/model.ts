@@ -1,13 +1,13 @@
-import { APLAction, APLValue } from '@generated/proto/apl';
-import { Class } from '@generated/proto/common';
-import i18n from '@i18n/config';
-import type { Player } from '@sim/player/player';
-import type { FieldInfo, IMessageType } from '@protobuf-ts/runtime';
-
 import { actionKinds } from '@features/apl/model/action_kinds';
 import type { APLFieldDescriptor } from '@features/apl/model/field_descriptors';
 import { type AplFieldSpec, newKindImpl, resolveField } from '@features/apl/model/field_specs';
+import { type UNIT_SET, unitSets } from '@features/apl/model/unit_sets';
 import { valueKinds } from '@features/apl/model/value_kinds';
+import { APLAction, APLValue } from '@generated/proto/apl';
+import { Class, UnitReference } from '@generated/proto/common';
+import i18n from '@i18n/config';
+import type { FieldInfo, IMessageType } from '@protobuf-ts/runtime';
+import type { Player } from '@sim/player/player';
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
@@ -15,7 +15,7 @@ export type JsonPath = Array<string | number>;
 
 export type Family = 'action' | 'value';
 
-export interface KindModel {
+interface KindModel {
 	kind: string;
 	label: string;
 	submenu?: string[];
@@ -58,20 +58,36 @@ export function fieldInfo(message: IMessageType<any> | undefined, field: string)
 	return message?.fields.find(f => f.localName === field || f.jsonName === field);
 }
 
-// The site's pickers read only the class off the player, to pick the wand or melee auto attack lists; the
-// panel has no sim, so it answers that one question from the spec folder the file sits in.
+// The panel has no sim, so the site's pickers read a stand-in player. It answers the class, which picks the wand or
+// melee auto attack lists, from the file's spec line; and it has one pet, one target and one other player in its raid,
+// so a unit set lists each kind of unit it offers once.
 let className: string | undefined;
 
 export function setClassName(name: string | undefined): void {
 	className = name;
 }
 
+const one = { asList: () => [{}] };
 const player = {
 	getClass: () =>
 		className
 			? ((Class as unknown as Record<string, number>)[`Class${className[0].toUpperCase()}${className.slice(1)}`] ?? Class.ClassUnknown)
 			: Class.ClassUnknown,
+	getPetMetadatas: () => one,
+	sim: { raid: { getActivePlayers: () => [{ getRaidIndex: () => 0 }] }, encounter: { targetsMetadata: one } },
 } as unknown as Player<any>;
+
+// The units a field of `set` takes, each as the JSON of its first one: a pet carries its owner, as the sim needs.
+export function unitChoices(set: UNIT_SET): JsonObject[] {
+	try {
+		return unitSets[set]
+			.getUnits(player)
+			.filter((unit): unit is UnitReference => unit !== undefined)
+			.map(unit => UnitReference.toJson(unit) as JsonObject);
+	} catch {
+		return [];
+	}
+}
 
 export function resolve(descriptor: APLFieldDescriptor): AplFieldSpec {
 	return resolveField(descriptor, player);
@@ -79,7 +95,7 @@ export function resolve(descriptor: APLFieldDescriptor): AplFieldSpec {
 
 // Whether the site offers the kind in this list. A test that asks the sim something the panel cannot answer
 // keeps the kind on offer.
-export function offered(model: KindModel, isPrepull: boolean, isGroup: boolean): boolean {
+function offered(model: KindModel, isPrepull: boolean, isGroup: boolean): boolean {
 	try {
 		return model.includeIf?.(player, isPrepull, isGroup) ?? true;
 	} catch {
@@ -97,10 +113,6 @@ export function submenuLabel(segment: string): string {
 	return translated === key ? segment : translated;
 }
 
-export function t(key: string): string {
-	return i18n.t(key);
-}
-
 // Proto JSON for a newly picked kind, with the defaults the site's pickers write and without the editor uuids
 // the site keys its rows by, which the APL files do not carry.
 export function newKindJson(family: Family, kind: string): JsonObject {
@@ -110,7 +122,7 @@ export function newKindJson(family: Family, kind: string): JsonObject {
 	return withoutUuids(message ? (message.toJson(message.create(impl as object)) as Json) : {}) as JsonObject;
 }
 
-export function withoutUuids(json: Json): Json {
+function withoutUuids(json: Json): Json {
 	if (Array.isArray(json)) {
 		return json.map(withoutUuids);
 	}

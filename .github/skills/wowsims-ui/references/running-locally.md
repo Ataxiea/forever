@@ -1,6 +1,6 @@
 # Running the sim locally
 
-**Source of truth:** `vite.config.mts`, `vite.build-workers.mts`, `tools/vite/spec_pages.mts`, the
+**Source of truth:** `vite.config.mts`, `vite.build-workers.mts`, `tools/vite/spec_pages.mts`, `tools/vite/siml.mts`, the
 `devserver` / `rundevserver` / `devmode` / `host` targets in the makefile, and for Storybook
 `.storybook/main.ts` and the `storybook:dev` / `storybook:build` scripts in `package.json`. Read the
 target before copying a command out of here:
@@ -91,7 +91,7 @@ bundles or `dist/`: stories render components against stub hosts, not a running 
 at `.storybook/vite.config.ts` rather than the repo's `vite.config.mts`. The builder would load
 `vite.config.mts` by default, and that config carries the site build's plugins (`specPages`,
 `watchAndRun`, `checker`); the Storybook config takes only `UI_ALIASES` from it, plus React,
-Tailwind and the i18next loader. Fonts and spec backgrounds are root-absolute under
+Tailwind, the i18next loader and the SIML plugin (`simlPlugin`, which `vitest.config.mts` registers too). Fonts and spec backgrounds are root-absolute under
 `/forever/assets`, so `staticDirs` serves `assets/` there. `.storybook/preview.tsx` imports
 `.storybook/storybook.css` (the Storybook stylesheet entry, see `ui/STYLING.md`), the i18n config
 and `ui/shared/page_boot.ts`, stubs `gtag`, and adds the spec toolbar and the `withSimUi` frame;

@@ -1,10 +1,12 @@
 import { createContext, useContext } from 'react';
 
-import type { AplEdit } from '../edits';
+import type { AplEdit } from '../protocol';
 import type { JsonPath } from './model';
 
 export interface EditorApi {
-	edit: (...edits: AplEdit[]) => void;
+	// Makes the edits on the panel's rotation and sends them to the extension. While the panel is read-only it does
+	// nothing, and says so with false.
+	edit: (...edits: AplEdit[]) => boolean;
 	reveal: (path: JsonPath) => void;
 	// Names the rotation defines, for the name pickers.
 	groupNames: string[];
@@ -15,6 +17,13 @@ export interface EditorApi {
 	groupVariables: Record<string, string[]>;
 }
 
-export const EditorContext = createContext<EditorApi>({ edit: () => {}, reveal: () => {}, groupNames: [], variableNames: [], usedIds: [], groupVariables: {} });
+export const EditorContext = createContext<EditorApi>({
+	edit: () => false,
+	reveal: () => {},
+	groupNames: [],
+	variableNames: [],
+	usedIds: [],
+	groupVariables: {},
+});
 
 export const useEditor = () => useContext(EditorContext);

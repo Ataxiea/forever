@@ -1,0 +1,9 @@
+siml 1
+spec hunter
+
+// A group's rows and var lines go under its header, which names it.
+var $x = 1
+wait 1s
+
+group "A":
+  wait 2s

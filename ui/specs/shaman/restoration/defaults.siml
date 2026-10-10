@@ -1,0 +1,23 @@
+siml 1
+spec restoration_shaman
+
+settings:
+  race dwarf
+  profession1 leatherworking
+  profession2 enchanting
+  reaction_time_ms 100
+  distance_from_target 20
+
+consumables:
+  pot major_mana_potion
+  food soaring_pamplona
+
+buffs: greater_blessing_of_kings, greater_blessing_of_wisdom, greater_blessing_of_light
+
+party_buffs: mana_spring_totem
+
+raid_buffs:
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  target_dummies 9
+
+apl: type auto

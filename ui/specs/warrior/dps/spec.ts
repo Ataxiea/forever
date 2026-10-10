@@ -1,7 +1,8 @@
+import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
-import { APLRotation, APLRotation_Type, SimpleRotation } from '@generated/proto/apl';
+import { APLRotation, SimpleRotation } from '@generated/proto/apl';
 import { Cooldowns, HandType, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { DpsWarriorSpec, WarriorSunder } from '@generated/proto/warrior';
 import * as Mechanics from '@sim/constants/mechanics';
@@ -13,7 +14,7 @@ import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as WarriorInputs from '../shared/inputs';
-import * as WarriorPresets from '../shared/presets';
+import Defaults from './defaults.siml';
 import * as DpsWarriorInputs from './inputs';
 import * as Presets from './presets';
 
@@ -66,8 +67,7 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		// Default equipped gear.
-		gear: Presets.PreBiSFuryGear.gear,
+		...PresetUtils.specDefaultsFromSettings(Spec.SpecDpsWarrior, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.PreBiSFuryEpWeights.epWeights,
 		statCaps: (() => {
@@ -83,20 +83,6 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 
 			return [meleeHitSoftCapConfig];
 		})(),
-		rotationType: APLRotation_Type.TypeSimple,
-		simpleRotation: Presets.SIMPLE_ROTATION,
-		other: Presets.OtherDefaults,
-		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
-		// Default talents.
-		talents: Presets.FuryTalents.data,
-		// Default spec-specific settings.
-		specOptions: Presets.DefaultOptions,
-		// Default raid/party buffs settings.
-		raidBuffs: WarriorPresets.DefaultRaidBuffs,
-		partyBuffs: WarriorPresets.DefaultPartyBuffs,
-		individualBuffs: WarriorPresets.DefaultIndividualBuffs,
-		debuffs: WarriorPresets.DefaultDebuffs,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.

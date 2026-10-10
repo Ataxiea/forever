@@ -2,9 +2,9 @@ package core
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/wowsims/forever/sim/core/proto"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type APLRotation struct {
@@ -60,6 +60,10 @@ type APLRotation struct {
 	priorityListIdxMap []int
 	groupListIdxMap    [][]int
 }
+
+// Called with every executed row, a group reference's row and then the row it ran from the group. Nil except
+// in tools that read a rotation's choices; it is shared by every sim in the process.
+var APLActionExecuted func(sim *Simulation, unit *Unit, action *APLAction)
 
 type APLGroup struct {
 	name         string
@@ -153,12 +157,16 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 					} else {
 						action := rotation.newAPLAction(prepullItem.Action)
 						if action != nil {
+							action.Path = fmt.Sprintf("prepullActions/%d", prepullIdx)
 							rotation.prepullActions = append(rotation.prepullActions, action)
 							rotation.prepullIdxMap = append(rotation.prepullIdxMap, prepullIdx)
 							unit.RegisterPrepullAction(doAt, func(sim *Simulation) {
 								// Warnings for prepull cast failure are detected by running a fake prepull,
 								// so this action.Execute needs to record warnings.
 								rotation.doAndRecordWarnings(&rotation.prepullValidations[prepullIdx], true, func() {
+									if APLActionExecuted != nil {
+										APLActionExecuted(sim, unit, action)
+									}
 									action.Execute(sim)
 								})
 							})
@@ -175,6 +183,7 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 			if !aplItem.Hide {
 				action := rotation.newAPLAction(aplItem.Action)
 				if action != nil {
+					action.Path = fmt.Sprintf("priorityList/%d", i)
 					rotation.priorityList = append(rotation.priorityList, action)
 					rotation.priorityListIdxMap = append(rotation.priorityListIdxMap, i)
 				}
@@ -207,6 +216,8 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 					// until the group is actually referenced with specific variable values
 					action := rotation.newAPLActionWithGroupVars(aplItem.Action, nil)
 					if action != nil {
+						// A group referenced twice is parsed twice; both copies carry the path of the one in the file.
+						action.Path = fmt.Sprintf("groups/%d/actions/%d", slices.Index(config.Groups, groupConfig), i)
 						group.actions = append(group.actions, action)
 						rotation.groupListIdxMap[groupIdx] = append(rotation.groupListIdxMap[groupIdx], i)
 					}
@@ -451,6 +462,9 @@ func (apl *APLRotation) DoNextAction(sim *Simulation) {
 			panic(fmt.Sprintf("[USER_ERROR] Infinite loop detected, current action:\n%s", nextAction))
 		}
 
+		if APLActionExecuted != nil {
+			APLActionExecuted(sim, apl.unit, nextAction)
+		}
 		nextAction.Execute(sim)
 		// Shoot has no GCD to end the pass; any later cast would cut it.
 		if apl.unit.Wand.wanding() {
@@ -608,15 +622,6 @@ func (apl *APLRotation) adoptChannelAction(dot *Dot) {
 		apl.interruptChannelIf = action.interruptIf
 		apl.allowChannelRecastOnInterrupt = action.allowRecast
 	}
-}
-
-func APLRotationFromJsonString(jsonString string) *proto.APLRotation {
-	apl := &proto.APLRotation{}
-	data := []byte(jsonString)
-	if err := protojson.Unmarshal(data, apl); err != nil {
-		panic(err)
-	}
-	return apl
 }
 
 // Add newAPLActionWithGroupVars to propagate groupVars to action condition and impl

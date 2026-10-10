@@ -1,15 +1,12 @@
 import * as PresetUtils from '@app/preset_utils';
-import * as Consumables from '@features/settings/model/consumables_auto_gen';
-import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, PseudoStat, Race, Stat, TristateEffect } from '@generated/proto/common';
-import { RetributionPaladin_Options as RetributionPaladinOptions } from '@generated/proto/paladin';
+import { PseudoStat, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
-import HolyShockApl from './apls/holy_shock.apl.json';
-import TwistOfLightApl from './apls/twist_of_light.apl.json';
-import HolyShockGear from './gear_sets/holy_shock.gear.json';
-import TwistOfLightGear from './gear_sets/twist_of_light.gear.json';
+import HolyShockApl from './apls/holy_shock.apl.siml';
+import TwistOfLightApl from './apls/twist_of_light.apl.siml';
+import HolyShockGear from './gear_sets/holy_shock.gear.siml';
+import TwistOfLightGear from './gear_sets/twist_of_light.gear.siml';
 
 export const HolyShockAplPreset = PresetUtils.makePresetAPLRotation('Holy Shock', HolyShockApl);
 export const TwistOfLightAplPreset = PresetUtils.makePresetAPLRotation('Twist of Light', TwistOfLightApl);
@@ -19,10 +16,6 @@ export const HolySHockGearPreset = PresetUtils.makePresetGear('Holy Shock', Holy
 });
 export const TwistOfLightGearPreset = PresetUtils.makePresetGear('Twist of Light', TwistOfLightGear, {
 	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
-});
-
-export const DefaultOptions = RetributionPaladinOptions.create({
-	classOptions: {},
 });
 
 export const HolyShockTalents = PresetUtils.makePresetTalents('Holy Shock', SavedTalents.create({ talentsString: '550030032101012--052252300012303' }));
@@ -75,64 +68,3 @@ export const TwistOfLightEpWeights = PresetUtils.makePresetEpWeights(
 		},
 	),
 );
-
-export const DefaultConsumables = ConsumesSpec.create({
-	potId: Consumables.MajorSpellblastingPotion.id,
-	flaskId: Consumables.FlaskOfSupremePower.id,
-	foodId: Consumables.SmokedDesertDumplings.id,
-	conjuredId: Consumables.DemonicRune.id,
-	explosiveId: Consumables.EzThroDynamiteII.id,
-	extraIds: [Consumables.GoblinSapperCharge.id, Consumables.ROIDS.id],
-	elixirIds: [
-		Consumables.ElixirOfHolyPower.id,
-		Consumables.ElixirOfSages.id,
-		Consumables.ElixirOfTheMongoose.id,
-		Consumables.ElixirOfTheOwl.id,
-		Consumables.ElixirOfTheGrizzly.id,
-		Consumables.GreaterArcaneElixir.id,
-		Consumables.GreaterMagebloodElixir.id,
-		Consumables.JujuMight.id,
-	],
-	mhImbueId: Consumables.BrilliantWizardOil.id,
-});
-
-export const DefaultRaidBuffs = RaidBuffs.create({
-	prayerOfSpirit: true,
-	arcaneBrilliance: true,
-	giftOfTheWild: true,
-	prayerOfFortitude: true,
-	prayerOfShadowProtection: true,
-});
-
-export const DefaultPartyBuffs = PartyBuffs.create({
-	manaSpringTotem: TristateEffect.TristateEffectRegular,
-	leaderOfThePack: true,
-	battleShout: TristateEffect.TristateEffectRegular,
-	strengthOfEarthTotem: true,
-	windfuryTotem: true,
-});
-
-export const DefaultIndividualBuffs = IndividualBuffs.create({
-	greaterBlessingOfKings: true,
-	greaterBlessingOfWisdom: true,
-	greaterBlessingOfMight: true,
-	greaterBlessingOfSalvation: true,
-});
-
-export const DefaultDebuffs = Debuffs.create({
-	curseOfElements: true,
-	judgementOfLight: true,
-	judgementOfWisdom: true,
-	curseOfRecklessness: true,
-	sunderArmor: true,
-	faerieFire: true,
-	exposeArmor: true,
-});
-
-export const OtherDefaults = {
-	profession1: Profession.Engineering,
-	profession2: Profession.Blacksmithing,
-	distanceFromTarget: 5,
-	iterationCount: 25000,
-	race: Race.RaceHuman,
-};

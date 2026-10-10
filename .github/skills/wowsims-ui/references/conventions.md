@@ -10,8 +10,8 @@ enforced.
 `npx oxfmt . --check`, so its scope is the whole repo: the markdown in `.github/skills/`, the
 workflows, `docker-compose.yml` and the JSON schemas are formatted too, and CI checks them. What it
 skips is `ignorePatterns` in `.oxfmtrc.json`, all of it data rather than source: `assets/**`, whose
-database is written by `gen_db`; `**/test-fixtures/*.json`; and the per-spec preset JSON and talent trees. Anything
-`.gitignore` already hides is skipped as well, which is how generated output stays out.
+database is written by `gen_db`; `**/test-fixtures/*.json`; the name table `sim/siml/names.json`; and the talent
+trees. Anything `.gitignore` already hides is skipped as well, which is how generated output stays out.
 
 ```
 node -e "console.log(require('./.oxfmtrc.json'))"
@@ -33,11 +33,9 @@ string is not sorted at all: there `clsx` is the only reason the formatter looks
 call and must not be "simplified" away. Use `clsx` when an argument is conditional or a variable,
 never to wrap or line-break a fixed list.
 
-`.oxfmtrc.json` deliberately ignores the preset JSON (`ui/**/apls/*.apl.json`,
-`ui/**/builds/*.build.json`, `ui/**/gear_sets/*.gear.json` — check the current list with the command
-above, since a new preset JSON category needs its own entry). Reformatting one of those is a diff
-nobody can review. Its ignore list also names `ui/worker/highs.js`, which does not exist — the solver
-comes from the npm `highs` package.
+The rotations, gear sets, builds and spec defaults are SIML (`*.siml`), which oxfmt does not read: their form is the one `go run --tags=with_db ./cmd/wowsimcli siml fmt -w <files>`
+writes, and `siml fmt -check ui/specs` fails on a committed file in any other. Its ignore list also names
+`ui/worker/highs.js`, which does not exist — the solver comes from the npm `highs` package.
 
 Stylesheets: Tailwind utilities, no SCSS or Bootstrap anywhere in `ui/`. A component that needs
 reusable multi-utility classes or state/descendant selectors gets a co-located
@@ -110,12 +108,14 @@ encounters more than one class's presets reference) — live in
 `ui/sim/presets/{stat_caps,encounters}.ts` and export raw protos/`Stats` for a class's
 `shared/presets.ts` to wrap, because `ui/sim` cannot import `@app`.
 
-Proto-serialisable preset data lives as JSON, never a TS literal: gear, APLs, builds, EP weights and
-talents under `ui/specs/<class>/<spec>/`. EP JSON stores enum fields **by name** (`"StatCritRating"`)
-so the file survives a proto regeneration. `SavedTalents` is a single `talentsString` field
-(no glyphs, no per-talent enum), so a talent preset is just that string, not enum-resolved JSON.
-Anything that references a TS symbol or a callback — a computed EP preset via `.withStat()`, an
-`onLoad` handler — stays a TS literal.
+Gear sets, APLs, builds and the spec's defaults live in SIML files under `ui/specs/<class>/<spec>/`
+(`gear_sets/*.gear.siml`, `apls/*.apl.siml`, `builds/*.siml`, `defaults.siml`), never as TS literals. `spec.ts`
+takes the proto-backed `defaults` from `defaults.siml` through `PresetUtils.specDefaultsFromSettings` and keeps only
+the UI-only ones (EP weights, stat caps, soft caps) in TypeScript. `presets.ts` imports a SIML file as its message's
+JSON (`import DefaultApl from './apls/default.apl.siml'`), which `tools/vite/siml.mts` reads at build time and fails
+the build on, with the file, line and column of each problem. EP weights and talents are TS presets in `presets.ts`:
+`PresetUtils.makePresetEpWeights` over a `Stats` map, and a talent preset is a `SavedTalents`, whose one field is the
+`talentsString` (no glyphs, no per-talent enum).
 
 ## Localization
 

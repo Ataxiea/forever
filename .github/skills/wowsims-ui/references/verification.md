@@ -25,7 +25,9 @@ not a misconfigured invocation.
 
 Add `npm run test:locales` whenever you touched `assets/locales/**` or `schemas/**`, and
 `npm run lint:css` (stylelint over `ui/**/*.css`) whenever you touched a stylesheet. There is no
-SCSS in the tree.
+SCSS in the tree. `ui/sim/siml` implements the SIML language beside the Go package `sim/siml`, so a change
+there follows `wowsims-review` step 6: `go test ./sim/siml/...` runs the agreement test between the two, and
+`make vscode-apl` rebuilds the committed extension, which bundles the module.
 
 What each one is actually for:
 
@@ -46,13 +48,16 @@ point of the layout, and `lint:js` is the only thing enforcing them anywhere.
 `.github/workflows/run_tests.yml` has two jobs:
 
 - **`build-ui`**: `npm ci` and `test:locales`, then `fmt`, `lint:js`, `lint:css`, a
-  `make ui/generated/proto/api.ts go-to-ts` generate step, `type-check`, `test:unit`,
-  `storybook:build`, and finally `make dist/forever/.dirstamp`. On a pull request from this
+  `make ui/generated/proto/api.ts go-to-ts` generate step, `type-check`, `test:unit`, the SIML
+  extension's `npm run check` and `npm test` in `tools/vscode-apl`, `storybook:build`, and finally
+  `make dist/forever/.dirstamp`. On a pull request from this
   repository two more steps upload `dist` to Cloudflare Pages and keep one comment on the pull
   request pointing at `https://pr-<number>.wowsims-forever.pages.dev/forever/`, the built UI with
   real sims. Fork pull requests carry no secrets and skip both. `preview_cleanup.yml` deletes those
   deployments when the pull request closes.
-- **`test`**: `go test --tags=with_db ./sim/...` in one job (four shards when there is more than one runner) — the Go sim, not the UI.
+- **`test`**: `go test --tags=with_db ./sim/...` in one job (four shards when there is more than one runner) — the Go sim, not the UI —
+  and, on the first shard, the buff generator's tests, `go test --tags=with_db ./cmd/wowsimcli/... ./tools/aplsim/...`
+  and `go test ./sim/siml/...` without the tag.
 
 So every script in the list above runs in CI, cheapest first, which is why a formatting slip reports
 in about a minute instead of behind the wasm build. The generate step has to come before `type-check`
@@ -127,9 +132,8 @@ done
 `npm run test:locales` runs `test-locales.mjs`, which compiles each `schemas/<name>.schema.json`
 with ajv and validates every `assets/locales/**/<name>.json` against it. Today that is `character`,
 `talents` and `translation` — only `assets/locales/en/` ships, no second locale. There is no
-`glyphs` schema or locale file (the proto has no `Glyphs` message). `gear.schema.json` exists but
-matches no locale file, so it validates nothing; `assets/locales/en/updates.json` has no matching
-schema either, so it is never validated by this script.
+`glyphs` schema or locale file (the proto has no `Glyphs` message). `assets/locales/en/updates.json`
+has no matching schema, so it is never validated by this script.
 
 **Every schema sets `additionalProperties: false`**, so a new locale key needs a matching property in
 `schemas/<name>.schema.json`. Skip the schema and CI fails on the very first job. Verify the
@@ -159,8 +163,9 @@ the `@source not` lines in `ui/STYLING.md` §7).
 `ui/generated/proto/*` (`make ui/generated/proto/api.ts`) and the `*_auto_gen.ts` files
 (`make go-to-ts`, which runs `go run ./tools/database/gen_db -gen=go-to-ts`) — today three:
 `ui/sim/player/classes/capabilities_auto_gen.ts`, `ui/sim/bulk/constants_auto_gen.ts` and
-`ui/sim/wasm/bulk_sim/constants_auto_gen.ts`. Copying them from a built checkout works and is
-faster. Never run `gen_db` concurrently with another copy of itself.
+`ui/sim/wasm/bulk_sim/constants_auto_gen.ts`. `make go-to-ts` also writes `ui/generated/siml/schema.json`,
+which the SIML Vite plugin reads in every build, `vitest` run and Storybook build. Copying them from a
+built checkout works and is faster. Never run `gen_db` concurrently with another copy of itself.
 
 The wart to watch for is a `AUTO_GEN_FILES_TS` entry the generator does not actually write: a stale
 path there makes the prerequisite never appear, so every `make` that depends on it re-runs `gen_db`

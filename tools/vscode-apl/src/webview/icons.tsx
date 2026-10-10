@@ -9,7 +9,6 @@ const PATHS = {
 	up: 'M8 13V3M4 7l4-4 4 4',
 	down: 'M4 6l4 4 4-4',
 	right: 'M6 4l4 4-4 4',
-	plus: 'M8 3v10M3 8h10',
 	jump: 'M9 3h4v4M13 3L7 9M11 9.5V13H3V5h3.5',
 };
 

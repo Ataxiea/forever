@@ -1,14 +1,16 @@
 package core
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"testing"
 
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
-	"google.golang.org/protobuf/encoding/protojson"
+	"github.com/wowsims/forever/sim/siml"
 )
 
 var DefaultSimTestOptions = &proto.SimOptions{
@@ -246,40 +248,56 @@ func CharacterBenchmark(b *testing.B, config CharacterSuiteConfig) {
 	b.ReportMetric(dps, "dps")
 }
 
-// The gear sets and encounter builds were removed with the rest of the TBC presets, so a
-// missing file is now an expected state rather than a broken checkout. log.Fatalf killed
-// the whole process and took the test output with it; returning an empty combo lets the
-// suite run and report a normal failure instead.
-func GetAplRotation(dir string, file string) RotationCombo {
-	filePath := dir + "/" + file + ".apl.json"
-	data, err := os.ReadFile(filePath)
+// Reads a preset under ui/specs, a .siml file, with the files its use lines name. A preset the spec
+// does not ship gives nil, so a suite still runs and the test that needs it fails on its own. A preset
+// that does not read panics with its diagnostics, and so does a missing one with a JSON file of the
+// same name beside it, since the sim reads presets only as SIML; printFlags are the flags of the
+// wowsimcli siml print command that writes it.
+func readPreset(path string, jsonPath string, printFlags string) *siml.File {
+	f, err := siml.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		if _, jsonErr := os.Stat(jsonPath); jsonErr == nil {
+			panic(fmt.Sprintf("%s is JSON, and the sim reads presets as SIML: write it as %s with go run --tags=with_db ./cmd/wowsimcli siml print %s %s > %s",
+				jsonPath, path, printFlags, jsonPath, path))
+		}
+		return nil
+	}
 	if err != nil {
-		log.Printf("no apl json file, skipping rotation: %s", filePath)
+		panic(err)
+	}
+	return f
+}
+
+func GetAplRotation(dir string, file string) RotationCombo {
+	filePath := dir + "/" + file + ".apl.siml"
+	f := readPreset(filePath, dir+"/"+file+".apl.json", "-kind apl -spec <spec>")
+	if f == nil {
+		log.Printf("no apl siml file, skipping rotation: %s", filePath)
 		return RotationCombo{Label: file}
 	}
 
-	return RotationCombo{Label: file, Rotation: APLRotationFromJsonString(string(data))}
+	return RotationCombo{Label: file, Rotation: f.Rotation()}
 }
 
 func GetGearSet(dir string, file string) GearSetCombo {
-	filePath := dir + "/" + file + ".gear.json"
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Printf("no gear json file, skipping gear set: %s", filePath)
+	filePath := dir + "/" + file + ".gear.siml"
+	f := readPreset(filePath, dir+"/"+file+".gear.json", "-kind gear")
+	if f == nil {
+		log.Printf("no gear siml file, skipping gear set: %s", filePath)
 		return GearSetCombo{Label: file, GearSet: &proto.EquipmentSpec{}}
 	}
 
-	return GearSetCombo{Label: file, GearSet: EquipmentSpecFromJsonString(string(data))}
+	return GearSetCombo{Label: file, GearSet: f.Equipment()}
 }
 
 func GetItemSwapGearSet(dir string, file string) ItemSwapSetCombo {
-	filePath := dir + "/" + file + ".gear.json"
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Fatalf("failed to load gear json file: %s, %s", filePath, err)
+	filePath := dir + "/" + file + ".gear.siml"
+	f := readPreset(filePath, dir+"/"+file+".gear.json", "-kind gear")
+	if f == nil {
+		log.Fatalf("no gear siml file for the item swap set: %s", filePath)
 	}
 
-	return ItemSwapSetCombo{Label: file, ItemSwap: ItemSwapFromJsonString(string(data))}
+	return ItemSwapSetCombo{Label: file, ItemSwap: &proto.ItemSwap{Items: f.Equipment().Items}}
 }
 
 func GenerateTalentVariations(baseTalents string) []TalentsCombo {
@@ -318,17 +336,13 @@ func GenerateTalentVariationsForRows(baseTalents string, rowsToVary []int) []Tal
 	return combinations
 }
 
-func GetTestBuildFromJSON(class proto.Class, dir string, file string, itemFilter ItemFilter, epReferenceStat *proto.Stat, statsToWeigh *[]proto.Stat) CharacterSuiteConfig {
-	filePath := dir + "/" + file + ".build.json"
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Fatalf("failed to load gear json file: %s, %s", filePath, err)
+func GetTestBuild(class proto.Class, dir string, file string, itemFilter ItemFilter, epReferenceStat *proto.Stat, statsToWeigh *[]proto.Stat) CharacterSuiteConfig {
+	filePath := dir + "/" + file + ".siml"
+	f := readPreset(filePath, dir+"/"+file+".build.json", "-kind siml")
+	if f == nil {
+		log.Fatalf("no siml file for the test build: %s", filePath)
 	}
-
-	simSettings := &proto.IndividualSimSettings{}
-	if err := protojson.Unmarshal(data, simSettings); err != nil {
-		panic(err)
-	}
+	simSettings := f.Settings
 
 	config := CharacterSuiteConfig{
 		Class:       class,

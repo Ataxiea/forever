@@ -1,0 +1,25 @@
+siml 1
+spec retribution_paladin
+
+prepull:
+  -10s cast retribution_aura
+  -1.5s cast seal_of_the_crusader
+
+priority:
+  autocast_other_cooldowns
+  cast judgement
+  cast consecration
+  cast hammer_of_wrath
+      if spell(hammer_of_wrath).cast_time == 0s
+      or auto_time_since_last(main_hand_auto) < 0.2s
+  cast seal_of_righteousness
+      if aura(seal_of_righteousness_20293).remaining_time < auto_time_to_next(main_hand_auto)
+      and aura(seal_of_righteousness_20293).is_inactive
+  cast holy_strike
+  cast divine_favor
+      if spell(holy_shock).is_ready
+      and (not target.aura(consecrated_ground).is_known or target.aura(consecrated_ground).is_active)
+  cast holy_shock
+      if not target.aura(consecrated_ground).is_known
+      or target.aura(consecrated_ground).is_active
+  cast exorcism

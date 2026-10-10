@@ -1,0 +1,20 @@
+siml 1
+spec dps_warrior
+talents "30305013002-25053005052010501"
+use "../gear_sets/prebis_fury.gear.siml"
+
+consumables:
+  pot major_frenzy_potion
+  food smoked_desert_dumplings
+  explosive ez_thro_dark_bomb
+  mh_imbue dense_weightstone
+  oh_imbue dense_sharpening_stone
+  extra goblin_sapper_charge
+  elixir elixir_of_ferocity, elixir_of_the_mongoose, winterfall_firewater
+
+simple:
+  spec=fury
+  use_overpower
+  sunder_armor help
+  use_rend, use_hamstring
+  cooldowns()

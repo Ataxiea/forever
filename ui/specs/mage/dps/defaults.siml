@@ -1,0 +1,35 @@
+siml 1
+spec mage
+
+settings:
+  race human
+  profession1 engineering
+  profession2 tailoring
+  reaction_time_ms 100
+  distance_from_target 20
+  default_mage_armor mage_armor
+
+consumables:
+  pot major_mana_potion
+  food nightfin_soup
+  mh_imbue brilliant_wizard_oil
+  elixir greater_arcane_elixir, elixir_of_the_sages
+
+buffs:
+  greater_blessing_of_kings, greater_blessing_of_wisdom, greater_blessing_of_salvation
+  innervates 1
+
+party_buffs:
+  mana_spring_totem=improved
+  mana_tide_totems 1
+
+raid_buffs:
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  prayer_of_shadow_protection
+
+debuffs: judgement_of_wisdom, curse_of_elements
+
+simple:
+  conserve_start 20
+  conserve_end 30
+  delay_major_c_ds 10

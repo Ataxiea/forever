@@ -1,0 +1,84 @@
+import { Player as PlayerProto } from '@generated/proto/api';
+import { APLRotation_Type as APLRotationType } from '@generated/proto/apl';
+import { EquipmentSpec } from '@generated/proto/common';
+import { IndividualSimSettings } from '@generated/proto/ui';
+import i18n from '@i18n/config';
+import { SIM_CATEGORY_KEYS, SimSettingCategories } from '@sim/constants/sim_settings';
+import { Database } from '@sim/proto/database';
+import type { IndividualSimHost } from '@sim/sim_host';
+import type { SimlDiagnostic } from '@sim/siml';
+import { toastManager } from '@ui-kit/Toast';
+
+import { SIML_ROTATION_FILE } from '../exporters/siml';
+import { loadSiml } from '../load_siml';
+import { type ImporterDefinition, ImportProblems } from './types';
+
+// What text with no file name reads as: a full setup, or any part of one (sim/siml/SPEC.md §1).
+const PASTED_FILE = 'wowsims.siml';
+
+const CATEGORY_OF_KEY = new Map([...SIM_CATEGORY_KEYS].map(([category, key]) => [key, category]));
+
+const located = (d: SimlDiagnostic) => `${d.range.start.line + 1}:${d.range.start.character + 1} ${d.message}`;
+
+/**
+ * Reads `text` as the file `path` names and loads exactly the categories it holds, so a file holding a rotation
+ * leaves the gear and the talents as they are, and an empty section resets its category. A file that does not read
+ * is refused with each problem at its line and column; `use` is among them, as the site reads no other files.
+ */
+export const importSiml = async (host: IndividualSimHost<any>, text: string, path: string): Promise<void> => {
+	const { siml, specField } = await loadSiml();
+	const parsed = siml.parse(text, { path });
+	const errors = parsed.diagnostics.filter(d => d.severity === 'error');
+	if (errors.length) throw new ImportProblems(i18n.t('import.siml.error_problems'), errors.map(located));
+
+	const categories = parsed.categories.map(key => CATEGORY_OF_KEY.get(key)!);
+	// `fromProto` reads no category as every category, which a file holding none must not do.
+	if (!categories.length) throw new Error(i18n.t('import.siml.error_empty'));
+	const settings = IndividualSimSettings.fromJson(parsed.settings!);
+	// A section file with no spec line, such as an x.encounter.siml, sets no player, and `fromProto` loads nothing
+	// without one.
+	const player = (settings.player ??= PlayerProto.create());
+	// The player loads TypeUnknown as TypeAuto, and a file only writes it with an explicit `type unknown`.
+	if (categories.includes(SimSettingCategories.Rotation) && (player.rotation?.type ?? APLRotationType.TypeUnknown) === APLRotationType.TypeUnknown) {
+		throw new Error(i18n.t('import.siml.error_unknown_type'));
+	}
+
+	const page = specField(host.player.getSpec());
+	if (parsed.spec && parsed.spec !== page) {
+		toastManager.add({ variant: 'warning', body: i18n.t('import.siml.warning_spec', { file: parsed.spec, page }), delay: 8000 });
+	}
+	const warnings = parsed.diagnostics.filter(d => d.severity === 'warning');
+	if (warnings.length) {
+		toastManager.add({
+			variant: 'warning',
+			body: (
+				<>
+					<p>{i18n.t('import.siml.warnings')}</p>
+					<ul>
+						{warnings.map(located).map((line, i) => (
+							<li key={i}>{line}</li>
+						))}
+					</ul>
+				</>
+			),
+			delay: 8000,
+		});
+	}
+
+	if (categories.includes(SimSettingCategories.Gear)) {
+		await Database.loadLeftoversIfNecessary(EquipmentSpec.create({ items: [...(player.equipment?.items ?? []), ...(player.itemSwap?.items ?? [])] }));
+	}
+	host.fromProto(settings, categories);
+};
+
+export const SIML_IMPORTER: ImporterDefinition = {
+	title: i18n.t('import.siml.title'),
+	allowFileUpload: true,
+	onImport: (host, data, fileName) => importSiml(host, data, fileName ?? PASTED_FILE),
+};
+
+export const SIML_ROTATION_IMPORTER: ImporterDefinition = {
+	title: i18n.t('import.siml_rotation.title'),
+	allowFileUpload: true,
+	onImport: (host, data) => importSiml(host, data, SIML_ROTATION_FILE),
+};

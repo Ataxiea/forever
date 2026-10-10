@@ -1,0 +1,86 @@
+siml 1
+spec protection_warrior
+
+var ${Delay Check} = and(spell(shield_slam).time_to_ready >= 1.5s)
+var ${Shield Equipped} = auto_swing_time(off_hand) == 0s
+var ${Defensive Cooldown Active} = aura(last_stand).is_active or aura(shield_wall).is_active or none
+
+prepull:
+  -1.5s cast battle_shout
+  -1.5s cast bloodrage
+  -1.5s cast other.potion
+
+priority:
+  group "Engineering"
+  group "CD: Offensive Trinkets"
+  cast last_stand if not $defensive_cooldown_active and current_health_percent <= 40%
+  # schedule "0s, 0s" cast last_stand
+  group "CD: Shield Wall Dual Wield"
+  cast shield_wall if current_health_percent <= 35% and not $defensive_cooldown_active
+  # schedule "0s, 0s" cast shield_wall
+  cast item.major_healthstone if current_health_percent <= 30%
+  cast other.potion
+  cast death_wish
+  # group "CD: Racials"
+  cast shield_block
+      if current_rage >= 40
+      or aura(revenge).is_inactive(include_reaction_time=true) and spell(revenge).time_to_ready <= 1.5s
+  cast sweeping_strikes if and(number_targets > 1)
+  cast thunder_clap if and(number_targets > 2)
+  # group "Execute"
+  cast shield_slam
+  cast bloodthirst
+  cast mortal_strike
+  cast revenge
+  cast thunder_clap if and(number_targets > 1)
+  cast demoralizing_shout if and(target.aura(demoralizing_shout).should_refresh(max_overlap=6s))
+  cast thunder_clap
+      if target.aura(thunderfury_27648_tag0).is_inactive
+      and target.aura(thunder_clap).remaining_time <= 6s
+  cast battle_shout
+      if not aura(battle_shout_external).is_known
+      and aura(battle_shout).remaining_time <= 10s
+  cast rend
+      if target.aura(rend).is_inactive(include_reaction_time=true)
+      and (and(not $shield_equipped) or $shield_equipped and $delay_check)
+  cast sunder_armor
+      if target.aura(sunder_armor).num_stacks(include_reaction_time=true) < 5
+      or $delay_check and target.aura(sunder_armor).remaining_time <= 10s
+  cast cleave if number_targets > 1 and current_rage >= 40
+  cast heroic_strike if number_targets == 1 and current_rage >= 40
+  cast bloodrage if current_rage < 90
+  cast recklessness if false
+  cast retaliation if false
+  # autocast_other_cooldowns
+
+group "Recklessness ON/OFF":
+  none
+
+group "Engineering":
+  cast item.goblin_sapper_charge
+  cast item.crystal_charge
+  cast item.ez_thro_dynamite_ii
+
+group "CD: Offensive Trinkets":
+  cast item.badge_of_the_swarmguard
+  cast item.kiss_of_the_spider
+  cast item.slayers_crest
+  cast item.defenders_grip_stabilizer
+
+group "CD: Racials":
+  cast blood_fury
+  cast berserking
+
+group "Execute":
+  cast battle_stance if is_execute_phase(e20)
+  cast execute if is_execute_phase(e20)
+
+group "CD: Shield Wall Dual Wield":
+  strict_sequence(item_swap(swap1), cast shield_wall)
+      if not $shield_equipped
+      and not $defensive_cooldown_active
+      and current_health_percent <= 35%
+      and spell(shield_wall).is_ready
+  item_swap(main)
+      if aura(shield_wall).is_inactive(include_reaction_time=true)
+      and not spell(shield_wall).is_ready

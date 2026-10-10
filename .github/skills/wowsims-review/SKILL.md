@@ -1,6 +1,6 @@
 ---
 name: wowsims-review
-description: 'Use before committing or opening a pull request that registers or changes a spell, talent, aura, dot or proc, and when reviewing such a pull request by someone else. A fixed pass: every number and hand-built config checked against its game files row and tooltip, the rules the rows cannot show checked against core, every finding verified before it is reported, and each fix written to read the spell store.'
+description: 'Use before committing or opening a pull request that registers or changes a spell, talent, aura, dot or proc, and when reviewing such a pull request by someone else. A fixed pass: every number and hand-built config checked against its game files row and tooltip, the rules the rows cannot show checked against core, every finding verified before it is reported, and each fix written to read the spell store. Also covers the SIML name table and rotations such a change moves, and a change to the SIML grammar.'
 argument-hint: 'Name the branch, the pull request number or the files to review.'
 ---
 
@@ -10,11 +10,12 @@ Comments, docs, commit messages and PR text follow `wowsims-conventions`: "game 
 
 The pass is the same on your own branch before a commit and on someone else's pull request. The author of a
 change reads it the way they meant it, so a self-review works best handed to a fresh agent with the diff and
-this skill; the author then verifies each finding that comes back the way step 6 says, and fixes it.
+this skill; the author then verifies each finding that comes back the way step 7 says, and fixes it.
 
 ## Scope
 
 - Class, spec, talent, aura, dot and proc code under `sim/`, and the overrides and class ladders it reads.
+- The SIML name table and rotations such a change moves, and a change to the SIML language itself (step 6).
 - Not the frontend (`wowsims-ui` has its own verification) and not the generator internals (`wowsims-spells`).
 
 `references/defects.md` is the catalog: each defect class the pass looks for, with a case the review of a
@@ -23,8 +24,8 @@ port found and the fix that reads the row.
 ## 1. Inventory
 
 ```
-git diff origin/master...HEAD --stat -- sim/ tools/     # what the change touches
-git diff origin/master...HEAD -- sim/<class>/           # read every hunk, not the stat
+git diff origin/master...HEAD --stat -- sim/ tools/ ui/specs/   # what the change touches
+git diff origin/master...HEAD -- sim/<class>/                    # read every hunk, not the stat
 ```
 
 List every spell id, ladder and talent the diff registers or changes, and every number literal it adds.
@@ -109,7 +110,48 @@ Each of these has a section in `references/defects.md`.
   opener repeats all fight.
 - A moved .results file has one isolated cause per move, found by reverting one change at a time.
 
-## 6. Verify every finding
+## 6. SIML
+
+`sim/siml/SPEC.md` is the language. A spell change usually moves two kinds of SIML file.
+
+**The name table, `sim/siml/names.json`.** A regeneration only adds lines to it, apart from an entry's
+`registeredBy` list and the comma JSON needs before a new last entry. Any other change to a name is a repin
+(`simlnames -repin`), the only way a name changes meaning, and the pull request has to say it intends one. This prints
+every line the change removes or changes beyond those two:
+
+```
+base=$(git merge-base origin/master HEAD)
+strip() { sed -E 's/, "registeredBy": \[[^]]*\]//; s/,$//' | sort; }
+comm -23 <(git show "$base:sim/siml/names.json" | strip) <(strip < sim/siml/names.json)   # empty unless a repin is intended
+```
+
+A table that differs from what the sim registers fails `TestTableIsUpToDate`, so a spell registered without the
+table regenerated shows in CI.
+
+**Rotations and gear sets, `ui/specs/**/*.siml`.** Their diff reads as SIML rows (`cast mortal_strike if …`,
+`main_hand arcanite_reaper + weapon_crusader`), so read each changed row for what it does. Check that each name means
+the thing intended: the table gives its id (`grep -n '"mortal_strike"' sim/siml/names.json`, one line per class and
+namespace), and for a spell `go run ./tools/spelldata <id>` gives its row. The repository check,
+`go run --tags=with_db ./cmd/wowsimcli siml fmt -check ui/specs`, fails on a spell or aura the file's spec does not
+register, and on an enchant that does not fit its slot.
+
+**The language.** A change to the grammar, the typing or the printer keeps `sim/siml` and `ui/sim/siml` in step,
+states the rule in `SPEC.md`, and adds a corpus case under `sim/siml/testdata/` (`parse/`, `print/`, `format/` or
+`errors/`). `sim/siml/conformance_test.go` and `ui/sim/siml/conformance.test.ts` both run the case, and
+`TestAgreement` checks that the two implementations give the same results over it and over every committed file. A
+change to one implementation that leaves the other behind, or one with no case, is a finding. So is a change that gives
+existing text another meaning without a new `siml` major version (`SPEC.md` §14).
+A grammar change also updates the editor's partial parser, `tools/vscode-apl/src/lang/context.ts`, which reads a
+statement up to the cursor for completion; `cd tools/vscode-apl && npm test` runs its cases.
+
+```
+go test ./sim/siml/...                     # the corpus and the agreement test; no database needed
+npx vitest run ui/sim/siml                 # the TypeScript side
+go test --tags=with_db ./sim/siml/...      # also the table's up-to-date test
+go test --tags=with_db ./cmd/wowsimcli/... # also the repository check of ui/specs
+```
+
+## 7. Verify every finding
 
 A finding is reported only with evidence of at least one of these kinds, named in the finding:
 
@@ -123,7 +165,7 @@ findings" instead. A finding about when something happens (an order, a consumpti
 runtime print: reading the call order is how a withdrawn finding got posted. A suggested fix is applied in a worktree, passes `go vet --tags=with_db ./sim/<class>/`,
 and the number it claims is printed at runtime before it is posted ("Checked: `maxEnergy=110` at rank 2").
 
-## 7. Report
+## 8. Report
 
 One entry per finding, most severe first: a wrong number, then missing behaviour, then hand code the store
 already states, then hygiene.

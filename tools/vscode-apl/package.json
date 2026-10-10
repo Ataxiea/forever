@@ -1,7 +1,7 @@
 {
 	"name": "wowsims-apl",
-	"displayName": "WoWSims APL Editor",
-	"description": "Read and edit an .apl.json rotation in a panel beside it, with spell names and icons from the database and the site's own action and value forms.",
+	"displayName": "WoWSims SIML",
+	"description": "The SIML language for rotations, gear sets and sim setups (*.siml): a language server with diagnostics, completion, hover, navigation, formatting and code actions, and a panel that shows, edits and sims an .apl.siml rotation beside it.",
 	"version": "0.1.0",
 	"private": true,
 	"publisher": "wowsims",
@@ -11,7 +11,8 @@
 	},
 	"main": "./out/extension.js",
 	"activationEvents": [
-		"onWebviewPanel:wowsims-apl.editor"
+		"onWebviewPanel:wowsims-apl.editor",
+		"onLanguage:siml"
 	],
 	"contributes": {
 		"commands": [
@@ -21,22 +22,49 @@
 				"icon": "$(list-tree)"
 			},
 			{
-				"command": "wowsims-apl.reloadRegistered",
-				"title": "WoWSims: Reload Registered APL Spells"
+				"command": "wowsims-apl.sim",
+				"title": "WoWSims: Sim This APL",
+				"icon": "$(play)"
+			},
+			{
+				"command": "wowsims-apl.compare",
+				"title": "WoWSims: Compare APL With Saved",
+				"icon": "$(diff)"
+			},
+			{
+				"command": "wowsims-apl.insertPattern",
+				"title": "WoWSims: Insert APL Pattern"
 			}
 		],
 		"menus": {
 			"editor/title": [
 				{
 					"command": "wowsims-apl.openToSide",
-					"when": "resourceFilename =~ /\\.apl\\.json$/",
+					"when": "resourceFilename =~ /\\.apl\\.siml$/",
+					"group": "navigation"
+				},
+				{
+					"command": "wowsims-apl.sim",
+					"when": "resourceFilename =~ /\\.apl\\.siml$/",
 					"group": "navigation"
 				}
 			],
 			"commandPalette": [
 				{
 					"command": "wowsims-apl.openToSide",
-					"when": "resourceFilename =~ /\\.apl\\.json$/"
+					"when": "resourceFilename =~ /\\.apl\\.siml$/"
+				},
+				{
+					"command": "wowsims-apl.sim",
+					"when": "resourceFilename =~ /\\.apl\\.siml$/"
+				},
+				{
+					"command": "wowsims-apl.compare",
+					"when": "resourceFilename =~ /\\.apl\\.siml$/"
+				},
+				{
+					"command": "wowsims-apl.insertPattern",
+					"when": "resourceFilename =~ /\\.apl\\.siml$/"
 				}
 			]
 		},
@@ -45,30 +73,64 @@
 				"command": "wowsims-apl.openToSide",
 				"key": "ctrl+k a",
 				"mac": "cmd+k a",
-				"when": "editorTextFocus && resourceFilename =~ /\\.apl\\.json$/"
+				"when": "editorTextFocus && resourceFilename =~ /\\.apl\\.siml$/"
 			}
 		],
 		"configuration": {
-			"title": "WoWSims APL Editor",
+			"title": "WoWSims SIML",
 			"properties": {
 				"wowsims-apl.goBinary": {
 					"type": "string",
 					"default": "go",
-					"description": "The go binary that runs tools/aplspells for the spells each spec registers. `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+					"description": "The go binary that sims from the editor (tools/aplsim) and reads a spell's game files row for hovers (tools/spelldata). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+				},
+				"wowsims-apl.simIterations": {
+					"type": "number",
+					"default": 1000,
+					"minimum": 1,
+					"maximum": 100000,
+					"description": "Iterations per sim run from the editor."
+				},
+				"wowsims-apl.simSettingsFile": {
+					"type": "string",
+					"default": "",
+					"description": "Settings exported from the site, as JSON or SIML, which supply the character (gear, talents, race, consumables, buffs, encounter) for sims from the editor. Empty uses the spec's defaults.siml, with the one preset build whose rotation is the saved file's loaded over it as the site loads a build."
 				}
 			}
-		}
+		},
+		"languages": [
+			{
+				"id": "siml",
+				"aliases": [
+					"SIML"
+				],
+				"extensions": [
+					".siml"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "siml",
+				"scopeName": "source.siml",
+				"path": "./syntaxes/siml.tmLanguage.json"
+			}
+		]
 	},
 	"scripts": {
 		"build": "node scripts/build.mjs",
 		"check": "node scripts/build.mjs --check",
-		"test": "node --test --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/*.test.mjs"
+		"test": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/*.test.mjs"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",
 		"@types/vscode": "~1.91.0",
 		"esbuild": "0.28.2",
-		"jsonc-parser": "3.3.1",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vscode-languageclient": "10.1.1",
+		"vscode-languageserver": "10.1.1",
+		"vscode-languageserver-textdocument": "1.0.14",
+		"vscode-languageserver-types": "3.18.3"
 	}
 }

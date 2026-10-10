@@ -1,0 +1,7 @@
+siml 1
+spec protection_paladin
+
+priority:
+  cast seal_of_righteousness if aura(seal_of_righteousness_20293).is_inactive
+  cast judgement
+  cast holy_strike

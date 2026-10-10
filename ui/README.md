@@ -7,7 +7,7 @@ The tree:
 ```
 ui/
   worker/            the three worker entries plus a Go package (go:embed highs.wasm). alias @worker
-  generated/         proto/* — tool output only. alias @generated
+  generated/         proto/* and siml/schema.json — tool output only. alias @generated
                      (the *_auto_gen.ts files sit beside their consumers, not here)
   sim/               DOM-free, node-runnable model, grouped by subject: sim.ts + sim_host.ts +
                      sim_runs.ts + sim_signal_manager.ts + spec_config.ts at the root, then
@@ -15,7 +15,8 @@ ui/
                      raid/ (raid, party, encounter), settings/ (bulk, item_swap, reforge,
                      stat_weight), utils/ (collections, math, format, json, misc),
                      workers/, cache/, state/, proto/, talents data + trees, bulk/,
-                     wasm/, constants/, presets/, hooks/, and context/. alias @sim
+                     wasm/, constants/, presets/, siml/ (the SIML language, sim/siml/SPEC.md),
+                     hooks/, and context/. alias @sim
   ui-kit/            sim-agnostic, controlled React widgets, one folder per component (48 of
                      them: TextField/, Dialog/, Field/, Table/, Notice/, …, each with a
                      story and a test), plus hooks/, utils/ (css, dom, icons, colors, wowhead),
@@ -69,7 +70,7 @@ ui/
                      hooks.tsx, localization.ts), apl/ (player.ts, dom.ts, source.ts), and the
                      gear.ts, inputs.ts, timeline_rotation.ts helpers. A module under testing/sim/
                      imports neither @features nor @ui-kit. alias @testing, for tests and stories only
-  types/             ambient .d.ts (i18n-loader.d.ts)
+  types/             ambient .d.ts (i18n-loader.d.ts, siml.d.ts)
   index_template.html   the one spec page; tracking/ the analytics shim
   canonical_classes.test.ts, no_class_hooks.test.ts, class_hook_allowlist.json,
   retired_class_names.json   the tree-wide class gates and their data (STYLING.md §7)
@@ -178,16 +179,11 @@ convenience. The preset shapes
 (`PresetGear`, `PresetEpWeights`, …) live in `ui/sim/presets/types.ts`; `app/preset_utils.ts`
 holds the `make*` builders and re-exports the types.
 
-Proto-serialisable preset data lives as JSON, never as a TS literal: gear (`gear_sets/*.gear.json`),
-APLs (`apls/*.apl.json`), builds (`builds/*.build.json`), EP weights (`presets/ep/*.ep.json`) and
-talents (`presets/talents/*.talents.json`) under `ui/specs/<class>/<spec>/`. EP JSON stores enum
-fields by name (e.g. `"StatCritRating"`) rather than numeric value, so the file stays stable across
-proto regenerations; `PresetUtils.makePresetEpWeightsFromJSON` resolves the names back through the
-enum (`Stat`/`PseudoStat`) and builds the preset from them. The
-`SavedTalents` proto is a single `talentsString` field — there is no per-talent enum to resolve, so
-`makePresetTalentsFromJSON` just wraps the string. Anything that references a TS symbol or a
-callback (a computed EP preset built from another via `.withStat()`, an `onLoad` handler) stays a
-TS literal instead.
+Gear (`gear_sets/*.gear.siml`), APLs (`apls/*.apl.siml`), builds (`builds/*.siml`) and the spec's defaults
+(`defaults.siml`) live in SIML files (`sim/siml/SPEC.md`) under `ui/specs/<class>/<spec>/`, never as TS literals;
+`tools/vite/siml.mts` imports each as its message's JSON. EP weights and talents are TS presets in `presets.ts`:
+`PresetUtils.makePresetEpWeights` over a `Stats` map, and a talent preset is a `SavedTalents`, whose one field is the
+`talentsString`.
 
 `@i18n/*` resolves into `ui/i18n/*`, a top-level leaf (not owned by `app/`) — sim, ui-kit and
 features reach it through that alias. `ui/i18n/**/*.{ts,tsx}` has its own `no-restricted-imports`
@@ -224,7 +220,7 @@ import { defineSpec } from '@sim/spec_config';
 export default defineSpec<Spec.SpecDpsWarrior>({
     spec: Spec.SpecDpsWarrior,          // identity
     className, cssScheme, epStats, displayStats, …,  // everything IndividualSimUIConfig declares
-    defaults: { … },
+    defaults: { ...PresetUtils.specDefaultsFromSettings(Spec.SpecDpsWarrior, Defaults), epWeights, … },
     presets: { … },
     reforge: { getEPDefaults, updateSoftCaps },      // optional — wires ReforgeOptimizer
     enableHealing: false,                            // optional — overrides the tank/healer default
@@ -327,9 +323,9 @@ page translates through `i18n.t` as it renders and calls `updateLandingPageMetad
 and `<meta name="description">`.
 
 Anything shared by several specs of the same class lives in `ui/specs/<class>/shared/`, under a
-fixed name: `inputs.ts` for the input configs its specs share, and `presets.ts` for encounter presets, EP-breakpoint tables and a class's
-`DefaultRaidBuffs` where its specs share one raid-buff default. Only the classes that need it have
-the directory — today `shaman/shared/inputs.ts` and `warrior/shared/{inputs,presets}.ts`; druid's
+fixed name: `inputs.ts` for the input configs its specs share, and `presets.ts` for encounter presets and EP-breakpoint
+tables. Only the classes that need it have the directory — today `shaman/shared/inputs.ts` and
+`warrior/shared/inputs.ts`; druid's
 four specs and paladin's three share nothing at this level, so there is no `druid/shared/` or
 `paladin/shared/`.
 

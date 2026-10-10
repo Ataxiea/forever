@@ -1,0 +1,24 @@
+siml 1
+spec rogue
+
+settings:
+  race human
+  profession1 engineering
+  reaction_time_ms 100
+  distance_from_target 5
+
+consumables:
+  pot major_frenzy_potion
+  food swiftstrike_steak
+  conjured thistle_tea
+  elixir elixir_of_the_mongoose, elixir_of_greater_fortitude
+
+buffs: greater_blessing_of_kings, greater_blessing_of_might
+
+party_buffs: battle_shout, leader_of_the_pack, strength_of_earth_totem, windfury_totem
+
+raid_buffs: gift_of_the_wild
+
+debuffs: curse_of_recklessness, faerie_fire, sunder_armor, gift_of_arthas
+
+apl: type auto

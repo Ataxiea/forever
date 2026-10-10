@@ -1,0 +1,29 @@
+siml 1
+spec dps_priest
+
+settings:
+  race human
+  profession1 enchanting
+  profession2 tailoring
+  reaction_time_ms 100
+  channel_clip_delay_ms 100
+  distance_from_target 28
+  pre_shadowform
+
+consumables:
+  pot major_spellblasting_potion
+  flask flask_of_supreme_power
+  food nightfin_soup
+  conjured demonic_rune
+  explosive ez_thro_dynamite_ii
+  mh_imbue brilliant_wizard_oil
+
+buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
+
+party_buffs: mana_spring_totem
+
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+
+debuffs: judgement_of_wisdom, curse_of_elements, faerie_fire, expose_armor
+
+apl: type auto

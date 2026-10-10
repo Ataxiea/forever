@@ -1,0 +1,19 @@
+siml 1
+
+head       stalwart_helm + arcanum_of_rapidity
+neck       beads_of_ogre_might + necklace_spell_power
+shoulder   soulforge_spaulders
+back       arcanoweave_cloak + cloak_lesser_agility
+chest      soulforge_breastplate + chest_greater_stats
+wrist      soulforge_bracers + bracer_healing_power
+hands      soulforge_gauntlets + mystic_rugged_armor_kit
+waist      soulforge_belt
+legs       titanic_leggings + arcanum_of_rapidity
+feet       soulforge_boots + mystic_rugged_armor_kit
+finger1    band_of_earthen_might
+finger2    don_julios_band
+trinket1   jewel_of_the_guard_captain
+trinket2   adaptive_combat_assistant
+main_hand  flurry_axe + weapon_spell_power
+off_hand   evergreen_shield
+ranged     libram_of_law
