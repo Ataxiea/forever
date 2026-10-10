@@ -471,6 +471,7 @@ func (f *typedFile) readUses(u *uses) usedFiles {
 	ix := t.ix
 	allowed := fileSections(ix, f.kind)
 	used := usedFiles{present: newKeySet(), declared: usedDeclarations{groups: map[string]map[string]bool{}}}
+	broughtBy := map[string]string{} // The used file that brought each key of used.present.
 	for _, s := range f.tree.top {
 		use, ok := s.(*useStmt)
 		if !ok {
@@ -514,26 +515,40 @@ func (f *typedFile) readUses(u *uses) usedFiles {
 		if f.spec != nil && file.spec != nil && f.spec.Field != file.spec.Field {
 			t.report("spec-mismatch", fmt.Sprintf("%s is for spec %s, and this file for %s", path, file.spec.Field.Name(), f.spec.Field.Name()), at)
 		}
-		var both, foreign []string
+		var foreign []string
+		sources := newKeySet()           // Where the keys already present came from: this file, or the used file that brought one.
+		clashes := map[string][]string{} // The keys of each source.
 		for _, key := range file.present.keys {
 			if f.present.has(key) || used.present.has(key) {
-				both = append(both, key)
+				source := "this file"
+				if !f.present.has(key) {
+					source = broughtBy[key]
+				}
+				sources.add(source)
+				clashes[source] = append(clashes[source], key)
 			}
-			if key != talentsKey && !allowed[sectionOfKey(key)] {
+			if key == talentsKey && f.kind.Section != "" || key != talentsKey && !allowed[sectionOfKey(key)] {
 				foreign = append(foreign, key)
 			}
 		}
-		if len(both) > 0 {
-			verb := "is"
-			if len(both) > 1 {
-				verb = "are"
+		if len(sources.keys) > 0 {
+			conflicts := make([]string, len(sources.keys))
+			for i, source := range sources.keys {
+				verb := "is"
+				if len(clashes[source]) > 1 {
+					verb = "are"
+				}
+				conflicts[i] = fmt.Sprintf("%s %s in both %s and %s", listed(clashes[source]), verb, source, path)
 			}
-			t.report("section-conflict", fmt.Sprintf("%s %s in both this file and %s", listed(both), verb, path), at)
+			t.report("section-conflict", strings.Join(conflicts, "; "), at)
 		}
 		if len(foreign) > 0 {
-			t.report("section-not-allowed", fmt.Sprintf("%s brings %s, which an x.%s.siml file holds no", path, listed(foreign), f.kind.Section), at)
+			t.report("section-not-allowed", fmt.Sprintf("%s brings %s, which an x.%s.siml file does not hold", path, listed(foreign), f.kind.Section), at)
 		}
 		for _, key := range file.present.keys {
+			if !used.present.has(key) {
+				broughtBy[key] = path
+			}
 			used.present.add(key)
 		}
 		rotation := file.settings.GetPlayer().GetRotation()

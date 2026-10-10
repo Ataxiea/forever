@@ -136,10 +136,39 @@ describe('Importer', () => {
 		expect(onImport).toHaveBeenCalledWith(theHost, 'from the file', 'setup.siml');
 	});
 
-	it('hands no file name on for text typed or pasted over an upload', async () => {
+	// A typo fixed in an uploaded p1.gear.siml still reads as a gear file.
+	it('keeps the uploaded file name while the text is edited', async () => {
+		const { onImport } = renderImporter();
+		await upload('p1.gear.siml', 'siml 1\nhead x');
+		const textarea = document.querySelector('textarea')!;
+		textarea.value = 'siml 1\nhead y';
+		fireEvent.input(textarea);
+		textarea.setSelectionRange(7, 11);
+		fireEvent.paste(textarea);
+
+		await clickImport();
+		expect(onImport).toHaveBeenCalledWith(theHost, 'siml 1\nhead y', 'p1.gear.siml');
+	});
+
+	it('hands no file name on once the uploaded text is cleared', async () => {
 		const { onImport } = renderImporter();
 		await upload('rotation.apl.siml', 'from the file');
 		const textarea = document.querySelector('textarea')!;
+		textarea.value = '';
+		fireEvent.input(textarea);
+		textarea.value = 'typed';
+		fireEvent.input(textarea);
+
+		await clickImport();
+		expect(onImport).toHaveBeenCalledWith(theHost, 'typed', undefined);
+	});
+
+	it('hands no file name on for text pasted over the whole upload', async () => {
+		const { onImport } = renderImporter();
+		await upload('rotation.apl.siml', 'from the file');
+		const textarea = document.querySelector('textarea')!;
+		textarea.select();
+		fireEvent.paste(textarea);
 		textarea.value = 'pasted';
 		fireEvent.input(textarea);
 

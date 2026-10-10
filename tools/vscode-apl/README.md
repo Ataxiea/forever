@@ -106,12 +106,14 @@ choice is written as its name.
 The forms are the site's own: the panel bundles `ui/features/apl/model` and the generated protos. The panel's rows
 carry the file's diagnostics, the same the Problems panel lists.
 
-**▶ Sim** and **⇄ Compare** run `go run --tags=with_db ./tools/aplsim` with the editor's text and the file's path:
-`use` lines are read against it from disk, so each used file must be saved first, and a sim is refused while one has
-unsaved changes. The character is the spec's `defaults.siml`, with the one preset build (`builds/*.siml`) whose
+**▶ Sim** and **⇄ Compare** run `go run --tags=with_db ./cmd/wowsimcli siml sim` with the editor's text and the file's
+path: `use` lines are read against it from disk, so each used file must be saved first, and a sim is refused while one
+has unsaved changes. The character is the spec's `defaults.siml`, with the one preset build (`builds/*.siml`) whose
 rotation is the saved file's loaded over it (`turret.apl.siml` takes `builds/mm.siml`); a rotation no build has, or
-several have, such as `arms.apl.siml`, is simmed on the defaults. The panel then shows the DPS, how often each row ran
-per fight, the damage by spell and a timeline of one fight; the editor shows each row's count at the end of its line.
+several have, such as `arms.apl.siml`, is simmed on the defaults. A settings file (`wowsims-apl.simSettingsFile`)
+supplies the character instead, a preset build loaded over its spec's `defaults.siml` the same way. The panel then
+shows the DPS, how often each row ran per fight, the damage by spell and a timeline of one fight; the editor shows
+each row's count at the end of its line.
 
 _Insert APL Pattern_ (or **+ pattern** in the panel) asks for each value of a common shape, its default filled in, and
 inserts it: refresh a DoT, keep a debuff up, an execute block, a toggle group, a prepull sequence and more. A condition

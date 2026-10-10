@@ -232,7 +232,7 @@ type headerStmt struct {
 type varStmt struct {
 	stmtBase
 	variable *varNode
-	value    node
+	value    node // nil for a variable with no value.
 }
 
 type rowStmt struct {
@@ -434,6 +434,14 @@ func headerShape(tokens []token, i int, lines *lineMap) bool {
 		return true
 	}
 	return a.text == sectionGroup && i+1 < len(tokens) && tokens[i+1].kind == tokString && tokens[i+1].err == nil && colon(i+2)
+}
+
+// Whether a file of kind holds a spec line: a full file, and a section file whose section reads the spec or holds a
+// rotation, whose names the spec's class reads (SPEC.md §3.3). A kind that names no section is not read past it.
+func holdsSpec(ix *schemaIndex, kind Kind) bool {
+	def := ix.sections[kind.Section]
+	return kind.Section == "" || def == nil || def.Category == rotationCategory ||
+		slices.ContainsFunc(def.Sources, func(src sectionSource) bool { return src.Flatten != "" || slices.Contains(src.Path, "*") })
 }
 
 // The sections a file kind holds: all of them in a full file, and its own in a section file. An x.apl.siml holds
@@ -666,10 +674,15 @@ func (f *fileParser) line(p *parser, first bool) lineRead {
 		}
 		return top(attempt(p, p.version))
 	case "spec", "talents", "use":
-		if word == "spec" && f.seenSpec || word == "talents" && f.seenTalents {
+		switch {
+		case word == "spec" && f.seenSpec || word == "talents" && f.seenTalents:
 			p.report("misplaced-statement", word+" is written once", t.at())
-		} else if f.seenHeader {
+		case f.seenHeader:
 			p.report("misplaced-statement", word+" goes before the first section header", t.at())
+		case word == "spec" && !holdsSpec(f.ix, f.kind):
+			p.report("misplaced-statement", fmt.Sprintf("an x.%s.siml file holds no spec line, as nothing in it reads the spec", f.kind.Section), t.at())
+		case word == "talents" && f.kind.Section != "":
+			p.report("misplaced-statement", fmt.Sprintf("an x.%s.siml file holds no talents line, which only an x.siml file holds", f.kind.Section), t.at())
 		}
 		f.seenSpec = f.seenSpec || word == "spec"
 		f.seenTalents = f.seenTalents || word == "talents"
@@ -1001,13 +1014,17 @@ func (p *parser) placeholder(t token) *placeholderNode {
 	return &placeholderNode{span: t.at(), name: t.value, braced: t.text[1] == '{'}
 }
 
+// `var $x = value`, or `var $x` for a variable with no value.
 func (p *parser) varDecl() stmt {
 	p.take()
-	variable := p.variable()
-	p.expectPunct("=", "'='")
-	value := p.expr()
+	s := &varStmt{variable: p.variable()}
+	if p.atEnd() {
+		return s
+	}
+	p.expectPunct("=", "'=' or the end of the var line")
+	s.value = p.expr()
 	p.finish("an operator or the end of the var line")
-	return &varStmt{variable: variable, value: value}
+	return s
 }
 
 // --- Setup sections (SPEC.md §5)
@@ -1108,7 +1125,7 @@ func (p *parser) row(prepull bool) stmt {
 		p.take()
 	}
 	// Raw JSON alone is the whole row, its time included (SPEC.md §6.3).
-	rawRow := !s.hide && len(p.toks) == 1 && p.peekKind(0, tokRaw)
+	rawRow := !s.hide && p.peekKind(0, tokRaw) && !p.has(1)
 	if prepull && !rawRow {
 		s.doAt = p.doAt()
 	} else if p.startsTime() {

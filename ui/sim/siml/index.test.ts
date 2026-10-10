@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createSiml, type NameTable } from './index.ts';
+import { createSiml, type JsonObject, type NameTable } from './index.ts';
 import { fixtureNames } from './test_names.ts';
 import { testSchema } from './test_schema.ts';
 
@@ -25,6 +25,21 @@ describe('createSiml', () => {
 		expect(parsed.kind).toEqual({});
 		expect(parsed.settings).toBeUndefined();
 		expect(parsed.diagnostics.map(d => [d.range.start.line, d.range.start.character, d.code])).toEqual([[3, 14, 'write-eq']]);
+	});
+
+	it('prints a rotation nested deeper than any statement holds, as Go does, without running out of stack', () => {
+		let condition: JsonObject = { const: { val: '1' } };
+		for (let i = 0; i < 1500; i++) condition = { not: { val: condition } };
+		const rotation = { type: 'TypeAPL', priorityList: [{ action: { condition, castSpell: { spellId: { spellId: 1 } } } }] };
+		const text = siml.print({ kind: { section: 'apl' }, spec: 'hunter', settings: { player: { rotation } } });
+		expect(siml.parse(text, { path: 'x.apl.siml' }).diagnostics.map(d => d.message)).toEqual(['the statement nests deeper than 256']);
+	});
+
+	it('says a raw number is past the range of a double', () => {
+		const parsed = siml.parse('siml 1\n\n`{"iterations": 1e400}`\n', { path: 'x.sim.siml' });
+		expect(parsed.diagnostics.map(d => d.message)).toEqual([
+			'the raw JSON is no value of iterations: iterations: the number is past the range of a double',
+		]);
 	});
 
 	it('refuses a name table that breaks the rules of SPEC.md §7.4', () => {

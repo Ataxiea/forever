@@ -40,7 +40,6 @@ const (
 var (
 	literalPattern = regexp.MustCompile(`^-?[0-9]+(\.[0-9]+)?(%|(ns|us|µs|ms|s|m|h)([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)?$`)
 	identPattern   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
-	bracedPattern  = regexp.MustCompile(`^[^}\n\r]*$`)
 	unprintable    = regexp.MustCompile(`[\x00-\x09\x0b-\x1f\x7f]| (\n|$)`)
 	logicPrec      = map[string]int{"and": precAnd, "or": precOr}
 	mathPrec       = map[proto.APLValueMath_MathOperator]int{
@@ -327,22 +326,21 @@ func (p *printer) variableRef(name string, sc scope) text {
 	if folded := Identifier(name); identPattern.MatchString(folded) && readsBack(folded) {
 		return word("$" + folded)
 	}
-	if bracedPattern.MatchString(name) {
-		return word("${" + name + "}")
-	}
-	return nil
+	return word(braced("$", name))
 }
 
-// `%x`, or `%{name}` when the name is no ident; nil when no placeholder writes it.
+// `%x`, or `%{name}` when the name is no ident.
 func placeholderText(name string) text {
 	if identPattern.MatchString(name) {
 		return word("%" + name)
 	}
-	if bracedPattern.MatchString(name) {
-		return word("%{" + name + "}")
-	}
-	return nil
+	return word(braced("%", name))
 }
+
+var bracedEscapes = strings.NewReplacer(`\`, `\\`, "}", `\}`, "\n", `\n`)
+
+// `${name}` or `%{name}`, with `\`, `}` and line feeds escaped (SPEC.md §2).
+func braced(sigil, name string) string { return sigil + "{" + bracedEscapes.Replace(name) + "}" }
 
 // `[u.]head(subject).prop[(f=v, …)]`, when the subject is set and the unit, if set, is a unit word.
 func (p *printer) accessor(k *aplKind, body protoreflect.Message, sc scope) text {
@@ -892,7 +890,7 @@ func (p *printer) use(path string, binds []useBind, indent int) *printedStmt {
 		for i, b := range binds {
 			name := "$" + b.name
 			if b.braced {
-				name = "${" + b.name + "}"
+				name = braced("$", b.name)
 			}
 			list[i] = cat(word(name), word(" = "), value(b.value))
 		}
@@ -969,10 +967,10 @@ func (p *printer) shortAction(k *aplKind, body protoreflect.Message, sc scope) t
 					return nil
 				}
 				value, ok := p.get(x, "value")
-				placeholder := placeholderText(x.Get(p.fieldOf(x, "name").desc).String())
-				if !ok || placeholder == nil {
+				if !ok {
 					return nil
 				}
+				placeholder := placeholderText(x.Get(p.fieldOf(x, "name").desc).String())
 				binds = append(binds, cat(placeholder, word(" = "), p.value(value.Message(), precTop, sc)))
 			}
 		}
@@ -1097,7 +1095,8 @@ func (p *printer) conditionParts(condition protoreflect.Message, sc scope) []tex
 	return parts
 }
 
-// `var $x = v` (SPEC.md §6.1), breaking after = and before each operand of a top-level and or or.
+// `var $x = v` (SPEC.md §6.1), breaking after = and before each operand of a top-level and or or; `var $x` for a
+// variable with no value.
 func (p *printer) variable(v protoreflect.Message, sc scope, indent int) *printedStmt {
 	name := ""
 	var value protoreflect.Message
@@ -1105,19 +1104,19 @@ func (p *printer) variable(v protoreflect.Message, sc scope, indent int) *printe
 		name = v.Get(p.fieldOf(v, "name").desc).String()
 		value = v.Get(p.fieldOf(v, "value").desc).Message()
 	}
-	head := word("var ${" + name + "} =")
+	declared := "var " + braced("$", name)
 	if identPattern.MatchString(name) {
-		head = word("var $" + name + " =")
+		declared = "var $" + name
 	}
+	head := word(declared + " =")
 	fallback := func() *printedStmt {
-		json := "null"
-		if value != nil && value.IsValid() {
-			json = p.ix.jsonText(value)
+		if value == nil || !value.IsValid() {
+			return &printedStmt{indent: indent, parts: []text{word(declared)}, role: roleVar}
 		}
-		return &printedStmt{indent: indent, parts: []text{head, rawWord(json)}, role: roleVar}
+		return &printedStmt{indent: indent, parts: []text{head, rawWord(p.ix.jsonText(value))}, role: roleVar}
 	}
 	exp := &expected{json: p.ix.comparedJSON(v), fallback: fallback}
-	if !v.IsValid() {
+	if value == nil || !value.IsValid() {
 		s := fallback()
 		s.expect = exp
 		return s
@@ -1468,13 +1467,8 @@ func printFile(ix *schemaIndex, names *Names, kind Kind, spec *SpecInfo, s *prot
 		}
 		return indentWidth
 	}
-	// A section file writes the spec when its section reads it, or holds a rotation, whose names the spec's class reads.
-	writesSpec := func(def *sectionDef) bool {
-		return def != nil && (def.Category == rotationCategory || slices.ContainsFunc(def.Sources, func(src sectionSource) bool { return src.Flatten != "" || slices.Contains(src.Path, "*") }))
-	}
-
 	items := []*item{{line: "siml 1"}}
-	if spec != nil && (own == "" || writesSpec(ix.sections[own])) {
+	if spec != nil && holdsSpec(ix, kind) {
 		items = append(items, &item{line: "spec " + string(spec.Field.Name())})
 		p.class = spec.Class
 	}

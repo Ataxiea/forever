@@ -56,7 +56,7 @@ point of the layout, and `lint:js` is the only thing enforcing them anywhere.
   real sims. Fork pull requests carry no secrets and skip both. `preview_cleanup.yml` deletes those
   deployments when the pull request closes.
 - **`test`**: `go test --tags=with_db ./sim/...` in one job (four shards when there is more than one runner) — the Go sim, not the UI —
-  and, on the first shard, the buff generator's tests, `go test --tags=with_db ./cmd/wowsimcli/... ./tools/aplsim/...`
+  and, on the first shard, the buff generator's tests, `go test --tags=with_db ./cmd/wowsimcli/...`
   and `go test ./sim/siml/...` without the tag.
 
 So every script in the list above runs in CI, cheapest first, which is why a formatting slip reports

@@ -116,13 +116,14 @@ Each of these has a section in `references/defects.md`.
 
 **The name table, `sim/siml/names.json`.** A regeneration only adds lines to it, apart from an entry's
 `registeredBy` list and the comma JSON needs before a new last entry. Any other change to a name is a repin
-(`simlnames -repin`), the only way a name changes meaning, and the pull request has to say it intends one. This prints
-every line the change removes or changes beyond those two:
+(`simlnames -w -repin`), the only way a name changes meaning, which adds a `<name>: was …, now …` line to the repin
+record, `sim/siml/gen/repinned.txt`; the pull request has to say it intends each one. This fails on every name of the
+base's table that means something else, or nothing, now and that the record does not add a line for; CI runs it on
+pull requests against the merge commit's first parent:
 
 ```
-base=$(git merge-base origin/master HEAD)
-strip() { sed -E 's/, "registeredBy": \[[^]]*\]//; s/,$//' | sort; }
-comm -23 <(git show "$base:sim/siml/names.json" | strip) <(strip < sim/siml/names.json)   # empty unless a repin is intended
+go run ./sim/siml/cmd/simlnames -base "$(git merge-base origin/master HEAD)"   # passes unless a name changed without its record line
+git diff "$(git merge-base origin/master HEAD)" -- sim/siml/gen/repinned.txt   # the repins the change makes; read each one
 ```
 
 A table that differs from what the sim registers fails `TestTableIsUpToDate`, so a spell registered without the

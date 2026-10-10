@@ -470,7 +470,7 @@ export interface HeaderStatement extends StatementTrivia {
 export interface VarStatement extends StatementTrivia {
 	type: 'var';
 	variable: VarNode;
-	value: Expr;
+	value?: Expr; // Absent for a variable with no value.
 }
 
 export interface RowStatement extends StatementTrivia {

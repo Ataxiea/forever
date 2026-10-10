@@ -58,13 +58,13 @@ type agreeLine struct {
 	Names       []agreeName       `json:"names"`
 }
 
-// The diagnostics as the lines of a .diag file, with the message of each unknown-name, which the table decides, and of
-// each raw-ref.
+// The diagnostics as the lines of a .diag file, with the message of each, except bad-raw, whose text comes from each
+// language's JSON reader.
 func agreeLines(diags []agreeDiagnostic) []string {
 	lines := make([]string, len(diags))
 	for i, d := range diags {
 		lines[i] = fmt.Sprintf("%d:%d %s %s", d.Line, d.Col, d.Severity, d.Code)
-		if d.Code == "unknown-name" || d.Code == "raw-ref" {
+		if d.Code != "bad-raw" {
 			lines[i] += ": " + d.Message
 		}
 	}

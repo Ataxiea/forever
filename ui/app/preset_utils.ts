@@ -396,6 +396,8 @@ export const specDefaultsFromSettings = <SpecType extends Spec>(spec: SpecType, 
 			channelClipDelay: player.channelClipDelayMs,
 			healingModel: player.healingModel,
 			iterationCount: settings.settings?.iterations,
+			inFrontOfTarget: player.inFrontOfTarget,
+			tanks: settings.tanks,
 		},
 	};
 };

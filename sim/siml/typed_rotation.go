@@ -39,12 +39,16 @@ func (f *typedFile) typeRotation() rotationTyping {
 	declare := func(s *varStmt, in scope) *proto.APLValueVariable {
 		d := &variableDecl{span: s.variable.span, name: s.variable.name, scope: in}
 		out.declarations = append(out.declarations, d)
-		t.decl = d
-		value := t.value(s.value)
-		t.decl = nil
 		var v *proto.APLValueVariable
-		if value != nil {
-			v = &proto.APLValueVariable{Name: s.variable.name, Value: value}
+		if s.value == nil {
+			v = &proto.APLValueVariable{Name: s.variable.name}
+		} else {
+			t.decl = d
+			value := t.value(s.value)
+			t.decl = nil
+			if value != nil {
+				v = &proto.APLValueVariable{Name: s.variable.name, Value: value}
+			}
 		}
 		f.written[s] = v.ProtoReflect()
 		return v

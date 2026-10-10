@@ -55,8 +55,8 @@ read as `\n`. A tab counts as one column of indentation, and the printer writes 
 | literal     | `[0-9]+(\.[0-9]+)?` followed by one of `%`, `ms`, `us`, `µs`, `ns`, `s`, `m`, `h`, or nothing; or a Go compound duration such as `1m30s` or `1h2m3.5s` | no letter, digit or `_` may follow; the text is kept exactly (`5.00` stays `5.00`) |
 | string      | a JSON string on one line                                                                                                                              | standard JSON escapes                                                              |
 | raw         | `` ` `` JSON text `` ` ``                                                                                                                              | may span lines; a backtick inside is written as the JSON escape `\u0060`           |
-| var         | `$` ident, or `${` any characters except `}` and newline `}`                                                                                           |                                                                                    |
-| placeholder | `%` ident, or `%{` … `}`                                                                                                                               |                                                                                    |
+| var         | `$` ident, or `${` name `}`: the name is any characters except `}`, `\` and newline, and the escapes `\}`, `\\` and `\n` for `}`, `\` and a line feed  |                                                                                    |
+| placeholder | `%` ident, or `%{` name `}`, the name as in a var                                                                                                      |                                                                                    |
 | punctuation | `>= <= == != < > + - * / ( ) [ ] , = . : #`                                                                                                            |                                                                                    |
 | rejected    | `!`, `&&`, `&`, `\|\|`, `\|`                                                                                                                           | each gives a targeted error (§13)                                                  |
 
@@ -69,6 +69,7 @@ A character that starts no token is the error `bad-character`.
 - a string holding an escape JSON does not have, an escape of a lone surrogate (`"\ud800"`), which names no
   character, or a control character such as a tab, is `bad-character` at that escape or character;
 - `$` or `%` followed by neither a name nor `{`, and `${` or `%{` with no `}` on its line, are `expected-name`;
+- a `\` in `${…}` or `%{…}` followed by anything but `}`, `\` or `n` is `bad-character` at that escape;
 - a string with no closing `"` on its line is `unclosed-string`, and raw JSON with no closing backtick is
   `unclosed-raw` at its backtick.
 
@@ -120,13 +121,19 @@ entry, a slot row, a row or a `var` line. That is how `buffs: greater_blessing_o
 | Statement                               | Means                                                                                                         | Rules                                                                                                                                                          |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `siml 1`                                | the format's major version                                                                                    | Must be the first statement; comments and blank lines may come before it. Its absence is `missing-version`, and a major other than 1 is `unsupported-version`. |
-| `spec <oneof>`                          | `Player.spec`: the oneof field of `Player`'s `spec`, such as `hunter`, `dps_warrior` or `retribution_paladin` | Required in `x.apl.siml` and `x.siml` (`spec-required`); allowed in other kinds. It also sets `Player.class` (§8.4). An unknown name is `unknown-spec`.        |
-| `talents "<string>"`                    | `Player.talents_string` (category t)                                                                          |                                                                                                                                                                |
+| `spec <oneof>`                          | `Player.spec`: the oneof field of `Player`'s `spec`, such as `hunter`, `dps_warrior` or `retribution_paladin` | Required in `x.apl.siml` and `x.siml` (`spec-required`); see below for other kinds. It also sets `Player.class` (§8.4). An unknown name is `unknown-spec`.     |
+| `talents "<string>"`                    | `Player.talents_string` (category t)                                                                          | In `x.siml` only.                                                                                                                                              |
 | `use "<path>" [with <var> = <expr>, …]` | composition (§9)                                                                                              |                                                                                                                                                                |
 | `var …`                                 | rotation value variables (§6.1)                                                                               |                                                                                                                                                                |
 
 `siml`, `spec`, `talents` and `use` must come before the first header (`misplaced-statement`), and each may
 appear once, except `use`.
+
+**Where `spec` and `talents` go.** A file holds what its printer writes (§12.1). `spec` goes in `x.siml`, and in a
+section file whose section reads the spec (`settings`, `simple`) or holds a rotation (category r: `apl`, `simple`,
+`cooldowns`, `prepull`, `priority`, a group), whose names the spec's class reads (§7.1). `talents` goes in `x.siml`
+only. Either line in any other file kind is `misplaced-statement`, so a section file holds only its own category
+(§1).
 
 A line whose first word is `siml`, `spec`, `talents`, `use` or `var` and whose next token is `=` is none of these
 statements. It reads as a line of its section, so `var = 1` under `apl:` is an entry (`unknown-field`).
@@ -153,7 +160,7 @@ top           = "spec" , ident
 var_bind      = var , "=" , expr ;
 
 (* §6: rotation sections *)
-var_decl      = "var" , var , "=" , ( expr | raw ) ;
+var_decl      = "var" , var , [ "=" , ( expr | raw ) ] ;
 row           = { note_line } , [ "#" ] , [ do_at ] , action ;    (* do_at present exactly in prepull: *)
 note_line     = note ;                                            (* directly above, no blank line between *)
 do_at         = unary ;                                           (* -22s, (1s + $x) *)
@@ -396,6 +403,7 @@ This is the text the site writes (`JSON.stringify(rotationToJson(...))` in `ui/a
 | Statement                                     | Where                                    | JSON                                                                          |
 | --------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
 | `var $name = <expr>` / `var ${Name} = <expr>` | top level, `apl:`, or a group            | `valueVariables[]` / `groups[g].variables[]`: `{"name": "Name", "value": V}`  |
+| `var $name` / `var ${Name}`                   | top level, `apl:`, or a group            | a variable with no value: `{"name": "Name"}`                                  |
 | `type <short name>`                           | `apl:`                                   | `"type"` (§6.2)                                                               |
 | `prepull:`                                    | header                                   | `prepullActions`                                                              |
 | `priority:`                                   | header                                   | `priorityList`                                                                |
@@ -764,10 +772,10 @@ it, in a section the file kind does not hold, has none.
 committed table, the sim and the database, and, when an entry changed, writes the table back, whole, renamed into
 place. The make rule runs when a Go file under `sim/` other than a test, a file of `assets/database/`, or a talent
 tree of `ui/sim/talents/trees` changes, and a stamp (`sim/siml/.names.stamp`) records the run, so a change that adds
-no name rebuilds nothing that reads the table. `make wasm`, `make devserver`, `make vscode-apl` and the site bundle, whose Vite
+no name rebuilds nothing that reads the table. `make devserver`, `make vscode-apl` and the site bundle, whose Vite
 plugin reads the table, depend on it, so a build after adding a spell adds its name, and the developer commits the
-table with the change. `make go-to-ts` does not read it. CI's up-to-date check (below) is what catches a table not
-committed. The generator:
+table with the change. `make wasm` and `make go-to-ts` do not read it. CI's up-to-date check (below) is what catches
+a table not committed. The generator:
 
 1. **Builds every spec the sim can build**, with no gear, for every playable race and every talents string that
    puts each talent at rank 1, 2, … up to the highest rank any talent has, each capped at its own. Each runs with
@@ -837,11 +845,17 @@ committed. The generator:
 9. **Keeps every pinned entry.** An entry keeps its name, id, tag, rank and slots whatever the inputs; only
    `registeredBy` is regenerated. An id that no build registers keeps its entry, with an empty `registeredBy`. A
    spell, item, enchant row or suffix that the game files rename keeps its old name; the generator adds no alias.
+   The one exception is work in progress: in a git checkout, an entry whose name the table at `HEAD`
+   (`git show HEAD:sim/siml/names.json`) does not hold is dropped before step 7 when no build registers it, or, for
+   an item, enchant or suffix, the database no longer holds it. So a name added for a spell registered only for a while, or
+   for a wrong id, goes once that is undone, while a name not committed yet that still means something stays, and so
+   does a repin's. Outside a git checkout, or when `HEAD` holds no table, nothing is dropped.
 10. **Is deterministic.** The same inputs give byte-identical output.
 11. **Reports** on standard error:
     - what it added: every entry, or a count for each scope when there are more than 50 and `-v` is not given;
     - each pinned spell-like name that no build registers while an id of the same base name is registered
       ("warrior.spell.eye_for_an_eye is pinned to spell 9799; the sim registers spell 25997");
+    - each entry dropped as work in progress (step 9);
     - how many pinned names no build registers;
     - how many specs and sources it could not build, and with `-v` each with why.
 
@@ -849,12 +863,21 @@ committed. The generator:
 `item.<name>`, `enchant.<name>`, `suffix.<name>`) drops that entry, and every entry of the same namespace and scope
 whose game name gives the same base name, and generates, so steps 7 and 8 name what the sim and the database
 hold now. It prints each dropped name's old and new meaning, and every `.siml` file under `ui/specs` that
-holds one of them as a word. It is the only way a name changes meaning.
+means one of them by a name it writes. It is the only way a name changes meaning, and it records itself: for each
+name whose meaning changed, it adds a line `<name>: was <meaning>, now <meaning>` (`warrior.spell.overpower: was
+spell 11585, now spell 11584`) to the repin record, `sim/siml/gen/repinned.txt`, unless the record holds that line.
+The record is committed with the table, and its lines are kept.
 
 **Checks.**
 
 - **Up to date.** A `with_db` test in `sim/siml/gen` regenerates the table in memory, and fails when it differs
   from the committed file, listing the new entries, the changed lines and the command `make sim/siml/names.json`.
+- **Names keep their meaning.** The up-to-date test regenerates from the table it is given, so it passes two names
+  that swapped their ids. `go run ./sim/siml/cmd/simlnames -base <commit>` reads the table and the repin record at
+  `<commit>`, and fails, listing each, when a name of that table means another id, tag, rank or slots, or nothing, in
+  the working tree's table (`registeredBy` is no part of a meaning), unless the working tree's record holds a line
+  for the name that `<commit>`'s record does not. CI runs it on every pull request against the base branch, so a
+  repin passes only with its record line in the diff.
 - **Repository files.** `wowsimcli siml fmt -check` checks each file under `ui/specs`, and a `with_db` test in
   `cmd/wowsimcli` runs it over every committed one. A file has zero diagnostics and no raw refs (`raw-ref`), is a
   fixed point of `format`, and, when it names a spec, sits under that spec's class folder, `ui/specs/<class>/`.
@@ -1051,9 +1074,10 @@ use "default.apl.siml" with $use_summon_hawk = true
 - **The path.** It is read against the folder of the using file, with `/` or `\` between parts and `.` and `..`
   resolved; a path that starts with `/`, `\` or a drive (`C:\`) is read as it is.
 - **Conflicts.** A section present in both files, or brought by two used files, is `section-conflict`. Two
-  groups conflict when they share a name, and two talents lines conflict too. A section file that uses a
-  section its kind does not hold is `section-not-allowed`. Each is reported once per `use` line, listing the
-  sections.
+  groups conflict when they share a name, and two talents lines conflict too. The message names where each
+  section was first: this file, or the used file that brought it. A section file that uses a section its kind
+  does not hold, or a talents line (§3.3), is `section-not-allowed`. Each is reported once per `use` line,
+  listing the sections.
 - **Specs.** The two files' `spec` lines must agree (`spec-mismatch`).
 - **`with`.** It sets the value of variables the used rotation declares, matched by the rule of §7.5. An
   unknown variable is `with-unknown-variable` and one that matches several is `ambiguous-variable`, each at the
@@ -1135,11 +1159,9 @@ from its typed value and puts back comments, notes and blank lines. **A committe
 
 **Order of the file.**
 
-1. `siml 1`, then `spec`, `talents` and `use` lines, in that order. `spec` is written in `x.siml`, and in a section
-   file whose section reads the spec (`settings`, `simple`) or holds a rotation (category r: `apl`, `simple`,
-   `cooldowns`, `prepull`, `priority`, a group), whose names the spec's class reads (§7.1); `talents` in `x.siml`,
-   when its category is given (`talents ""` for an empty string) or, with no categories given, when the string is
-   not empty.
+1. `siml 1`, then `spec`, `talents` and `use` lines, in that order. `spec` is written in each file kind that holds
+   it (§3.3); `talents` in `x.siml`, when its category is given (`talents ""` for an empty string) or, with no
+   categories given, when the string is not empty.
 2. The setup sections, in the §5.1 order: `settings`, `gear`, `item_swap`, `consumables`, `buffs`,
    `party_buffs`, `raid_buffs`, `debuffs`, `encounter`, `sim`.
 3. The rotation: `apl` (vars), `simple`, `cooldowns`, `prepull`, `priority`, then the groups in proto order.
@@ -1265,10 +1287,12 @@ Each piece goes on a continuation line. A continuation line may itself exceed 10
 **Variables and placeholders.**
 
 - A variable reference prints as `$name` when the name is an ident that §7.5 reads back as itself, else as
-  `$identifier(name)` when that is an ident that reads back as the name, otherwise as `${Exact}`. A name that
-  holds `}` or a line break has no form, and its value prints as raw JSON.
-- A declaration prints as `var $x` when the exact name is an ident, otherwise as `var ${Exact}`.
+  `$identifier(name)` when that is an ident that reads back as the name, otherwise as `${Exact}`.
+- A declaration prints as `var $x` when the exact name is an ident, otherwise as `var ${Exact}`, followed by
+  `=` and its value, or by nothing for a variable with no value.
 - Placeholders print as `%x` when the name is an ident, otherwise as `%{Exact}`.
+- In `${Exact}` and `%{Exact}`, `\`, `}` and a line feed are written `\\`, `\}` and `\n` (§2), and every other
+  character as itself.
 
 **Notes.** They print as `///` lines, one per line of the text, and an empty line as `///` alone. A note that
 holds a control character other than the line feed (a tab or `\r` among them), or a line that ends in a space,

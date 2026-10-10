@@ -311,13 +311,36 @@ func TestSimReadsAFullSetup(t *testing.T) {
 	}
 	for file, want := range map[string]string{
 		"options.json":      "a RaidSimRequest needs simOptions",
-		"rotation.apl.siml": "holds only its apl section; sim takes a full setup",
+		"rotation.apl.siml": "holds only its apl section, and a setup is an x.siml",
 		"broken.siml":       "broken.siml:4:1 unknown-section",
-		"build.siml":        "build.siml names no race, so it is not a full setup",
+		// The test runs where ui/specs holds no defaults.siml to load a build over.
+		"build.siml": "build.siml names no race, so it is a preset build, and ui/specs holds no defaults.siml for SpecHunter",
 	} {
 		if _, _, err := readSimRequest(filepath.Join(dir, file)); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: error %v, want %q", file, err, want)
 		}
+	}
+}
+
+func TestSimLoadsAPresetBuildOverItsSpecDefaults(t *testing.T) {
+	t.Chdir(root)
+	const build, defaults = "ui/specs/hunter/dps/builds/sv.siml", "ui/specs/hunter/dps/defaults.siml"
+	request, warnings, err := readSimRequest(build)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(warnings, build+" names no race, so it is a preset build: simmed over "+defaults) {
+		t.Errorf("warnings %q", warnings)
+	}
+	player := request.Raid.Parties[0].Players[0]
+	if player.Race != proto.Race_RaceOrc || player.TalentsString != "1-00531500114-52225303000021005" || player.DistanceFromTarget != 11 ||
+		player.Consumables.GetPotId() == 0 || len(player.Rotation.GetPriorityList()) == 0 {
+		t.Errorf("race %v, talents %q, distance %v, consumables %v, %d priority rows, want the defaults' race and consumables under the build's talents, distance and rotation",
+			player.Race, player.TalentsString, player.DistanceFromTarget, player.Consumables, len(player.Rotation.GetPriorityList()))
+	}
+	request.SimOptions.Iterations = 20
+	if res := core.RunRaidSim(request); res.Error != nil || res.RaidMetrics.Dps.Avg <= 0 {
+		t.Errorf("the sim gives %v (%v)", res.GetRaidMetrics().GetDps(), res.Error)
 	}
 }
 

@@ -61,9 +61,10 @@ export function typeRotation(
 		const decl: VariableDecl = { name: s.variable.name, range: s.variable.range, scope, uses: [] };
 		declarations.push(decl);
 		typer.decl = decl;
-		const value = typer.value(s.value, [...path, V.variable.f.value]);
+		const value = s.value && typer.value(s.value, [...path, V.variable.f.value]);
 		typer.decl = undefined;
 		typer.span(path, s.range);
+		if (!s.value) return { [V.variable.f.name]: s.variable.name };
 		return value && { [V.variable.f.name]: s.variable.name, [V.variable.f.value]: value };
 	};
 

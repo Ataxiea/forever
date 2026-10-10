@@ -2,15 +2,15 @@ import { spawn } from 'node:child_process';
 
 import { findGo } from '../go.ts';
 
-// Runs `tools/aplsim` and reads its result.
+// Runs `wowsimcli siml sim` and reads its result.
 
 export type JsonPathKey = string; // A row's JSON path joined with '/': 'priorityList/3', 'groups/1/actions/0'.
 
 export interface SimRequest {
-	siml: string; // The text of an .apl.siml, which tools/aplsim parses with the committed name table.
+	siml: string; // The text of an .apl.siml, which `wowsimcli siml sim` parses with the committed name table.
 	path: string; // Its file, relative to the repository root or absolute: use lines are read against it, and the one preset build whose rotation is the saved file's is loaded over the spec's defaults.
 	compare?: { siml: string }; // Another text of the same file, simmed on the same character and seed.
-	settingsFile?: string; // Settings the site exports, in protojson or as an x.siml, for everything but the APL.
+	settingsFile?: string; // Settings the site exports, in protojson or as an x.siml, for everything but the APL; a preset build is loaded over its spec's defaults.siml.
 	iterations?: number;
 	seed?: number;
 	timeline?: boolean;
@@ -114,13 +114,13 @@ export function parseResult(stdout: string): SimResult {
 	try {
 		parsed = JSON.parse(stdout);
 	} catch {
-		throw new Error(`tools/aplsim printed no result: ${stdout.trim().slice(0, 200)}`);
+		throw new Error(`wowsimcli siml sim printed no result: ${stdout.trim().slice(0, 200)}`);
 	}
 	if (parsed.error) {
 		throw new Error(parsed.error);
 	}
 	if (!parsed.dps || !parsed.rows || !parsed.character) {
-		throw new Error('tools/aplsim printed an incomplete result');
+		throw new Error('wowsimcli siml sim printed an incomplete result');
 	}
 	const result = parsed as SimResult;
 	result.spells ??= [];
@@ -131,16 +131,16 @@ export function parseResult(stdout: string): SimResult {
 	return result;
 }
 
-// Sims a rotation with `tools/aplsim` in the repository at `root`. `goBinary` is the wowsims-apl.goBinary setting: 'go'
-// looks for an install, anything else is the binary to run.
+// Sims a rotation with `wowsimcli siml sim` in the repository at `root`. `goBinary` is the wowsims-apl.goBinary setting:
+// 'go' looks for an install, anything else is the binary to run.
 export function runSim(root: string, goBinary: string, request: SimRequest, signal?: AbortSignal): Promise<SimResult> {
 	const go = findGo(goBinary);
 	if (!go) return Promise.reject(new Error('no go binary found; set wowsims-apl.goBinary'));
 	return runTool(root, go, request, signal);
 }
 
-// Runs `go run --tags=with_db ./tools/aplsim` in the repository. Aborting kills the tool and the sim binary `go run`
-// started: on POSIX through the process group, on Windows with taskkill over the process tree.
+// Runs `go run --tags=with_db ./cmd/wowsimcli siml sim` in the repository. Aborting kills the tool and the sim binary
+// `go run` started: on POSIX through the process group, on Windows with taskkill over the process tree.
 export function runTool(root: string, go: string, request: SimRequest, signal?: AbortSignal): Promise<SimResult> {
 	const body = JSON.stringify(buildRequest(request));
 	return new Promise((resolve, reject) => {
@@ -150,7 +150,7 @@ export function runTool(root: string, go: string, request: SimRequest, signal?: 
 		}
 		const posix = process.platform !== 'win32';
 		// Its own process group on POSIX, so one kill reaches the binary `go run` spawns.
-		const child = spawn(go, ['run', '--tags=with_db', './tools/aplsim'], { cwd: root, detached: posix, windowsHide: true });
+		const child = spawn(go, ['run', '--tags=with_db', './cmd/wowsimcli', 'siml', 'sim'], { cwd: root, detached: posix, windowsHide: true });
 		const stdout: Buffer[] = [];
 		const stderr: Buffer[] = [];
 		let aborted = false;
@@ -184,7 +184,7 @@ export function runTool(root: string, go: string, request: SimRequest, signal?: 
 			const out = Buffer.concat(stdout).toString('utf8');
 			if (code !== 0 && !out.trim()) {
 				const err = Buffer.concat(stderr).toString('utf8').trim().split('\n').slice(-3).join('\n');
-				reject(new Error(err || `tools/aplsim exited with ${code}`));
+				reject(new Error(err || `wowsimcli siml sim exited with ${code}`));
 				return;
 			}
 			try {

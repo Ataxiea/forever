@@ -238,7 +238,10 @@ export class Typer {
 
 	private unknownKind(name: string, what: 'value' | 'action', kinds: Iterable<string>): string {
 		const other = what === 'value' ? this.index.actionKinds.has(name) : this.index.valueKinds.has(name);
-		if (other) return `${name} is ${what === 'value' ? 'an action' : 'a value'}, and ${what === 'value' ? 'a value' : 'an action'} goes here`;
+		const here = what === 'value' ? 'a value' : 'an action';
+		if (other) return `${name} is ${what === 'value' ? 'an action' : 'a value'}, and ${here} goes here`;
+		const [held] = this.names.holding(this.cls, name);
+		if (held !== undefined) return `${name} is ${THINGS[held]}, and ${here} goes here`;
 		return `no ${what} is named ${name}${didYouMean(name, kinds)}`;
 	}
 
@@ -523,7 +526,7 @@ export class Typer {
 	// An item, enchant or suffix ref field: a name of its namespace, written as the id.
 	private ref(field: SchemaField, t: Term, path: JsonPath): JsonValue | undefined {
 		const ns = field.ref!;
-		if (t.type !== 'call' || t.args) return this.wrongType(field, `the name of ${THINGS[ns]}`, t);
+		if (t.type !== 'call' || t.args) return this.wrongType(field, `the name of ${THINGS[ns]}, written alone`, t);
 		const slotRow = this.index.protoField(this.v.itemSpec.message, field.name) === field;
 		return this.lookup(t.name, path, ns, (slotRow && SLOT_PLACES[field.name]) || field.siml) as number | undefined;
 	}

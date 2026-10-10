@@ -19,6 +19,7 @@ const FILES: Record<string, string> = {
 	'specs/p1.gear.siml': GEAR,
 	'specs/base.apl.siml': ['siml 1', 'spec hunter', '', 'var $weave = true', '', 'priority:', '  cast x if $weave', ''].join('\n'),
 	'specs/cd.cooldowns.siml': 'siml 1\n\ncooldowns(id=x)\n',
+	'specs/talents.siml': 'siml 1\nspec hunter\ntalents "-0053"\n',
 };
 const open = (path: string) => FILES[path];
 
@@ -79,6 +80,24 @@ describe('parse of a full file', () => {
 		const used = siml.parse('siml 1\nspec hunter\nuse "cd.cooldowns.siml"\n', { path: 'specs/x.siml', open });
 		expect(used.diagnostics.map(d => [d.code, d.message])).toEqual([
 			['unknown-name', 'specs/cd.cooldowns.siml:3:14: no spell is named x; with no spec, a file reads only the spells and auras every class shares'],
+		]);
+	});
+
+	it('names the used file a conflicting section came from first', () => {
+		const twice = siml.parse('siml 1\nspec hunter\nuse "base.apl.siml"\nuse "sub/../base.apl.siml"\n', { path: 'specs/x.apl.siml', open });
+		expect(twice.diagnostics.map(d => [d.code, d.message])).toEqual([
+			['section-conflict', 'apl: and priority: are in both specs/base.apl.siml and specs/base.apl.siml'],
+		]);
+	});
+
+	it('keeps the talents line to an x.siml file, written or used', () => {
+		const written = siml.parse('siml 1\nspec hunter\ntalents "-0053"\n', { path: 'specs/x.settings.siml' });
+		expect(written.diagnostics.map(d => [d.code, d.message])).toEqual([
+			['misplaced-statement', 'an x.settings.siml file holds no talents line, which only an x.siml file holds'],
+		]);
+		const used = siml.parse('siml 1\nspec hunter\nuse "talents.siml"\n', { path: 'specs/x.settings.siml', open });
+		expect(used.diagnostics.map(d => [d.code, d.message])).toEqual([
+			['section-not-allowed', 'specs/talents.siml brings the talents line, which an x.settings.siml file does not hold'],
 		]);
 	});
 

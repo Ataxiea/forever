@@ -20,8 +20,10 @@ const TablePath = "sim/siml/names.json"
 // The command that regenerates the committed table.
 const MakeCommand = "make sim/siml/names.json"
 
-// Reads the committed table under root, collects what the sim and the database hold, and returns the table the
-// committed one grows into, with pin handed back to the new-name rules when it is not nil.
+// Reads the table under root, collects what the sim and the database hold, and returns the table the one under
+// root grows into, with pin handed back to the new-name rules when it is not nil. In a git checkout, the entries
+// whose names HEAD's table does not hold and that the sim and the database no longer give are dropped first, so a
+// name added during work in progress does not outlive what it named.
 func Generate(root string, pin *Pin) (*siml.Names, *Report, error) {
 	data, err := os.ReadFile(filepath.Join(root, TablePath))
 	if err != nil {
@@ -31,11 +33,23 @@ func Generate(root string, pin *Pin) (*siml.Names, *Report, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w; it is generated, so take the committed one and run %s", TablePath, err, MakeCommand)
 	}
+	head, err := headTable(root)
+	if err != nil {
+		return nil, nil, err
+	}
 	c, err := Collect(root, old)
 	if err != nil {
 		return nil, nil, err
 	}
-	return Update(old, c, pin)
+	var dropped []string
+	if head != nil {
+		dropped = prune(old, head, c)
+	}
+	names, report, err := Update(old, c, pin)
+	if report != nil {
+		report.Dropped = dropped
+	}
+	return names, report, err
 }
 
 // The .siml files under root/ui/specs that write the name pin holds and mean its entry by it, relative to root: every
@@ -63,7 +77,7 @@ func FilesUsing(root string, pin Pin) ([]string, error) {
 		if diags := (siml.Diagnostics{}); err != nil && !errors.As(err, &diags) {
 			return err
 		}
-		if !means(f, pin) {
+		if !means(f, pin, names) {
 			return nil
 		}
 		rel, err := filepath.Rel(root, path)
@@ -76,10 +90,15 @@ func FilesUsing(root string, pin Pin) ([]string, error) {
 	return files, err
 }
 
-// Whether f writes the name pin holds, and means pin's entry by it.
-func means(f *siml.File, pin Pin) bool {
-	if pin.Class != proto.Class_ClassUnknown {
-		if info, ok := siml.SpecOf(f.Spec); !ok || info.Class != pin.Class {
+// Whether f writes the name pin holds, and means pin's entry by it with names: a shared name means a class's own
+// entry of that name in a file of the class.
+func means(f *siml.File, pin Pin, names *siml.Names) bool {
+	info, ok := siml.SpecOf(f.Spec)
+	if pin.Class != proto.Class_ClassUnknown && (!ok || info.Class != pin.Class) {
+		return false
+	}
+	if ok && pin.Class == proto.Class_ClassUnknown && pin.Namespace.SpellLike() {
+		if _, own := names.Classes[info.Class][pin.Namespace][pin.Name]; own {
 			return false
 		}
 	}
@@ -87,8 +106,8 @@ func means(f *siml.File, pin Pin) bool {
 }
 
 // Writes the report: the entries added, or their count by scope unless verbose; the new class entries a shared name
-// holds the plain name of; the repinned names; the stale pinned names; and what could not be built, or its count
-// unless verbose.
+// holds the plain name of; the repinned names; the dropped names; the stale pinned names; and what could not be
+// built, or its count unless verbose.
 func (r *Report) Write(w io.Writer, verbose bool) {
 	if verbose || len(r.Added) <= 50 {
 		for _, line := range r.Added {
@@ -113,7 +132,10 @@ func (r *Report) Write(w io.Writer, verbose bool) {
 		fmt.Fprintln(w, "qualified:", line)
 	}
 	for _, p := range r.Repinned {
-		fmt.Fprintf(w, "repinned %s: was %s, now %s\n", p.Pin, p.Was, p.Now)
+		fmt.Fprintln(w, "repinned", p)
+	}
+	for _, line := range r.Dropped {
+		fmt.Fprintln(w, "dropped", line, "(HEAD's table does not hold it, and nothing gives it now)")
 	}
 	for _, line := range r.Stale {
 		fmt.Fprintln(w, "stale:", line)

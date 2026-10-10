@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -109,11 +109,13 @@ func buildOf(root, folder, path string) (*siml.File, error) {
 }
 
 // Loads the settings of a build b over s, as the site loads a preset build (makePresetBuildFromJSON and applyBuild in
-// the UI), but for the rotation, which is the one simmed: each message b holds replaces s's own, and without an item
-// swap set b turns item swap off. b's settings: section, which sets the spec's options, sets the options, the distance
+// the UI): each message b holds replaces s's own, and without an item swap set b turns item swap off. b's settings: section, which sets the spec's options, sets the options, the distance
 // and whether the player stands in front of the target, and the race, professions and timings it does not leave at 0.
 func loadBuild(s, b *proto.IndividualSimSettings) {
 	p, bp := s.Player, b.GetPlayer()
+	if bp.Rotation != nil {
+		p.Rotation = bp.Rotation
+	}
 	if bp.Equipment != nil {
 		p.Equipment = bp.Equipment
 	}
@@ -177,28 +179,48 @@ func gearSetOf(root, folder string, e *proto.EquipmentSpec) string {
 }
 
 // The character a settings file describes: an IndividualSimSettings the site exports, in protojson or as an x.siml.
-func characterFromSettings(path string, spec proto.Spec, folder string) (*character, error) {
+func characterFromSettings(root, path string, spec proto.Spec, folder string) (*character, error) {
 	c := &character{settings: &proto.IndividualSimSettings{}, info: characterInfo{Source: path}}
 	if strings.HasSuffix(path, ".siml") {
-		f, err := siml.ReadFile(path)
-		if err != nil {
+		var err error
+		if c, err = readSetup(root, path); err != nil {
 			return nil, err
 		}
-		c.settings = f.Settings
-		for _, w := range f.Warnings {
-			c.info.Warnings = append(c.info.Warnings, w.String())
-		}
-	} else {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(data, c.settings); err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
+	} else if data, err := os.ReadFile(path); err != nil {
+		return nil, err
+	} else if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(data, c.settings); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if info, ok := siml.SpecOf(spec); !ok || specField(c.settings.GetPlayer()) != info.Field {
 		return nil, fmt.Errorf("%s is not a %s character", path, folder)
 	}
+	return c, nil
+}
+
+// The character of the x.siml at path: a full setup as it is, or a preset build, which names no race, loaded over its
+// spec's defaults.siml under root. The warnings are the file's, and for a build the defaults it is loaded over.
+func readSetup(root, path string) (*character, error) {
+	f, err := siml.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if f.Kind.Section != "" {
+		return nil, fmt.Errorf("%s holds only its %s section, and a setup is an x.siml: a full setup or a preset build", path, f.Kind.Section)
+	}
+	c := &character{settings: f.Settings, info: characterInfo{Source: path}}
+	for _, w := range f.Warnings {
+		c.info.Warnings = append(c.info.Warnings, diagnosticLine(w))
+	}
+	if f.Settings.GetPlayer().GetRace() != proto.Race_RaceUnknown {
+		return c, nil
+	}
+	_, defaults, err := specDefaults(root, f.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("%s names no race, so it is a preset build, and %w", path, err)
+	}
+	c.settings = googleProto.Clone(defaults.Settings).(*proto.IndividualSimSettings)
+	loadBuild(c.settings, f.Settings)
+	c.info.Source = path + " over " + defaults.Path
+	c.info.Warnings = append(c.info.Warnings, fmt.Sprintf("%s names no race, so it is a preset build: simmed over %s", path, defaults.Path))
 	return c, nil
 }

@@ -82,7 +82,7 @@
 				"wowsims-apl.goBinary": {
 					"type": "string",
 					"default": "go",
-					"description": "The go binary that sims from the editor (tools/aplsim) and reads a spell's game files row for hovers (tools/spelldata). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+					"description": "The go binary that sims from the editor (cmd/wowsimcli siml sim) and reads a spell's game files row for hovers (tools/spelldata). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
 				},
 				"wowsims-apl.simIterations": {
 					"type": "number",
@@ -94,7 +94,7 @@
 				"wowsims-apl.simSettingsFile": {
 					"type": "string",
 					"default": "",
-					"description": "Settings exported from the site, as JSON or SIML, which supply the character (gear, talents, race, consumables, buffs, encounter) for sims from the editor. Empty uses the spec's defaults.siml, with the one preset build whose rotation is the saved file's loaded over it as the site loads a build."
+					"description": "Settings exported from the site, as JSON or SIML, which supply the character (gear, talents, race, consumables, buffs, encounter) for sims from the editor; a preset build (builds/*.siml) is loaded over its spec's defaults.siml. Empty uses the spec's defaults.siml, with the one preset build whose rotation is the saved file's loaded over it as the site loads a build."
 				}
 			}
 		},

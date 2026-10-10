@@ -83,8 +83,9 @@ A spec's presets are SIML files under `ui/specs/<class>/<spec>/`. `sim/siml/SPEC
 - `defaults.siml` holds the setup the spec's page starts with, a whole setup in the same form, with what the page
   sets on top of it stated: the race, `reaction_time_ms 100`, the rotation type (`apl: type auto` when the spec has
   no default rotation), for a tank `in_front_of_target` and `tanks player1`, and for a healer `target_dummies 9`.
-  `spec.ts` reads it through `PresetUtils.specDefaultsFromSettings`, and `tools/aplsim` sims a rotation on it, with
-  the preset build that uses the rotation loaded over it.
+  `spec.ts` reads it through `PresetUtils.specDefaultsFromSettings`, and `wowsimcli siml sim` sims a rotation on it,
+  with the preset build that uses the rotation loaded over it; `wowsimcli sim --infile` loads a preset build over it
+  the same way.
 
 Every spell, aura, item and enchant is written by its name in the name table, `sim/siml/names.json`:
 `cast mortal_strike`, `target.aura(sunder_armor).num_stacks`, `cast item.goblin_sapper_charge`. A spell or aura has
@@ -92,7 +93,8 @@ a name once the sim registers it, so register the spells first and then run `mak
 their names, and the table goes into the same commit as the spells. A `qualified:` line in its report means a shared
 entry (a gear or encounter spell) holds the plain name of one of the class's spells, so `cast fireball` would mean the
 shared spell: run the generator with the `-repin` that line names on the committed table
-(`git checkout sim/siml/names.json` first) to give the class the plain name. The site's Rotation tab writes a rotation with
+(`git checkout sim/siml/names.json` first) to give the class the plain name, and commit the line it adds to the repin
+record, `sim/siml/gen/repinned.txt`, with the table. The site's Rotation tab writes a rotation with
 **Export SIML**. `make vscode-apl` builds the editor extension, which completes the names the file's spec registers
 (`tools/vscode-apl/README.md`). A name the table does not hold fails, with the names close to it:
 

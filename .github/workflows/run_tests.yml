@@ -217,10 +217,13 @@ jobs:
                 # shard: [0, 1, 2, 3]
                 shard: [0]
         steps:
+            # Two commits deep, so a pull request's merge commit comes with its first parent, the base branch's
+            # commit the name table check reads.
             - name: Checkout 🛎️
               uses: actions/checkout@v5
               with:
                   ref: ${{ inputs.ref }}
+                  fetch-depth: 2
 
             - name: Install Go
               uses: actions/setup-go@v6
@@ -249,6 +252,16 @@ jobs:
             - name: Generate proto and dist stubs
               run: make sim/core/proto/api.pb.go binary_dist/dist.go
 
+            # TestTableIsUpToDate regenerates from the table the pull request holds, so it passes a table whose names
+            # changed meaning. This fails when a name of the base branch's table means something else, or nothing,
+            # unless the pull request adds the name's line to sim/siml/gen/repinned.txt, which simlnames -w -repin
+            # writes. A pull request is checked out as its merge commit, whose first parent is the base.
+            - name: Check the name table keeps its names
+              if: github.event_name == 'pull_request' && matrix.shard == 0
+              run: |
+                  git rev-parse --verify --quiet HEAD^2 > /dev/null || { echo "HEAD is not the pull request's merge commit"; exit 1; }
+                  go run ./sim/siml/cmd/simlnames -base HEAD^1
+
             # The buff manifest, the proto emitter and the buff generator's render and
             # TS tests need no game files database, and the database is not in the repo, so
             # the tests that do need it skip. One shard runs them.
@@ -262,7 +275,7 @@ jobs:
             - name: Test the SIML tools
               if: matrix.shard == 0
               run: |
-                  go test --tags=with_db ./cmd/wowsimcli/... ./tools/aplsim/...
+                  go test --tags=with_db ./cmd/wowsimcli/...
                   go test ./sim/siml/...
 
             - name: Test (shard ${{ matrix.shard }})

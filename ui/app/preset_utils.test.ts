@@ -1,6 +1,6 @@
 import { APLRotation_Type } from '@generated/proto/apl';
 import { Debuffs, IndividualBuffs, PartyBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, EquipmentSpec, Profession, Race, Spec } from '@generated/proto/common';
+import { ConsumesSpec, EquipmentSpec, Profession, Race, Spec, UnitReference, UnitReference_Type } from '@generated/proto/common';
 import { Hunter_Rotation_Playstyle } from '@generated/proto/hunter';
 import { describe, expect, it } from 'vitest';
 
@@ -61,6 +61,11 @@ describe('specDefaultsFromSettings', () => {
 		settings: { iterations: 25000 },
 	};
 
+	const warrior = {
+		player: { class: 'ClassWarrior', inFrontOfTarget: true, protectionWarrior: {} },
+		tanks: [{ type: 'Player' }],
+	};
+
 	it('reads the proto-backed defaults a file holds', () => {
 		const defaults = specDefaultsFromSettings(Spec.SpecHunter, hunter);
 
@@ -78,10 +83,17 @@ describe('specDefaultsFromSettings', () => {
 		const defaults = specDefaultsFromSettings(Spec.SpecHunter, { player: { class: 'ClassHunter', hunter: {} } });
 
 		expect(defaults.consumables).toEqual(ConsumesSpec.create());
+		expect(defaults.other).toMatchObject({ inFrontOfTarget: false, tanks: [] });
 		expect(defaults.debuffs).toEqual(Debuffs.create());
 		expect(defaults.partyBuffs).toEqual(PartyBuffs.create());
 		expect(defaults.individualBuffs).toEqual(IndividualBuffs.create());
 		expect(defaults).not.toHaveProperty('rotationType');
+	});
+
+	it('reads where the player stands and whom the raid tanks with', () => {
+		const defaults = specDefaultsFromSettings(Spec.SpecProtectionWarrior, warrior);
+
+		expect(defaults.other).toMatchObject({ inFrontOfTarget: true, tanks: [UnitReference.create({ type: UnitReference_Type.Player })] });
 	});
 
 	it('keeps the priority list of an APL rotation', () => {

@@ -73,7 +73,7 @@ function show(n: Term | Step): string {
 function expr(text: string): string {
 	const { tree, diagnostics } = parse(`siml 1\nvar $x = ${text}\n`);
 	expect(diagnostics).toEqual([]);
-	return show((tree.top[1] as VarStatement).value);
+	return show((tree.top[1] as VarStatement).value!);
 }
 
 // The first statement under `<section>:` in a full file.
@@ -220,9 +220,21 @@ describe('statements', () => {
 		expect(withVars.type === 'use' && withVars.with.map(w => `${show(w.variable)}=${show(w.value)}`)).toEqual(['$a=true', '${B c}=1s']);
 	});
 
-	it('reads var lines in both forms', () => {
-		const { tree } = parse('siml 1\nvar $x = 1\nvar ${Melee weave} = `true`\n');
-		expect(tree.top.slice(1).map(s => (s.type === 'var' ? `${show(s.variable)}=${show(s.value)}` : s.type))).toEqual(['$x=1', '${Melee weave}=raw true']);
+	it('reads var lines in both forms, and with no value', () => {
+		const { tree, diagnostics } = parse('siml 1\nvar $x = 1\nvar ${Melee weave} = `true`\nvar $none\n');
+		expect(diagnostics).toEqual([]);
+		expect(tree.top.slice(1).map(s => (s.type === 'var' ? `${show(s.variable)}=${s.value && show(s.value)}` : s.type))).toEqual([
+			'$x=1',
+			'${Melee weave}=raw true',
+			'$none=undefined',
+		]);
+	});
+
+	it('reads the escapes of a braced name', () => {
+		const { tree, diagnostics } = parse('siml 1\nvar ${a\\}b\\\\c\\nd} = %{e\\}}\n');
+		expect(diagnostics).toEqual([]);
+		const v = tree.top[1] as VarStatement;
+		expect([v.variable.name, v.value?.type === 'placeholder' && v.value.name]).toEqual(['a}b\\c\nd', 'e}']);
 	});
 
 	it('reads headers, with a body line after the colon', () => {
@@ -307,7 +319,7 @@ describe('layout', () => {
 	it('continues while a bracket is open, whatever the indentation, and past blank lines', () => {
 		const { tree, diagnostics } = parse('siml 1\nvar $x = max(\na,\n\n    b\n)\nvar $y = 1\n');
 		expect(diagnostics).toEqual([]);
-		expect(tree.top.slice(1).map(s => (s.type === 'var' ? show(s.value) : s.type))).toEqual(['max(a, b)', '1']);
+		expect(tree.top.slice(1).map(s => (s.type === 'var' ? show(s.value!) : s.type))).toEqual(['max(a, b)', '1']);
 	});
 
 	it('ends an indented continuation at a blank line', () => {

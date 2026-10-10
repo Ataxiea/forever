@@ -8,7 +8,6 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/siml"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -17,9 +16,9 @@ const (
 	maxRandomSeed     = 1<<32 - 1 // The site draws a seed below this when the settings fix none.
 )
 
-// The request in the file at path: a RaidSimRequest in protojson, or a full setup in an x.siml, simmed as the site
-// sims it. The warnings say what a setup leaves for the request to fill in, and a rotation the site builds that the
-// sim cannot.
+// The request in the file at path: a RaidSimRequest in protojson, or an x.siml, a full setup or a preset build loaded
+// over its spec's defaults.siml, simmed as the site sims it. The warnings say what a setup leaves for the request to
+// fill in, and a rotation the site builds that the sim cannot.
 func readSimRequest(path string) (*proto.RaidSimRequest, []string, error) {
 	if !strings.HasSuffix(path, ".siml") {
 		data, err := os.ReadFile(path)
@@ -35,21 +34,11 @@ func readSimRequest(path string) (*proto.RaidSimRequest, []string, error) {
 		}
 		return request, nil, nil
 	}
-	f, err := siml.ReadFile(path)
+	c, err := readSetup(".", path)
 	if err != nil {
 		return nil, nil, err
 	}
-	if f.Kind.Section != "" {
-		return nil, nil, fmt.Errorf("%s holds only its %s section; sim takes a full setup, an x.siml", path, f.Kind.Section)
-	}
-	player := f.Settings.GetPlayer()
-	if player.GetRace() == proto.Race_RaceUnknown {
-		return nil, nil, fmt.Errorf("%s names no race, so it is not a full setup: a preset build holds only what it changes over its spec's defaults.siml, and tools/aplsim sims one over them", path)
-	}
-	var warnings []string
-	for _, w := range f.Warnings {
-		warnings = append(warnings, diagnosticLine(w))
-	}
+	player, warnings := c.settings.GetPlayer(), c.info.Warnings
 	// The site builds an auto or simple rotation into an APL in the browser, and the sim runs only APL rows. A player
 	// with no rotation at all stops the sim at its first swing.
 	switch rotation := player.Rotation; {
@@ -61,7 +50,7 @@ func readSimRequest(path string) (*proto.RaidSimRequest, []string, error) {
 	case rotation.Type != proto.APLRotation_TypeAPL:
 		warnings = append(warnings, fmt.Sprintf("the rotation is %s, which the site builds into an APL before simming; this sims the APL rows the file holds instead", rotation.Type))
 	}
-	request, more := settingsRequest(f.Settings)
+	request, more := settingsRequest(c.settings)
 	return request, append(warnings, more...), nil
 }
 

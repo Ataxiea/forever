@@ -50,6 +50,7 @@ clean:
 	  dist \
 	  binary_dist \
 	  ui/generated/proto/*.ts \
+	  ui/generated/siml/schema.json \
 	  node_modules
 	find . -name "*.results.tmp" -type f -delete
 
@@ -68,7 +69,7 @@ ui/generated/siml/schema.json: proto/*.proto sim/core/proto/api.pb.go $(filter-o
 # table only when an entry changes, and the stamp records the run, so a Go change that adds no name rebuilds nothing
 # that reads the table.
 sim/siml/names.json: sim/siml/.names.stamp ;
-sim/siml/.names.stamp: $(filter-out %_test.go,$(call rwildcard,sim,*.go)) $(wildcard assets/database/*.json assets/database/*.bin) $(wildcard ui/sim/talents/trees/*.json)
+sim/siml/.names.stamp: sim/core/proto/api.pb.go $(filter-out %_test.go,$(call rwildcard,sim,*.go)) $(wildcard assets/database/*.json assets/database/*.bin) $(wildcard ui/sim/talents/trees/*.json)
 	go run --tags=with_db ./sim/siml/cmd/simlnames -w
 	touch $@
 
@@ -103,7 +104,7 @@ host_%: $(OUT_DIR) node_modules $(AUTO_GEN_FILES_TS)
 	npx http-server $(OUT_DIR)/..
 
 .PHONY: wasm
-wasm: $(OUT_DIR)/lib.wasm.gz sim/siml/names.json
+wasm: $(OUT_DIR)/lib.wasm.gz
 
 # Builds the generic .wasm, with all items included.
 # Published gzipped: Cloudflare Pages caps files at 25 MiB.
@@ -162,7 +163,7 @@ buffs-proto:
 wowsimforever: binary_dist devserver
 
 .PHONY: devserver
-devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json
+devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json ui/generated/siml/schema.json
 	@echo "Starting server compile now..."
 	@if go build -o wowsimforever$(BIN_EXT) ./sim/web ; then \
 		printf "\033[1;32mBuild Completed Successfully\033[0m\n"; \

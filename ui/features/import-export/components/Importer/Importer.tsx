@@ -22,7 +22,8 @@ export interface ImporterProps extends ImporterDefinition {
 export const Importer = ({ open, onOpenChange, title, allowFileUpload = false, onImport, children }: ImporterProps) => {
 	const host = useSimHost();
 	const textRef = useRef<HTMLTextAreaElement>(null);
-	// The name of the file the text was uploaded from, which text typed or pasted over it replaces with none.
+	// The name of the file the text was uploaded from. It stays while the text is edited, and goes with the text:
+	// cleared, or pasted over whole.
 	const fileName = useRef<string>(undefined);
 	const [problems, setProblems] = useState<ImportProblems>();
 	const uploadInputId = `upload-input-${kebabCase(title)}`;
@@ -93,7 +94,13 @@ export const Importer = ({ open, onOpenChange, title, allowFileUpload = false, o
 					data-testid="importer-textarea"
 					className="h-[40vh] w-full resize-none"
 					ref={textRef}
-					onInput={() => (fileName.current = undefined)}
+					onInput={event => {
+						if (!event.currentTarget.value) fileName.current = undefined;
+					}}
+					onPaste={event => {
+						const { selectionStart, selectionEnd, value } = event.currentTarget;
+						if (selectionStart === 0 && selectionEnd === value.length) fileName.current = undefined;
+					}}
 				/>
 				{problems && (
 					<Notice level="error" className="mt-2" testId="importer-problems">

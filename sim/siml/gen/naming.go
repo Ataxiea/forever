@@ -51,6 +51,7 @@ type Report struct {
 	Added        []string // One line per new entry, such as warrior.spell.heroic_strike = spell 25286 tag 1.
 	Qualified    []string // New class entries whose plain name a shared entry holds, which the class's files mean by it.
 	Repinned     []Repin  // The names a repin handed back to the new-name rules, by name.
+	Dropped      []string // Names HEAD's table does not hold whose entries nothing gives now, such as hunter.spell.x = spell 1.
 	Stale        []string // Pinned names no build registers while an id of the same game name is registered.
 	Unregistered int      // Pinned spell-like entries no build registers.
 	Skipped      []string

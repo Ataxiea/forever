@@ -361,7 +361,7 @@ func isHex4(s string) bool {
 	return true
 }
 
-// `$name`, `${Name}`, `%name`, `%{Name}`.
+// `$name`, `${Name}`, `%name`, `%{Name}`. Inside the braces `\}`, `\\` and `\n` are `}`, `\` and a line feed.
 func scanName(src string, pos int) token {
 	sigil := src[pos : pos+1]
 	kind := tokPlaceholder
@@ -370,9 +370,30 @@ func scanName(src string, pos int) token {
 	}
 	if strings.HasPrefix(src[pos+1:], "{") {
 		end := contentEnd(src, pos)
-		if close := strings.IndexByte(src[pos+2:end], '}'); close >= 0 {
-			close += pos + 2
-			return token{kind: kind, text: src[pos : close+1], start: pos, end: close + 1, value: src[pos+2 : close]}
+		var name strings.Builder
+		var bad *tokenError
+		for i := pos + 2; i < end; {
+			switch c := src[i]; {
+			case c == '}':
+				return token{kind: kind, text: src[pos : i+1], start: pos, end: i + 1, value: name.String(), err: bad}
+			case c != '\\':
+				name.WriteByte(c)
+				i++
+			case i+1 < end && strings.IndexByte(`}\n`, src[i+1]) >= 0:
+				if src[i+1] == 'n' {
+					name.WriteByte('\n')
+				} else {
+					name.WriteByte(src[i+1])
+				}
+				i += 2
+			default:
+				_, size := utf8.DecodeRuneInString(src[i+1 : end])
+				if bad == nil {
+					message := fmt.Sprintf(`'%s' is no escape: %s{…} escapes only \} \\ and \n`, src[i:i+1+size], sigil)
+					bad = &tokenError{"bad-character", message, span{i, i + 1 + size}}
+				}
+				i += 1 + size
+			}
 		}
 		message := sigil + "{ needs its } on the same line"
 		return token{kind: kind, text: src[pos:end], start: pos, end: end, err: &tokenError{"expected-name", message, span{pos, end}}}

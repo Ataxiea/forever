@@ -4,7 +4,7 @@
 
 import { declaredBy, declaredIn, resolveVariable } from './check.ts';
 import { identifier } from './identifier.ts';
-import { equalJson, isObject, LONE_SURROGATE, normalize, valueAt } from './json.ts';
+import { equalJson, isObject, LONE_SURROGATE, MAX_MESSAGE_DEPTH, normalize, valueAt } from './json.ts';
 import { classOf, fieldNamespace, type Names, readsBack, unitFieldOf, unitReference } from './names.ts';
 import { inFileOrder, rotationPath, TYPE_APL, TYPE_SIMPLE } from './rotation.ts';
 import {
@@ -23,7 +23,7 @@ import {
 	STAT_ENUM,
 } from './schema.ts';
 import { readFile, simplePaths, slotField, type TypedFile } from './setup.ts';
-import { fileSections, STOP_WORDS, TOP_WORDS } from './syntax.ts';
+import { fileSections, holdsSpec, STOP_WORDS, TOP_WORDS } from './syntax.ts';
 import type { JsonObject, JsonPath, JsonValue, SimlDoc, SimlKind, SpellNamespace, Statement } from './types.ts';
 import { isList } from './typing.ts';
 
@@ -60,7 +60,8 @@ const SLOT_WIDTH = 11; // A slot row's slot word, padded.
 const PREC = { top: 0, or: 1, and: 2, not: 3, cmp: 4, add: 5, mul: 6, operand: 7 };
 const LITERAL = /^-?[0-9]+(\.[0-9]+)?(%|(ns|us|µs|ms|s|m|h)([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)?$/;
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const BRACED = /^[^}\n\r]*$/;
+// `${name}` or `%{name}`, with `\`, `}` and line feeds escaped (SPEC.md §2).
+const braced = (sigil: '$' | '%', name: string) => `${sigil}{${name.replace(/[\\}\n]/g, c => (c === '\n' ? '\\n' : `\\${c}`))}}`;
 const CMP_TEXT: Record<string, string> = { OpEq: '==', OpNe: '!=', OpGe: '>=', OpGt: '>', OpLe: '<=', OpLt: '<' };
 const MATH_TEXT: Record<string, string> = { OpAdd: '+', OpSub: '-', OpMul: '*', OpDiv: '/' };
 const MATH_PREC: Record<string, number> = { OpAdd: PREC.add, OpSub: PREC.add, OpMul: PREC.mul, OpDiv: PREC.mul };
@@ -194,7 +195,7 @@ export class Printer {
 		if (IDENT.test(name) && readsBack(name)) return word(`$${name}`);
 		const folded = identifier(name);
 		if (IDENT.test(folded) && readsBack(folded)) return word(`$${folded}`);
-		return BRACED.test(name) ? word(`\${${name}}`) : undefined;
+		return word(braced('$', name));
 	}
 
 	// `[u.]head(subject).prop[(f=v, …)]`, when the subject is set and the unit, if set, is a unit word.
@@ -507,7 +508,7 @@ export class Printer {
 	// `use "path" [with $v = value, …]`, its values checked as the `with` list's values.
 	use(path: string, binds: Array<{ name: string; braced: boolean; value: JsonValue }>, indent: number): Stmt {
 		const line = (value: (v: JsonValue) => Text): Text[] => {
-			const list = binds.map(b => [b.braced ? `\${${b.name}}` : `$${b.name}`, ' = ', ...value(b.value)]);
+			const list = binds.map(b => [b.braced ? braced('$', b.name) : `$${b.name}`, ' = ', ...value(b.value)]);
 			return [[`use ${JSON.stringify(path)}`, ...(list.length ? [' with ', ...join(list, ', ')] : [])]];
 		};
 		const fallback = (): Stmt => ({ indent, notes: [], parts: line(v => word(raw(v))), role: 'use' });
@@ -565,7 +566,7 @@ export class Printer {
 				for (const x of vars) {
 					if (!isObject(x) || !(W.value in x) || Object.keys(x).some(k => k !== W.name && k !== W.value)) return undefined;
 					const p = placeholder(typeof x[W.name] === 'string' ? (x[W.name] as string) : '');
-					if (!p || (W.name in x && typeof x[W.name] !== 'string')) return undefined;
+					if (W.name in x && typeof x[W.name] !== 'string') return undefined;
 					binds.push([...p, ' = ', ...this.value(x[W.value], PREC.top, scope)]);
 				}
 				return [`group ${JSON.stringify(name)}`, ...(binds.length ? [' with ', ...join(binds, ', ')] : [])];
@@ -650,25 +651,30 @@ export class Printer {
 		return infix.operands.map((t, i) => [i ? `${infix.op} ` : 'if ', ...t]);
 	}
 
-	// `var $x = v` (SPEC.md §6.1), breaking after `=` and before each operand of a top-level `and` or `or`.
+	// `var $x = v` (SPEC.md §6.1), breaking after `=` and before each operand of a top-level `and` or `or`; `var $x`
+	// for a variable with no value.
 	variable(v: JsonValue, scope: string | undefined, indent: number): Stmt {
 		const W = this.V.variable.f;
 		const name = isObject(v) && typeof v[W.name] === 'string' ? (v[W.name] as string) : '';
-		const head = word(`var ${IDENT.test(name) ? `$${name}` : `\${${name}}`} =`);
-		const value = isObject(v) ? v[W.value] : undefined;
-		const fallback = (): Stmt => ({ indent, notes: [], parts: [head, word(raw(value ?? null))], role: 'var' });
+		const declared = `var ${IDENT.test(name) ? `$${name}` : braced('$', name)}`;
+		const value = isObject(v) ? (v[W.value] ?? undefined) : undefined; // JSON null is no value.
+		const fallback = (): Stmt => ({
+			indent,
+			notes: [],
+			parts: value === undefined ? [word(declared)] : [word(`${declared} =`), word(raw(value))],
+			role: 'var',
+		});
 		const expect = { json: v, fallback };
-		if (!isObject(v) || Object.keys(v).some(k => k !== W.name && k !== W.value)) return { ...fallback(), expect };
+		if (!isObject(v) || value === undefined || Object.keys(v).some(k => k !== W.name && k !== W.value)) return { ...fallback(), expect };
 		const infix = this.infix(value, scope);
 		const parts = infix ? infix.operands.map((t, i) => (i ? [`${infix.op} `, ...t] : t)) : [this.value(value, PREC.top, scope)];
-		return { indent, notes: [], parts: [head, ...parts], role: 'var', expect };
+		return { indent, notes: [], parts: [word(`${declared} =`), ...parts], role: 'var', expect };
 	}
 }
 
 // `%x`, or `%{name}` when the name is no ident.
-function placeholder(name: string): Text | undefined {
-	if (IDENT.test(name)) return word(`%${name}`);
-	return BRACED.test(name) ? word(`%{${name}}`) : undefined;
+function placeholder(name: string): Text {
+	return word(IDENT.test(name) ? `%${name}` : braced('%', name));
 }
 
 // --- Layout
@@ -740,7 +746,6 @@ export function verified(index: SchemaIndex, names: Names, kind: SimlKind, items
 // --- Files
 
 const APL = 'apl';
-const ROTATION_CATEGORY = 'r';
 const GEAR = 'gear';
 const GROUP = 'group';
 const PREPULL = 'prepull';
@@ -786,15 +791,15 @@ function printable(index: SchemaIndex, settings: JsonObject, spec: SpecDef | und
 	return json;
 }
 
-function indexedArrays(index: SchemaIndex, message: string, v: JsonValue): JsonValue {
-	if (!isObject(v)) return v;
+function indexedArrays(index: SchemaIndex, message: string, v: JsonValue, depth = 0): JsonValue {
+	if (!isObject(v) || depth > MAX_MESSAGE_DEPTH) return v;
 	const out: JsonObject = {};
 	for (const [key, x] of Object.entries(v)) {
 		const f = index.fields(message).find(field => field.json === key);
 		if (f?.printed === 'indexed' && Array.isArray(x) && x.every(n => typeof n === 'number')) {
 			if (x.some(n => n !== 0)) out[key] = [...x, ...Array(Math.max(0, index.enumLength(f.index!) - x.length)).fill(0)];
 		} else if (f?.type && index.schema.messages[f.type])
-			out[key] = Array.isArray(x) ? x.map(m => indexedArrays(index, f.type!, m)) : indexedArrays(index, f.type, x);
+			out[key] = Array.isArray(x) ? x.map(m => indexedArrays(index, f.type!, m, depth + 1)) : indexedArrays(index, f.type, x, depth + 1);
 		else out[key] = x;
 	}
 	return out;
@@ -823,10 +828,7 @@ export function printFile(index: SchemaIndex, names: Names, doc: SimlDoc): strin
 	const allowed = fileSections(index, kind);
 	// A reference is written as the printed file reads it, from the variables the file declares.
 	const declared = declaredBy(index, rotation).variables.filter(v => allowed.has(v.scope === undefined ? APL : GROUP));
-	// A section file writes the spec when its section reads it, or holds a rotation, whose names the spec's class reads.
-	const writesSpec = (def: SectionDef | undefined) =>
-		def && (def.category === ROTATION_CATEGORY || def.sources.some(src => src.flatten || src.path.includes('*')));
-	const specLine = spec && (own === undefined || writesSpec(index.sections.get(own))) ? spec : undefined;
+	const specLine = spec && holdsSpec(index, kind) ? spec : undefined;
 	const printer = new Printer(index, names, classOf(index, specLine), declared);
 	const given = doc.categories && new Set(doc.categories);
 	const list = (json: JsonValue | undefined, key: string) => (isObject(json) && Array.isArray(json[key]) ? (json[key] as JsonValue[]) : []);

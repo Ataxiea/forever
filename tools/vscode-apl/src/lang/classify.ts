@@ -189,7 +189,8 @@ export function classify(p: Parsed): Span[] {
 				return;
 			case 'var':
 				push(s.variable.range, { role: 'variable', declaration: true });
-				return expr(s.value);
+				if (s.value) expr(s.value);
+				return;
 			case 'row':
 				if (s.doAt) expr(s.doAt);
 				return action(s.action);

@@ -237,14 +237,31 @@ function unicodeEscape(text: string, i: number, close: number): number | undefin
 	return i + 6 <= close && text.startsWith('\\u', i) && HEX4.test(text.slice(i + 2, i + 6)) ? parseInt(text.slice(i + 2, i + 6), 16) : undefined;
 }
 
-// `$name`, `${Name}`, `%name`, `%{Name}`.
+// `$name`, `${Name}`, `%name`, `%{Name}`. Inside the braces `\}`, `\\` and `\n` are `}`, `\` and a line feed.
 function scanName(text: string, pos: number): Token {
 	const sigil = text[pos];
 	const kind = sigil === '$' ? 'var' : 'placeholder';
 	if (text[pos + 1] === '{') {
 		const end = contentEnd(text, pos);
-		const close = text.indexOf('}', pos + 2);
-		if (close >= 0 && close < end) return { kind, text: text.slice(pos, close + 1), start: pos, end: close + 1, value: text.slice(pos + 2, close) };
+		let name = '';
+		let error: TokenError | undefined;
+		for (let i = pos + 2; i < end;) {
+			const c = text[i];
+			if (c === '}') return { kind, text: text.slice(pos, i + 1), start: pos, end: i + 1, value: name, ...(error && { error }) };
+			const next = i + 1 < end ? text[i + 1] : undefined;
+			if (c !== '\\') {
+				name += c;
+				i++;
+			} else if (next === '}' || next === '\\' || next === 'n') {
+				name += next === 'n' ? '\n' : next;
+				i += 2;
+			} else {
+				const size = next === undefined ? 0 : String.fromCodePoint(text.codePointAt(i + 1)!).length;
+				const message = `'${text.slice(i, i + 1 + size)}' is no escape: ${sigil}{…} escapes only \\} \\\\ and \\n`;
+				error ??= { code: 'bad-character', message, start: i, end: i + 1 + size };
+				i += 1 + size;
+			}
+		}
 		return {
 			kind,
 			text: text.slice(pos, end),

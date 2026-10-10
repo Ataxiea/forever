@@ -3,7 +3,19 @@ import type * as InputHelpers from '@features/inputs/input_helpers';
 import type { ReforgeOptimizerOptions } from '@features/reforge/model/reforge_optimizer';
 import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, EquipmentSpec, HealingModel, ItemSlot, ItemSwap, Profession, PseudoStat, Race, Spec, Stat } from '@generated/proto/common';
+import {
+	ConsumesSpec,
+	EquipmentSpec,
+	HealingModel,
+	ItemSlot,
+	ItemSwap,
+	Profession,
+	PseudoStat,
+	Race,
+	Spec,
+	Stat,
+	type UnitReference,
+} from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import type { SavedDataConfig } from '@ui-kit/SavedDataPanel/types';
 import type { ReactNode } from 'react';
@@ -71,6 +83,9 @@ export interface OtherDefaults {
 	race?: Race;
 	// Applied by applyIndividualDefaults after the encounter defaults.
 	healingModel?: HealingModel;
+	// Unset, a tank spec stands in front of the target and tanks it, and any other spec does neither.
+	inFrontOfTarget?: boolean;
+	tanks?: Array<UnitReference>;
 }
 
 export interface IndividualSimUIConfig<SpecType extends Spec> extends PlayerConfig<SpecType> {

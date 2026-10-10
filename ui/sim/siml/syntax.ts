@@ -47,6 +47,7 @@ const APL = 'apl';
 const GEAR = 'gear';
 const GROUP = 'group';
 const PREPULL = 'prepull'; // The rows section whose rows start with their time and take no notes.
+const ROTATION_CATEGORY = 'r';
 
 // Words that end an expression or start an action, and so never read as a name or value.
 export const STOP_WORDS: ReadonlySet<string> = new Set([
@@ -146,6 +147,13 @@ function headerShape(tokens: Token[], i: number, lines: LineMap): boolean {
 	const colon = (t: Token | undefined) => t?.kind === 'punct' && t.text === ':' && sameLine(t);
 	if (a.kind !== 'ident' || a.error) return false;
 	return colon(b) || (a.text === GROUP && b?.kind === 'string' && !b.error && colon(c));
+}
+
+// Whether a file of `kind` holds a spec line: a full file, and a section file whose section reads the spec or holds a
+// rotation, whose names the spec's class reads (SPEC.md §3.3). A kind that names no section is not read past it.
+export function holdsSpec(index: SchemaIndex, kind: SimlKind): boolean {
+	const def = kind.section === undefined ? undefined : index.sections.get(kind.section);
+	return !def || def.category === ROTATION_CATEGORY || def.sources.some(src => src.flatten || src.path.includes('*'));
 }
 
 // The sections a file kind holds: all of them in a full file, and its own in a section file. An x.apl.siml holds the
@@ -329,8 +337,13 @@ class FileParser {
 		}
 		if (word === 'spec' || word === 'talents' || word === 'use') {
 			const repeated = (word === 'spec' && this.seenSpec) || (word === 'talents' && this.seenTalents);
-			if (repeated) p.report('misplaced-statement', `${word} is written once`, p.range(t.start, t.end));
-			else if (this.seenHeader) p.report('misplaced-statement', `${word} goes before the first section header`, p.range(t.start, t.end));
+			const at = p.range(t.start, t.end);
+			if (repeated) p.report('misplaced-statement', `${word} is written once`, at);
+			else if (this.seenHeader) p.report('misplaced-statement', `${word} goes before the first section header`, at);
+			else if (word === 'spec' && !holdsSpec(this.index, this.kind))
+				p.report('misplaced-statement', `an x.${this.kind.section}.siml file holds no spec line, as nothing in it reads the spec`, at);
+			else if (word === 'talents' && this.kind.section !== undefined)
+				p.report('misplaced-statement', `an x.${this.kind.section}.siml file holds no talents line, which only an x.siml file holds`, at);
 			this.seenSpec ||= word === 'spec';
 			this.seenTalents ||= word === 'talents';
 			return top(attempt(p, () => (word === 'spec' ? p.spec() : word === 'talents' ? p.talents() : p.use())));
@@ -616,10 +629,12 @@ class Parser {
 		return { type: 'placeholder', name: t.value!, braced: t.text[1] === '{', range: this.range(t.start, t.end) };
 	}
 
+	// `var $x = value`, or `var $x` for a variable with no value.
 	varDecl(): Draft {
 		this.take();
 		const variable = this.variable();
-		this.expectPunct('=');
+		if (this.atEnd()) return { type: 'var', variable };
+		this.expectPunct('=', "'=' or the end of the var line");
 		const value = this.expr();
 		this.finish('an operator or the end of the var line');
 		return { type: 'var', variable, value };
@@ -703,7 +718,7 @@ class Parser {
 		if (hide) this.take();
 		let doAt: Expr | undefined;
 		// Raw JSON alone is the whole row, its time included (SPEC.md §6.3).
-		const rawRow = !hide && this.toks.length === 1 && this.peek()?.kind === 'raw';
+		const rawRow = !hide && this.i === this.toks.length - 1 && this.peek()?.kind === 'raw';
 		if (prepull && !rawRow) doAt = this.doAt();
 		else if (this.startsTime()) {
 			doAt = this.unary();

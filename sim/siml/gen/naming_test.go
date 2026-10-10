@@ -369,7 +369,7 @@ func TestFilesUsing(t *testing.T) {
 			}},
 			hunter: {siml.NamespaceSpell: {"arcane_shot": {SpellID: 14287}}},
 		},
-		Shared:   siml.SpellNames{siml.NamespaceSpell: {"goblin_sapper": {SpellID: 13241}}},
+		Shared:   siml.SpellNames{siml.NamespaceSpell: {"goblin_sapper": {SpellID: 13241}, "battle_shout": {SpellID: 25289}}},
 		Items:    map[string]int32{"arcanite_reaper": 12784},
 		Enchants: map[string]siml.EnchantName{},
 		Suffixes: map[string]int32{},
@@ -383,6 +383,7 @@ func TestFilesUsing(t *testing.T) {
 		"ui/specs/warrior/dps/gear_sets/p1.gear.siml": "siml 1\n\nmain_hand arcanite_reaper\n",
 		"ui/specs/hunter/dps/defaults.siml":           "siml 1\nspec hunter\n\nparty_buffs: battle_shout\n",
 		"ui/specs/hunter/dps/apls/default.apl.siml":   "siml 1\nspec hunter\n\npriority:\n  cast arcane_shot\n  cast goblin_sapper\n",
+		"ui/specs/hunter/dps/apls/shout.apl.siml":     "siml 1\nspec hunter\n\npriority:\n  cast battle_shout\n",
 	}
 	for path, text := range files {
 		full := filepath.Join(root, path)
@@ -405,6 +406,8 @@ func TestFilesUsing(t *testing.T) {
 			"ui/specs/warrior/dps/apls/fury.apl.siml",
 		}},
 		{Pin{Namespace: siml.NamespaceItem, Name: "arcanite_reaper"}, []string{"ui/specs/warrior/dps/gear_sets/p1.gear.siml"}},
+		// A warrior file means the warrior's own battle_shout, which a repin of the shared one leaves alone.
+		{Pin{Namespace: siml.NamespaceSpell, Name: "battle_shout"}, []string{"ui/specs/hunter/dps/apls/shout.apl.siml"}},
 	} {
 		got, err := FilesUsing(root, c.pin)
 		if err != nil {

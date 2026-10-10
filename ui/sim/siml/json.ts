@@ -74,7 +74,7 @@ function halfway(x: number, h: bigint, k: number): boolean {
 // its field is kept as written. Both are described in `problems`, or a key that names no field in `unknown` when
 // it is given.
 export function normalize(index: SchemaIndex, message: string, value: JsonValue, problems: string[] = [], unknown = problems): JsonValue {
-	return readMessage(index, message, value, { problems, unknown }, short(message));
+	return readMessage(index, message, value, { problems, unknown }, short(message), 0);
 }
 
 // The value at `path`, or undefined when the path leads through something it cannot.
@@ -115,8 +115,8 @@ function mapKey(f: SchemaField, k: string): string | undefined {
 // one value, which keeps its zero.
 export function normalizeField(index: SchemaIndex, field: SchemaField, value: JsonValue, whole: boolean, problems: string[]): JsonValue {
 	const r = { problems, unknown: problems };
-	if (whole) return readField(index, field, value, r, field.siml) ?? (field.printed === 'map' ? {} : []);
-	return readSingle(index, field, value, r, field.siml, true)!;
+	if (whole) return readField(index, field, value, r, field.siml, 0) ?? (field.printed === 'map' ? {} : []);
+	return readSingle(index, field, value, r, field.siml, true, 0)!;
 }
 
 // Whether two JSON values are equal, whatever the order of their keys.
@@ -130,13 +130,21 @@ export function equalJson(a: JsonValue | undefined, b: JsonValue | undefined): b
 
 const short = (message: string) => message.slice(message.lastIndexOf('.') + 1);
 
+// How deep reading follows messages into messages, as deep as raw JSON in a statement nests (SPEC.md §4 note 10).
+// Deeper JSON, which only a print's input holds, is kept as written, so that reading stays within the stack.
+export const MAX_MESSAGE_DEPTH = 256;
+
 // Where reading puts what does not fit: a key that names no field in `unknown`, everything else in `problems`.
 interface Report {
 	problems: string[];
 	unknown: string[];
 }
 
-function readMessage(index: SchemaIndex, message: string, value: JsonValue, r: Report, at: string): JsonValue {
+function readMessage(index: SchemaIndex, message: string, value: JsonValue, r: Report, at: string, depth: number): JsonValue {
+	if (depth > MAX_MESSAGE_DEPTH) {
+		r.problems.push(`${at} nests deeper than ${MAX_MESSAGE_DEPTH} messages`);
+		return value;
+	}
 	if (!isObject(value)) {
 		r.problems.push(`${at} is a ${short(message)} object`);
 		return value;
@@ -167,7 +175,7 @@ function readMessage(index: SchemaIndex, message: string, value: JsonValue, r: R
 			if (other) r.problems.push(`${short(message)} sets both ${other} and ${f.json}, which are one oneof`);
 			oneofs.set(f.oneof, f.json);
 		}
-		const read = readField(index, f, v, r, `${at}.${f.json}`);
+		const read = readField(index, f, v, r, `${at}.${f.json}`, depth);
 		if (read !== undefined) set.set(f, read);
 	}
 	const out: JsonObject = {};
@@ -175,7 +183,7 @@ function readMessage(index: SchemaIndex, message: string, value: JsonValue, r: R
 	return out;
 }
 
-function readField(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report, at: string): JsonValue | undefined {
+function readField(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report, at: string, depth: number): JsonValue | undefined {
 	if (f.printed === 'map') {
 		if (!isObject(v)) {
 			r.problems.push(`${at} is an object`);
@@ -186,7 +194,7 @@ function readField(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report, 
 			const key = mapKey(f, k);
 			if (key === undefined) r.problems.push(`${at}: ${JSON.stringify(k)} is no ${f.key} key`);
 			else if (entries.has(key)) r.problems.push(`${at} has the key ${key} twice`);
-			else entries.set(key, readSingle(index, f, x, r, `${at}.${k}`, true)!);
+			else entries.set(key, readSingle(index, f, x, r, `${at}.${k}`, true, depth)!);
 		}
 		// JSON.stringify writes array index keys first, by number, and then the others in the order given.
 		return entries.size ? Object.fromEntries([...entries].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : undefined;
@@ -196,16 +204,16 @@ function readField(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report, 
 			r.problems.push(`${at} is a list`);
 			return v;
 		}
-		const items = v.map((x, i) => readSingle(index, f, x, r, `${at}[${i}]`, true)!);
+		const items = v.map((x, i) => readSingle(index, f, x, r, `${at}[${i}]`, true, depth)!);
 		return items.length ? items : undefined;
 	}
-	return readSingle(index, f, v, r, at, f.oneof !== undefined);
+	return readSingle(index, f, v, r, at, f.oneof !== undefined, depth);
 }
 
 // One value of a field; undefined for the field's default unless `keepZero`.
-function readSingle(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report, at: string, keepZero: boolean): JsonValue | undefined {
+function readSingle(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report, at: string, keepZero: boolean, depth: number): JsonValue | undefined {
 	const { schema } = index;
-	if (f.type && schema.messages[f.type]) return readMessage(index, f.type, v, r, at);
+	if (f.type && schema.messages[f.type]) return readMessage(index, f.type, v, r, at, depth + 1);
 	if (f.type && schema.enums[f.type]) {
 		const value = typeof v === 'string' ? index.enumValue(f.type, v) : typeof v === 'number' ? index.enumNumber(f.type, v) : undefined;
 		// An int32 that names no value is kept, as protojson keeps it.
@@ -247,6 +255,8 @@ function readSingle(index: SchemaIndex, f: SchemaField, v: JsonValue, r: Report,
 			return n !== 0 || keepZero ? n : undefined;
 		}
 	}
-	r.problems.push(`${at}: ${JSON.stringify(v)} is no ${f.scalar ?? f.type}`);
+	// JSON.parse reads a number past the range of a double as Infinity, which JSON.stringify writes as null.
+	if (typeof v === 'number' && !Number.isFinite(v)) r.problems.push(`${at}: the number is past the range of a double`);
+	else r.problems.push(`${at}: ${JSON.stringify(v)} is no ${f.scalar ?? f.type}`);
 	return v;
 }

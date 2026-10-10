@@ -1,53 +1,4 @@
-// Sims one spec's character with a given APL, for the APL editor: DPS, how often each APL row ran, the
-// damage by spell, and the rows one iteration ran in order. Reads one JSON request on stdin and writes one
-// JSON result on stdout.
-//
-//	go run --tags=with_db ./tools/aplsim < request.json
-//
-// Request:
-//
-//	{
-//	  "siml": "siml 1\nspec hunter\n...", // the text of an .apl.siml, parsed with the committed name table
-//	  "path": "ui/specs/hunter/dps/apls/default.apl.siml",
-//	                                     // its file, relative to the repository root or absolute
-//	  "compare": {"siml": "..."},        // optional: another text of the file, simmed on the same character and seed
-//	  "settingsFile": "path",            // optional: settings the site exports, in protojson or as an x.siml, for
-//	                                     // everything but the APL
-//	  "iterations": 1000,                // default 1000
-//	  "seed": 1,                         // default 1, so the same request gives the same result
-//	  "timeline": true,                  // optional: the rows one iteration (the first, with `seed`) ran
-//	  "timelineLimit": 400               // default 400 events
-//	}
-//
-// The text's spec line names the spec, and its use lines are read against path. Without a settings file the character
-// is the spec's defaults.siml with the one of its builds/*.siml loaded over it whose rotation is the saved file's at
-// path, as the site loads a preset build; a rotation no build has, or several have, is simmed on the defaults. The
-// sim's request is the one the site sends. A request with any other field is refused.
-//
-// Result:
-//
-//	{
-//	  "dps": {"mean": 812.3, "stdev": 60.1},
-//	  "iterations": 1000,
-//	  "duration": 180.2,              // average iteration length, in seconds
-//	  "rows": {"priorityList/3": {"executions": 12.4}, "groups/1/actions/0": {"executions": 3.1, "hidden": true}},
-//	  "spells": [{"id": {"spellId": 2643}, "name": "Multi-Shot", "dps": 120.4, "casts": 14.2, "pet": "Cat"}],
-//	  "timeline": [{"timeMs": -1500, "path": "prepullActions/0", "label": "Cast Spell(Hunter's Mark)"},
-//	               {"timeMs": 0, "path": "groups/0/actions/1", "label": "...", "via": "priorityList/2"}],
-//	  "character": {"source": "ui/specs/hunter/dps/builds/mm.siml over ui/specs/hunter/dps/defaults.siml",
-//	                "race": "RaceOrc", "talents": "...", "gear": "p1", "warnings": []},
-//	  "compare": {...},               // the same fields for compare, without character
-//	  "error": "..."                  // set instead of the results when the sim cannot run; a text that does not
-//	                                  // parse gives its diagnostics, one "path:line:col code message" per line
-//	}
-//
-// Rows are keyed by their JSON paths in the APLRotation the text parses to, the rows of the files it uses after its
-// own. A row's executions are the times per iteration the rotation ran it; a cast that then fails still counts.
-// Every row of the APL is listed, so a row that never ran has 0. A group reference row counts each time it
-// runs a row of its group, and that group row counts too; a group the APL references twice sums both uses
-// under the group's rows. A sequence row counts when the rotation runs it, not for each spell of the
-// sequence. Hidden rows are listed with "hidden" and never run.
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -63,14 +14,13 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	googleProto "google.golang.org/protobuf/proto"
 
-	"github.com/wowsims/forever/sim"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/siml"
 )
 
-type request struct {
+type simlSimRequest struct {
 	SIML          string    `json:"siml"`
 	Path          string    `json:"path"`
 	Compare       *compared `json:"compare,omitempty"`
@@ -119,40 +69,88 @@ type simResult struct {
 	Timeline   []timelineEvent     `json:"timeline,omitempty"`
 }
 
-type result struct {
+type simlSimResult struct {
 	*simResult
 	Character *characterInfo `json:"character,omitempty"`
 	Compare   *simResult     `json:"compare,omitempty"`
 	Error     string         `json:"error,omitempty"`
 }
 
-func main() {
-	var res result
+// Sims one spec's character with a given APL, for the APL editor: DPS, how often each APL row ran, the
+// damage by spell, and the rows one iteration ran in order. Reads one JSON request on stdin and writes one
+// JSON result on stdout.
+//
+//	go run --tags=with_db ./cmd/wowsimcli siml sim < request.json
+//
+// Request:
+//
+//	{
+//	  "siml": "siml 1\nspec hunter\n...", // the text of an .apl.siml, parsed with the committed name table
+//	  "path": "ui/specs/hunter/dps/apls/default.apl.siml",
+//	                                     // its file, relative to the repository root or absolute
+//	  "compare": {"siml": "..."},        // optional: another text of the file, simmed on the same character and seed
+//	  "settingsFile": "path",            // optional: settings the site exports, in protojson, or an x.siml (a full
+//	                                     // setup, or a preset build loaded over its spec's defaults.siml), for
+//	                                     // everything but the APL
+//	  "iterations": 1000,                // default 1000
+//	  "seed": 1,                         // default 1, so the same request gives the same result
+//	  "timeline": true,                  // optional: the rows one iteration (the first, with `seed`) ran
+//	  "timelineLimit": 400               // default 400 events
+//	}
+//
+// The text's spec line names the spec, and its use lines are read against path. Without a settings file the character
+// is the spec's defaults.siml with the one of its builds/*.siml loaded over it whose rotation is the saved file's at
+// path, as the site loads a preset build; a rotation no build has, or several have, is simmed on the defaults. The
+// sim's request is the one the site sends. A request with any other field is refused.
+//
+// Result:
+//
+//	{
+//	  "dps": {"mean": 812.3, "stdev": 60.1},
+//	  "iterations": 1000,
+//	  "duration": 180.2,              // average iteration length, in seconds
+//	  "rows": {"priorityList/3": {"executions": 12.4}, "groups/1/actions/0": {"executions": 3.1, "hidden": true}},
+//	  "spells": [{"id": {"spellId": 2643}, "name": "Multi-Shot", "dps": 120.4, "casts": 14.2, "pet": "Cat"}],
+//	  "timeline": [{"timeMs": -1500, "path": "prepullActions/0", "label": "Cast Spell(Hunter's Mark)"},
+//	               {"timeMs": 0, "path": "groups/0/actions/1", "label": "...", "via": "priorityList/2"}],
+//	  "character": {"source": "ui/specs/hunter/dps/builds/mm.siml over ui/specs/hunter/dps/defaults.siml",
+//	                "race": "RaceOrc", "talents": "...", "gear": "p1", "warnings": []},
+//	  "compare": {...},               // the same fields for compare, without character
+//	  "error": "..."                  // set instead of the results when the sim cannot run; a text that does not
+//	                                  // parse gives its diagnostics, one "path:line:col code message" per line
+//	}
+//
+// Rows are keyed by their JSON paths in the APLRotation the text parses to, the rows of the files it uses after its
+// own. A row's executions are the times per iteration the rotation ran it; a cast that then fails still counts.
+// Every row of the APL is listed, so a row that never ran has 0. A group reference row counts each time it
+// runs a row of its group, and that group row counts too; a group the APL references twice sums both uses
+// under the group's rows. A sequence row counts when the rotation runs it, not for each spell of the
+// sequence. Hidden rows are listed with "hidden" and never run.
+func simlSim(out, errOut io.Writer, args []string) error {
+	if err := parseFlags(newFlags("sim < request.json", errOut), args, 0); err != nil {
+		return err
+	}
+	var res simlSimResult
 	if req, err := readRequest(os.Stdin); err != nil {
 		res.Error = fmt.Sprintf("reading the request: %v", err)
 	} else {
-		sim.RegisterAll()
-		res = run(".", req)
+		res = runSimlSim(".", req)
 	}
-	encoder := json.NewEncoder(os.Stdout)
-	if err := encoder.Encode(res); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	return json.NewEncoder(out).Encode(res)
 }
 
 // The request in r, which holds no field the request does not have.
-func readRequest(r io.Reader) (request, error) {
-	var req request
+func readRequest(r io.Reader) (simlSimRequest, error) {
+	var req simlSimRequest
 	decoder := json.NewDecoder(r)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&req)
 	return req, err
 }
 
-func run(root string, req request) result {
+func runSimlSim(root string, req simlSimRequest) simlSimResult {
 	if req.Path == "" {
-		return result{Error: "the request needs the siml text of an .apl.siml and its path"}
+		return simlSimResult{Error: "the request needs the siml text of an .apl.siml and its path"}
 	}
 	if req.Iterations <= 0 {
 		req.Iterations = 1000
@@ -165,11 +163,11 @@ func run(root string, req request) result {
 	}
 	names, err := siml.DefaultNames()
 	if err != nil {
-		return result{Error: err.Error()}
+		return simlSimResult{Error: err.Error()}
 	}
 	rotation, spec, err := readRotation(root, req.Path, req.SIML, names)
 	if err != nil {
-		return result{Error: err.Error()}
+		return simlSimResult{Error: err.Error()}
 	}
 	var compare *proto.APLRotation
 	if req.Compare != nil {
@@ -179,29 +177,29 @@ func run(root string, req request) result {
 			err = fmt.Errorf("its spec is %s, and the rotation's %s", compareSpec, spec)
 		}
 		if err != nil {
-			return result{Error: "compare: " + err.Error()}
+			return simlSimResult{Error: "compare: " + err.Error()}
 		}
 	}
 
 	folder, defaults, err := specDefaults(root, spec)
 	if err != nil {
-		return result{Error: err.Error()}
+		return simlSimResult{Error: err.Error()}
 	}
 	var char *character
 	if req.SettingsFile != "" {
-		char, err = characterFromSettings(req.SettingsFile, spec, folder)
+		char, err = characterFromSettings(root, req.SettingsFile, spec, folder)
 	} else {
 		char, err = characterFromRepo(root, folder, defaults, absolute(root, req.Path))
 	}
 	if err != nil {
-		return result{Error: err.Error()}
+		return simlSimResult{Error: err.Error()}
 	}
 	char.info.Race = char.settings.GetPlayer().GetRace().String()
 	char.info.Talents = char.settings.GetPlayer().GetTalentsString()
 	base, warnings := core.IndividualSimRequest(char.settings, &proto.SimOptions{RandomSeed: req.Seed})
 	char.info.Warnings = append(char.info.Warnings, warnings...)
 
-	res := result{Character: &char.info}
+	res := simlSimResult{Character: &char.info}
 	res.simResult, err = simAPL(base, folder, rotation, req)
 	if err != nil {
 		res.Error = err.Error()
@@ -303,7 +301,7 @@ func label(action *core.APLAction) string {
 }
 
 // Sims rotation as the APL of the one player of base, an individual sim request for the spec folder under ui/specs.
-func simAPL(base *proto.RaidSimRequest, folder string, rotation *proto.APLRotation, req request) (*simResult, error) {
+func simAPL(base *proto.RaidSimRequest, folder string, rotation *proto.APLRotation, req simlSimRequest) (*simResult, error) {
 	rotation = cloneProto(rotation)
 	rotation.Type = proto.APLRotation_TypeAPL
 

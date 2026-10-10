@@ -312,6 +312,7 @@ function readUses(
 	const W = typer.v.variable.f;
 	const allowed = fileSections(index, kind);
 	const used: Used = { settings: [], present: new Set(), declared: { variables: [], groups: new Map() }, explicitType: false };
+	const broughtBy = new Map<string, string>(); // The used file that brought each key of `used.present`.
 	for (const u of tree.top.filter((s): s is UseStatement => s.type === 'use')) {
 		if (uses === undefined) {
 			withs.set(
@@ -345,11 +346,21 @@ function readUses(
 		}
 		if (spec && file.spec && file.spec !== spec)
 			typer.report('spec-mismatch', `${path} is for spec ${file.spec.field}, and this file for ${spec.field}`, at);
-		const both = [...file.present].filter(key => present.has(key) || used.present.has(key));
-		const foreign = [...file.present].filter(key => key !== TALENTS && !allowed.has(sectionOf(key)));
-		if (both.length) typer.report('section-conflict', `${listed(both)} ${both.length > 1 ? 'are' : 'is'} in both this file and ${path}`, at);
-		if (foreign.length) typer.report('section-not-allowed', `${path} brings ${listed(foreign)}, which an x.${kind.section}.siml file holds no`, at);
-		for (const key of file.present) used.present.add(key);
+		// Where each key that is already present came from, this file first.
+		const both = new Map<string, string[]>();
+		for (const key of file.present) {
+			if (!present.has(key) && !used.present.has(key)) continue;
+			const source = present.has(key) ? 'this file' : broughtBy.get(key)!;
+			both.set(source, [...(both.get(source) ?? []), key]);
+		}
+		const foreign = [...file.present].filter(key => (key === TALENTS ? kind.section !== undefined : !allowed.has(sectionOf(key))));
+		const conflicts = [...both].map(([source, keys]) => `${listed(keys)} ${keys.length > 1 ? 'are' : 'is'} in both ${source} and ${path}`);
+		if (conflicts.length) typer.report('section-conflict', conflicts.join('; '), at);
+		if (foreign.length) typer.report('section-not-allowed', `${path} brings ${listed(foreign)}, which an x.${kind.section}.siml file does not hold`, at);
+		for (const key of file.present) {
+			if (!used.present.has(key)) broughtBy.set(key, path);
+			used.present.add(key);
+		}
 		const rotation = valueAt(file.settings, rotationPath(index));
 		const variables = isObject(rotation) && Array.isArray(rotation[R.value_variables]) ? (rotation[R.value_variables] as JsonObject[]) : [];
 		if (u.with.length && !isObject(rotation))

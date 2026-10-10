@@ -6,19 +6,16 @@ import i18n from '@i18n/config';
 import { SIM_CATEGORY_KEYS, SimSettingCategories } from '@sim/constants/sim_settings';
 import { Database } from '@sim/proto/database';
 import type { IndividualSimHost } from '@sim/sim_host';
-import type { SimlDiagnostic } from '@sim/siml';
 import { toastManager } from '@ui-kit/Toast';
 
 import { SIML_ROTATION_FILE } from '../exporters/siml';
-import { loadSiml } from '../load_siml';
+import { loadSiml, located } from '../load_siml';
 import { type ImporterDefinition, ImportProblems } from './types';
 
 // What text with no file name reads as: a full setup, or any part of one (sim/siml/SPEC.md §1).
 const PASTED_FILE = 'wowsims.siml';
 
 const CATEGORY_OF_KEY = new Map([...SIM_CATEGORY_KEYS].map(([category, key]) => [key, category]));
-
-const located = (d: SimlDiagnostic) => `${d.range.start.line + 1}:${d.range.start.character + 1} ${d.message}`;
 
 /**
  * Reads `text` as the file `path` names and loads exactly the categories it holds, so a file holding a rotation
@@ -34,6 +31,10 @@ export const importSiml = async (host: IndividualSimHost<any>, text: string, pat
 	const categories = parsed.categories.map(key => CATEGORY_OF_KEY.get(key)!);
 	// `fromProto` reads no category as every category, which a file holding none must not do.
 	if (!categories.length) throw new Error(i18n.t('import.siml.error_empty'));
+	// A gear planner loads no encounter, so a file holding only that has nothing for the page.
+	if (host.simDisabled && categories.every(category => category === SimSettingCategories.Encounter)) {
+		throw new Error(i18n.t('import.siml.error_nothing_here'));
+	}
 	const settings = IndividualSimSettings.fromJson(parsed.settings!);
 	// A section file with no spec line, such as an x.encounter.siml, sets no player, and `fromProto` loads nothing
 	// without one.
@@ -71,10 +72,16 @@ export const importSiml = async (host: IndividualSimHost<any>, text: string, pat
 	host.fromProto(settings, categories);
 };
 
+/**
+ * The name the file was given before a browser renamed it on download, so its double extension reads: a copy
+ * such as `rotation.apl (1).siml` or `rotation.apl(1).siml` drops the count, and `Rotation.APL.siml` reads lowercase.
+ */
+const uploadedPath = (fileName: string) => fileName.toLowerCase().replace(/\s*\(\d+\)(?=\.siml$)/, '');
+
 export const SIML_IMPORTER: ImporterDefinition = {
 	title: i18n.t('import.siml.title'),
 	allowFileUpload: true,
-	onImport: (host, data, fileName) => importSiml(host, data, fileName ?? PASTED_FILE),
+	onImport: (host, data, fileName) => importSiml(host, data, fileName ? uploadedPath(fileName) : PASTED_FILE),
 };
 
 export const SIML_ROTATION_IMPORTER: ImporterDefinition = {

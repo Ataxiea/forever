@@ -107,6 +107,38 @@ describe('an uploaded file', () => {
 	});
 });
 
+describe('a file a browser renamed on download', () => {
+	it.each(['p1.gear (1).siml', 'p1.gear(1).siml', 'P1.GEAR.siml', 'P1.Gear (12).siml'])('reads %s as a gear file', async name => {
+		await SIML_IMPORTER.onImport(hunter, 'siml 1\n\nhead lieutenant_commanders_chain_helmet\n', name);
+		expect(loaded().categories).toEqual([SimSettingCategories.Gear]);
+	});
+
+	it.each(['rotation.apl (1).siml', 'rotation.apl(1).siml', 'Rotation.APL.siml'])('reads %s as a rotation', async name => {
+		await SIML_IMPORTER.onImport(hunter, ROTATION, name);
+		expect(loaded().categories).toEqual([SimSettingCategories.Rotation]);
+	});
+});
+
+describe('a gear planner', () => {
+	const ENCOUNTER = 'siml 1\n\nencounter:\n  duration 180\n';
+	const planner = fakeHost({ player: { getSpec: () => Spec.SpecHolyPaladin }, simDisabled: true, fromProto });
+
+	it('refuses a file holding only the encounter, which it does not import', async () => {
+		await expect(SIML_IMPORTER.onImport(planner, ENCOUNTER, 'raid.encounter.siml')).rejects.toThrow('import.siml.error_nothing_here');
+		expect(fromProto).not.toHaveBeenCalled();
+	});
+
+	it('imports a file holding the encounter and more', async () => {
+		await SIML_IMPORTER.onImport(planner, `siml 1\nspec holy_paladin\ntalents "-0053"\n\nencounter:\n  duration 180\n`);
+		expect(loaded().categories).toEqual([SimSettingCategories.Talents, SimSettingCategories.Encounter].sort());
+	});
+
+	it('leaves a page that sims to import the encounter', async () => {
+		await SIML_IMPORTER.onImport(hunter, ENCOUNTER, 'raid.encounter.siml');
+		expect(loaded().categories).toEqual([SimSettingCategories.Encounter]);
+	});
+});
+
 describe('what the importer refuses or warns of', () => {
 	it('shows an unknown name at its line and column, with the did-you-mean', async () => {
 		expect(await problems(SIML_IMPORTER.onImport(hunter, 'siml 1\nspec hunter\n\npriority:\n  cast hunters_mrak\n'))).toEqual([

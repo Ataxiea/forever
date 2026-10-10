@@ -117,10 +117,10 @@ make spelldata
 # Needs no game files database and no sim that builds; make sim/core/proto/api.pb.go runs it before protoc
 go run ./tools/gen_buffs_proto
 
-# Run one sim from a RaidSimRequest in protojson, or from a full setup in an x.siml (the request built as the
-# site builds it; with no encounter, against one default target), and print the RaidSimResult
-# An x.siml names a race, which a preset build does not; an auto or simple rotation, which the site builds into
-# an APL, sims only the APL rows the file holds, and the command says so
+# Run one sim from a RaidSimRequest in protojson, or from an x.siml (the request built as the site builds it;
+# with no encounter, against one default target), and print the RaidSimResult
+# A preset build, which names no race, is loaded over its spec's defaults.siml as the site loads it, and the command
+# says so; an auto or simple rotation, which the site builds into an APL, sims only the APL rows the file holds
 # Nothing migrates an input file: export the settings from the UI again after a proto change
 go run --tags=with_db ./cmd/wowsimcli sim --infile input.json
 
@@ -129,6 +129,10 @@ go run --tags=with_db ./cmd/wowsimcli siml parse [-json] x.apl.siml             
 go run --tags=with_db ./cmd/wowsimcli siml print -kind apl -spec hunter x.apl.json # print a JSON file as SIML
 go run --tags=with_db ./cmd/wowsimcli siml fmt -check ui/specs                    # list files not canonical or failing the check (SPEC.md §7.4)
 go run --tags=with_db ./cmd/wowsimcli siml verify x.apl.json x.apl.siml           # check a print reads back as its JSON
+
+# Sim the text of an .apl.siml for the APL editor: a JSON request on stdin, DPS, row counts, spells and a timeline
+# as JSON on stdout (the request and result are described in cmd/wowsimcli/cmd/siml_sim.go)
+echo '{"siml": "...", "path": "ui/specs/hunter/dps/apls/default.apl.siml"}' | go run --tags=with_db ./cmd/wowsimcli siml sim
 
 # Add names for newly registered spells and new database rows to the SIML name table; commit it with the change
 make sim/siml/names.json

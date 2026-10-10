@@ -1,11 +1,14 @@
 import { Spec } from '@generated/proto/common';
-import type { Siml } from '@sim/siml';
+import type { Siml, SimlDiagnostic } from '@sim/siml';
 
 export interface SimlTools {
 	siml: Siml;
 	/** The `spec` word a file writes for a spec: the field of Player's spec oneof, such as `hunter` for SpecHunter. */
 	specField: (spec: Spec) => string | undefined;
 }
+
+/** A problem in a text, at its line and column counted from 1. */
+export const located = (d: SimlDiagnostic) => `${d.range.start.line + 1}:${d.range.start.character + 1} ${d.message}`;
 
 let loading: Promise<SimlTools> | undefined;
 
