@@ -3,10 +3,28 @@
 package siml
 
 import (
+	"io/fs"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 )
+
+// Every .siml under ui/specs.
+func committedFiles(t *testing.T) []string {
+	t.Helper()
+	var files []string
+	err := filepath.WalkDir("../../ui/specs", func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && strings.HasSuffix(path, ".siml") {
+			files = append(files, path)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
 
 // The repository's rotations, in the x.apl.siml files under ui/specs and in the full files that hold one, carry no
 // error or warning.

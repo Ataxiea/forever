@@ -296,8 +296,7 @@ func byShortName(names map[protoreflect.EnumNumber]string, short string) (protor
 }
 
 // Reads a name table in the form of SPEC.md §7.4, and refuses one that breaks a rule of what a loader checks. The JSON
-// is read as TypeScript, which takes the table as parsed JSON, reads it: keys exactly, numbers by value, so 1.0 is the
-// whole number 1, and null as absent.
+// is read with keys exactly, numbers by value, so 1.0 is the whole number 1, and null as absent.
 func ParseNames(data []byte) (*Names, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	var v any

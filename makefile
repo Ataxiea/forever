@@ -32,7 +32,6 @@ $(OUT_DIR)/bundle/.dirstamp: \
   node_modules \
   tsconfig.json \
   ui/generated/proto/api.ts \
-  ui/generated/siml/schema.json \
   sim/siml/names.json
 	node_modules/typescript/bin/tsc --noEmit
 	npx tsx vite.build-workers.mts
@@ -51,7 +50,6 @@ clean:
 	  dist \
 	  binary_dist \
 	  ui/generated/proto/*.ts \
-	  ui/generated/siml/schema.json \
 	  node_modules
 	find . -name "*.results.tmp" -type f -delete
 
@@ -60,10 +58,6 @@ ui/generated/proto/api.ts: proto/*.proto node_modules
 	npx protoc --ts_opt generate_dependencies --ts_out ui/generated/proto --proto_path proto proto/api.proto
 	npx protoc --ts_out ui/generated/proto --proto_path proto proto/test.proto
 	npx protoc --ts_out ui/generated/proto --proto_path proto proto/ui.proto
-
-# The SIML schema the TypeScript module reads, derived from the protos and sim/siml/forms.json.
-ui/generated/siml/schema.json: proto/*.proto sim/core/proto/api.pb.go $(filter-out %_test.go,$(wildcard sim/siml/*.go)) sim/siml/forms.json
-	go run ./sim/siml/cmd/simlschema -o $@
 
 # The SIML name table, generated from what the sim registers and the database. The generator keeps every name the
 # committed table holds and adds the new ones, so commit the table with the change that adds them. It writes the
@@ -156,7 +150,7 @@ binary_dist: $(OUT_DIR)/.dirstamp
 
 # Rebuild the protobuf generated code.
 .PHONY: proto
-proto: sim/core/proto/api.pb.go ui/generated/proto/api.ts ui/generated/siml/schema.json
+proto: sim/core/proto/api.pb.go ui/generated/proto/api.ts
 
 # The buff messages come from the checked-in manifest, not from hand-edited proto. The manifest
 # imports the compiled protos, so this is run by hand after a manifest edit rather than as a
@@ -170,7 +164,7 @@ buffs-proto:
 wowsimforever: binary_dist devserver
 
 .PHONY: devserver
-devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json ui/generated/siml/schema.json $(OUT_DIR)/siml_names.json
+devserver: sim/core/proto/api.pb.go sim/web/*.go binary_dist/dist.go sim/siml/names.json $(OUT_DIR)/siml_names.json
 	@echo "Starting server compile now..."
 	@if go build -o wowsimforever$(BIN_EXT) ./sim/web ; then \
 		printf "\033[1;32mBuild Completed Successfully\033[0m\n"; \
@@ -240,7 +234,7 @@ $(AUTO_GEN_FILES_TS): $(AUTO_GEN_FILES_TS_DEPS)
 	go run ./tools/database/gen_db -gen=go-to-ts
 
 .PHONY: go-to-ts
-go-to-ts: $(AUTO_GEN_FILES_TS) ui/generated/siml/schema.json
+go-to-ts: $(AUTO_GEN_FILES_TS)
 
 .PHONY: character-constants-ts
 character-constants-ts: go-to-ts

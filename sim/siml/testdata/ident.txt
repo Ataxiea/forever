@@ -34,3 +34,4 @@ Pokémon Badge	pok_mon_badge
 Naïve — Approach	na_ve_approach
 —	
 x	x
+Fire🔥Ball	fire_ball

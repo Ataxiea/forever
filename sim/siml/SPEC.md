@@ -1,8 +1,9 @@
 # SIML v1
 
 SIML (SimLanguage) is the text form of a WoWSims Forever rotation, gear set, or full sim setup. This document
-is normative. The Go package `sim/siml` and the TypeScript module `ui/sim/siml` both implement it, and must
-both pass the conformance corpus in §15.
+is normative. The Go package `sim/siml` implements it and must pass the conformance corpus in §15. Every other
+host reads and writes SIML through it: the site through `lib.wasm` or the server it runs on, the build's `.siml`
+imports through `wowsimcli siml serve`, and editors through `wowsimcli siml lsp`.
 
 "Must", "must not" and "may" are requirements. A _proto_ is a message of `proto/*.proto`. A _JSON_ value is
 protojson: camelCase field names, enum values by name, 64-bit integers as strings, default values left out.
@@ -644,7 +645,7 @@ meaning among the shared entries.
   takes an item's name later cannot change what a committed line means. `item.` is written nowhere else: in an
   item field it is `wrong-type`.
 - **Errors.** A name that the position's namespace does not hold for the file is `unknown-name`, at the name (for
-  `item.<name>`, at the name after the dot). The table decides its message, and both implementations write it
+  `item.<name>`, at the name after the dot). The table decides its message, which is written
   exactly so:
     1. When another namespace holds the name for the file, the first in the order of §7.1 says what the name is.
        When that is `item` and the position reads a spell-like namespace, the message is
@@ -727,8 +728,8 @@ meaning among the shared entries.
   regenerated table differs from the committed one by exactly its new and changed entry lines, and by the comma
   JSON then needs at the end of the line before a new entry that sorts last in its object. The repository's
   formatter would lay the table out otherwise, so `.oxfmtrc.json` leaves it alone.
-- **What a loader checks.** It reads the JSON as TypeScript, which takes the table as parsed JSON, does: keys
-  exactly, a number by its value (`1.0` is the whole number 1), and `null` as absent, except for the table itself.
+- **What a loader checks.** It reads keys exactly, a number by its value (`1.0` is the whole number 1), and `null`
+  as absent, except for the table itself.
   It refuses a table that breaks any of these:
     - the table, each of its sections, each class and namespace, and each spell-like or enchant entry is an
       object; the table and the entries hold only the keys the form shows; `registeredBy` and `slots` are lists of
@@ -763,10 +764,9 @@ build with the `with_db` tag holds the committed table, so `lib.wasm` has none, 
 committed table; without the tag it reads a file that writes no name, and refuses one that does with an error naming
 the tag. A parsed `File` lists the names the file writes, each with what it means, its namespace and its slot row
 (`Names`), and its raw refs as `raw-ref` diagnostics (`RawRefs`), for the checks below; a file with an error lists
-those that read. TypeScript takes the table as data, `createSiml(schema, names)`, and refuses it as a loader does;
-a parse gives the names the file writes with their namespaces, those that mean nothing included (`refs`), and
-its raw refs (`rawRefs`) beside its diagnostics. A ref's path leads into the loader's message (§1); a name outside
-it, in a section the file kind does not hold, has none.
+those that read. An editor's `Doc` (`Analyze`) gives the names the file writes with their namespaces, those that
+mean nothing included (`Refs`). A ref's path leads into the loader's message (§1); a name outside it, in a section
+the file kind does not hold, has none.
 
 **Generating it.** `go run --tags=with_db ./sim/siml/cmd/simlnames -w`, or `make sim/siml/names.json`, reads the
 committed table, the sim and the database, and, when an entry changed, writes the table back, whole, renamed into
@@ -935,11 +935,12 @@ itself through group references, is `reference-cycle` at its name.
 ## 8. Forms derived from the protos
 
 Every form in this section comes from the proto descriptors plus the small hand-kept table `sim/siml/forms.json`.
-**A new proto field, enum value, APL kind or spec needs no change to this document, the grammar, or either
+**A new proto field, enum value, APL kind or spec needs no change to this document, the grammar, or the
 implementation,** with one exception: a field of a message that §6 writes by hand as a row, a group header or a var
 line, which a guard test below refuses until it has a form. A kind with a short form (§6.4, §6.5) prints in its
-generic form when it sets a field the short form does not write. Go computes the derived names and forms once and
-writes them into `ui/generated/siml/schema.json`, and TypeScript only reads that file.
+generic form when it sets a field the short form does not write. Go computes the derived names and forms once, as
+the schema, when it first reads a file; the editor's grammar takes its words from the same schema (`wowsimcli siml
+grammar`).
 
 ### 8.1 What `forms.json` holds
 
@@ -1040,12 +1041,11 @@ Each kind's form is decided in this order:
 **The generic form is always accepted**, even where a shorter form exists (`aura_is_active(x)`), and the
 printer writes the shortest form that reads back to the same JSON (§12.3).
 
-**A kind's field order** is the proto declaration order that protoreflect reports, which both
-implementations take from the schema.
+**A kind's field order** is the proto declaration order that protoreflect reports.
 
 ### 8.4 Specs
 
-`schema.json` lists each field of `Player`'s `spec` oneof with:
+The schema lists each field of `Player`'s `spec` oneof with:
 
 - its message;
 - its `Spec` enum value, named `Spec` + the message name;
@@ -1148,7 +1148,7 @@ Beyond protojson's own rules:
 
 `print(proto)` is a pure function of its input and the name table (§7). `format(text)` re-prints every statement
 from its typed value and puts back comments, notes and blank lines. **A committed file must equal
-`format(file)`.** Both implementations must produce byte-identical output for the same input.
+`format(file)`.**
 
 ### 12.1 Layout
 
@@ -1309,7 +1309,7 @@ normalisations:
 - `spec_rotation_json` is compared as the protojson of the spec's `Rotation` it holds, an empty string as `{}`;
 - an `ActionID` with a `spellId` that a spell-like name prints takes the rank of the name's entry (§7.3).
 
-Go compares with `proto.Equal`, and TS compares deep-equal on the normalised JSON.
+The protos are then compared with `proto.Equal`.
 
 ---
 
@@ -1347,7 +1347,7 @@ are errors.
 | `raw-ref`                                                                                                     | error    | §7.3; reported by the repository check only, never by the parser  |
 
 **Recovery.** Each statement is read on its own, so a bad statement costs only itself. A file with any error
-produces no proto. Both implementations report exactly these:
+produces no proto. The diagnostics are exactly these:
 
 - A statement is read only up to its first token with a lexer diagnostic (§2), and is then left unread. Every
   lexer diagnostic is reported, and a parse error only when it lies in front of that token.
@@ -1373,15 +1373,14 @@ produces no proto. Both implementations report exactly these:
 rule, a §8 derivation rule, or a section's mapping. New proto fields, enum values, kinds and specs need no
 bump.
 
-A proto rename breaks the files that use the old name loudly, in both parsers and in CI.
+A proto rename breaks the files that use the old name loudly, in the parser and in CI.
 
 ---
 
 ## 15. Conformance corpus
 
-The corpus lives in `sim/siml/testdata/`. Go runs it in `sim/siml/conformance_test.go`, and TypeScript in
-`ui/sim/siml/conformance.test.ts`. A case's kind comes from its double extension. A case with no double
-extension is a full setup.
+The corpus lives in `sim/siml/testdata/`, and `sim/siml/conformance_test.go` runs it. A case's kind comes from its
+double extension. A case with no double extension is a full setup.
 
 ```
 sim/siml/testdata/
@@ -1401,10 +1400,9 @@ sim/siml/testdata/
   errors/<case>.<kind>.siml.diag    expected diagnostics, one "LINE:COL severity code" per line, in order
   <case>.<kind>.siml.raw            (optional, beside a parse/ or errors/ case) its raw-ref diagnostics, as .diag
   errors/<dir>/main.<kind>.siml     multi-file error cases (use), with main.<kind>.siml.diag beside it
-  splice/<case>.apl.siml            (TypeScript only) input
+  splice/<case>.apl.siml            input of the rotation panel's edits (`splice_test.go`)
   splice/<case>.edits.json          AplEdit list; a set with no value removes what its path names
   splice/<case>.apl.siml.want       expected text after the splice
-  agree.mjs                         the TypeScript side of the agreement test
 ```
 
 **File access.** A file reads the files it `use`s from the file system, resolved as §9 says, except an error
@@ -1415,7 +1413,7 @@ of its own, only `main.<kind>.siml` is a case; the other files are the ones it u
 §7.4, laid out as the formatter writes the corpus's JSON, so `go test ./sim/siml/...` needs no `with_db`. The
 committed `ui/specs/**/*.siml` files are read with the committed `sim/siml/names.json`, read from disk.
 
-**What both implementations must do:**
+**What the package must do:**
 
 1. Parse every `parse/` case to its expected JSON, with no error.
 2. Print every `print/` case to its expected text exactly, and parse that text back to the input; a case with
@@ -1428,31 +1426,14 @@ committed `ui/specs/**/*.siml` files are read with the committed `sim/siml/names
     - committed files are a fixed point of `format`;
     - `parse(print(parse(x))) == parse(x)`;
     - zero diagnostics and no raw refs (§7.3) on committed files.
-6. **The schema property test.** For every kind and every section field in `schema.json`, build a sample with
+6. **The schema property test.** For every kind and every section field in the schema, build a sample with
    each field set to a typical value, then check `parse(print(sample)) == sample`, and check that the printed
    form is the one §8.3 or §12.2 derives. A new kind or field is covered the day it is added.
 7. Refuse every table in `tables/refused`, and load every table in `tables/accepted` (§7.4).
 
-**The agreement test.** `sim/siml/agree_test.go` checks that both implementations give the same results.
-
-- **How it runs.** It writes the schema to a temporary file and runs
-  `node --experimental-strip-types sim/siml/testdata/agree.mjs --schema <file> --names <table> [--print] <paths…>`
-  over every `parse/`, `format/` and `errors/` case, every `print/` case with `--print`, a hunter rotation of each
-  action and value kind of item 6, with every field set and with none, with `--print`, and every committed
-  `ui/specs/**/*.siml`, with the file access and the name tables above. A print case is printed with its
-  categories, if it has any. Each line it prints is
-  `{"path", "json", "format", "print", "diagnostics", "rawRefs", "names"}`: the loader's message JSON (null on an
-  error), the formatted text (null when `format` finds an error), the printed text (`--print` only), the
-  diagnostics and the raw refs as `{"line", "col", "severity", "code", "message"}`, and the names the file writes
-  that mean something, each as `{"line", "col", "name", "namespace"}`.
-- **What it compares.** For each path, both must give the same diagnostics and the same raw refs, by line,
-  column, severity and code, and for `unknown-name` (§7.2) and `raw-ref` by the message too, and the same names,
-  by line, column, name and namespace.
-  The TS JSON is unmarshalled into the kind's message and must be `proto.Equal` to the Go parse, and a file must
-  load in both or in neither. TS `format` and Go `Format` must be byte-identical, or both find an error, and TS
-  and Go `print` must be byte-identical for print cases, which are then compared as the parse of the printed
-  text.
-- **When `node` is missing.** The test fails with an error naming the missing tool; it never skips.
+Item 5 for committed files is the repository check (§7.4), which `go test --tags=with_db ./cmd/wowsimcli/...` runs
+over `ui/specs`; item 6 is `property_test.go`. The examples of §16 read with the committed table, with no diagnostic
+and no raw ref.
 
 **Minimum coverage:**
 
@@ -1468,7 +1449,8 @@ committed `ui/specs/**/*.siml` files are read with the committed `sim/siml/names
 - each enum short-name rule, including the fallback;
 - every diagnostic code that the parser emits.
 
-**The repository's files.** Every committed `.siml` reaches the agreement test through `ui/specs`.
+A test fails when the parse cases leave out a section, a form of statement, a short form or another form of §8.3,
+or when the errors cases leave out a diagnostic code of §13 that the package emits.
 
 ---
 

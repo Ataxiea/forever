@@ -53,6 +53,16 @@
 					}
 				}
 			}
+		},
+		{
+			"notes": "tight\n/ four",
+			"action": {
+				"castSpell": {
+					"spellId": {
+						"spellId": 5
+					}
+				}
+			}
 		}
 	],
 	"groups": [

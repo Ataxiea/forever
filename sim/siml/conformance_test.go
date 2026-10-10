@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ import (
 	googleProto "google.golang.org/protobuf/proto"
 )
 
-// The conformance corpus of SPEC.md §15 in testdata, which ui/sim/siml/conformance.test.ts runs too.
+// The conformance corpus of SPEC.md §15 in testdata.
 
 // The case files under a corpus folder whose names end in suffix (SPEC.md §15). In a nested folder, a multi-file
 // case, only main.<kind>.siml is a case; the other files are the ones it uses.
@@ -362,4 +363,217 @@ func TestCorpusRoundTrips(t *testing.T) {
 
 func nonEmptyLines(text string) []string {
 	return slices.DeleteFunc(strings.Split(text, "\n"), func(line string) bool { return line == "" })
+}
+
+// A file SPEC.md §16 gives as an example.
+type specExample struct{ path, text string }
+
+var (
+	exampleName  = regexp.MustCompile("`([^`]*\\.siml)`")
+	exampleBlock = regexp.MustCompile("(?s)\n```\n(.*?)```\n")
+	exampleKind  = regexp.MustCompile(`^(.*?)((?:\.[a-z_]+)?\.siml)$`)
+)
+
+// The examples of SPEC.md §16, as the files they stand for: each code block under a `### 16.` heading. The first
+// block takes the path the heading gives, and a further block one beside it, so that a `use` of the first reads it.
+func specExamples(t *testing.T) []specExample {
+	t.Helper()
+	spec, err := os.ReadFile("SPEC.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(spec)
+	text = text[strings.Index(text, "\n## 16. "):]
+	var out []specExample
+	for _, part := range strings.Split(text, "\n### 16.")[1:] {
+		heading, _, _ := strings.Cut(part, "\n")
+		m := exampleName.FindStringSubmatch(heading)
+		if m == nil {
+			t.Fatalf("the heading %q names no .siml file", heading)
+		}
+		file := m[1]
+		if strings.HasPrefix(file, ".") {
+			file = "example" + file
+		}
+		for i, block := range exampleBlock.FindAllStringSubmatch(part, -1) {
+			path := file
+			if i > 0 {
+				path = exampleKind.ReplaceAllString(file, fmt.Sprintf("${1}_%d${2}", i+1))
+			}
+			out = append(out, specExample{path, block[1]})
+		}
+	}
+	return out
+}
+
+// Every example of SPEC.md §16 reads with the committed name table, with no diagnostic and no raw ref (§7.3).
+func TestSpecExamples(t *testing.T) {
+	examples := specExamples(t)
+	var paths []string
+	for _, e := range examples {
+		paths = append(paths, e.path)
+	}
+	want := []string{
+		"ui/specs/hunter/dps/apls/default.apl.siml",
+		"ui/specs/hunter/dps/apls/default_2.apl.siml",
+		"ui/specs/warrior/dps/apls/arms.apl.siml",
+		"ui/specs/hunter/dps/gear_sets/p1.gear.siml",
+		"example.siml",
+	}
+	if !slices.Equal(paths, want) {
+		t.Fatalf("the examples are %v, want %v", paths, want)
+	}
+	open := func(path string) ([]byte, error) {
+		for _, e := range examples {
+			if e.path == filepath.ToSlash(path) {
+				return []byte(e.text), nil
+			}
+		}
+		return nil, fs.ErrNotExist
+	}
+	names := readNames(t, "names.json")
+	for _, e := range examples {
+		t.Run(e.path, func(t *testing.T) {
+			f, err := Parse(e.path, []byte(e.text), names, open)
+			if diags := diagnosticsOf(t, f, err); len(diags) != 0 {
+				t.Errorf("the diagnostics are\n%s", strings.Join(diagnosticLines(diags), "\n"))
+			}
+			if f != nil && len(f.RawRefs) != 0 {
+				t.Errorf("the raw refs are %v", f.RawRefs)
+			}
+		})
+	}
+}
+
+// Every diagnostic code of SPEC.md §13 that the package emits has an errors case, and every code an errors case gives
+// is in the table.
+func TestErrorCasesCoverEveryCode(t *testing.T) {
+	spec, err := os.ReadFile("SPEC.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(spec)
+	table := text[strings.Index(text, "## 13. Diagnostics"):strings.Index(text, "**Recovery.**")]
+	codes := map[string]bool{}
+	for _, line := range strings.Split(table, "\n") {
+		if cells := strings.Split(line, "|"); strings.HasPrefix(line, "| `") {
+			for _, m := range regexp.MustCompile("`([a-z-]+)`").FindAllStringSubmatch(cells[1], -1) {
+				codes[m[1]] = true
+			}
+		}
+	}
+	sources, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var code strings.Builder
+	for _, file := range sources {
+		if !strings.HasSuffix(file, "_test.go") {
+			src, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			code.Write(src)
+		}
+	}
+	covered := map[string]bool{}
+	err = filepath.WalkDir(filepath.Join("testdata", "errors"), func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".diag") && !strings.HasSuffix(path, ".raw") {
+			return err
+		}
+		src, err := os.ReadFile(path)
+		for _, line := range nonEmptyLines(string(src)) {
+			if fields := strings.Fields(line); len(fields) > 2 {
+				covered[fields[2]] = true
+			}
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	emitted := 0
+	for c := range codes {
+		if strings.Contains(code.String(), `"`+c+`"`) {
+			emitted++
+			if !covered[c] {
+				t.Errorf("no errors case gives %s", c)
+			}
+		}
+	}
+	if emitted < 50 {
+		t.Errorf("the package emits only %d of the codes of SPEC.md §13", emitted)
+	}
+	for c := range covered {
+		if !codes[c] {
+			t.Errorf("an errors case gives %s, which SPEC.md §13 does not list", c)
+		}
+	}
+}
+
+// The parse cases write every section, every form of statement, every short form and every other form of SPEC.md
+// §8.3.
+func TestParseCasesCoverTheLanguage(t *testing.T) {
+	ix, err := loadIndex()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sections, statements := map[string]bool{}, map[string]bool{}
+	for _, file := range corpusCases(t, "parse", ".siml") {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		kind, err := KindOf(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tree, _ := parseSyntax(sourceText(src), ix, kind)
+		for _, s := range tree.sections {
+			if s.header != nil || len(s.body) > 0 {
+				sections[s.name] = true
+			}
+		}
+		for _, st := range tree.inFileOrder() {
+			statements[strings.TrimPrefix(fmt.Sprintf("%T", st), "*siml.")] = true
+		}
+	}
+	for _, def := range ix.sectionList {
+		if !sections[def.Name] {
+			t.Errorf("no parse case writes the section %s", def.Name)
+		}
+	}
+	for _, st := range []string{"versionStmt", "specStmt", "talentsStmt", "useStmt", "headerStmt", "varStmt", "rowStmt", "slotRowStmt",
+		"flagListStmt", "fieldEntryStmt", "messageEntryStmt", "rawEntryStmt"} {
+		if !statements[st] {
+			t.Errorf("no parse case writes a %s", st)
+		}
+	}
+
+	var json strings.Builder
+	for _, file := range corpusCases(t, "parse", ".json") {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		json.Write(src)
+	}
+	s, err := buildSchema()
+	if err != nil {
+		t.Fatal(err)
+	}
+	forms := map[string]bool{}
+	for _, k := range slices.Concat(s.Kinds.Action, s.Kinds.Value) {
+		switch written := strings.Contains(json.String(), `"`+k.JSON+`":`); {
+		case written:
+			forms[k.Form] = true
+		case k.Form == "short":
+			t.Errorf("no parse case writes the short form of %s", k.Kind)
+		}
+	}
+	for _, form := range []string{"accessor", "bare", "unit_prefix", "list_args", "generic"} {
+		if !forms[form] {
+			t.Errorf("no parse case writes a kind of the %s form", form)
+		}
+	}
 }

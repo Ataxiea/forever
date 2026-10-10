@@ -142,34 +142,18 @@ func scopeOf(patterns []grammarPattern, text, part string) string {
 	return ""
 }
 
-type grammarSchema struct {
-	Keywords []string `json:"keywords"`
-	Heads    []string `json:"heads"`
-	Units    struct {
-		Words   map[string]json.RawMessage `json:"words"`
-		Indexed map[string]string          `json:"indexed"`
-	} `json:"units"`
-	Sections []struct {
-		Name string `json:"name"`
-	} `json:"sections"`
-}
-
-func readGrammarSchema(t *testing.T) grammarSchema {
+func schemaWords(t *testing.T) siml.Words {
 	t.Helper()
-	var buf bytes.Buffer
-	if err := siml.WriteSchema(&buf); err != nil {
+	words, err := siml.GrammarWords()
+	if err != nil {
 		t.Fatal(err)
 	}
-	var s grammarSchema
-	if err := json.Unmarshal(buf.Bytes(), &s); err != nil {
-		t.Fatal(err)
-	}
-	return s
+	return words
 }
 
 func TestGrammarColoursEveryKeyword(t *testing.T) {
-	patterns, schema := grammarPatterns(t), readGrammarSchema(t)
-	for _, word := range schema.Keywords {
+	patterns, words := grammarPatterns(t), schemaWords(t)
+	for _, word := range words.Keywords {
 		if got := scopeOf(patterns, word, word); !strings.HasPrefix(got, "keyword.") && !strings.HasPrefix(got, "constant.language.") {
 			t.Errorf("%s is coloured %q", word, got)
 		}
@@ -177,8 +161,8 @@ func TestGrammarColoursEveryKeyword(t *testing.T) {
 }
 
 func TestGrammarColoursHeadsBeforeTheirParenthesis(t *testing.T) {
-	patterns, schema := grammarPatterns(t), readGrammarSchema(t)
-	for _, head := range schema.Heads {
+	patterns, words := grammarPatterns(t), schemaWords(t)
+	for _, head := range words.Heads {
 		if got := scopeOf(patterns, head+"(", head); got != "support.function.head.siml" {
 			t.Errorf("%s( is coloured %q", head, got)
 		}
@@ -192,13 +176,13 @@ func TestGrammarColoursHeadsBeforeTheirParenthesis(t *testing.T) {
 }
 
 func TestGrammarColoursUnits(t *testing.T) {
-	patterns, schema := grammarPatterns(t), readGrammarSchema(t)
-	for word := range schema.Units.Words {
+	patterns, words := grammarPatterns(t), schemaWords(t)
+	for _, word := range words.Units {
 		if got := scopeOf(patterns, word, word); got != "variable.language.unit.siml" {
 			t.Errorf("%s is coloured %q", word, got)
 		}
 	}
-	for prefix := range schema.Units.Indexed {
+	for _, prefix := range words.UnitPrefixes {
 		if got := scopeOf(patterns, prefix+"2", prefix+"2"); got != "variable.language.unit.siml" {
 			t.Errorf("%s2 is coloured %q", prefix, got)
 		}
@@ -206,13 +190,13 @@ func TestGrammarColoursUnits(t *testing.T) {
 }
 
 func TestGrammarColoursSectionHeaders(t *testing.T) {
-	patterns, schema := grammarPatterns(t), readGrammarSchema(t)
-	for _, s := range schema.Sections {
-		if s.Name == "group" {
+	patterns, words := grammarPatterns(t), schemaWords(t)
+	for _, s := range words.Sections {
+		if s == "group" {
 			continue
 		}
-		if got := scopeOf(patterns, s.Name+":", s.Name); got != "entity.name.section.siml" {
-			t.Errorf("%s: is coloured %q", s.Name, got)
+		if got := scopeOf(patterns, s+":", s); got != "entity.name.section.siml" {
+			t.Errorf("%s: is coloured %q", s, got)
 		}
 	}
 	if got := scopeOf(patterns, `group "Weave":`, `"Weave"`); got != "entity.name.section.group.siml" {

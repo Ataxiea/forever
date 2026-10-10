@@ -174,8 +174,6 @@
 									"@sim/wasm",
 									"@sim/wasm/**",
 									"@sim/workers/**",
-									"@sim/siml",
-									"@sim/siml/**",
 									"@sim/sim",
 									"@sim/sim_host",
 									"@sim/sim_runs",
@@ -230,8 +228,6 @@
 									"@sim/wasm",
 									"@sim/wasm/**",
 									"@sim/workers/**",
-									"@sim/siml",
-									"@sim/siml/**",
 									"@sim/sim",
 									"@sim/sim_host",
 									"@sim/sim_runs",
@@ -442,20 +438,6 @@
 						"css": "always",
 						"json": "always",
 						"siml": "always"
-					}
-				]
-			},
-			"plugins": ["import"]
-		},
-		{
-			"files": ["ui/sim/siml/**/*.ts"],
-			"rules": {
-				"import/extensions": [
-					"warn",
-					"never",
-					{
-						"json": "always",
-						"ts": "always"
 					}
 				]
 			},

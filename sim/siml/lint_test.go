@@ -39,7 +39,7 @@ func findingLines(findings []Finding, parts ...string) []string {
 		for _, part := range parts {
 			switch part {
 			case "path":
-				line = append(line, agreePath(f.Path))
+				line = append(line, pathString(f.Path))
 			case "severity":
 				line = append(line, f.Severity)
 			case "code":

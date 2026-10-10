@@ -136,18 +136,15 @@ namespace), and for a spell `go run ./tools/spelldata <id>` gives its row. The r
 `go run --tags=with_db ./cmd/wowsimcli siml fmt -check ui/specs`, fails on a spell or aura the file's spec does not
 register, and on an enchant that does not fit its slot.
 
-**The language.** A change to the grammar, the typing or the printer keeps `sim/siml` and `ui/sim/siml` in step,
-states the rule in `SPEC.md`, and adds a corpus case under `sim/siml/testdata/` (`parse/`, `print/`, `format/` or
-`errors/`). `sim/siml/conformance_test.go` and `ui/sim/siml/conformance.test.ts` both run the case, and
-`TestAgreement` checks that the two implementations give the same results over it and over every committed file. A
-change to one implementation that leaves the other behind, or one with no case, is a finding. So is a change that gives
-existing text another meaning without a new `siml` major version (`SPEC.md` §14).
-A grammar change also updates the editor's partial parser, `sim/siml/lang_context.go`, which reads a statement up to
-the cursor for completion; `go test --tags=with_db ./sim/siml/...` runs its cases (`lang_db_test.go`).
+**The language.** A change to the grammar, the typing or the printer states the rule in `SPEC.md` and adds a corpus
+case under `sim/siml/testdata/` (`parse/`, `print/`, `format/` or `errors/`), which `sim/siml/conformance_test.go`
+runs. A change with no case is a finding. So is a change that gives existing text another meaning without a new `siml`
+major version (`SPEC.md` §14). A grammar change also updates the editor's partial parser, `sim/siml/lang_context.go`,
+which reads a statement up to the cursor for completion; `go test --tags=with_db ./sim/siml/...` runs its cases
+(`lang_db_test.go`).
 
 ```
-go test ./sim/siml/...                     # the corpus and the agreement test; no database needed
-npx vitest run ui/sim/siml                 # the TypeScript side
+go test ./sim/siml/...                     # the corpus; no database needed
 go test --tags=with_db ./sim/siml/...      # also the table's up-to-date test
 go test --tags=with_db ./cmd/wowsimcli/... # also the repository check of ui/specs
 ```

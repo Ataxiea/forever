@@ -186,3 +186,23 @@ func TestFormatError(t *testing.T) {
 		t.Errorf("Format gave %v, want unknown-name", err)
 	}
 }
+
+// A rotation nested deeper than a statement holds prints without running out of stack, and its print reads as the
+// one error that says so.
+func TestPrintDeepNesting(t *testing.T) {
+	condition := &proto.APLValue{Value: &proto.APLValue_Const{Const: &proto.APLValueConst{Val: "1"}}}
+	for range 1500 {
+		condition = &proto.APLValue{Value: &proto.APLValue_Not{Not: &proto.APLValueNot{Val: condition}}}
+	}
+	rotation := &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{{Action: &proto.APLAction{
+		Condition: condition,
+		Action:    &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{SpellId: &proto.ActionID{RawId: &proto.ActionID_SpellId{SpellId: 1}}}},
+	}}}}
+	settings := &proto.IndividualSimSettings{Player: &proto.Player{Rotation: rotation}}
+	text := Print(Kind{Section: sectionAPL}, proto.Spec_SpecHunter, settings, nil, &Names{})
+	_, err := Parse("x.apl.siml", text, &Names{}, nil)
+	var diags Diagnostics
+	if !errors.As(err, &diags) || len(diags) != 1 || diags[0].Message != "the statement nests deeper than 256" {
+		t.Errorf("the print reads as %v, want the one error that the statement nests deeper than 256", err)
+	}
+}

@@ -25,8 +25,7 @@ not a misconfigured invocation.
 
 Add `npm run test:locales` whenever you touched `assets/locales/**` or `schemas/**`, and
 `npm run lint:css` (stylelint over `ui/**/*.css`) whenever you touched a stylesheet. There is no
-SCSS in the tree. `ui/sim/siml` implements the SIML language beside the Go package `sim/siml`, so a change
-there follows `wowsims-review` step 6: `go test ./sim/siml/...` runs the agreement test between the two.
+SCSS in the tree.
 
 What each one is actually for:
 
@@ -163,7 +162,7 @@ the `@source not` lines in `ui/STYLING.md` §7).
 `ui/generated/proto/*` (`make ui/generated/proto/api.ts`) and the `*_auto_gen.ts` files
 (`make go-to-ts`, which runs `go run ./tools/database/gen_db -gen=go-to-ts`) — today three:
 `ui/sim/player/classes/capabilities_auto_gen.ts`, `ui/sim/bulk/constants_auto_gen.ts` and
-`ui/sim/wasm/bulk_sim/constants_auto_gen.ts`. `make go-to-ts` also writes `ui/generated/siml/schema.json`.
+`ui/sim/wasm/bulk_sim/constants_auto_gen.ts`.
 Copying them from a built checkout works and is faster. Never run `gen_db` concurrently with another copy of
 itself. Every build, `vitest` run and Storybook build also needs Go itself, for the `.siml` imports
 (`running-locally.md`).

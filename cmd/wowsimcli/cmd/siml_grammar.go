@@ -105,36 +105,21 @@ func grammarNamed(name, match string) orderedObject {
 
 // The grammar, built from the schema the protos derive.
 func simlGrammarObject() (orderedObject, error) {
-	var buf bytes.Buffer
-	if err := siml.WriteSchema(&buf); err != nil {
-		return nil, err
-	}
-	var schema struct {
-		Keywords []string `json:"keywords"`
-		Heads    []string `json:"heads"`
-		Units    struct {
-			Words   map[string]json.RawMessage `json:"words"`
-			Indexed map[string]string          `json:"indexed"`
-		} `json:"units"`
-		Sections []struct {
-			Name string `json:"name"`
-		} `json:"sections"`
-	}
-	if err := json.Unmarshal(buf.Bytes(), &schema); err != nil {
+	words, err := siml.GrammarWords()
+	if err != nil {
 		return nil, err
 	}
 	var control []string
-	for _, w := range schema.Keywords {
+	for _, w := range words.Keywords {
 		if !slices.Contains(grammarActionWords, w) && !slices.Contains(grammarLogicWords, w) && !slices.Contains(grammarConstantWords, w) {
 			control = append(control, w)
 		}
 	}
-	units := grammarKeys(schema.Units.Words)
-	prefixes := grammarKeys(schema.Units.Indexed)
+	units, prefixes := words.Units, words.UnitPrefixes
 	var sections []string
-	for _, s := range schema.Sections {
-		if s.Name != "group" {
-			sections = append(sections, s.Name)
+	for _, s := range words.Sections {
+		if s != "group" {
+			sections = append(sections, s)
 		}
 	}
 	captures := func(names ...string) orderedObject {
@@ -181,7 +166,7 @@ func simlGrammarObject() (orderedObject, error) {
 			grammarNamed("variable.parameter.placeholder.siml", `%(?:\{[^}\n]*\}|[A-Za-z_][A-Za-z0-9_]*)`),
 			grammarNamed("constant.numeric.siml", `(?<![A-Za-z0-9_.])`+grammarNumber+`(?:%|`+grammarUnit+`(?:`+grammarNumber+grammarUnit+`)*)?`+grammarIdentEnd),
 			// Before the keywords: `sequence(` is the accessor head, `sequence "S"` the action.
-			grammarNamed("support.function.head.siml", `\b(?:`+grammarWords(schema.Heads)+`)(?=\s*\()`),
+			grammarNamed("support.function.head.siml", `\b(?:`+grammarWords(words.Heads)+`)(?=\s*\()`),
 			grammarNamed("keyword.other.action.siml", `\b(?:`+grammarWords(grammarActionWords)+`)`+grammarIdentEnd),
 			grammarNamed("keyword.operator.word.siml", `\b(?:`+grammarWords(grammarLogicWords)+`)`+grammarIdentEnd),
 			grammarNamed("constant.language.siml", `\b(?:`+grammarWords(grammarConstantWords)+`)`+grammarIdentEnd),
@@ -209,14 +194,4 @@ func simlGrammarText() ([]byte, error) {
 		return nil, err
 	}
 	return b.Bytes(), nil
-}
-
-// The keys of a map in byte order, the order the schema's JSON writes them in.
-func grammarKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }

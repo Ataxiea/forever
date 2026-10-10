@@ -17,7 +17,9 @@ _Building the SIML server_ notification; a build that is up to date relinks noth
 `wowsimcli siml lsp` in the root for that repository's `file:` and `untitled:` `*.siml` documents. A build that fails
 puts the compiler's output in the _WoWSims SIML_ output, and the server stays down until _WoWSims: Restart SIML
 Server_, which builds and starts it again; run it after pulling Go changes too. `wowsims-apl.server` names a prebuilt
-binary to run instead.
+binary to run instead. A file in a repository nested inside another, such as a worktree under `.claude/worktrees`, is
+served by the nested repository's server only: the outer server is never told the file is open, so it answers nothing
+about it.
 
 The server reads each file with `sim/siml`, the name table (`sim/siml/names.json`) and the item database
 (`assets/database/db.json`), all from the repository the file sits in. A fresh `make sim/siml/names.json` or `make db`
@@ -155,5 +157,6 @@ panel says to. `npm run check` builds the page too, but compares only the commit
 The tests bundle the extension from its sources as the build does and run it against the stand-in for VS Code in
 `test/vscode.mjs`, whose language client starts the server the extension builds, so they need go:
 `test/extension.test.mjs` drives the extension's host, `test/webview.test.mjs` the panel's page bundled from its
-sources, and `test/sim.test.mjs` the sims. The server's own cases are Go tests, in `sim/siml/lsp` and
+sources, `test/sim.test.mjs` the sims, and `test/roots.test.mjs` which server a file in a nested repository goes to,
+against a stand-in server. The server's own cases are Go tests, in `sim/siml/lsp` and
 `sim/siml/lang_*_test.go`.

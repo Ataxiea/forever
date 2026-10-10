@@ -7,7 +7,7 @@ The tree:
 ```
 ui/
   worker/            the three worker entries plus a Go package (go:embed highs.wasm). alias @worker
-  generated/         proto/* and siml/schema.json — tool output only. alias @generated
+  generated/         proto/* — tool output only. alias @generated
                      (the *_auto_gen.ts files sit beside their consumers, not here)
   sim/               DOM-free, node-runnable model, grouped by subject: sim.ts + sim_host.ts +
                      sim_runs.ts + sim_signal_manager.ts + spec_config.ts at the root, then
@@ -15,8 +15,7 @@ ui/
                      raid/ (raid, party, encounter), settings/ (bulk, item_swap, reforge,
                      stat_weight), utils/ (collections, math, format, json, misc),
                      workers/, cache/, state/, proto/, talents data + trees, bulk/,
-                     wasm/, constants/, presets/, siml/ (the SIML language, sim/siml/SPEC.md),
-                     hooks/, and context/. alias @sim
+                     wasm/, constants/, presets/, hooks/, and context/. alias @sim
   ui-kit/            sim-agnostic, controlled React widgets, one folder per component (48 of
                      them: TextField/, Dialog/, Field/, Table/, Notice/, …, each with a
                      story and a test), plus hooks/, utils/ (css, dom, icons, colors, wowhead),

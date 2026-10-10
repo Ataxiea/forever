@@ -17,6 +17,9 @@ priority:
   // a comment apart
 
   cast x
+  ///tight
+  //// four
+  cast x
 
 group "G":
   /// In a group.

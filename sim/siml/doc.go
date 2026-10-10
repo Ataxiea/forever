@@ -161,8 +161,7 @@ func (d *Doc) Refs() []NameRef {
 	return out
 }
 
-// The rotation's JSON, in the form both implementations write (SPEC.md §5.4); nil when the text has an error or holds
-// no rotation.
+// The rotation's JSON, in the form of SPEC.md §5.4; nil when the text has an error or holds no rotation.
 func (d *Doc) RotationJSON() json.RawMessage {
 	if d.err != nil || !slices.Contains(d.file.Categories, rotationCategory) {
 		return nil

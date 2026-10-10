@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// Splice: panel edits applied to the text of an x.apl.siml, over the corpus in testdata/splice, which
-// ui/sim/siml/splice.test.ts runs too, and over each rule on its own.
+// Splice: panel edits applied to the text of an x.apl.siml, over the corpus in testdata/splice and over each rule on
+// its own.
 
 const splicePath = "x.apl.siml"
 

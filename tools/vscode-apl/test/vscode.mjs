@@ -280,22 +280,36 @@ export function fakeVscode() {
 			connection.sendNotification('initialized', {});
 			this.connection = connection;
 			const siml = document => document.languageId === 'siml';
+			// The middleware's didOpen, didChange and didClose decide what reaches the server, as in the real client.
+			const middleware = this.options.middleware ?? {};
+			const through = (hook, data, send) => (middleware[hook] ? middleware[hook](data, send) : send(data));
+			this.opened = new Set();
 			const open = document =>
-				connection.sendNotification('textDocument/didOpen', {
-					textDocument: { uri: document.uri.toString(), languageId: 'siml', version: document.version, text: document.text },
+				through('didOpen', document, async () => {
+					this.opened.add(document.uri.fsPath);
+					connection.sendNotification('textDocument/didOpen', {
+						textDocument: { uri: document.uri.toString(), languageId: 'siml', version: document.version, text: document.text },
+					});
 				});
 			this.subscriptions = [
 				opens.event(document => siml(document) && open(document)),
 				changes.event(
-					({ document }) =>
-						siml(document) &&
-						connection.sendNotification('textDocument/didChange', {
-							textDocument: { uri: document.uri.toString(), version: document.version },
-							contentChanges: [{ text: document.text }],
-						}),
+					change =>
+						siml(change.document) &&
+						through('didChange', change, async ({ document }) =>
+							connection.sendNotification('textDocument/didChange', {
+								textDocument: { uri: document.uri.toString(), version: document.version },
+								contentChanges: [{ text: document.text }],
+							}),
+						),
 				),
 				closes.event(
-					document => siml(document) && connection.sendNotification('textDocument/didClose', { textDocument: { uri: document.uri.toString() } }),
+					document =>
+						siml(document) &&
+						through('didClose', document, async () => {
+							this.opened.delete(document.uri.fsPath);
+							connection.sendNotification('textDocument/didClose', { textDocument: { uri: document.uri.toString() } });
+						}),
 				),
 			];
 			workspace.textDocuments.filter(siml).forEach(open);

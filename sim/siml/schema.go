@@ -1,9 +1,8 @@
 package siml
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
+	"maps"
 	"slices"
 	"strings"
 	"unicode"
@@ -14,107 +13,104 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-// Writes the schema that ui/generated/siml/schema.json holds: every name and form SPEC.md §8 derives from the
-// protos, with forms.json folded in, so the TypeScript module reads what Go computes and never derives it again.
-func WriteSchema(w io.Writer) error {
-	s, err := buildSchema()
-	if err != nil {
-		return err
-	}
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "\t")
-	return enc.Encode(s)
+// The words of SIML that the editor's grammar colours (SPEC.md §2-§4): the keywords, the accessor heads, the unit
+// words, the prefixes of the indexed units (target1, player2), and every section name, in the schema's order.
+type Words struct {
+	Keywords, Heads, Units, UnitPrefixes, Sections []string
 }
 
+func GrammarWords() (Words, error) {
+	s, err := buildSchema()
+	if err != nil {
+		return Words{}, err
+	}
+	w := Words{
+		Keywords:     s.Keywords,
+		Heads:        s.Heads,
+		Units:        slices.Sorted(maps.Keys(s.Units.Words)),
+		UnitPrefixes: slices.Sorted(maps.Keys(s.Units.Indexed)),
+	}
+	for _, def := range s.Sections {
+		w.Sections = append(w.Sections, def.Name)
+	}
+	return w, nil
+}
+
+// Every name and form SPEC.md §8 derives from the protos, with forms.json folded in. loadIndex builds its lookups from
+// it.
 type schema struct {
-	Version  int                      `json:"version"`
-	Keywords []string                 `json:"keywords"`
-	Heads    []string                 `json:"heads"`
-	Units    unitForms                `json:"units"`
-	Messages map[string]schemaMessage `json:"messages"` // Every message reachable from IndividualSimSettings, and each spec's Rotation.
-	Enums    map[string]schemaEnum    `json:"enums"`
+	Keywords []string
+	Heads    []string
+	Units    unitForms
+	Messages map[string]schemaMessage // Every message reachable from IndividualSimSettings, and each spec's Rotation.
+	Enums    map[string]schemaEnum
 	Kinds    struct {
-		Action []kindForm `json:"action"`
-		Value  []kindForm `json:"value"`
-	} `json:"kinds"`
-	Sections []sectionDef `json:"sections"`
-	Specs    []specDef    `json:"specs"`
-	Skip     []string     `json:"skip"`
+		Action []kindForm
+		Value  []kindForm
+	}
+	Sections []sectionDef
 }
 
 type schemaMessage struct {
-	Fields []schemaField `json:"fields"` // Declaration order, skipped fields left out.
+	Fields []schemaField // Declaration order, skipped fields left out.
 }
 
 type schemaField struct {
-	Name     string   `json:"name"`
-	Siml     string   `json:"siml"`    // The name a file writes (§8.2).
-	Aliases  []string `json:"aliases"` // Other names a file may write.
-	JSON     string   `json:"json"`
-	Number   int32    `json:"number"`
-	Scalar   string   `json:"scalar,omitempty"` // For a map, the value's.
-	Type     string   `json:"type,omitempty"`   // For a map, the value's.
-	Key      string   `json:"key,omitempty"`    // A map's key scalar.
-	Repeated bool     `json:"repeated"`
-	Oneof    string   `json:"oneof,omitempty"`
-	Printed  string   `json:"printed"`
-	Ref      string   `json:"ref,omitempty"`
-	Index    string   `json:"index,omitempty"`
+	Name     string
+	Siml     string   // The name a file writes (§8.2).
+	Aliases  []string // Other names a file may write.
+	JSON     string
+	Number   int32
+	Scalar   string // For a map, the value's.
+	Type     string // For a map, the value's.
+	Repeated bool
+	Printed  string
+	Ref      string
+	Index    string
 }
 
 type schemaEnum struct {
-	Values []enumValue `json:"values"`
-	Flag   string      `json:"flag,omitempty"` // The value a bare field name sets.
+	Values []enumValue
+	Flag   string // The value a bare field name sets.
 }
 
 type enumValue struct {
-	Name   string `json:"name"`
-	Number int32  `json:"number"`
-	Short  string `json:"short"`
+	Name   string
+	Number int32
+	Short  string
 }
 
 type kindForm struct {
-	Kind       string    `json:"kind"`
-	JSON       string    `json:"json"`
-	Message    string    `json:"message"`
-	Form       string    `json:"form"`
-	Positional string    `json:"positional,omitempty"` // The generic form's positional field, which every kind accepts.
-	Accessor   *accessor `json:"accessor,omitempty"`
-	UnitField  string    `json:"unitField,omitempty"`
-	ListField  string    `json:"listField,omitempty"`
+	Kind       string
+	JSON       string
+	Message    string
+	Form       string
+	Positional string // The generic form's positional field, which every kind accepts.
+	Accessor   *accessor
+	UnitField  string
+	ListField  string
 }
 
 type accessor struct {
-	Head    string `json:"head"`
-	Prop    string `json:"prop"`
-	Subject string `json:"subject"`
-	Unit    string `json:"unit,omitempty"`
+	Head    string
+	Prop    string
+	Subject string
+	Unit    string
 }
 
 type sectionDef struct {
-	Name     string          `json:"name"`
-	Category string          `json:"category"`
-	Body     []string        `json:"body"`
-	Sources  []sectionSource `json:"sources"`
-	Presence []string        `json:"presence,omitempty"`
+	Name     string
+	Category string
+	Body     []string
+	Sources  []sectionSource
+	Presence []string
 }
 
 // Paths are JSON names from IndividualSimSettings, with "*" for the spec field.
 type sectionSource struct {
-	Path    []string `json:"path"`
-	Fields  []string `json:"fields,omitempty"` // JSON names; all of the message's fields when absent.
-	Flatten string   `json:"flatten,omitempty"`
-}
-
-type specDef struct {
-	Field        string `json:"field"`
-	Message      string `json:"message"`
-	Spec         string `json:"spec"`
-	Class        string `json:"class"`
-	Options      string `json:"options"`
-	ClassOptions string `json:"classOptions,omitempty"`
-	Rotation     string `json:"rotation"`
+	Path    []string
+	Fields  []string // JSON names; all of the message's fields when absent.
+	Flatten string
 }
 
 var (
@@ -158,12 +154,10 @@ func buildSchema() (*schema, error) {
 	}
 
 	s := &schema{
-		Version:  1,
 		Keywords: f.Keywords,
 		Units:    f.Units,
 		Messages: b.messages,
 		Enums:    b.enums,
-		Skip:     f.Skip,
 	}
 	for _, h := range f.Heads {
 		s.Heads = append(s.Heads, h.Name)
@@ -179,20 +173,6 @@ func buildSchema() (*schema, error) {
 	}
 	if s.Sections, err = b.sections(specs); err != nil {
 		return nil, err
-	}
-	for _, spec := range specs {
-		def := specDef{
-			Field:    string(spec.Field.Name()),
-			Message:  string(spec.Field.Message().FullName()),
-			Spec:     spec.Spec.String(),
-			Class:    spec.Class.String(),
-			Options:  string(spec.Options.FullName()),
-			Rotation: string(spec.Rotation.FullName()),
-		}
-		if spec.ClassOptions != nil {
-			def.ClassOptions = string(spec.ClassOptions.Message().FullName())
-		}
-		s.Specs = append(s.Specs, def)
 	}
 	return s, nil
 }
@@ -274,12 +254,8 @@ func (b *builder) field(fd protoreflect.FieldDescriptor) (schemaField, error) {
 		Number:   int32(fd.Number()),
 		Repeated: fd.IsList(),
 	}
-	if od := fd.ContainingOneof(); od != nil {
-		sf.Oneof = string(od.Name())
-	}
 	if fd.IsMap() {
 		sf.Printed = "map"
-		sf.Key = scalarName(fd.MapKey().Kind())
 		sf.Scalar, sf.Type = valueType(fd.MapValue())
 		return sf, b.addType(fd.MapValue())
 	}

@@ -71,6 +71,9 @@ async function serverBinary(root: string): Promise<string> {
 
 async function start(root: string): Promise<LanguageClient> {
 	const command = await serverBinary(root);
+	// A file in a repository nested in this one, such as a worktree under .claude/worktrees, is that repository's: this
+	// server is never told it is open, so it answers nothing about it and the nested one's server serves it alone.
+	const ours = (document: vscode.TextDocument) => document.uri.scheme !== 'file' || repositoryRoot(document.uri.fsPath) === root;
 	const client = new LanguageClient(
 		'wowsims-siml',
 		'WoWSims SIML',
@@ -85,6 +88,11 @@ async function start(root: string): Promise<LanguageClient> {
 			synchronize: { configurationSection: 'wowsims-apl' },
 			outputChannel: output,
 			revealOutputChannelOn: RevealOutputChannelOn.Never,
+			middleware: {
+				didOpen: (document, next) => (ours(document) ? next(document) : Promise.resolve()),
+				didChange: (change, next) => (ours(change.document) ? next(change) : Promise.resolve()),
+				didClose: (document, next) => (ours(document) ? next(document) : Promise.resolve()),
+			},
 		},
 	);
 	await client.start();

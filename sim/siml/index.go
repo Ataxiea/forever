@@ -15,8 +15,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-// The schema's lookups that reading uses: the derivations of buildSchema, the same ones WriteSchema writes for
-// the TypeScript module, keyed for the parser and tied to the proto descriptors they describe.
+// The schema's lookups that reading uses: the derivations of buildSchema, keyed for the parser and tied to the proto
+// descriptors they describe.
 type schemaIndex struct {
 	sections       map[string]*sectionDef
 	sectionList    []*sectionDef                  // In the order of SPEC.md §5.1, which the printer writes.

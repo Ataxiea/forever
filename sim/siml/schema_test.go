@@ -1,8 +1,6 @@
 package siml
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"regexp"
@@ -34,27 +32,6 @@ func messageDescriptor(t *testing.T, name string) protoreflect.MessageDescriptor
 		t.Fatal(err)
 	}
 	return d.(protoreflect.MessageDescriptor)
-}
-
-func TestWriteSchemaIsStable(t *testing.T) {
-	var first, second bytes.Buffer
-	if err := WriteSchema(&first); err != nil {
-		t.Fatal(err)
-	}
-	if err := WriteSchema(&second); err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(first.Bytes(), second.Bytes()) {
-		t.Fatal("two WriteSchema calls wrote different bytes")
-	}
-	var decoded map[string]any
-	if err := json.Unmarshal(first.Bytes(), &decoded); err != nil {
-		t.Fatal(err)
-	}
-	want := []string{"version", "keywords", "heads", "units", "messages", "enums", "kinds", "sections", "specs", "skip"}
-	if got := slices.Sorted(maps.Keys(decoded)); !slices.Equal(got, slices.Sorted(slices.Values(want))) {
-		t.Errorf("the schema's top-level keys are %v, want %v", got, want)
-	}
 }
 
 // A kind named like a keyword, head or unit word could not be told apart from it in a row. The short-form kinds
@@ -208,7 +185,7 @@ func TestHandWrittenMessagesHoldOnlyWhatTheirSyntaxWrites(t *testing.T) {
 			if action := fd.ContainingOneof(); slices.Contains(m.fields, fd.Name()) || action != nil && action.Name() == "action" || f.skips(fd) {
 				continue
 			}
-			t.Errorf(`%s has no SIML form: %s writes only %v (sim/siml/SPEC.md §6), so every print would lose it. Give it a form in SPEC.md §6 and in both sim/siml and ui/sim/siml, with a corpus case, or add it to "skip" in sim/siml/forms.json if no file should hold it.`,
+			t.Errorf(`%s has no SIML form: %s writes only %v (sim/siml/SPEC.md §6), so every print would lose it. Give it a form in SPEC.md §6 and in sim/siml, with a corpus case, or add it to "skip" in sim/siml/forms.json if no file should hold it.`,
 				fd.FullName(), m.syntax, m.fields)
 		}
 	}
