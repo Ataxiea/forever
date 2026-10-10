@@ -107,7 +107,7 @@ func (n *namesFile) get() (*siml.Names, error) {
 	}
 	if stamp := fmt.Sprintf("%d:%d", info.ModTime().UnixNano(), info.Size()); stamp != n.stamp {
 		n.stamp, n.names, n.err = stamp, nil, nil
-		data, err := os.ReadFile(n.path)
+		data, err := siml.ReadSource(n.path)
 		if err == nil {
 			n.names, err = siml.ParseNames(data)
 		}
@@ -123,11 +123,17 @@ func newResponse() simlServeResponse {
 	return simlServeResponse{Errors: []serveDiagnostic{}, Warnings: []serveDiagnostic{}, Uses: []string{}}
 }
 
-func serveFile(req simlServeRequest, names *siml.Names) simlServeResponse {
-	res := newResponse()
+func serveFile(req simlServeRequest, names *siml.Names) (res simlServeResponse) {
+	res = newResponse()
+	defer func() {
+		if r := recover(); r != nil {
+			res = newResponse()
+			res.Error = fmt.Sprintf("reading %s panicked: %v", req.Path, r)
+		}
+	}()
 	open := func(path string) ([]byte, error) {
 		res.Uses = append(res.Uses, path)
-		return os.ReadFile(path)
+		return siml.ReadSource(path)
 	}
 	f, err := siml.Parse(req.Path, []byte(req.Text), names, open)
 	fail, warn, err := failures(req.Path, f, err)

@@ -121,15 +121,16 @@ func (s *server) uriOfLocked(path string) string {
 // A hover, with the game files' row of the spell it is about appended. The row is read without holding the server,
 // since `go run` can take a while.
 func (s *server) hover(ctx context.Context, uri string, at Position) (any, *ResponseError) {
-	s.mu.Lock()
-	a := s.analyzeLocked(uri)
-	if a == nil || a.doc == nil {
-		s.mu.Unlock()
-		return nil, nil
-	}
-	h, ok := a.doc.Hover(fromPosition(at), siml.CatalogAt(a.root))
-	root := a.root
-	s.mu.Unlock()
+	h, root, ok := func() (siml.Hover, string, bool) {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		a := s.analyzeLocked(uri)
+		if a == nil || a.doc == nil {
+			return siml.Hover{}, "", false
+		}
+		h, ok := a.doc.Hover(fromPosition(at), siml.CatalogAt(a.root))
+		return h, a.root, ok
+	}()
 	if !ok {
 		return nil, nil
 	}

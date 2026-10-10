@@ -66,9 +66,10 @@ export function vscodeRange(range: Range): vscode.Range {
 	return new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
 }
 
-// Applies the server's text edits to a document as one change; the version it leaves, or undefined when VS Code
-// refused it.
-export async function applyEdits(document: vscode.TextDocument, edits: { range: Range; newText: string }[]): Promise<number | undefined> {
+// Applies the server's text edits, made against the document at `version`, as one change; the version it leaves, or
+// undefined when the document has moved past `version` or VS Code refused it.
+export async function applyEdits(document: vscode.TextDocument, version: number, edits: { range: Range; newText: string }[]): Promise<number | undefined> {
+	if (document.isClosed || document.version !== version) return undefined;
 	const edit = new vscode.WorkspaceEdit();
 	for (const e of edits) edit.replace(document.uri, vscodeRange(e.range), e.newText);
 	return (await vscode.workspace.applyEdit(edit)) ? document.version : undefined;

@@ -139,15 +139,29 @@ var handlers = map[string]apiHandler{
 // The site the server serves, which holds the name table SIML requests read with.
 var siteFS fs.FS
 
-// sim/siml/names.json, as the site serves it, read on the first SIML request: the server is built without the
-// with_db tag, so it holds no table of its own.
-var simlNames = sync.OnceValues(func() (*siml.Names, error) {
+var (
+	simlNamesMu    sync.Mutex
+	simlNamesTable *siml.Names
+)
+
+// sim/siml/names.json, as the site serves it, read on the first SIML request that finds it: the server is built
+// without the with_db tag, so it holds no table of its own.
+var simlNames = func() (*siml.Names, error) {
+	simlNamesMu.Lock()
+	defer simlNamesMu.Unlock()
+	if simlNamesTable != nil {
+		return simlNamesTable, nil
+	}
 	data, err := fs.ReadFile(siteFS, "forever/siml_names.json")
 	if err != nil {
 		return nil, err
 	}
-	return siml.ParseNames(data)
-})
+	names, err := siml.ParseNames(data)
+	if err == nil {
+		simlNamesTable = names
+	}
+	return names, err
+}
 
 // The handler of a SIML request, which answers with failed when the name table does not read.
 func simlHandler[Req, Res googleProto.Message](newReq func() Req, handle func(Req, *siml.Names) Res, failed func(string) Res) apiHandler {

@@ -3,6 +3,7 @@ package siml
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
@@ -94,10 +95,36 @@ func Parse(path string, src []byte, names *Names, open Opener) (*File, error) {
 	return Analyze(path, src, names, open).File()
 }
 
+// The largest file ReadSource reads.
+const maxSourceSize = 16 << 20
+
+// Reads the file at path, which a use line or a command names: a regular file of at most 16 MB. A FIFO or a device
+// is refused unread, since reading one can block forever or never end.
+func ReadSource(path string) ([]byte, error) {
+	if info, err := os.Stat(path); err != nil {
+		return nil, err
+	} else if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, maxSourceSize+1))
+	if err == nil && len(data) > maxSourceSize {
+		err = fmt.Errorf("%s is larger than %d MB", path, maxSourceSize>>20)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 // Reads and parses the file at path with the committed name table, reading the files its use lines name from the
 // file system. A build without the with_db tag holds no table, and reads only a file that writes no name.
 func ReadFile(path string) (*File, error) {
-	src, err := os.ReadFile(path)
+	src, err := ReadSource(path)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +132,7 @@ func ReadFile(path string) (*File, error) {
 	if noTable != nil {
 		names = &Names{}
 	}
-	f, err := Parse(path, src, names, os.ReadFile)
+	f, err := Parse(path, src, names, ReadSource)
 	var diags Diagnostics
 	if noTable != nil && errors.As(err, &diags) && slices.ContainsFunc(diags, func(d Diagnostic) bool { return d.Code == "unknown-name" }) {
 		return nil, fmt.Errorf("%s writes names: %w", path, noTable)

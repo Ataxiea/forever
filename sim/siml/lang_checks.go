@@ -206,7 +206,8 @@ func (d *Doc) quickFixes(r Range) []Fix {
 					return
 				}
 				operands := x.args.items
-				if slices.ContainsFunc(operands, func(a arg) bool { return a.name != nil }) {
+				// A named operand, or a list, which and/or reads as its operands, writes no operator.
+				if slices.ContainsFunc(operands, func(a arg) bool { _, list := a.value.(*listNode); return a.name != nil || list }) {
 					return
 				}
 				op := x.name.text

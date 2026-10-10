@@ -1,7 +1,6 @@
 package siml
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -182,10 +181,13 @@ func (d *Doc) occurrences() []occurrence {
 	}
 	var declarations []declaration
 	var uses []use
+	var used []declaredVariable
 	for _, statement := range tree.statements {
 		sc := scopeOf(sections[statement])
 		if u, ok := statement.(*useStmt); ok {
-			out = append(out, d.withBinds(u)...)
+			found := d.declaredThrough(resolveUse(d.path, u.path.value), []string{d.path})
+			used = append(used, found...)
+			out = append(out, d.withBinds(u, found)...)
 			continue
 		}
 		if h, ok := statement.(*headerStmt); ok && h.group != nil && sections[statement] != nil && sections[statement].name == sectionGroup {
@@ -248,6 +250,11 @@ func (d *Doc) occurrences() []occurrence {
 		seen[i] = declared{name: x.name, scope: x.scope}
 		out = append(out, occurrence{kind: "variable", name: x.name, span: x.node.span, definition: true, scope: x.scope, resolved: true})
 	}
+	for _, x := range used {
+		if !x.group {
+			seen = append(seen, declared{name: x.name})
+		}
+	}
 	for _, u := range uses {
 		res := resolveVariable(u.node.name, u.node.braced, declaredIn(seen, u.scope))
 		name := u.node.name
@@ -255,15 +262,19 @@ func (d *Doc) occurrences() []occurrence {
 			name = res.name
 		}
 		o := occurrence{kind: "variable", name: name, span: u.node.span, resolved: res.found}
-		for _, x := range declarations {
-			if x.name == name && (!x.scope.inGroup || x.scope == u.scope) {
-				o.scope = x.scope
-				break
-			}
+		// As the parser reads it: the group's own variable, else the file's, else a used file's.
+		i := slices.IndexFunc(declarations, func(x declaration) bool { return x.name == name && u.scope.inGroup && x.scope == u.scope })
+		if i < 0 {
+			i = slices.IndexFunc(declarations, func(x declaration) bool { return x.name == name && !x.scope.inGroup })
+		}
+		if i >= 0 {
+			o.scope = declarations[i].scope
+		} else if j := slices.IndexFunc(used, func(x declaredVariable) bool { return !x.group && x.name == name }); j >= 0 && res.found {
+			o.file = used[j].file
 		}
 		out = append(out, o)
 	}
-	// Groups and sequences the file names but never defines resolve to nothing.
+	// Groups and sequences the file names but never defines are a used file's, or resolve to nothing.
 	defined := map[string]bool{}
 	for _, o := range out {
 		if o.definition {
@@ -272,7 +283,11 @@ func (d *Doc) occurrences() []occurrence {
 	}
 	for i, o := range out {
 		if (o.kind == "group" || o.kind == "sequence") && !defined[o.kind+"\x00"+o.name] {
-			out[i].resolved = false
+			if j := slices.IndexFunc(used, func(x declaredVariable) bool { return x.group && o.kind == "group" && x.name == o.name }); j >= 0 {
+				out[i].file = used[j].file
+			} else {
+				out[i].resolved = false
+			}
 		}
 	}
 	slices.SortStableFunc(out, func(a, b occurrence) int { return a.start - b.start })
@@ -280,13 +295,10 @@ func (d *Doc) occurrences() []occurrence {
 }
 
 // The variables a use … with list sets, each an occurrence of the variable in the file that declares it: the used file,
-// or one it uses in turn. They resolve as the parser reads them, against every variable those files declare.
-func (d *Doc) withBinds(u *useStmt) []occurrence {
+// or one it uses in turn. They resolve as the parser reads them, against every variable those files declare, found.
+func (d *Doc) withBinds(u *useStmt, found []declaredVariable) []occurrence {
 	path := resolveUse(d.path, u.path.value)
-	var found []declaredVariable
-	if len(u.with) > 0 {
-		found = d.declaredThrough(path, []string{d.path})
-	}
+	found = variablesOf(found)
 	names := make([]string, len(found))
 	for i, x := range found {
 		names[i] = x.name
@@ -310,13 +322,21 @@ func (d *Doc) withBinds(u *useStmt) []occurrence {
 	return out
 }
 
-// A variable a used file declares outside its groups, with that file.
-type declaredVariable struct{ name, file string }
+// A variable a used file declares outside its groups, or with group a group it declares, with that file.
+type declaredVariable struct {
+	name, file string
+	group      bool
+}
 
 // The variables a use line naming usePath can set: those the file declares outside its groups, then those of the files
 // it uses in turn, each with the file that declares it.
 func (d *Doc) settableVariables(usePath string) []declaredVariable {
-	return d.declaredThrough(resolveUse(d.path, usePath), []string{d.path})
+	return variablesOf(d.declaredThrough(resolveUse(d.path, usePath), []string{d.path}))
+}
+
+// The variables of what used files declare, without the groups.
+func variablesOf(found []declaredVariable) []declaredVariable {
+	return slices.DeleteFunc(slices.Clone(found), func(x declaredVariable) bool { return x.group })
 }
 
 func (d *Doc) declaredThrough(path string, chain []string) []declaredVariable {
@@ -339,6 +359,10 @@ func (d *Doc) declaredThrough(path string, chain []string) []declaredVariable {
 		case *varStmt:
 			if sections[s] == nil || sections[s].group == nil {
 				out = append(out, declaredVariable{name: x.variable.name, file: path})
+			}
+		case *headerStmt:
+			if x.group != nil && sections[s] != nil && sections[s].name == sectionGroup {
+				out = append(out, declaredVariable{name: x.group.value, file: path, group: true})
 			}
 		case *useStmt:
 			out = append(out, used.declaredThrough(resolveUse(path, x.path.value), append(slices.Clone(chain), path))...)
@@ -426,8 +450,8 @@ func (f foundOccurrence) location() Location {
 	return Location{Path: f.doc.path, Range: f.doc.rangeOf(f.o.span)}
 }
 
-// Every occurrence of what key names in home, and, for a variable outside the groups of a saved file, the use … with
-// binds that set it in the .siml files near home and in from.
+// Every occurrence of what key names in home, and, for a group or a variable outside the groups of a saved file, the
+// occurrences that name it through a use line in the .siml files near home and in from.
 func everywhere(home *Doc, key occurrence, from *Doc) []foundOccurrence {
 	var out []foundOccurrence
 	for _, o := range home.occurrences() {
@@ -435,7 +459,7 @@ func everywhere(home *Doc, key occurrence, from *Doc) []foundOccurrence {
 			out = append(out, foundOccurrence{home, o})
 		}
 	}
-	if key.kind != "variable" || key.scope.inGroup || home.path == "" {
+	if key.kind != "variable" && key.kind != "group" || key.scope.inGroup || home.path == "" {
 		return out
 	}
 	files := nearbyFiles(home.path)
@@ -447,15 +471,15 @@ func everywhere(home *Doc, key occurrence, from *Doc) []foundOccurrence {
 		other := from
 		if !own {
 			text, ok := home.readUsed(file)
-			if !ok || !useWith.MatchString(text) || !withWord.MatchString(text) {
+			if !ok || !useWord.MatchString(text) {
 				continue
 			}
 			other = home.analyze(file, text)
-		} else if !useWith.MatchString(from.src) || !withWord.MatchString(from.src) {
+		} else if !useWord.MatchString(from.src) {
 			continue
 		}
 		for _, o := range other.occurrences() {
-			if o.file != "" && samePath(o.file, home.path) && o.name == key.name {
+			if o.file != "" && samePath(o.file, home.path) && o.kind == key.kind && o.name == key.name {
 				out = append(out, foundOccurrence{other, o})
 			}
 		}
@@ -463,10 +487,7 @@ func everywhere(home *Doc, key occurrence, from *Doc) []foundOccurrence {
 	return out
 }
 
-var (
-	useWith  = regexp.MustCompile(`\buse\b`)
-	withWord = regexp.MustCompile(`\bwith\b`)
-)
+var useWord = regexp.MustCompile(`\buse\b`)
 
 // The .siml files near a file, which use names by a short path from its folder: those in its folder and the folder
 // above, and in the folders those hold (../gear_sets/p1.gear.siml from an apls folder). The file itself is left out.
@@ -587,8 +608,7 @@ func spelled(kind, name string) string {
 	case "placeholder":
 		return placeholderRef(name)
 	}
-	text, _ := json.Marshal(name)
-	return string(text)
+	return jsonString(name)
 }
 
 // Whether name can be written as a name of kind (variable, placeholder, group or sequence): it is not empty, and a
@@ -713,8 +733,7 @@ func (d *Doc) symbols() []Symbol {
 		at := sectionSpan(s)
 		name, kind := s.name, SymbolNamespace
 		if s.group != nil {
-			text, _ := json.Marshal(s.group.value)
-			name, kind = "group "+string(text), SymbolModule
+			name, kind = "group "+jsonString(s.group.value), SymbolModule
 		}
 		var children []Symbol
 		if s.group != nil || s.name == sectionAPL {

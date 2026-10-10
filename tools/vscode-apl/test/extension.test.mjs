@@ -169,6 +169,29 @@ test("the panel's own edits made in a row are all made; one against a version so
 	panel.dispose();
 });
 
+test("a panel's edit is dropped when the text changes while the server splices it", async () => {
+	const { panel, document } = await openPanel('default.apl.siml');
+	const { version } = lastRotation(panel);
+	const [client] = stand.state.clients;
+	const sendRequest = client.sendRequest;
+	// Someone types while the server answers siml/splice: its edits are for the text before that.
+	client.sendRequest = async function (method, ...params) {
+		const answer = await sendRequest.call(this, method, ...params);
+		if (method === 'siml/splice') stand.change(document, document.getText().replace('${Time to weave} = 400ms', '${Time to weave} = 500ms'));
+		return answer;
+	};
+	try {
+		const applied = stand.state.applied.length;
+		const answer = await edit(panel, { version, seq: 1, edits: [{ op: 'move', path: ['priorityList'], from: 4, to: 1 }] });
+		assert.equal(stand.state.applied.length, applied, 'no edit applied');
+		assert.equal(answer.version, document.version);
+		assert.equal(answer.rotation.priorityList[4].action.castSpell.spellId.spellId, 1317257, 'Strider Kick stays fifth');
+	} finally {
+		client.sendRequest = sendRequest;
+		panel.dispose();
+	}
+});
+
 test('the panel finds its document by URI on every message, after VS Code closes the one it opened with', async () => {
 	const { panel, document } = await openPanel('default.apl.siml');
 	const { version } = lastRotation(panel);

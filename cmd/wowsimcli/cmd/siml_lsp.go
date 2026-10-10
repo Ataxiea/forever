@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 
 	"github.com/wowsims/forever/sim/siml/lsp"
 )
@@ -41,7 +40,7 @@ func simlLSP(out, errOut io.Writer, args []string) error {
 }
 
 // One sim at a time: the sim's row counts go through a hook all sims share.
-var simlSimMu sync.Mutex
+var simlSimSlot = make(chan struct{}, 1)
 
 // Runs a `siml sim` request for the language server: the request and the result as `siml sim` reads and writes them.
 func simlSimJSON(ctx context.Context, root string, request json.RawMessage) (result json.RawMessage, err error) {
@@ -49,8 +48,12 @@ func simlSimJSON(ctx context.Context, root string, request json.RawMessage) (res
 	if err != nil {
 		return nil, fmt.Errorf("reading the request: %w", err)
 	}
-	simlSimMu.Lock()
-	defer simlSimMu.Unlock()
+	select {
+	case simlSimSlot <- struct{}{}:
+		defer func() { <-simlSimSlot }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			result, err = nil, fmt.Errorf("the sim panicked: %v", r)

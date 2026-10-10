@@ -385,22 +385,34 @@ type lineChange struct {
 }
 
 // Where lines differ from the text's lines from to to (exclusive), which they replace: each run of lines that is not
-// in their longest common run, as the text's lines it replaces and the lines that go in their place.
+// in their longest common run, as the text's lines it replaces and the lines that go in their place. The lines both
+// start and end with are left out first. When what remains would need a table of more than maxDiffCells, it is
+// replaced whole.
 func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
+	for from < to && len(lines) > 0 && e.line(from) == lines[0] {
+		from, lines = from+1, lines[1:]
+	}
+	for from < to && len(lines) > 0 && e.line(to-1) == lines[len(lines)-1] {
+		to, lines = to-1, lines[:len(lines)-1]
+	}
+	if from == to && len(lines) == 0 {
+		return nil
+	}
+	if (to-from+1)*(len(lines)+1) > maxDiffCells {
+		return []lineChange{{from: from, to: to, lines: lines}}
+	}
 	old := make([]string, to-from)
 	for k := range old {
 		old[k] = e.line(from + k)
 	}
-	common := make([][]int, len(old)+1)
-	for i := range common {
-		common[i] = make([]int, len(lines)+1)
-	}
+	width := len(lines) + 1
+	common := make([]int32, (len(old)+1)*width) // The longest common run of old[i:] and lines[j:], at i*width+j.
 	for i := len(old) - 1; i >= 0; i-- {
 		for j := len(lines) - 1; j >= 0; j-- {
 			if old[i] == lines[j] {
-				common[i][j] = common[i+1][j+1] + 1
+				common[i*width+j] = common[(i+1)*width+j+1] + 1
 			} else {
-				common[i][j] = max(common[i+1][j], common[i][j+1])
+				common[i*width+j] = max(common[(i+1)*width+j], common[i*width+j+1])
 			}
 		}
 	}
@@ -415,7 +427,7 @@ func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
 			out, open = append(out, lineChange{from: from + i, to: from + i}), true
 		}
 		change := &out[len(out)-1]
-		if j < len(lines) && (i == len(old) || common[i][j+1] >= common[i+1][j]) {
+		if j < len(lines) && (i == len(old) || common[i*width+j+1] >= common[(i+1)*width+j]) {
 			change.lines = append(change.lines, lines[j])
 			j++
 		} else {
@@ -425,6 +437,9 @@ func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
 	}
 	return out
 }
+
+// The most cells changes builds its table of common runs with, 4 MB.
+const maxDiffCells = 1 << 20
 
 // The edit that puts lines in place of the text's lines from to to (exclusive).
 func (e *lineEdits) edit(from, to int, lines []string) offsetEdit {
@@ -441,10 +456,8 @@ func (e *lineEdits) edit(from, to int, lines []string) offsetEdit {
 			text = e.eol
 		}
 		text += strings.Join(lines, e.eol)
-	} else {
-		for _, l := range lines {
-			text += l + e.eol
-		}
+	} else if len(lines) > 0 {
+		text = strings.Join(lines, e.eol) + e.eol
 	}
 	return offsetEdit{start: offset(from), end: offset(to), text: text}
 }

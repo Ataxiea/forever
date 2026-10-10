@@ -160,6 +160,16 @@ func TestQuickFixRewrites(t *testing.T) {
 	}
 }
 
+func TestQuickFixSkipsListOperand(t *testing.T) {
+	text := langPreface + "priority:\n  cast steady if and([gcd_is_ready, true]) and or([gcd_is_ready]) and and([true])\n"
+	d := Analyze(hunterPath, []byte(text), smallNames(), langOpen)
+	for _, f := range d.QuickFixes(Range{Position{1, 1}, Position{10, 1}}, nil) {
+		if f.Kind == "refactor.rewrite" {
+			t.Errorf("rewrites a list operand: %q", f.Edits[0].NewText)
+		}
+	}
+}
+
 func TestIsIdentifierFor(t *testing.T) {
 	for _, c := range []struct {
 		kind, name string

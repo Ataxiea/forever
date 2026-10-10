@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"runtime/debug"
 	"slices"
@@ -328,8 +327,10 @@ func (s *server) notification(method string, params json.RawMessage) {
 				continue
 			}
 			// The table and the database are read again by the next check, which every open file gets.
-			for uri, a := range s.analyses {
-				a.stale = true
+			for uri := range s.docs {
+				if a := s.analyses[uri]; a != nil {
+					a.stale = true
+				}
 				s.scheduleLocked(uri, usersDelay)
 			}
 		}
@@ -460,7 +461,7 @@ func (s *server) openerLocked(a *analysis) siml.Opener {
 		if d := s.docByPathLocked(path); d != nil {
 			return []byte(d.text), nil
 		}
-		return os.ReadFile(path)
+		return siml.ReadSource(path)
 	}
 }
 

@@ -108,15 +108,17 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	const make = async (message: Extract<FromPanel, { type: 'edit' }>, document: vscode.TextDocument) => {
 		for (let version = message.version + 1; version <= document.version; version++) if (!own.has(version)) return;
 		if (message.version > document.version) return;
+		const spliced = document.version;
 		let edits: TextEdit[];
 		try {
-			({ edits } = await request<{ edits: TextEdit[] }>(uri, 'siml/splice', { uri: key, version: document.version, edits: message.edits }));
+			({ edits } = await request<{ edits: TextEdit[] }>(uri, 'siml/splice', { uri: key, version: spliced, edits: message.edits }));
 		} catch (e) {
 			void vscode.window.showWarningMessage(`The panel's edit was not made: ${(e as Error).message}.`);
 			return;
 		}
 		if (edits.length === 0) return;
-		const version = await applyEdits(document, edits);
+		// Text that changed while the server worked is not the text the edits are for; the edit is dropped as above.
+		const version = await applyEdits(document, spliced, edits);
 		if (version !== undefined) own.add(version);
 	};
 	const edit = async (message: Extract<FromPanel, { type: 'edit' }>) => {
@@ -142,6 +144,13 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		editor.revealRange(new vscode.Range(selection.start, selection.start), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 	};
 
+	// The database, posted when the page loads and again when a server starts; a failed read posts it empty.
+	let loaded = false;
+	const postInit = async () => {
+		const db = await request<AplDatabase>(uri, 'siml/database', { uri: key }).catch(() => ({ spells: {}, items: {} }));
+		post({ type: 'init', db, fileName: basename(uri.fsPath), uri: key });
+	};
+
 	const disposables: vscode.Disposable[] = [
 		panel.webview.onDidReceiveMessage(async (message: FromPanel) => {
 			switch (message.type) {
@@ -150,8 +159,8 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 					const document = await documentFor(uri);
 					handled = 0;
 					registered = undefined;
-					const db = await request<AplDatabase>(uri, 'siml/database', { uri: key }).catch(() => ({ spells: {}, items: {} }));
-					post({ type: 'init', db, fileName: basename(uri.fsPath), uri: key });
+					loaded = true;
+					await postInit();
 					await postRotation(document);
 					postSim(document.version);
 					break;
@@ -185,11 +194,14 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 			if (changedUri === key) changed();
 		}),
 		// The server checks the file again when the name table or the database changes, and a restarted server reads
-		// it afresh.
+		// it and the database afresh.
 		vscode.languages.onDidChangeDiagnostics(event => {
 			if (event.uris.some(changedUri => changedUri.toString() === key)) changed();
 		}),
-		onServerStarted(changed),
+		onServerStarted(() => {
+			if (loaded) void postInit();
+			changed();
+		}),
 		vscode.window.onDidChangeTextEditorSelection(async event => {
 			const document = event.textEditor.document;
 			if (document.uri.toString() !== key || event.kind === vscode.TextEditorSelectionChangeKind.Command) return;

@@ -108,6 +108,10 @@ func (d *Doc) cursorAt(offset int) *cursorContext {
 		if at.kind == tokString {
 			ctx.end, ctx.string = at.end, true
 		}
+		// A ${…} or %{…} name is replaced up to its }.
+		if braced := (at.kind == tokVar || at.kind == tokPlaceholder) && strings.HasPrefix(at.text[1:], "{"); braced && (at.err == nil || at.err.code != "expected-name") {
+			ctx.end = at.end
+		}
 	}
 	column0 := upTo == lineStartOf(text, offset) && len(before) == 0
 	ctx.wants = d.readContext(before, after, ctx.section, column0)

@@ -2,6 +2,7 @@ package siml
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -226,6 +227,22 @@ func TestSplice(t *testing.T) {
 			t.Errorf("got:\n%s\nwant:\n%s", got, want)
 		}
 		check(t, spliceChanges(t, text, `[{"op":"set","path":["priorityList",1,"hide"],"value":true}]`), []lineEdit{{4, 5, "  # none\n"}})
+	})
+
+	t.Run("replaces a list too long to compare line by line in one edit", func(t *testing.T) {
+		rows := make([]string, 1100)
+		for k := range rows {
+			rows[k] = fmt.Sprintf("  cast multi_shot if current_time > %ds", k)
+		}
+		text := textLines(append([]string{"siml 1", "spec hunter", "", "priority:"}, rows...)...)
+		var rotation struct{ PriorityList []json.RawMessage }
+		if err := json.Unmarshal(Analyze(splicePath, []byte(text), corpusNames(t), nil).RotationJSON(), &rotation); err != nil {
+			t.Fatal(err)
+		}
+		slices.Reverse(rotation.PriorityList)
+		value, _ := json.Marshal(rotation.PriorityList)
+		slices.Reverse(rows)
+		check(t, spliceChanges(t, text, `[{"op":"set","path":["priorityList"],"value":`+string(value)+`}]`), []lineEdit{{4, 1104, textLines(rows...)}})
 	})
 
 	t.Run("writes new lines with the line breaks of the text, and adds none at its end", func(t *testing.T) {

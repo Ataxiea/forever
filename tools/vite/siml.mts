@@ -59,6 +59,12 @@ const read = (file: string, text: string): Promise<Response> => {
 		};
 		child.on('error', error => fail(new Error(`${command} does not start, and SIML files need Go or $WOWSIMCLI: ${error.message}`)));
 		child.on('exit', code => fail(new Error(`wowsimcli siml serve exited with code ${code}`)));
+		// A write to a child that has exited fails with EPIPE: the next read starts another, and the exit fails the
+		// requests this one owes.
+		child.stdin!.on('error', () => {
+			if (server?.child === child) server = undefined;
+			child.kill();
+		});
 		readline.createInterface({ input: child.stdout! }).on('line', line => {
 			const response = JSON.parse(line) as Response;
 			pending.get(response.id)?.resolve(response);

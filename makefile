@@ -32,7 +32,9 @@ $(OUT_DIR)/bundle/.dirstamp: \
   node_modules \
   tsconfig.json \
   ui/generated/proto/api.ts \
-  sim/siml/names.json
+  sim/siml/names.json \
+  sim/siml/forms.json \
+  $(filter-out %_test.go,$(wildcard sim/siml/*.go))
 	node_modules/typescript/bin/tsc --noEmit
 	npx tsx vite.build-workers.mts
 	npx vite build
@@ -106,7 +108,7 @@ wasm: $(OUT_DIR)/lib.wasm.gz
 # The main thread decompresses and compiles it once (see getSharedWasmModule in
 # ui/sim/workers/worker_pool.ts) and shares the compiled module with every worker.
 WASM_FEATURES := --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals --enable-bulk-memory
-$(OUT_DIR)/lib.wasm.gz: sim/wasm/* sim/core/proto/api.pb.go $(filter-out sim/core/items/all_items.go, $(call rwildcard,sim,*.go))
+$(OUT_DIR)/lib.wasm.gz: sim/wasm/* sim/core/proto/api.pb.go sim/siml/forms.json $(filter-out sim/core/items/all_items.go, $(call rwildcard,sim,*.go))
 	@echo "Starting webassembly compile now..."
 	@if GOWASM=satconv,signext GOOS=js GOARCH=wasm go build -ldflags "-w -s" -o ./$(OUT_DIR)/lib.wasm ./sim/wasm/; then \
 		printf "\033[1;32mWASM compile successful.\033[0m\n"; \

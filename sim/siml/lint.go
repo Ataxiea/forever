@@ -882,36 +882,52 @@ func lintConditions(c *collected, report lintReport) {
 // A row is shadowed when an earlier live row of the same list takes the same action, with no condition or the same
 // one: the later row is only reached when that action cannot run, and then it cannot either. Prepull rows each run at
 // their own time, and stateful actions keep a state per row, so neither is compared. Earlier rows are kept by their
-// list, kind and action, so each row is compared only with those that take the same action.
+// list, kind and action, with the first that always runs and the first for each condition, so each row is looked up
+// once.
 func lintShadowed(c *collected, report lintReport) {
-	// A row's condition, when it has one the sim builds.
-	conditionOf := func(action lintObject) (lintObject, bool) {
-		condition := action.object("condition")
-		return condition, !absent(condition)
+	type earlier struct {
+		always     int            // The first row that runs whenever it is reached, or -1.
+		conditions map[string]int // The first row with each condition.
 	}
-	taken := map[string][]actionSite{}
-	for _, site := range c.actions {
+	taken := map[string]*earlier{}
+	for i, site := range c.actions {
 		kind := site.action.kind()
 		if site.nested || site.scope.hidden || site.scope.prepull || kind == "" || statefulKinds[kind] {
 			continue
 		}
-		condition, hasCondition := conditionOf(site.action)
-		if truth, known := constantTruth(condition); hasCondition && known && !truth {
+		condition := site.action.object("condition")
+		hasCondition := !absent(condition)
+		truth, known := constantTruth(condition)
+		if hasCondition && known && !truth {
 			continue
 		}
 		key := fmt.Sprint(site.scope.group, " ", kind, " ", canonicalJSON(site.action.value(kind)))
-		k := slices.IndexFunc(taken[key], func(e actionSite) bool {
-			before, has := conditionOf(e.action)
-			truth, known := constantTruth(before)
-			return !has || known && truth || hasCondition && canonicalJSON(before) == canonicalJSON(condition)
-		})
-		if k >= 0 {
+		rows := taken[key]
+		if rows == nil {
+			rows = &earlier{always: -1, conditions: map[string]int{}}
+			taken[key] = rows
+		}
+		var text string
+		first := rows.always
+		if hasCondition {
+			text = canonicalJSON(condition)
+			if same, has := rows.conditions[text]; has && (first < 0 || same < first) {
+				first = same
+			}
+		}
+		if first >= 0 {
 			how := "the same condition"
-			if _, has := conditionOf(taken[key][k].action); !has {
+			if absent(c.actions[first].action.object("condition")) {
 				how = "no condition"
 			}
-			report(site.path[:len(site.path)-1], "warning", "shadowed-row", fmt.Sprintf("%s above takes this action with %s, so this row never runs.", rowLabel(taken[key][k].path), how))
+			report(site.path[:len(site.path)-1], "warning", "shadowed-row", fmt.Sprintf("%s above takes this action with %s, so this row never runs.", rowLabel(c.actions[first].path), how))
 		}
-		taken[key] = append(taken[key], site)
+		if !hasCondition || known && truth {
+			if rows.always < 0 {
+				rows.always = i
+			}
+		} else if _, has := rows.conditions[text]; !has {
+			rows.conditions[text] = i
+		}
 	}
 }

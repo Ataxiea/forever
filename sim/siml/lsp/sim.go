@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -87,35 +86,10 @@ func (s *server) sim(ctx context.Context, p simParams) (any, *ResponseError) {
 	if s.opts.Sim == nil {
 		return nil, failed("%s", errNoSim.Error())
 	}
-	s.mu.Lock()
-	a := s.analyzeLocked(p.uri)
-	d := s.docs[p.uri]
-	if a == nil || d == nil {
-		s.mu.Unlock()
-		return nil, failed("%s is not open", p.uri)
+	text, path, root, rpcErr := s.simInput(p.uri)
+	if rpcErr != nil {
+		return nil, rpcErr
 	}
-	if a.err != nil || d.path == "" || a.doc.Kind().Section != "apl" {
-		s.mu.Unlock()
-		why := "."
-		if a.err != nil {
-			why = ": " + a.err.Error()
-		}
-		return nil, failed("The sim runs an .apl.siml rotation in a WoWSims repository%s", why)
-	}
-	for _, diag := range a.doc.Diagnostics() {
-		if diag.Severity == siml.Error {
-			s.mu.Unlock()
-			return nil, failed("The rotation does not read (line %d: %s); fix it before simming it.", diag.Start.Line, diag.Message)
-		}
-	}
-	for _, used := range a.used {
-		if open := s.docByPathLocked(used); open != nil && unsaved(open.path, open.text) {
-			s.mu.Unlock()
-			return nil, failed("%s has unsaved changes; the sim reads it from disk. Save it first.", filepath.Base(used))
-		}
-	}
-	text, path, root := d.text, d.path, a.root
-	s.mu.Unlock()
 
 	file, err := filepath.Rel(root, path)
 	if err != nil {
@@ -139,7 +113,7 @@ func (s *server) sim(ctx context.Context, p simParams) (any, *ResponseError) {
 		var base []byte
 		if unsaved(path, text) {
 			baseline = "saved"
-			base, err = os.ReadFile(path)
+			base, err = siml.ReadSource(path)
 		} else {
 			baseline = "HEAD"
 			cmd := exec.CommandContext(ctx, "git", "show", "HEAD:"+file)
@@ -167,9 +141,38 @@ func (s *server) sim(ctx context.Context, p simParams) (any, *ResponseError) {
 	return simResult(raw, baseline)
 }
 
+// The text, path and repository of the rotation at uri as the sim reads it, or why it cannot be simmed.
+func (s *server) simInput(uri string) (text, path, root string, rpcErr *ResponseError) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a := s.analyzeLocked(uri)
+	d := s.docs[uri]
+	if a == nil || d == nil {
+		return "", "", "", failed("%s is not open", uri)
+	}
+	if a.err != nil || d.path == "" || a.doc.Kind().Section != "apl" {
+		why := "."
+		if a.err != nil {
+			why = ": " + a.err.Error()
+		}
+		return "", "", "", failed("The sim runs an .apl.siml rotation in a WoWSims repository%s", why)
+	}
+	for _, diag := range a.doc.Diagnostics() {
+		if diag.Severity == siml.Error {
+			return "", "", "", failed("The rotation does not read (line %d: %s); fix it before simming it.", diag.Start.Line, diag.Message)
+		}
+	}
+	for _, used := range a.used {
+		if open := s.docByPathLocked(used); open != nil && unsaved(open.path, open.text) {
+			return "", "", "", failed("%s has unsaved changes; the sim reads it from disk. Save it first.", filepath.Base(used))
+		}
+	}
+	return d.text, d.path, a.root, nil
+}
+
 // Whether an open document's text differs from its file's.
 func unsaved(path, text string) bool {
-	disk, err := os.ReadFile(path)
+	disk, err := siml.ReadSource(path)
 	return err != nil || !bytes.Equal(disk, []byte(text))
 }
 

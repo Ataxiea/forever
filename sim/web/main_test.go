@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	_ "github.com/wowsims/forever/sim/common"
@@ -111,6 +112,24 @@ func TestIndividualSim(t *testing.T) {
 	}
 
 	log.Printf("RESULT: %#v", rsr)
+}
+
+// A table missing on the first SIML request is read on a later one.
+func TestSimlNamesMissingAtFirstIsReadLater(t *testing.T) {
+	site, saved := fstest.MapFS{}, siteFS
+	siteFS = site
+	defer func() { siteFS, simlNamesTable = saved, nil }()
+	if _, err := simlNames(); err == nil {
+		t.Fatal("a site without the table gave one")
+	}
+	data, err := os.ReadFile("../siml/names.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	site["forever/siml_names.json"] = &fstest.MapFile{Data: data}
+	if _, err := simlNames(); err != nil {
+		t.Errorf("the table, once the site holds it: %v", err)
+	}
 }
 
 // The SIML routes, read with the committed name table in place of the one the site serves.

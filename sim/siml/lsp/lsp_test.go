@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/wowsims/forever/sim/siml"
 )
 
 // The server driven over the protocol, the way any editor's client drives it.
@@ -308,4 +311,50 @@ func TestUsedFileErrorPointsIntoIt(t *testing.T) {
 	if !slices.ContainsFunc(folds, func(f FoldingRange) bool { return f.Kind == "region" }) {
 		t.Errorf("no section folds as a region: %+v", folds)
 	}
+}
+
+func TestUsedFileThatIsNotARegularFileIsRefused(t *testing.T) {
+	dir := t.TempDir()
+	big := filepath.Join(dir, "big.apl.siml")
+	if err := os.WriteFile(big, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Truncate(big, 17<<20); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{dir, big} {
+		if _, err := siml.ReadSource(path); err == nil {
+			t.Errorf("%s is read", path)
+		}
+	}
+}
+
+func TestOversizedFrameIsRefused(t *testing.T) {
+	if _, err := newFrameReader(strings.NewReader("Content-Length: 99999999999\r\n\r\n")).read(); err == nil || err == io.EOF {
+		t.Errorf("a 99999999999 byte frame gave %v", err)
+	}
+}
+
+func TestBrokenTableIsReadAgainWhenItChanges(t *testing.T) {
+	root := t.TempDir()
+	tablePath := filepath.Join(root, tableFile)
+	table, err := os.ReadFile(filepath.Join(repository, tableFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(tablePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tablePath, []byte("{broken"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := started(t)
+	uri := pathURI(filepath.Join(root, "x.apl.siml"))
+	c.open(uri, lines("siml 1", "spec hunter", "", "priority:", "  cast hunters_mark", ""))
+	c.diagnostics(uri, func(d []Diagnostic) bool { return len(d) == 1 && d[0].Severity == severityError })
+	if err := os.WriteFile(tablePath, table, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c.notify("workspace/didChangeWatchedFiles", map[string]any{"changes": []any{map[string]any{"uri": pathURI(tablePath), "type": 2}}})
+	c.diagnostics(uri, func(d []Diagnostic) bool { return len(d) == 0 })
 }

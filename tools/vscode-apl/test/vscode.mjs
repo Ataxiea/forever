@@ -219,6 +219,13 @@ export function fakeVscode() {
 		showInformationMessage: message => void state.messages.push({ severity: 'info', message }),
 		showWarningMessage: message => void state.messages.push({ severity: 'warning', message }),
 		showErrorMessage: message => void state.messages.push({ severity: 'error', message }),
+		// The extension's output channel, printed to the test's stderr: a server that does not build logs its compiler's
+		// errors there.
+		createOutputChannel: name =>
+			new Proxy(
+				{},
+				{ get: (_, key) => (['show', 'hide', 'dispose', 'clear'].includes(key) ? () => {} : (...text) => console.error(`[${name}]`, ...text)) },
+			),
 		setStatusBarMessage: () => ({ dispose() {} }),
 		createTextEditorDecorationType: () => ({ dispose() {} }),
 		onDidChangeTextEditorSelection: selections.event,
@@ -398,10 +405,13 @@ export async function activateBuilt(stand, installed = fileURLToPath(new URL('..
 	}
 }
 
-// Waits for the stand-in's first server to run, which the first .siml document opened builds and starts.
+// Waits for the stand-in's first server to run, which the first .siml document opened builds and starts; fails as soon
+// as the extension reports that it did not build.
 export async function serverRunning(stand) {
 	const end = Date.now() + 600000;
 	while (!stand.state.clients[0]?.running) {
+		const failed = stand.state.messages.find(m => m.severity === 'error' && /did not build|No go binary/.test(m.message));
+		if (failed) throw new Error(failed.message);
 		if (Date.now() > end) throw new Error('the SIML server did not start');
 		await new Promise(resolve => setTimeout(resolve, 50));
 	}

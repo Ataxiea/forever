@@ -231,7 +231,7 @@ func readRotation(root, path, text string, names *siml.Names) (*proto.APLRotatio
 	if kind, err := siml.KindOf(path); err != nil || kind.Section != "apl" {
 		return nil, 0, fmt.Errorf("%s is not an .apl.siml", path)
 	}
-	f, err := siml.Parse(absolute(root, path), []byte(text), names, os.ReadFile)
+	f, err := siml.Parse(absolute(root, path), []byte(text), names, siml.ReadSource)
 	if err != nil {
 		return nil, 0, err
 	}

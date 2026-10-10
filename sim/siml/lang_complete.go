@@ -1,7 +1,6 @@
 package siml
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -100,27 +99,38 @@ func (b *completer) definitions() []occurrence {
 		return b.defined
 	}
 	b.read = true
-	read := b.d
-	for open := unclosedLines(read); len(open) > 0; open = unclosedLines(read) {
-		lines := strings.Split(read.src, "\n")
+	read, src := b.d, b.d.src
+	for open := unclosedLines(src); len(open) > 0; open = unclosedLines(src) {
+		lines := strings.Split(src, "\n")
 		for i := range lines {
 			if open[i] {
 				lines[i] = ""
 			}
 		}
-		read = read.analyze(read.path, strings.Join(lines, "\n"))
+		src = strings.Join(lines, "\n")
+	}
+	if src != b.d.src {
+		read = b.d.analyze(b.d.path, src)
 	}
 	b.defined = read.occurrences()
 	return b.defined
 }
 
-// The 0-based lines of the brackets the text never closes.
-func unclosedLines(d *Doc) map[int]bool {
-	out := map[int]bool{}
-	for _, x := range d.Diagnostics() {
-		if x.Code == "unclosed-bracket" {
-			out[x.Start.Line-1] = true
+// The 0-based lines of the brackets the text never closes. A statement ends only once its brackets close, so those
+// are the brackets still open when the file's tokens are read in order, as statementsOf reads them.
+func unclosedLines(src string) map[int]bool {
+	tokens, _, lines := lex(src)
+	var open []token
+	for _, t := range tokens {
+		if t.kind == tokPunct && (t.text == "(" || t.text == "[") {
+			open = append(open, t)
+		} else if t.kind == tokPunct && (t.text == ")" || t.text == "]") && len(open) > 0 {
+			open = open[:len(open)-1]
 		}
+	}
+	out := map[int]bool{}
+	for _, t := range open {
+		out[lines.line(t.start)] = true
 	}
 	return out
 }
@@ -208,7 +218,7 @@ func (b *completer) offer(w want) {
 	case "strings":
 		for _, o := range b.definitions() {
 			if o.kind == w.of && o.definition {
-				b.add(jsonQuote(o.name), CompletionModule, offerAs{detail: w.of})
+				b.add(jsonString(o.name), CompletionModule, offerAs{detail: w.of})
 			}
 		}
 	case "placeholders":
@@ -240,11 +250,6 @@ func (b *completer) offer(w want) {
 	case "use-variables":
 		b.usedVariables(w.path)
 	}
-}
-
-func jsonQuote(s string) string {
-	text, _ := json.Marshal(s)
-	return string(text)
 }
 
 // --- Lines.
@@ -714,7 +719,7 @@ func (b *completer) pathsForUse() {
 		if err != nil {
 			continue
 		}
-		b.add(jsonQuote(filepath.ToSlash(rel)), CompletionFile, offerAs{detail: "file"})
+		b.add(jsonString(filepath.ToSlash(rel)), CompletionFile, offerAs{detail: "file"})
 	}
 }
 

@@ -14,8 +14,7 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-// The language services on the committed name table and the item database, case for case with
-// tools/vscode-apl/test/lang.test.mjs.
+// The language services on the committed name table and the item database.
 
 func langNames(t *testing.T) *Names {
 	t.Helper()
@@ -139,6 +138,19 @@ func TestCompleteBelowOpenBracket(t *testing.T) {
 	continued := langPreface + "priority:\n  cast x if and(\n      gcd_is_ready,\n      action_group_used(\"|" + below
 	if got := complete(t, continued); !slices.Equal(got, []string{`"G"`}) {
 		t.Errorf("opened again on a continuation line: %q", got)
+	}
+}
+
+func TestCompleteBelowManyOpenBrackets(t *testing.T) {
+	open := langPreface + "priority:\n  cast x if action_group_used(|\n  cast x if and(\n  cast x if [\n  cast x if or(gcd_is_ready,\n"
+	hasAll(t, "below four open brackets", complete(t, open+"\ngroup \"G\":\n  none\n"), `"G"`)
+}
+
+func TestCompleteBracedVariableReplacesName(t *testing.T) {
+	text, at := marked(langPreface + "priority:\n  cast x if ${Melee we|ave}\n")
+	items := analyzeText(t, hunterPath, text).Complete(at, langCatalog())
+	if len(items) != 1 || items[0].Replace != (Range{Position{6, 13}, Position{6, 27}}) {
+		t.Errorf("got %+v, want ${Melee weave} replacing 6:13 to 6:27", items)
 	}
 }
 
@@ -362,6 +374,50 @@ func TestReferences(t *testing.T) {
 	}
 }
 
+func TestGroupVariableShadows(t *testing.T) {
+	text := textLines(
+		"siml 1", "spec hunter", "", "var $x = true", "", "priority:", `  group "G"`, "  cast hunters_mark if $x", "",
+		`group "G":`, "  var $x = false", "  cast arcane_shot if $x",
+	)
+	d := analyzeText(t, hunterPath, text)
+	if got, want := lineCols(d.Definition(positionOf(text, "arcane_shot if $x", 16))), []string{"10:6"}; !slices.Equal(got, want) {
+		t.Errorf("the group's $x: %v, want %v", got, want)
+	}
+	if got, want := lineCols(d.References(positionOf(text, "$x = true", 1), true)), []string{"3:4", "7:23"}; !slices.Equal(got, want) {
+		t.Errorf("the file's $x: %v, want %v", got, want)
+	}
+}
+
+func TestRenameThroughUse(t *testing.T) {
+	dir := t.TempDir()
+	usedPath, userPath := filepath.Join(dir, "a.apl.siml"), filepath.Join(dir, "b.siml")
+	used := textLines("siml 1", "spec hunter", "", "var $x = true", "", "priority:", `  group "G" if $x`, "", `group "G":`, "  cast arcane_shot")
+	user := textLines("siml 1", "spec hunter", `use "a.apl.siml"`, "", "prepull:", `  -1s group "G" if $x`)
+	for path, text := range map[string]string{usedPath: used, userPath: user} {
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	d := analyzeText(t, userPath, user)
+	for _, c := range []struct{ needle, newName, want string }{{"$x", "y", "$y"}, {`"G"`, "H", `"H"`}} {
+		at := positionOf(user, c.needle, 1)
+		if got := whereIs(d.Definition(at)); len(got) != 1 || !strings.HasPrefix(got[0], "a.apl.siml ") {
+			t.Errorf("%s: definition %q, want in a.apl.siml", c.needle, got)
+		}
+		edits, err := d.Rename(at, c.newName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, f := range edits {
+			got = append(got, fmt.Sprintf("%s %d %s", filepath.Base(f.Path), len(f.Edits), f.Edits[0].NewText))
+		}
+		if want := []string{"a.apl.siml 2 " + c.want, "b.siml 1 " + c.want}; !slices.Equal(got, want) {
+			t.Errorf("%s: %q, want %q", c.needle, got, want)
+		}
+	}
+}
+
 func renamedTexts(t *testing.T, d *Doc, at Position, newName string) []string {
 	t.Helper()
 	edits, err := d.Rename(at, newName)
@@ -384,6 +440,9 @@ func TestRenameSpelling(t *testing.T) {
 	}
 	if got, want := renamedTexts(t, d, positionOf(symbolsText, `"S"`, 1), "Two words"), []string{`"Two words"`, `"Two words"`, `"Two words"`}; !slices.Equal(got, want) {
 		t.Errorf("sequence: %q", got)
+	}
+	if got, want := renamedTexts(t, d, positionOf(symbolsText, `"Weave":`, 1), "A & <B>"), `"A & <B>"`; len(got) != 3 || got[0] != want {
+		t.Errorf("group: %q, want %q", got, want)
 	}
 	if _, _, err := d.PrepareRename(positionOf(symbolsText, "hunters_mark", 1)); err == nil {
 		t.Error("a spell name renames")
@@ -604,8 +663,8 @@ func TestQuickFixDidYouMean(t *testing.T) {
 	}
 }
 
-// The content cases of tools/vscode-apl/test/lsp.test.mjs: the diagnostics of an opened file and of a file that uses
-// another, and the completions and hover the server gives from them.
+// The diagnostics of an opened file and of a file that uses another, and the completions and hover the server gives
+// from them.
 func TestServerContentCases(t *testing.T) {
 	text := textLines("siml 1", "spec hunter", "", "priority:", "  cast hunters_mrk", "  ")
 	d := analyzeText(t, specsPath, text)

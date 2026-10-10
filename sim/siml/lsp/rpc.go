@@ -55,6 +55,8 @@ func newFrameReader(in io.Reader) *frameReader {
 	return &frameReader{textproto.NewReader(bufio.NewReaderSize(in, 1<<16))}
 }
 
+const maxFrame = 64 << 20
+
 // The body of the next frame; io.EOF when the stream ends between frames.
 func (f *frameReader) read() ([]byte, error) {
 	header, err := f.r.ReadMIMEHeader()
@@ -67,6 +69,9 @@ func (f *frameReader) read() ([]byte, error) {
 	length, err := strconv.Atoi(header.Get("Content-Length"))
 	if err != nil || length < 0 {
 		return nil, fmt.Errorf("a frame without a Content-Length: %v", header)
+	}
+	if length > maxFrame {
+		return nil, fmt.Errorf("a frame of %d bytes, over the %d MB the server reads", length, maxFrame>>20)
 	}
 	body := make([]byte, length)
 	if _, err := io.ReadFull(f.r.R, body); err != nil {

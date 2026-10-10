@@ -124,7 +124,8 @@ export async function insertPattern(uri: vscode.Uri, path: JsonPath): Promise<vo
 		const values = await askAll(pattern, namePicks(read.registered, db), taken);
 		if (!values) return;
 		const { edits } = await request<{ edits: TextEdit[] }>(uri, 'siml/insertPattern', { uri: uri.toString(), version, id: pattern.id, values, path });
-		await applyEdits(await documentFor(uri), edits);
+		if ((await applyEdits(await documentFor(uri), version, edits)) === undefined)
+			void vscode.window.showWarningMessage(`${pattern.label} was not inserted: the file changed while it was being made. Insert it again.`);
 	} catch (e) {
 		void vscode.window.showWarningMessage((e as Error).message);
 	}

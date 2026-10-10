@@ -69,6 +69,8 @@ func (c *cards) row(ctx context.Context, root string, spellID int32) (string, bo
 	defer cancel()
 	cmd := exec.CommandContext(ctx, goPath, "run", "./tools/spelldata", fmt.Sprint(spellID))
 	cmd.Dir = root
+	cmd.WaitDelay = time.Second
+	ownGroup(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", false
