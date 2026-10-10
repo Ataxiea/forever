@@ -8,6 +8,17 @@ prepull:
 priority:
   autocast_other_cooldowns
   cast judgement
+  item_swap(swap1)
+      if spell(item.manual_crowd_pummeler).is_known
+      and aura(haste).is_inactive(include_reaction_time=true)
+      and active_item_swap_set(main)
+      and spell(item.manual_crowd_pummeler).time_to_ready > 40s
+  item_swap(main)
+      if spell(item.manual_crowd_pummeler).is_known
+      and aura(haste).is_inactive(include_reaction_time=true)
+      and active_item_swap_set(swap1)
+      and spell(item.manual_crowd_pummeler).time_to_ready <= 32s
+      and remaining_time > 35s
   cast consecration
   cast hammer_of_wrath
       if spell(hammer_of_wrath).cast_time == 0s

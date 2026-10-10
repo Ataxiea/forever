@@ -124,7 +124,9 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 		// Preset talents that the user can quickly select.
 		talents: [Presets.TwistOfLightTalents, Presets.HolyShockTalents],
 		// Preset gear configurations that the user can quickly select.
-		gear: [Presets.TwistOfLightGearPreset, Presets.HolySHockGearPreset],
+		gear: [Presets.TwistOfLightGearPreset, Presets.HolyShockGearPreset],
+		settings: [Presets.TwistOfLightSettings, Presets.HolyShockSettings],
+		builds: [Presets.TwistOfLightBuild, Presets.HolyShockBuild],
 	},
 
 	autoRotation: (player: Player<Spec.SpecRetributionPaladin>): APLRotation => {

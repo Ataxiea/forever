@@ -23,9 +23,9 @@ prepull:
 priority:
   autocast_other_cooldowns if current_time >= 5s
   cast hunters_mark if not target.aura(hunters_mark).is_active
+  cast mongoose_bite if self.unit_distance <= $melee_range
+  cast strider_kick if self.unit_distance <= $melee_range
   group "Weave" if $melee_weave
-  cast mongoose_bite
-  cast strider_kick
   cast serpent_sting if not dot(serpent_sting).is_active
   reset_sequence("HHA") if ($use_summon_hawk and $use_arcane_shot) and sequence("HHA").is_complete
   sequence "HHA" [cast summon_hawk, cast summon_hawk, cast arcane_shot]

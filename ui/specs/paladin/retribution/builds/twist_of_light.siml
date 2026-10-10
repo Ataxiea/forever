@@ -1,0 +1,6 @@
+siml 1
+spec retribution_paladin
+talents "55003003--05225331101330321"
+use "../gear_sets/twist_of_light.gear.siml"
+
+apl: type auto

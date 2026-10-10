@@ -1,17 +1,19 @@
 import * as PresetUtils from '@app/preset_utils';
-import { PseudoStat, Stat } from '@generated/proto/common';
+import { PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
 import HolyShockApl from './apls/holy_shock.apl.siml';
 import TwistOfLightApl from './apls/twist_of_light.apl.siml';
+import HolyShockBuildJson from './builds/holy_shock.siml';
+import TwistOfLightBuildJson from './builds/twist_of_light.siml';
 import HolyShockGear from './gear_sets/holy_shock.gear.siml';
 import TwistOfLightGear from './gear_sets/twist_of_light.gear.siml';
 
 export const HolyShockAplPreset = PresetUtils.makePresetAPLRotation('Holy Shock', HolyShockApl);
 export const TwistOfLightAplPreset = PresetUtils.makePresetAPLRotation('Twist of Light', TwistOfLightApl);
 
-export const HolySHockGearPreset = PresetUtils.makePresetGear('Holy Shock', HolyShockGear, {
+export const HolyShockGearPreset = PresetUtils.makePresetGear('Holy Shock', HolyShockGear, {
 	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
 });
 export const TwistOfLightGearPreset = PresetUtils.makePresetGear('Twist of Light', TwistOfLightGear, {
@@ -68,3 +70,11 @@ export const TwistOfLightEpWeights = PresetUtils.makePresetEpWeights(
 		},
 	),
 );
+
+// The settings and the build of each talent tree. The Auto rotation picks the Twist of Light or the Holy Shock APL from
+// the talents; the Holy Shock build swaps in Shin Blade while the Manual Crowd Pummeler is on cooldown.
+export const TwistOfLightSettings = PresetUtils.makePresetSettingsFromJSON('Twist of Light', Spec.SpecRetributionPaladin, TwistOfLightBuildJson);
+export const HolyShockSettings = PresetUtils.makePresetSettingsFromJSON('Holy Shock', Spec.SpecRetributionPaladin, HolyShockBuildJson);
+
+export const TwistOfLightBuild = PresetUtils.makePresetBuildFromJSON('Twist of Light', Spec.SpecRetributionPaladin, TwistOfLightBuildJson);
+export const HolyShockBuild = PresetUtils.makePresetBuildFromJSON('Holy Shock', Spec.SpecRetributionPaladin, HolyShockBuildJson);

@@ -38,7 +38,7 @@ func (spell *Spell) ResistanceMultiplier(sim *Simulation, isPeriodic bool, attac
 		return 1, OutcomeEmpty
 	}
 
-	averageResist := attackTable.Defender.averageResist(spell, attackTable.Attacker, false, isPeriodic)
+	averageResist := attackTable.Defender.averageResist(spell, attackTable.Attacker, isPeriodic)
 	if averageResist == 0 {
 		return 1, OutcomeEmpty
 	}
@@ -60,8 +60,8 @@ func (at *AttackTable) GetBinaryHitChance(spell *Spell) float64 {
 // The average share of a spell's damage the target resists, R / (R + 5L + 80) for the caster's level L,
 // with the caster's Spell Piercing taken off R. Piercing beyond the resistance makes the share negative,
 // and the roll pays it out as bonus damage. The target's own resistance stops at 0, so a debuff that
-// lowers it below 0 adds nothing.
-func (unit *Unit) averageResist(spell *Spell, attacker *Unit, binary bool, isPeriodic bool) float64 {
+// lowers it below 0 adds nothing. A target above the caster's level resists no more for its level.
+func (unit *Unit) averageResist(spell *Spell, attacker *Unit, isPeriodic bool) float64 {
 	if spell.SchoolIndex <= stats.SchoolIndexPhysical {
 		return 0
 	}
@@ -71,8 +71,9 @@ func (unit *Unit) averageResist(spell *Spell, attacker *Unit, binary bool, isPer
 		piercing := attacker.stats[stats.SpellPiercing] + attacker.PseudoStats.SchoolSpellPiercing[spell.SchoolIndex]
 		resistance = max(0, unit.GetStat(stat)) - piercing
 	}
-	// TODO: 5L + 80 and 10L (as R / 10L) both fit the level 20-24 Spell Piercing logs; a level-30 log
-	// decides, with 46% of hits binned at 15 piercing under 5L + 80 and 38% under 10L (#76).
+	// TODO: the Spell Piercing logs disagree on the constant (#76). Mages with 15 piercing from Arcane
+	// Subtlety at level 20 and 24+ fit 5L + 80; at level 30 a mage with 15 from the talent and a priest
+	// with 7 from gear both sit near 10L. The level-20 mage logged again at 30 sets how K grows.
 	resistanceConstant := 5*float64(attacker.Level) + 80
 	averageResist := resistance / (math.Abs(resistance) + resistanceConstant)
 
@@ -81,17 +82,12 @@ func (unit *Unit) averageResist(spell *Spell, attacker *Unit, binary bool, isPer
 		averageResist /= 10
 	}
 
-	// Level-based resistance does not apply to binary spells.
-	if !binary && unit.Type == EnemyUnit && unit.Level > attacker.Level {
-		averageResist += 0.02 * float64(combatLevelDiff(attacker, unit))
-	}
-
-	return min(1, averageResist)
+	return averageResist
 }
 
 // A binary spell is resisted in full with the target's average resist as the chance.
 func (unit *Unit) binaryHitChance(spell *Spell, attacker *Unit) float64 {
-	return 1 - max(0, unit.averageResist(spell, attacker, true, false))
+	return 1 - max(0, unit.averageResist(spell, attacker, false))
 }
 
 // The partial resist roll, in tenths of the damage, around the average share a. Up to a = 10% it gives

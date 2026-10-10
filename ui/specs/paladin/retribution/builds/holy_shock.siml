@@ -1,0 +1,45 @@
+siml 1
+spec retribution_paladin
+talents "550030032101012--052252300012303"
+
+// Shin Blade, which the Holy Shock APL swaps in while the Manual Crowd Pummeler is on cooldown.
+gear:
+  enable_item_swap
+  head       magisters_crown
+  neck       archlight_talisman + necklace_spell_power
+  shoulder   lightforge_spaulders
+  back       arcanoweave_cloak + cloak_lesser_agility
+  chest      vest_of_elements + chest_greater_stats
+  wrist      lightforge_bracers + bracer_healing_power
+  hands      gauntlets_of_elements + gloves_healing_power
+  waist      lightforge_belt
+  legs       magisters_leggings + mystic_rugged_armor_kit
+  feet       magisters_boots + mystic_rugged_armor_kit
+  finger1    blessed_band_of_light
+  finger2    channelers_ring
+  trinket1   jewel_of_the_guard_captain
+  trinket2   adaptive_combat_assistant
+  main_hand  manual_crowd_pummeler + enchant_2h_weapon_mighty_spell_power
+  ranged     libram_of_law
+
+item_swap:
+  main_hand  shin_blade of_healing_12919 + enchant_2h_weapon_mighty_spell_power
+
+consumables:
+  pot major_spellblasting_potion
+  flask flask_of_supreme_power
+  food lobster_stew
+  conjured demonic_rune
+  explosive ez_thro_dynamite_ii
+  mh_imbue brilliant_wizard_oil
+  extra goblin_sapper_charge, cerebral_cortex_compound
+  elixir elixir_of_holy_power,
+      elixir_of_sages,
+      elixir_of_the_mongoose,
+      elixir_of_the_owl,
+      elixir_of_the_grizzly,
+      greater_arcane_elixir,
+      greater_mageblood_elixir,
+      juju_might
+
+apl: type auto
