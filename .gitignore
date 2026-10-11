@@ -19,6 +19,7 @@ sim/siml/gen/repinned-*.txt
 
 # binaries
 dist
+/bin
 binary_dist
 storybook-static
 *storybook.log

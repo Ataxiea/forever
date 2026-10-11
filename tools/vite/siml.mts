@@ -3,7 +3,7 @@
 // loads into (SPEC.md §1), which reads as the same message as a `.json` file of it.
 //
 // The Go reader reads each file: one `wowsimcli siml serve` per process, the binary $WOWSIMCLI names, else
-// dist/wowsimcli, which `make` builds and keeps fresh, else `go run ./cmd/wowsimcli`, so the build needs Go.
+// bin/wowsimcli, which `make` builds and keeps fresh, else `go run ./cmd/wowsimcli`, so the build needs Go.
 import { type ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +14,7 @@ import { normalizePath, type Plugin } from 'vite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NAMES = path.join(ROOT, 'sim/siml/names.json');
-const BUILT = path.join(ROOT, 'dist', process.platform === 'win32' ? 'wowsimcli.exe' : 'wowsimcli');
+const BUILT = path.join(ROOT, 'bin', process.platform === 'win32' ? 'wowsimcli.exe' : 'wowsimcli');
 
 interface Diagnostic {
 	line: number;

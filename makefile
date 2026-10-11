@@ -23,7 +23,7 @@ $(OUT_DIR)/.dirstamp: \
 	touch $@
 
 $(OUT_DIR)/bundle/.dirstamp: \
-  dist/wowsimcli$(BIN_EXT) \
+  bin/wowsimcli$(BIN_EXT) \
   $(UI_SRC) \
   $(AUTO_GEN_FILES_TS) \
   vite.config.mts \
@@ -51,6 +51,7 @@ clean:
 	  wowsimforever-arm64-darwin \
 	  wowsimforever-amd64-linux \
 	  dist \
+	  bin \
 	  binary_dist \
 	  ui/generated/proto/*.ts \
 	  node_modules
@@ -96,9 +97,9 @@ package-lock.json:
 node_modules: package-lock.json
 	npm ci
 
-# What tools/vite/siml.mts reads .siml imports with when $WOWSIMCLI is unset. It sits outside $(OUT_DIR), which the
-# deploy publishes as the site.
-dist/wowsimcli$(BIN_EXT): sim/core/proto/api.pb.go $(filter-out %_test.go,$(call rwildcard,sim,*.go) $(call rwildcard,cmd/wowsimcli,*.go))
+# What tools/vite/siml.mts reads .siml imports with when $WOWSIMCLI is unset. It stays out of dist: the pull request
+# preview uploads all of dist to Cloudflare Pages, which refuses a file over 25 MiB.
+bin/wowsimcli$(BIN_EXT): sim/core/proto/api.pb.go $(filter-out %_test.go,$(call rwildcard,sim,*.go) $(call rwildcard,cmd/wowsimcli,*.go))
 	go build -o $@ ./cmd/wowsimcli
 
 # Run before committing: refresh the SIML name table, then check the files under ui/specs read and are canonical.
