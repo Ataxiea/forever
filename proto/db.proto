@@ -30,6 +30,7 @@ message SimEnchant {
 	repeated ItemType extra_types = 7;
 	repeated double pseudo_stats = 8; // Indexed by PseudoStat.
 	double weapon_damage = 9; // Flat damage on the enchanted weapon's minimum and maximum.
+	EnchantProcKind proc_kind = 10;
 }
 
 // Contains only the Item info needed by the sim.
@@ -100,6 +101,12 @@ message Consumable {
 	// The world event the consumable belongs to, by name, which the settings list it under. Empty for
 	// one available all year.
 	string holiday = 21;
+	// The classes of a potion, which the settings offer it under. Empty on anything else.
+	repeated PotionClass potion_classes = 22;
+	// What the on-use grants only against a target of these mob types, which stats leaves out.
+	repeated MobTypeStats mob_type_stats = 23;
+	// What the on-use grants only while the encounter is in one of these zones, which stats leaves out.
+	repeated ZoneStats zone_stats = 24;
 }
 
 message ItemEffectRandPropPoints {

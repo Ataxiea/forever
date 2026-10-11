@@ -40,19 +40,19 @@ func init() {
 			{BuffId: 1317424, BuffName: "Heal (1317424)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1153, CategoryCooldownMs: 120000}}},
 		},
 		1728: {
-			{BuffId: 1300753, BuffName: "Firebolt (1300753)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 1300753, BuffName: "Firebolt (1300753)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		1982: {
-			{BuffId: 18211, BuffName: "Shadow Bolt (18211)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 18211, BuffName: "Shadow Bolt (18211)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		1986: {
 			{BuffId: 18090, BuffName: "Wound (18090)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		2164: {
-			{BuffId: 18107, BuffName: "Wound (18107)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 18107, BuffName: "Wound (18107)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		2243: {
-			{BuffId: 18803, BuffName: "Focus (18803)", EffectDurationMs: 4000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 18803, BuffName: "Focus (18803)", EffectDurationMs: 4000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		2802: {
 			{BuffId: 13744, BuffName: "Blazing Emblem (13744)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{33: 33}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 600000}}},
@@ -61,7 +61,7 @@ func init() {
 			{BuffId: 14530, BuffName: "Speed (14530)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 360000, CategoryId: 44, CategoryCooldownMs: 10000}}},
 		},
 		2825: {
-			{BuffId: 29638, BuffName: "Searing Arrow (29638)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 29638, BuffName: "Searing Arrow (29638)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 3.35}}}},
 		},
 		3475: {
 			{BuffId: 21142, BuffName: "Immolation (21142)", EffectDurationMs: -1},
@@ -103,7 +103,7 @@ func init() {
 			{BuffId: 9253, BuffName: "Replenish Mana II (9253)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
 		},
 		7717: {
-			{BuffId: 9632, BuffName: "Bladestorm (9632)", EffectDurationMs: 9000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 9632, BuffName: "Bladestorm (9632)", EffectDurationMs: 9000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		7726: {
 			{BuffId: 1293539, BuffName: "Scarlet Retribution (1293539)"},
@@ -132,6 +132,9 @@ func init() {
 		8190: {
 			{BuffId: 16405, BuffName: "Wound (16405)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
+		8345: {
+			{BuffId: 17768, BuffName: "Wolfshead Helm (17768)"},
+		},
 		8346: {
 			{BuffId: 10577, BuffName: "Heal (10577)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
 		},
@@ -144,8 +147,17 @@ func init() {
 		8708: {
 			{BuffId: 1317432, BuffName: "Forging Strike (1317432)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
+		9394: {
+			{BuffId: 22641, BuffName: "Reckless Charge (22641)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
+		},
+		9414: {
+			{BuffId: 1320726, BuffName: "Increased Feral Combat (1320726)"},
+		},
+		9449: {
+			{BuffId: 13494, BuffName: "Haste (13494)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
+		},
 		9651: {
-			{BuffId: 18081, BuffName: "Lightning Bolt (18081)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 18081, BuffName: "Lightning Bolt (18081)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		10030: {
 			{BuffId: 12022, BuffName: "Admiral's Hat (12022)", EffectDurationMs: 600000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 60000}}},
@@ -202,10 +214,10 @@ func init() {
 			{BuffId: 16608, BuffName: "Drain Life (16611)", EffectDurationMs: 4000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.03}}}},
 		},
 		12631: {
-			{BuffId: 7714, BuffName: "Fire Strike (7721)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 7714, BuffName: "Fire Strike (7721)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		12632: {
-			{BuffId: 16614, BuffName: "Lightning Strike (16615)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 16614, BuffName: "Lightning Strike (16615)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		12641: {
 			{BuffId: 16621, BuffName: "Self Invulnerability (16620)", EffectDurationMs: 3000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 10000, ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.05}}}},
@@ -214,28 +226,28 @@ func init() {
 			{BuffId: 16871, BuffName: "Bleakwood Curse (16871)", EffectDurationMs: 60000, MaxCumulativeStacks: 3, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		12777: {
-			{BuffId: 16898, BuffName: "Blaze (16898)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 16898, BuffName: "Blaze (16898)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		12781: {
 			{BuffId: 16908, BuffName: "Dispel Magic (16908)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		12790: {
-			{BuffId: 16916, BuffName: "Strength of the Champion (16916)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 120}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 16916, BuffName: "Strength of the Champion (16916)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 120}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		12792: {
-			{BuffId: 18082, BuffName: "Fireball (18082)", EffectDurationMs: 6000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 18082, BuffName: "Fireball (18082)", EffectDurationMs: 6000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		12794: {
 			{BuffId: 16921, BuffName: "Chain Lightning (16921)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 0.5}}}},
 		},
 		12795: {
-			{BuffId: 13318, BuffName: "Rend (13318)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 13318, BuffName: "Rend (13318)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		12796: {
 			{BuffId: 56, BuffName: "Stun (56)", EffectDurationMs: 3000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		12797: {
-			{BuffId: 16927, BuffName: "Chilled (16927)", EffectDurationMs: 5000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 16927, BuffName: "Chilled (16927)", EffectDurationMs: 5000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		12798: {
 			{BuffId: 16928, BuffName: "Armor Shatter (16928)", EffectDurationMs: 45000, MaxCumulativeStacks: 3, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
@@ -247,10 +259,10 @@ func init() {
 			{BuffId: 13441, BuffName: "Firebolt (16982)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 8000, ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.01}}}},
 		},
 		13035: {
-			{BuffId: 17511, BuffName: "Poison (17511)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 17511, BuffName: "Poison (17511)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		13040: {
-			{BuffId: 29640, BuffName: "Shadowbolt (29626)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 29640, BuffName: "Shadowbolt (29626)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 3}}}},
 		},
 		13051: {
 			{BuffId: 18214, BuffName: "Shadow Bolt (18214)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1.25}}}},
@@ -272,9 +284,6 @@ func init() {
 		},
 		13262: {
 			{BuffId: 18112, BuffName: "Firebolt (18112)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
-		},
-		13503: {
-			{BuffId: 17619, BuffName: "Alchemists Stone (17619)", EffectDurationMs: -1},
 		},
 		14134: {
 			{BuffId: 18364, BuffName: "Cloak of Fire (18364)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
@@ -298,7 +307,7 @@ func init() {
 			{BuffId: 22683, BuffName: "Onyxia Scale Cloak (22683)", EffectDurationMs: -1},
 		},
 		15814: {
-			{BuffId: 16406, BuffName: "Rend (16406)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 16406, BuffName: "Rend (16406)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		16004: {
 			{BuffId: 29641, BuffName: "Shadow Shot (29641)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
@@ -327,6 +336,9 @@ func init() {
 		},
 		16446: {
 			{BuffId: 23049, BuffName: "Sprint Duration Increase (23049)", EffectDurationMs: -1},
+		},
+		16463: {
+			{BuffId: 28539, BuffName: "Multi-Shot Damage Increase (28539)", EffectDurationMs: -1},
 		},
 		16471: {
 			{BuffId: 23300, BuffName: "Seal of the Crusader Judgement Increase (23300)", EffectDurationMs: -1},
@@ -358,6 +370,9 @@ func init() {
 		16558: {
 			{BuffId: 23049, BuffName: "Sprint Duration Increase (23049)", EffectDurationMs: -1},
 		},
+		16571: {
+			{BuffId: 28539, BuffName: "Multi-Shot Damage Increase (28539)", EffectDurationMs: -1},
+		},
 		16573: {
 			{BuffId: 22801, BuffName: "Ghost Wolf Speed (22801)", EffectDurationMs: -1},
 		},
@@ -371,17 +386,17 @@ func init() {
 			{BuffId: 21152, BuffName: "Earthshaker (21152)", EffectDurationMs: 3000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 2.1}}}},
 		},
 		17111: {
-			{BuffId: 7712, BuffName: "Fire Strike (7711)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 7712, BuffName: "Fire Strike (7711)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		17182: {
 			{BuffId: 21162, BuffName: "Fireball (21162)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 0.7}}}},
 			{BuffId: 21142, BuffName: "Immolation (21142)", EffectDurationMs: -1},
 		},
 		17193: {
-			{BuffId: 21159, BuffName: "Fireball (21159)", EffectDurationMs: 8000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 21159, BuffName: "Fireball (21159)", EffectDurationMs: 8000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
 		},
 		17223: {
-			{BuffId: 21179, BuffName: "Chain Lightning (21179)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 21179, BuffName: "Chain Lightning (21179)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1.5}}}},
 		},
 		17564: {
 			{BuffId: 23046, BuffName: "Searing Pain Cast Pushback Reduction (23046)", EffectDurationMs: -1},
@@ -416,6 +431,10 @@ func init() {
 		17759: {
 			{BuffId: 21958, BuffName: "Stout Heart (21958)"},
 			{BuffId: 21956, BuffName: "Physical Protection (21956)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 2554, CategoryCooldownMs: 10000}}},
+		},
+		18168: {
+			{BuffId: 22600, BuffName: "Force Reactive Disk (22618)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 1000}}},
+			{BuffId: 22619, BuffName: "Force Reactive Disk (22620)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 1000, ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.5}}}},
 		},
 		18355: {
 			{BuffId: 22854, BuffName: "Increased Hunter Pet Damage (22854)"},
@@ -456,6 +475,9 @@ func init() {
 		18951: {
 			{BuffId: 23409, BuffName: "Soft Landin' (23409)", EffectDurationMs: -1},
 		},
+		19019: {
+			{BuffId: 21992, BuffName: "Thunderfury (21992)", EffectDurationMs: 12000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 6}}}},
+		},
 		19024: {
 			{BuffId: 23506, BuffName: "Aura of Protection (23506)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 540000, CategoryId: 2554, CategoryCooldownMs: 20000}}},
 			{BuffId: 1318318, BuffName: "Arena Grand Master (1318318)", EffectDurationMs: -1},
@@ -464,7 +486,7 @@ func init() {
 			{BuffId: 18398, BuffName: "Frost Blast (18398)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1.4}}}},
 		},
 		19100: {
-			{BuffId: 23592, BuffName: "Lightning Bolt (23592)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+			{BuffId: 23592, BuffName: "Lightning Bolt (23592)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1.4}}}},
 		},
 		19141: {
 			{BuffId: 23595, BuffName: "Luffa (23595)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryCooldownMs: -1}}},
@@ -479,13 +501,13 @@ func init() {
 			{BuffId: 18211, BuffName: "Shadow Bolt (18211)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 0.4}}}},
 		},
 		19287: {
-			{BuffId: 23682, BuffName: "Heroism (23689)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 23682, BuffName: "Heroism (23689)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 2}}}},
 		},
 		19288: {
 			{BuffId: 23684, BuffName: "Aura of the Blue Dragon (23688)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{13: 150}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.02}}}},
 		},
 		19289: {
-			{BuffId: 23687, BuffName: "Lightning Strike (23686)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 23687, BuffName: "Lightning Strike (23686)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		19290: {
 			{BuffId: 23701, BuffName: "Twisting Nether (23701)", EffectDurationMs: -1},
@@ -498,6 +520,9 @@ func init() {
 		},
 		19336: {
 			{BuffId: 23721, BuffName: "Arcane Infused (23721)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 10000}}},
+		},
+		19337: {
+			{BuffId: 23720, BuffName: "Blessing of the Black Book (23720)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 30000}}},
 		},
 		19339: {
 			{BuffId: 23723, BuffName: "Mind Quickening (23723)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
@@ -789,7 +814,7 @@ func init() {
 			{BuffId: 27518, BuffName: "Spell Damage Reduction (27518)", EffectDurationMs: -1},
 		},
 		22194: {
-			{BuffId: 18350, BuffName: "Dummy Trigger (27522)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 18350, BuffName: "Dummy Trigger (27522)", EffectDurationMs: -1, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		22196: {
 			{BuffId: 27539, BuffName: "Obsidian Armor (27539)", EffectDurationMs: -1},
@@ -818,6 +843,9 @@ func init() {
 		22857: {
 			{BuffId: 22801, BuffName: "Ghost Wolf Speed (22801)", EffectDurationMs: -1},
 		},
+		22862: {
+			{BuffId: 28539, BuffName: "Multi-Shot Damage Increase (28539)", EffectDurationMs: -1},
+		},
 		22865: {
 			{BuffId: 23046, BuffName: "Searing Pain Cast Pushback Reduction (23046)", EffectDurationMs: -1},
 		},
@@ -842,11 +870,14 @@ func init() {
 		23005: {
 			{BuffId: 28849, BuffName: "Lesser Healing Wave (28849)"},
 		},
+		23006: {
+			{BuffId: 28851, BuffName: "Increased Flash of Light Healing (28851)"},
+		},
 		23027: {
 			{BuffId: 28760, BuffName: "Mana Infusion (28760)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
 		},
 		23040: {
-			{BuffId: 28773, BuffName: "Glyph of Deflection (28773)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
+			{BuffId: 28773, BuffName: "Glyph of Deflection (28773)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{24: 235}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
 		},
 		23041: {
 			{BuffId: 28777, BuffName: "Slayer's Crest (28777)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{14: 260, 15: 260}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
@@ -860,8 +891,20 @@ func init() {
 		23047: {
 			{BuffId: 28780, BuffName: "The Eye of the Dead (28780)", EffectDurationMs: 30000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 450}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
 		},
+		23197: {
+			{BuffId: 28854, BuffName: "Improved Moonfire (28854)"},
+		},
+		23199: {
+			{BuffId: 28857, BuffName: "Increased Lightning Damage (28857)"},
+		},
+		23203: {
+			{BuffId: 28852, BuffName: "Improved Seal of the Crusader (28852)"},
+		},
 		23274: {
 			{BuffId: 23300, BuffName: "Seal of the Crusader Judgement Increase (23300)", EffectDurationMs: -1},
+		},
+		23279: {
+			{BuffId: 28539, BuffName: "Multi-Shot Damage Increase (28539)", EffectDurationMs: -1},
 		},
 		23282: {
 			{BuffId: 23046, BuffName: "Searing Pain Cast Pushback Reduction (23046)", EffectDurationMs: -1},
@@ -881,6 +924,9 @@ func init() {
 		23558: {
 			{BuffId: 29506, BuffName: "The Burrower's Shell (29506)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000}}},
 		},
+		23570: {
+			{BuffId: 29602, BuffName: "Jom Gabbar (29602)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryId: 1141, CategoryCooldownMs: 20000}}},
+		},
 		191312: {
 			{BuffId: 370391, BuffName: "Failsafe Phylactery (370391)"},
 		},
@@ -890,8 +936,17 @@ func init() {
 		221315: {
 			{BuffId: 1306267, BuffName: "Traveler's Mark (1306267)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000, CategoryCooldownMs: 1800000}}},
 		},
+		249397: {
+			{BuffId: 1302545, BuffName: "Increased Damage Undead 01 (1302545)"},
+		},
+		249398: {
+			{BuffId: 1248756, BuffName: "Meditation (1248756)"},
+		},
 		249441: {
 			{BuffId: 1302521, BuffName: "Improved Wrath (1248996)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.5}}}},
+		},
+		249442: {
+			{BuffId: 1249005, BuffName: "Seal Cost Reduction (1249005)"},
 		},
 		249443: {
 			{BuffId: 1249011, BuffName: "Totem of Ancestral Protection (1249011)"},
@@ -903,13 +958,13 @@ func init() {
 			{BuffId: 1249113, BuffName: "Molten Fury (1249113)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{14: 55, 15: 55}}}, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
 		},
 		249473: {
-			{BuffId: 1249119, BuffName: "Eternal Power (1249118)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 40, 5: 13}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1249119, BuffName: "Eternal Power (1249118)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{4: 40, 5: 13}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		260186: {
 			{BuffId: 16784, BuffName: "Shadow Bolt (16784)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		260205: {
-			{BuffId: 1265634, BuffName: "Ancient Power (1318159)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1265634, BuffName: "Ancient Power (1318159)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		260819: {
 			{BuffId: 23453, BuffName: "Gnomish Transporter (23453)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 14400000, CategoryId: 2467, CategoryCooldownMs: 14400000}}},
@@ -920,12 +975,15 @@ func init() {
 		260824: {
 			{BuffId: 1270941, BuffName: "Poultryizer (1270941)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryCooldownMs: -1}}},
 		},
+		263412: {
+			{BuffId: 1270478, BuffName: "Flame Charged (1270478)"},
+		},
 		268873: {
 			{BuffId: 1294063, BuffName: "Defender of the Barkskin (1294063)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 94, CategoryCooldownMs: 20000}}},
 			{BuffId: 1318514, BuffName: "Defender of the Barkskin (1318514)"},
 		},
 		269741: {
-			{BuffId: 1318324, BuffName: "Scented Runewood Brooch (1318323)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1318324, BuffName: "Scented Runewood Brooch (1318323)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 			{BuffId: 1296664, BuffName: "Irresistible Scent (1296664)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryCooldownMs: -1}}},
 		},
 		270226: {
@@ -951,6 +1009,15 @@ func init() {
 		},
 		272433: {
 			{BuffId: 1291077, BuffName: "Increased Flame Shock Duration (1291077)"},
+		},
+		272434: {
+			{BuffId: 1291083, BuffName: "Swift Judgement Cooldown Reduction (1291083)"},
+		},
+		272435: {
+			{BuffId: 1291086, BuffName: "Judgement Increased Damage (1291086)"},
+		},
+		272436: {
+			{BuffId: 1291089, BuffName: "Holy Light Mana Cost Reduction (1291089)"},
 		},
 		272437: {
 			{BuffId: 1291097, BuffName: "Damage Sigmoid (1291097)", EffectDurationMs: 15000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 90000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
@@ -1084,6 +1151,9 @@ func init() {
 		273445: {
 			{BuffId: 1293542, BuffName: "Flash Heal Cast Pushback Reduction (1293542)"},
 		},
+		273817: {
+			{BuffId: 1292560, BuffName: "Dig (1292560)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 120000, CategoryCooldownMs: -1}}},
+		},
 		274176: {
 			{BuffId: 22801, BuffName: "Ghost Wolf Speed (22801)", EffectDurationMs: -1},
 		},
@@ -1118,10 +1188,10 @@ func init() {
 			{BuffId: 1293820, BuffName: "Toy Soldier (1293820)", EffectDurationMs: 20000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 2554, CategoryCooldownMs: 20000}}},
 		},
 		274425: {
-			{BuffId: 1294058, BuffName: "White Obsidian (1294055)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 10, ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1294058, BuffName: "White Obsidian (1294055)", EffectDurationMs: 10000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 10}}},
 		},
 		274430: {
-			{BuffId: 1294065, BuffName: "Rock Sentinel (1294064)", EffectDurationMs: 10000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 300}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1294065, BuffName: "Rock Sentinel (1294064)", EffectDurationMs: 10000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{27: 300}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		274759: {
 			{BuffId: 1295270, BuffName: "Prototype Pathcarver (1295270)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000, CategoryId: 1141, CategoryCooldownMs: 15000}}},
@@ -1146,7 +1216,7 @@ func init() {
 			{BuffId: 1297921, BuffName: "Cremate (1297921)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		275630: {
-			{BuffId: 1297082, BuffName: "Eye of Influence (1297085)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1297082, BuffName: "Eye of Influence (1297085)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		275645: {
 			{BuffId: 1297357, BuffName: "Reforged Spear (1297357)", EffectDurationMs: 14000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
@@ -1174,6 +1244,12 @@ func init() {
 		},
 		277950: {
 			{BuffId: 1302968, BuffName: "Wastewanderer Rations (1302968)", EffectDurationMs: -1},
+		},
+		279247: {
+			{BuffId: 1306433, BuffName: "Holy Shield Block Value Increase (1306433)"},
+		},
+		279248: {
+			{BuffId: 1306429, BuffName: "Holy Shock Critical Chance Increase (1306429)"},
 		},
 		279249: {
 			{BuffId: 1306448, BuffName: "Lesser Healing Wave Crit Chance (1306448)"},
@@ -1212,10 +1288,10 @@ func init() {
 			{BuffId: 1317583, BuffName: "Poison (1317583)", EffectDurationMs: 9000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		285277: {
-			{BuffId: 1318068, BuffName: "Large Bomb (1318069)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1318068, BuffName: "Large Bomb (1318069)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		285278: {
-			{BuffId: 1318121, BuffName: "Huge Bomb (1318123)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 1}}}},
+			{BuffId: 1318121, BuffName: "Huge Bomb (1318123)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
 		285281: {
 			{BuffId: 1318178, BuffName: "Cracked Skull (1318178)", EffectDurationMs: 1000, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
@@ -1225,6 +1301,9 @@ func init() {
 		},
 	})
 	shared.RegisterEnchantEffects(map[int32][]*proto.ItemEffect{
+		1900: {
+			{BuffId: 20007, BuffName: "Holy Strength (20007)", EffectDurationMs: 15000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 100}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: 1}}}},
+		},
 		7940: {
 			{BuffId: 1231124, BuffName: "Righteous Strength (1231124)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 120}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
 		},
@@ -1236,6 +1315,9 @@ func init() {
 		},
 		7943: {
 			{BuffId: 1232169, BuffName: "Righteous Inquisition (1232169)", EffectDurationMs: 20000, ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{0: 200}}}, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
+		8217: {
+			{BuffId: 1248806, Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{ProcRate: &proto.ProcEffect_ProcChance{ProcChance: 0.09}}}},
 		},
 	})
 }

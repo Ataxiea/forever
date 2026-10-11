@@ -15,8 +15,8 @@ import (
 
 const itemEffectsTableFileName = "sim/common/forever/item_effects_auto_gen.go"
 
-// The effects the item and enchant helpers in sim/common/shared resolve a generated registration
-// from: on-use cooldowns and categories, stats scaled to every item level state, and stacking auras.
+// The effects the item and enchant helpers in sim/common/shared resolve a registration from: on-use
+// cooldowns and categories, stats scaled to every item level state, proc rates and stacking auras.
 // The sim reads them from this file and not from the database.
 func GenerateItemEffectsTable(itemEffects map[int32][]*proto.ItemEffect, enchantEffects map[int32][]*proto.ItemEffect) error {
 	var b strings.Builder
@@ -102,10 +102,16 @@ func protoFields(v reflect.Value) string {
 	return strings.Join(parts, ", ")
 }
 
-// The effects of every item or enchant a generated file writes a registration for, live or
-// commented out, so that uncommenting one finds its data. A skipped effect names no helper.
-func registeredEffects(effects map[int32][]*proto.ItemEffect, groupSets ...[]*Group) map[int32][]*proto.ItemEffect {
+// The effects of every item or enchant registered by hand, and of every one a generated file writes a
+// registration for, live or commented out, so that uncommenting one finds its data. A skipped effect
+// names no helper.
+func registeredEffects(effects map[int32][]*proto.ItemEffect, byHand func(int32) bool, groupSets ...[]*Group) map[int32][]*proto.ItemEffect {
 	registered := map[int32][]*proto.ItemEffect{}
+	for id, idEffects := range effects {
+		if len(idEffects) > 0 && byHand(id) {
+			registered[id] = idEffects
+		}
+	}
 	for _, groups := range groupSets {
 		for _, grp := range groups {
 			for _, entry := range grp.Entries {

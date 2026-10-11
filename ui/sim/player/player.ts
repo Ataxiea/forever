@@ -35,8 +35,9 @@ import { CURRENT_API_VERSION } from '../constants/other';
 import { SimSettingCategories } from '../constants/sim_settings';
 import type { PresetEpWeights } from '../presets/types';
 import { ActionId } from '../proto/action_id';
+import { addPartyBuffItems } from '../proto/buff_items';
 import { Database } from '../proto/database';
-import { EquippedItem, getWeaponDpsStatsBySlot } from '../proto/equipped_item';
+import { enchantWeaponDamageEP, EquippedItem, getWeaponDpsStatsBySlot } from '../proto/equipped_item';
 import { Gear, ItemSwapGear } from '../proto/gear';
 import { canEquipEnchant, canEquipItem, enchantAppliesToItem, isPVPItem } from '../proto/items';
 import { specTypeFunctions, withSpec } from '../proto/spec_functions';
@@ -312,7 +313,13 @@ export class Player<SpecType extends Spec> {
 
 	// Item-swap fields share one version counter (ItemSwapSettings facade).
 	patchItemSwap(patch: { itemSwapEnabled?: boolean; itemSwapGear?: ItemSwapGear; itemSwapBonusStats?: Stats }) {
-		this.write(patch, ['itemSwap']);
+		// The swap weapons' stone imbues are corrected in the same write as the swap gear, as setGear does for the main weapons.
+		const adjustedConsumes = patch.itemSwapGear?.adjustSwapImbues(this.slice().consumables);
+		if (adjustedConsumes && adjustedConsumes !== this.slice().consumables) {
+			this.write({ ...patch, consumables: adjustedConsumes }, ['itemSwap', 'consumables']);
+		} else {
+			this.write(patch, ['itemSwap']);
+		}
 	}
 
 	getItemSwapField<F extends 'itemSwapEnabled' | 'itemSwapGear' | 'itemSwapBonusStats'>(field: F): PlayerSlice[F] {
@@ -1175,12 +1182,7 @@ export class Player<SpecType extends Spec> {
 			ep = this.computeStatsEP(new Stats(enchant.stats, enchant.pseudoStats));
 			this.enchantEPCache.set(enchant.effectId, ep);
 		}
-
-		// Flat weapon damage is worth the DPS it adds at the enchanted weapon's speed, as a weapon's own damage is.
-		if (enchant.weaponDamage && weaponSpeed) {
-			ep += (enchant.weaponDamage / weaponSpeed) * epPerWeaponDps;
-		}
-		return ep;
+		return ep + enchantWeaponDamageEP(enchant, weaponSpeed, epPerWeaponDps);
 	}
 
 	computeWeaponDpsEP(slot: ItemSlot): number {
@@ -1431,7 +1433,9 @@ export class Player<SpecType extends Spec> {
 	private toDatabase(): SimDatabase {
 		const dbGear = this.getGear().toDatabase(this.sim.db);
 		const dbItemSwapGear = this.itemSwapSettings.getGear().toDatabase(this.sim.db);
-		return Database.mergeSimDatabases(dbGear, dbItemSwapGear);
+		const database = Database.mergeSimDatabases(dbGear, dbItemSwapGear);
+		addPartyBuffItems(database, this.sim.db, this.getParty()?.getBuffs());
+		return database;
 	}
 
 	toProto(forExport?: boolean, forSimming?: boolean, exportCategories?: Array<SimSettingCategories>): PlayerProto {

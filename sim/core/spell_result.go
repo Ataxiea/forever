@@ -370,7 +370,17 @@ func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage
 		partialOutcome = result.Outcome & OutcomePartial
 	}
 
-	outcomeApplier(sim, result, attackTable)
+	// A full resist is a miss, as a binary spell's resist is: it rolls no hit or crit and lands nothing.
+	if partialOutcome.ResistedTenths() == 10 {
+		partialOutcome = OutcomeEmpty
+		result.Outcome = OutcomeMiss
+		result.Damage = 0
+		if !spell.expecting {
+			spell.SpellMetrics[target.UnitIndex].Misses++
+		}
+	} else {
+		outcomeApplier(sim, result, attackTable)
+	}
 	afterOutcome := result.Damage
 
 	// The outcome scales the mitigated damage by its multiplier and then takes the block off, so the
@@ -783,7 +793,7 @@ func (spell *Spell) AttackerDamageMultiplier(attackTable *AttackTable, isDot boo
 	damageMultiplierAdditive := TernaryFloat64(
 		isDot,
 		spell.DamageMultiplierAdditive+spell.Unit.PseudoStats.DotDamageMultiplierAdditive-1,
-		spell.DamageMultiplierAdditive+spell.DirectDamageMultiplierAdditive,
+		(spell.DamageMultiplierAdditive+spell.DirectDamageMultiplierAdditive)*spell.DirectDamageMultiplier,
 	)
 
 	return spell.attackerDamageMultiplierInternal(attackTable) *
@@ -859,7 +869,7 @@ func (spell *Spell) casterHealingMultiplier(isPeriodic bool) float64 {
 
 	additive := spell.DamageMultiplierAdditive
 	if !isPeriodic {
-		additive += spell.DirectDamageMultiplierAdditive
+		additive = (additive + spell.DirectDamageMultiplierAdditive) * spell.DirectDamageMultiplier
 	}
 
 	multiplier := spell.DamageMultiplier * additive * spell.Unit.PseudoStats.HealingDealtMultiplier

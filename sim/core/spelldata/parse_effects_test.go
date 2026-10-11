@@ -3,6 +3,7 @@ package spelldata
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -225,20 +226,58 @@ func TestParseKeepsTheHitAndDotModifiersApart(t *testing.T) {
 	parsed := ParseStatic(character, Find(1100))
 
 	kinds := appliedKinds(parsed)
-	if len(kinds) != 2 || kinds[0] != "SpellMod_DirectDamageDone_Flat" || kinds[1] != "SpellMod_DotDamageDone_Pct" {
+	if len(kinds) != 2 || kinds[0] != "SpellMod_DirectDamageDone_Pct" || kinds[1] != "SpellMod_DotDamageDone_Pct" {
 		t.Errorf("the pair became %v, want a direct damage mod and a dot damage mod", kinds)
 	}
 	if len(parsed.Skipped) != 0 {
 		t.Errorf("skipped %d effects, want none", len(parsed.Skipped))
 	}
-	if got := spell.DirectDamageMultiplierAdditive; got != 0.1 {
-		t.Errorf("the hit modifier: %v, want 0.1", got)
+	if got := spell.DirectDamageMultiplier; math.Abs(got-1.1) > 1e-9 {
+		t.Errorf("the hit modifier: %v, want 1.1", got)
 	}
 	if got := spell.DamageMultiplierAdditive; got != 1 {
 		t.Errorf("the multiplier the ticks share with the hit: %v, want 1", got)
 	}
 	if got := spell.AOEDot().PeriodicDamageMultiplier; math.Abs(got-1.1) > 1e-9 {
 		t.Errorf("the dot modifier: %v, want 1.1", got)
+	}
+}
+
+// Elemental Focus's Clearcasting parses to a percent cost mod: with its cost row taking the whole
+// cost, the spells it names are free while it is up and cost what they did once it drops.
+func TestGeneratedFreeCastRowGivesTheCostBack(t *testing.T) {
+	withGeneratedStore(t)
+	sim := &core.Simulation{}
+	character := parseCharacter(&proto.Player{
+		Class: proto.Class_ClassShaman,
+		Spec:  &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{}},
+	})
+
+	row := *MustFind(16246)
+	row.Effects = slices.Clone(row.Effects)
+	costRow := row.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST))
+	costRow.BasePoints = -100
+	spell := character.RegisterSpell(core.SpellConfig{
+		ActionID:    core.ActionID{SpellID: 2190},
+		ClassFlags:  costRow.ClassFlags,
+		SpellSchool: core.SpellSchoolNature,
+		ManaCost:    core.ManaCostOptions{FlatCost: 120},
+	})
+	base := spell.Cost.GetCurrentCost()
+
+	aura := character.RegisterAura(AuraConfig(&row))
+	parsed := ParseEffects(character, aura, &row)
+	if kinds := appliedKinds(parsed); len(kinds) != 1 || kinds[0] != "SpellMod_PowerCost_Pct" {
+		t.Fatalf("attached %v, want the cost row alone", kinds)
+	}
+
+	aura.Activate(sim)
+	if got := spell.Cost.GetCurrentCost(); got != 0 {
+		t.Errorf("the cost while Clearcasting is up: %v, want 0", got)
+	}
+	aura.Deactivate(sim)
+	if got := spell.Cost.GetCurrentCost(); got != base {
+		t.Errorf("the cost after Clearcasting dropped: %v, want %v", got, base)
 	}
 }
 
@@ -511,13 +550,13 @@ func TestEveryTableRow(t *testing.T) {
 		{flat, int32(dbcenums.SPELLMOD_EFFECT2), 20, "effect2-assumed-damage SpellMod_BaseDamage_Flat", 20, false},
 		{flat, int32(dbcenums.SPELLMOD_EFFECT3), 20, "effect3-assumed-damage SpellMod_BaseDamage_Flat", 20, false},
 
-		{pct, int32(dbcenums.SPELLMOD_DAMAGE), 15, "SpellMod_DirectDamageDone_Flat", 0.15, false},
+		{pct, int32(dbcenums.SPELLMOD_DAMAGE), 15, "SpellMod_DirectDamageDone_Pct", 0.15, false},
 		{pct, int32(dbcenums.SPELLMOD_ALL_EFFECTS), 15, "SpellMod_DamageDone_Flat", 0.15, false},
 		{pct, int32(dbcenums.SPELLMOD_DURATION), 20, "SpellMod_DotBaseDuration_Pct", 0.2, false},
 		{pct, int32(dbcenums.SPELLMOD_THREAT), -20, "SpellMod_ThreatMultiplier_Pct", -0.2, false},
 		{pct, int32(dbcenums.SPELLMOD_CASTING_TIME), -10, "SpellMod_CastTime_Pct", -0.1, false},
 		{pct, int32(dbcenums.SPELLMOD_COOLDOWN), -20, "SpellMod_Cooldown_Multiplier", 0.8, false},
-		{pct, int32(dbcenums.SPELLMOD_COST), -20, "SpellMod_PowerCost_Pct_Add", -0.2, false},
+		{pct, int32(dbcenums.SPELLMOD_COST), -20, "SpellMod_PowerCost_Pct", -0.2, false},
 		{pct, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS), 20, "SpellMod_CritMultiplier_Flat", 0.2, false},
 		{pct, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE), 7, "SpellMod_BonusCrit_Percent", 7, false},
 		{pct, int32(dbcenums.SPELLMOD_DOT), 10, "SpellMod_DotDamageDone_Pct", 0.1, false},
@@ -538,6 +577,7 @@ func TestEveryTableRow(t *testing.T) {
 		{dbcenums.A_MOD_RESISTANCE, 1, 100, "stat Armor", 100, false},
 		{dbcenums.A_MOD_BASE_RESISTANCE_PCT, 1, 10, "equip-scaling Armor", 1.1, false},
 		{dbcenums.A_MOD_RESISTANCE_PCT, 1, 8, "multiply-stat Armor", 1.08, false},
+		{dbcenums.A_MOD_ARMOR_NO_MODS, 1, -450, "stat Armor", -450, false},
 		{dbcenums.A_MOD_RESISTANCE, 16, 30, "stat FrostResistance", 30, false},
 		{dbcenums.A_MOD_RESISTANCE, 127, 30,
 			"stat Armor, stat FireResistance, stat NatureResistance, stat FrostResistance, stat ShadowResistance, stat ArcaneResistance", 30, false},
@@ -800,6 +840,39 @@ func TestParseStaticScalesEquippedArmor(t *testing.T) {
 
 	if got := character.EquipStats()[stats.Armor]; got != 1100 {
 		t.Errorf("armor after the row: %v, want 1100", got)
+	}
+}
+
+// The percent armor modifier scales the resistance aura's armor and leaves the no-mods aura's armor
+// alone, which still counts in Armor.
+func TestParseStaticArmorNoModsOutsideThePercentModifier(t *testing.T) {
+	withRows(t, parseRows())
+	character := parseWarrior()
+	before := character.SortAndApplyStatDependencies(character.GetStats())[stats.Armor]
+
+	ParseStatic(character, &Spell{ID: 6000, Name: "Armor Rows", ClassFlags: parseFamily, Effects: []Effect{
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_RESISTANCE, Misc: miscArmor, BasePoints: 1000},
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_ARMOR_NO_MODS, Misc: miscArmor, BasePoints: 500},
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_RESISTANCE_PCT, Misc: miscArmor, BasePoints: 10},
+	}})
+
+	got := character.SortAndApplyStatDependencies(character.GetStats())[stats.Armor]
+	if want := (before+1000)*1.1 + 500; math.Abs(got-want) > 1e-9 {
+		t.Errorf("armor: %v, want %v from %v before", got, want, before)
+	}
+}
+
+// The no-mods armor row takes armor alone: a mask naming another school is skipped with a reason
+// rather than parsed for its armor bit.
+func TestParseArmorNoModsSkipsAMaskBeyondArmor(t *testing.T) {
+	withRows(t, parseRows())
+	character := parseWarrior()
+
+	parsed := ParseStatic(character, &Spell{ID: 6000, Name: "Armor Rows", ClassFlags: parseFamily, Effects: []Effect{
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_ARMOR_NO_MODS, Misc: miscArmor | 4, BasePoints: 500},
+	}})
+	if len(parsed.Applied) != 0 || len(parsed.Skipped) != 1 || parsed.Skipped[0].Reason == "" {
+		t.Errorf("attached %v and skipped %v, want the effect skipped with a reason", appliedKinds(parsed), parsed.Skipped)
 	}
 }
 

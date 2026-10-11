@@ -1,7 +1,7 @@
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
-import { PseudoStat, Spec, Stat } from '@generated/proto/common';
+import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
@@ -51,11 +51,6 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 			Stat.StatStamina,
 			Stat.StatHolyDamage,
 			Stat.StatSpellPiercing,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
 		],
 		[
 			PseudoStat.PseudoStatMeleeHitPercent,
@@ -83,7 +78,7 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 			return hitCap.add(expCap);
 		})(),
 		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
+		consumables: Presets.TwistOfLightConsumables,
 		// Default talents.
 		talents: Presets.TwistOfLightTalents.data,
 		// Default spec-specific settings.
@@ -126,6 +121,7 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 	otherInputs: {
 		inputs: [OtherInputs.InputDelay, OtherInputs.TankAssignment, OtherInputs.InFrontOfTarget],
 	},
+	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand],
 	encounterPicker: {
 		// Whether to include 'Execute Duration (%)' in the 'Encounter' section of the settings tab.
 		showExecuteProportion: false,
@@ -137,7 +133,9 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 		// Preset talents that the user can quickly select.
 		talents: [Presets.TwistOfLightTalents, Presets.HolyShockTalents],
 		// Preset gear configurations that the user can quickly select.
-		gear: [Presets.TwistOfLightGearPreset, Presets.HolySHockGearPreset],
+		gear: [Presets.TwistOfLightGearPreset, Presets.HolyShockGearPreset],
+		settings: [Presets.TwistOfLightSettings, Presets.HolyShockSettings],
+		builds: [Presets.TwistOfLightBuild, Presets.HolyShockBuild],
 	},
 
 	autoRotation: (player: Player<Spec.SpecRetributionPaladin>): APLRotation => {

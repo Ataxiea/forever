@@ -245,6 +245,34 @@
 					"additionalProperties": false,
 					"required": ["unknown", "beast", "demon", "dragonkin", "elemental", "giant", "humanoid", "mechanical", "undead"]
 				},
+				"creature_families": {
+					"type": "object",
+					"properties": {
+						"unknown": {
+							"type": "string"
+						},
+						"naga": {
+							"type": "string"
+						},
+						"satyr": {
+							"type": "string"
+						},
+						"aquatic": {
+							"type": "string"
+						},
+						"earth_elemental": {
+							"type": "string"
+						},
+						"fire_elemental": {
+							"type": "string"
+						},
+						"mountain_giant": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["unknown", "naga", "satyr", "aquatic", "earth_elemental", "fire_elemental", "mountain_giant"]
+				},
 				"area_types": {
 					"type": "object",
 					"properties": {
@@ -1114,6 +1142,7 @@
 				"tanks",
 				"status",
 				"mob_types",
+				"creature_families",
 				"area_types",
 				"sources",
 				"raids",
@@ -2168,38 +2197,6 @@
 							"additionalProperties": false,
 							"required": ["label", "tooltip"]
 						},
-						"sync_type": {
-							"type": "object",
-							"properties": {
-								"label": {
-									"type": "string"
-								},
-								"tooltip": {
-									"type": "string"
-								},
-								"values": {
-									"type": "object",
-									"properties": {
-										"automatic": {
-											"type": "string"
-										},
-										"none": {
-											"type": "string"
-										},
-										"perfect_sync": {
-											"type": "string"
-										},
-										"delayed_offhand": {
-											"type": "string"
-										}
-									},
-									"additionalProperties": false,
-									"required": ["automatic", "none", "perfect_sync", "delayed_offhand"]
-								}
-							},
-							"additionalProperties": false,
-							"required": ["label", "tooltip", "values"]
-						},
 						"show_1h_weapons": {
 							"type": "object",
 							"properties": {
@@ -2438,7 +2435,6 @@
 						"assume_bleed_active",
 						"cannot_shred_target",
 						"okf_uptime",
-						"sync_type",
 						"show_1h_weapons",
 						"show_2h_weapons",
 						"show_all_enchants",
@@ -2464,6 +2460,9 @@
 							"type": "object",
 							"properties": {
 								"title": {
+									"type": "string"
+								},
+								"trigger": {
 									"type": "string"
 								},
 								"min_lvl": {
@@ -2504,7 +2503,7 @@
 								}
 							},
 							"additionalProperties": false,
-							"required": ["title", "min_lvl", "reset", "types"]
+							"required": ["title", "trigger", "min_lvl", "reset", "types"]
 						},
 						"potions": {
 							"type": "object",
@@ -2515,12 +2514,18 @@
 								"prepop": {
 									"type": "string"
 								},
-								"combat": {
+								"offensive": {
+									"type": "string"
+								},
+								"defensive": {
+									"type": "string"
+								},
+								"resource": {
 									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["title", "prepop", "combat"]
+							"required": ["title", "prepop", "offensive", "defensive", "resource"]
 						},
 						"elixirs": {
 							"type": "object",
@@ -2576,10 +2581,16 @@
 								},
 								"ohImbue": {
 									"type": "string"
+								},
+								"swapMhImbue": {
+									"type": "string"
+								},
+								"swapOhImbue": {
+									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["title", "mhImbue", "ohImbue"]
+							"required": ["title", "mhImbue", "ohImbue", "swapMhImbue", "swapOhImbue"]
 						},
 						"weaponImbue": {
 							"type": "object",
@@ -2592,10 +2603,16 @@
 								},
 								"ohWeaponImbue": {
 									"type": "string"
+								},
+								"swapMhWeaponImbue": {
+									"type": "string"
+								},
+								"swapOhWeaponImbue": {
+									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["title", "mhWeaponImbue", "ohWeaponImbue"]
+							"required": ["title", "mhWeaponImbue", "ohWeaponImbue", "swapMhWeaponImbue", "swapOhWeaponImbue"]
 						},
 						"scrolls": {
 							"type": "object",
@@ -2999,6 +3016,19 @@
 						"mob_type": {
 							"type": "string"
 						},
+						"creature_family": {
+							"type": "object",
+							"properties": {
+								"label": {
+									"type": "string"
+								},
+								"tooltip": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": ["label", "tooltip"]
+						},
 						"tanked_by": {
 							"type": "object",
 							"properties": {
@@ -3135,6 +3165,7 @@
 						"ai",
 						"level",
 						"mob_type",
+						"creature_family",
 						"tanked_by",
 						"swing_speed",
 						"dual_wield",
@@ -3415,16 +3446,10 @@
 								},
 								"frozen_slots": {
 									"type": "string"
-								},
-								"reforge": {
-									"type": "string"
-								},
-								"reforge_description": {
-									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["enchants", "frozen_slots", "reforge", "reforge_description"]
+							"required": ["enchants", "frozen_slots"]
 						},
 						"iterations": {
 							"type": "string"
@@ -3577,13 +3602,7 @@
 						"total_combinations": {
 							"type": "string"
 						},
-						"restoring_reforges_from_cache": {
-							"type": "string"
-						},
 						"building_candidate_gear_sets": {
-							"type": "string"
-						},
-						"reforging_iteration_rounds": {
 							"type": "string"
 						},
 						"baseline_round": {
@@ -3617,9 +3636,7 @@
 					"additionalProperties": false,
 					"required": [
 						"total_combinations",
-						"restoring_reforges_from_cache",
 						"building_candidate_gear_sets",
-						"reforging_iteration_rounds",
 						"baseline_round",
 						"refining_rounds",
 						"low_iteration_rounds",
@@ -8483,9 +8500,6 @@
 										"stats_type": {
 											"type": "string"
 										},
-										"show_all_stats": {
-											"type": "string"
-										},
 										"dps_tps_reference": {
 											"type": "string"
 										},
@@ -8752,7 +8766,6 @@
 										"ep",
 										"weights",
 										"stats_type",
-										"show_all_stats",
 										"dps_tps_reference",
 										"healing_reference",
 										"mitigation_reference",
@@ -8869,6 +8882,33 @@
 								},
 								"freeze_item_slots": {
 									"type": "string"
+								},
+								"settings": {
+									"type": "string"
+								},
+								"frozen_slots": {
+									"type": "string"
+								},
+								"enchants": {
+									"type": "string"
+								},
+								"skipped_slots_description": {
+									"type": "string"
+								},
+								"skipped_slots_unlisted": {
+									"type": "string"
+								},
+								"go_to_batch_sim": {
+									"type": "string"
+								},
+								"use_enchant_presets": {
+									"type": "string"
+								},
+								"use_enchant_presets_tooltip": {
+									"type": "string"
+								},
+								"no_enchant_preset": {
+									"type": "string"
 								}
 							},
 							"additionalProperties": false,
@@ -8895,7 +8935,16 @@
 								"modify_in_editor",
 								"hard_cap_info",
 								"edit_weights",
-								"freeze_item_slots"
+								"freeze_item_slots",
+								"settings",
+								"frozen_slots",
+								"enchants",
+								"skipped_slots_description",
+								"skipped_slots_unlisted",
+								"go_to_batch_sim",
+								"use_enchant_presets",
+								"use_enchant_presets_tooltip",
+								"no_enchant_preset"
 							]
 						}
 					},
@@ -9165,22 +9214,6 @@
 						"title": {
 							"type": "string"
 						},
-						"mode": {
-							"type": "object",
-							"properties": {
-								"label": {
-									"type": "string"
-								},
-								"key": {
-									"type": "string"
-								},
-								"all": {
-									"type": "string"
-								}
-							},
-							"additionalProperties": false,
-							"required": ["label", "key", "all"]
-						},
 						"groups": {
 							"type": "object",
 							"properties": {
@@ -9403,7 +9436,6 @@
 					"additionalProperties": false,
 					"required": [
 						"title",
-						"mode",
 						"groups",
 						"hands",
 						"melee_crit_cap",
@@ -9420,6 +9452,69 @@
 			},
 			"additionalProperties": false,
 			"required": ["iterations", "warnings", "buttons", "header", "results", "character_stats"]
+		},
+		"stat_filters": {
+			"type": "object",
+			"properties": {
+				"title": {
+					"type": "string"
+				},
+				"triggers": {
+					"type": "object",
+					"properties": {
+						"character_stats": {
+							"type": "string"
+						},
+						"ep": {
+							"type": "string"
+						},
+						"buffs": {
+							"type": "string"
+						},
+						"debuffs": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["character_stats", "ep", "buffs", "debuffs"]
+				},
+				"spec_defaults": {
+					"type": "string"
+				},
+				"all": {
+					"type": "string"
+				},
+				"groups": {
+					"type": "object",
+					"properties": {
+						"primary": {
+							"type": "string"
+						},
+						"ratings": {
+							"type": "string"
+						},
+						"other": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["primary", "ratings", "other"]
+				},
+				"group_count": {
+					"type": "string"
+				},
+				"kept_tooltip": {
+					"type": "string"
+				},
+				"rating_label": {
+					"type": "string"
+				},
+				"percent_label": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"required": ["title", "triggers", "spec_defaults", "all", "groups", "group_count", "kept_tooltip", "rating_label", "percent_label"]
 		}
 	},
 	"additionalProperties": false,
@@ -9436,7 +9531,8 @@
 		"import",
 		"export",
 		"info",
-		"sidebar"
+		"sidebar",
+		"stat_filters"
 	],
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"title": "Generated Schema",

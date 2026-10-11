@@ -138,13 +138,21 @@ is the bonus stats' school hit, which reaches every spell of the school with a `
 flags and no melee roll. A talent written into it by hand loses its row's spell list, and one written in
 beside the parse counts its hit twice.
 
+Armor has two flat auras on misc 1. `A_MOD_RESISTANCE` (22) is armor like any other, and
+`A_MOD_ARMOR_NO_MODS` (674) is the one the class armor buffs and debuffs state: Mark of the Wild,
+Devotion Aura, Sunder Armor, Expose Armor, Faerie Fire and Curse of Recklessness. Armor on 674 stays
+outside every percent armor modifier: the unit records it as a share of Armor the multipliers leave
+alone (`StatDependencyManager.AddUnmultiplied`), scales the rest and adds it after. The row takes misc
+1 alone and skips any other mask with a reason.
+
 Armor has two percentage auras. `A_MOD_BASE_RESISTANCE_PCT` scales the armor from items, which is what
-its tooltip states, and `A_MOD_RESISTANCE_PCT` multiplies the whole stat: Inspiration's 8 is 8% more
-armor, whatever it came from.
+its tooltip states, and `A_MOD_RESISTANCE_PCT` multiplies the whole stat but the 674 armor:
+Inspiration's 8 is 8% more armor, whatever else it came from.
 
 `A_MOD_MAX_HEALTH` is flat health, which is how the bear forms state it: Dire Bear Form's passive is
-1240 health at 60. Last Stand 12976 states its 30% on the same aura and a script applies it as a
-percentage, so the warrior reads it by hand and does not parse the row.
+1240 health at 60, and `A_MOD_INCREASE_HEALTH` is flat health too. Last Stand 12976 states its 30% on
+`A_MOD_INCREASE_HEALTH` and a script applies it as a percentage, so the warrior reads it by hand and
+does not parse the row.
 
 `A_MOD_ATTACK_POWER_OF_STAT_PERCENT` (598) and `A_MOD_RANGED_ATTACK_POWER_OF_STAT_PERCENT` (580) add a
 share of the misc value's stat to attack power: Cat Form (Passive) 3025 states melee attack power as
@@ -194,11 +202,18 @@ its mask: `SchoolSpellPiercing4` for the Baleflame imbue's fire and `SchoolSpell
 Balefrost's frost. Core adds a spell's school piercing to `SpellPiercing`; a holy or multi-school spell
 has no resistance stat to pierce.
 
-A percentage `SPELLMOD_DAMAGE` raises only direct hits and direct heals (`SpellMod_DirectDamageDone_Flat`),
+A percentage `SPELLMOD_DAMAGE` raises only direct hits and direct heals (`SpellMod_DirectDamageDone_Pct`),
 and `SPELLMOD_DOT` raises only the ticks (`SpellMod_DotDamageDone_Pct`). A talent that raises both a
 spell and its dot therefore states the percentage twice, and each effect attaches its own mod (Improved
 Serpent Sting 19464, Improved Moonfire 16821). `SPELLMOD_ALL_EFFECTS` raises both
 (`SpellMod_DamageDone_Flat`).
+
+Two percentage rows of `SPELLMOD_DAMAGE`, `SPELLMOD_DOT` or `SPELLMOD_COST` on one spell multiply in
+game, each as its own factor: Improved Wrath and Moonglow on a Wrath costing 120 Mana leave 45, not 30.
+The sim gives each of those rows its own factor: a hit's applies after the additive bucket that
+`SPELLMOD_ALL_EFFECTS` sums into, and a cost's goes into `SpellMod_PowerCost_Pct`. A cost row that takes the
+whole cost or more (the Clearcasting family) makes the spell free while it is up, whatever the other
+cost rows are, and gives the cost back exactly when it drops.
 
 ## What the table does not take
 
