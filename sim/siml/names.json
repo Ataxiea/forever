@@ -59,9 +59,9 @@
         "strength_of_earth": {"spellId": 25362, "tag": -1, "registeredBy": ["hunter"]},
         "thorns": {"spellId": 9910, "tag": -1, "registeredBy": ["hunter"]},
         "trueshot_aura": {"spellId": 20906, "tag": -1, "registeredBy": ["hunter"]},
-        "windfury_totem": {"spellId": 10610, "tag": -1, "registeredBy": ["hunter"]},
-        "windfury_totem_10612": {"spellId": 10612, "tag": -1, "registeredBy": ["hunter"]},
-        "windfury_totem_10614": {"spellId": 10614, "tag": -1, "registeredBy": ["hunter"]}
+        "windfury_totem_aura": {"spellId": 10614, "tag": -1, "registeredBy": ["hunter"]},
+        "windfury_totem_buff": {"spellId": 10610, "tag": -1, "registeredBy": ["hunter"]},
+        "windfury_totem_proc": {"spellId": 10612, "tag": -1, "registeredBy": ["hunter"]}
       },
       "pet_aura": {
         "bestial_wrath": {"spellId": 19574, "registeredBy": ["hunter"]},
@@ -77,9 +77,9 @@
         "nature_resistance": {"spellId": 10599, "tag": -1, "registeredBy": ["hunter"]},
         "stoneskin": {"spellId": 10405, "tag": -1, "registeredBy": ["hunter"]},
         "tricksters_dance": {"spellId": 1310612, "registeredBy": ["hunter"]},
-        "windfury_totem": {"spellId": 10610, "tag": -1, "registeredBy": ["hunter"]},
-        "windfury_totem_10612": {"spellId": 10612, "tag": -1, "registeredBy": ["hunter"]},
-        "windfury_totem_10614": {"spellId": 10614, "tag": -1, "registeredBy": ["hunter"]}
+        "windfury_totem_aura": {"spellId": 10614, "tag": -1, "registeredBy": ["hunter"]},
+        "windfury_totem_buff": {"spellId": 10610, "tag": -1, "registeredBy": ["hunter"]},
+        "windfury_totem_proc": {"spellId": 10612, "tag": -1, "registeredBy": ["hunter"]}
       },
       "spell": {
         "aimed_shot": {"spellId": 20904, "rank": 6, "registeredBy": ["hunter"]},
@@ -275,9 +275,9 @@
         "trueshot_aura": {"spellId": 20906, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
         "vengeance": {"spellId": 20050, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
         "vindication": {"spellId": 440667, "tag": 1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
-        "windfury_totem": {"spellId": 10610, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
-        "windfury_totem_10612": {"spellId": 10612, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
-        "windfury_totem_10614": {"spellId": 10614, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]}
+        "windfury_totem_aura": {"spellId": 10614, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
+        "windfury_totem_buff": {"spellId": 10610, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
+        "windfury_totem_proc": {"spellId": 10612, "tag": -1, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]}
       },
       "spell": {
         "concentration_aura": {"spellId": 19746, "registeredBy": ["holy_paladin", "protection_paladin", "retribution_paladin"]},
@@ -581,9 +581,9 @@
         "thorns": {"spellId": 9910, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
         "trueshot_aura": {"spellId": 20906, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
         "windfury_totem": {"spellId": 10614, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
-        "windfury_totem_10610": {"spellId": 10610, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
-        "windfury_totem_10612": {"spellId": 10612, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
-        "windfury_totem_10614_external": {"spellId": 10614, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]}
+        "windfury_totem_aura": {"spellId": 10614, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
+        "windfury_totem_buff": {"spellId": 10610, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
+        "windfury_totem_proc": {"spellId": 10612, "tag": -1, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]}
       },
       "spell": {
         "berserking": {"spellId": 20554, "registeredBy": ["elemental_shaman", "enhancement_shaman", "restoration_shaman"]},
@@ -742,9 +742,9 @@
         "weaponmaster": {"spellId": 1290261, "tag": 1, "registeredBy": ["dps_warrior", "protection_warrior"]},
         "weaponmaster_tag2": {"spellId": 1290261, "tag": 2, "registeredBy": ["dps_warrior", "protection_warrior"]},
         "weaponmaster_tag3": {"spellId": 1290261, "tag": 3, "registeredBy": ["dps_warrior", "protection_warrior"]},
-        "windfury_totem": {"spellId": 10610, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]},
-        "windfury_totem_10612": {"spellId": 10612, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]},
-        "windfury_totem_10614": {"spellId": 10614, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]}
+        "windfury_totem_aura": {"spellId": 10614, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]},
+        "windfury_totem_buff": {"spellId": 10610, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]},
+        "windfury_totem_proc": {"spellId": 10612, "tag": -1, "registeredBy": ["dps_warrior", "protection_warrior"]}
       },
       "spell": {
         "battle_shout": {"spellId": 25289, "rank": 7, "registeredBy": ["dps_warrior", "protection_warrior"]},

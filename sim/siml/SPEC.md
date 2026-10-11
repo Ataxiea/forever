@@ -1601,9 +1601,9 @@ priority:
   cast whirlwind if action_group_used("Stance Dance ON/OFF")
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")
-      and aura(windfury_totem_10612).is_known
+      and aura(windfury_totem_proc).is_known
       and not is_execute_phase(e20)
-      and aura(windfury_totem).is_inactive
+      and aura(windfury_totem_buff).is_inactive
   cast execute if is_execute_phase(e20)
   cast battle_stance
       if action_group_used("Stance Dance ON/OFF")
@@ -1671,8 +1671,10 @@ Some notes on this file:
 - **The tagged spells.** `heroic_strike`, `cleave` and `whirlwind` are the tag-1 spells, the queued or main-hand
   versions the sim casts from the APL, since those are castable (§7.4). A bare `cast heroic_strike` therefore
   queues, and the tag-0 Heroic Strike is `heroic_strike_tag0`.
-- **The Windfury Totem auras** the warrior reads are all external (tag −1) and share a game name, so the lowest
-  id, 10610, is `windfury_totem`, and 10612 and 10614 take their ids.
+- **The Windfury Totem auras** the warrior reads are all external (tag −1) and share a game name, so the
+  generator would tell them apart only by id. Their pinned names say what each does instead:
+  `windfury_totem_proc` is 10612, the party aura that rolls the proc; `windfury_totem_buff` is 10610, the attack
+  power a proc grants; `windfury_totem_aura` is 10614, which the sim holds while the party's totem stands.
 - **Items and spells.** The trinkets and engineering items are cast with `item.`. Jom Gabbar's on-use is the
   spell 29602, a shared name (§7.1) that every class reads.
 - **Strength.** In `cast_all_stat_buff_cooldowns(stat_type2=…)`, `stat_type1` is strength, `Stat` 0. That is

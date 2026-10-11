@@ -43,7 +43,7 @@ priority:
   group "Overpower Weaving"
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")
-      and aura(windfury_totem_10612).is_known
+      and aura(windfury_totem_proc).is_known
       and $delay_check
       and not is_execute_phase(e20)
   cast berserker_stance

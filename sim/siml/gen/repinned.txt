@@ -1,3 +1,18 @@
 # The names simlnames -repin gave another meaning, one line each, as the run reports them (sim/siml/SPEC.md §7.4).
 # The check against a pull request's base branch accepts a name of the base's table that means something else, or
 # nothing, only when the pull request adds the name's line here. simlnames -w -repin writes the lines; keep them.
+hunter.aura.windfury_totem: was spell 10610 tag -1, now nothing
+hunter.aura.windfury_totem_10612: was spell 10612 tag -1, now nothing
+hunter.aura.windfury_totem_10614: was spell 10614 tag -1, now nothing
+hunter.pet_aura.windfury_totem: was spell 10610 tag -1, now nothing
+hunter.pet_aura.windfury_totem_10612: was spell 10612 tag -1, now nothing
+hunter.pet_aura.windfury_totem_10614: was spell 10614 tag -1, now nothing
+paladin.aura.windfury_totem: was spell 10610 tag -1, now nothing
+paladin.aura.windfury_totem_10612: was spell 10612 tag -1, now nothing
+paladin.aura.windfury_totem_10614: was spell 10614 tag -1, now nothing
+shaman.aura.windfury_totem_10610: was spell 10610 tag -1, now nothing
+shaman.aura.windfury_totem_10612: was spell 10612 tag -1, now nothing
+shaman.aura.windfury_totem_10614_external: was spell 10614 tag -1, now nothing
+warrior.aura.windfury_totem: was spell 10610 tag -1, now nothing
+warrior.aura.windfury_totem_10612: was spell 10612 tag -1, now nothing
+warrior.aura.windfury_totem_10614: was spell 10614 tag -1, now nothing

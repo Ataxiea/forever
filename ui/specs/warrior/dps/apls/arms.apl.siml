@@ -50,9 +50,9 @@ priority:
   cast whirlwind if action_group_used("Stance Dance ON/OFF")
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")
-      and aura(windfury_totem_10612).is_known
+      and aura(windfury_totem_proc).is_known
       and not is_execute_phase(e20)
-      and aura(windfury_totem).is_inactive
+      and aura(windfury_totem_buff).is_inactive
   cast execute if is_execute_phase(e20)
   cast battle_stance
       if action_group_used("Stance Dance ON/OFF")
