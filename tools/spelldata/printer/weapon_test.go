@@ -1,4 +1,4 @@
-package main
+package printer
 
 import (
 	"bytes"
@@ -86,7 +86,7 @@ func TestConfigSpellModConfig(t *testing.T) {
 	var out bytes.Buffer
 	literal := "core.SpellModConfig{Kind: core.SpellMod_BonusHit_Percent, FloatValue: 2, ProcMask: core.ProcMaskMelee, " +
 		"EquipSubclass: dbcenums.ITEM_SUBCLASS_BIT_WEAPON_SWORD_1H | dbcenums.ITEM_SUBCLASS_BIT_WEAPON_SWORD_2H, EquipHand: core.ProcMaskMeleeOH, FromRating: true}"
-	if err := run([]string{"-config", literal}, &out); err != nil {
+	if err := Run([]string{"-config", literal}, &out); err != nil {
 		t.Fatal(err)
 	}
 	text := out.String()

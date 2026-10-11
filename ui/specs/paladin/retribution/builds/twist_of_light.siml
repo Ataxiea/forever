@@ -3,4 +3,43 @@ spec retribution_paladin
 talents "55003003--05225331101330321"
 use "../gear_sets/twist_of_light.gear.siml"
 
+settings:
+  race human
+  profession1 engineering
+  profession2 blacksmithing
+  reaction_time_ms 100
+  distance_from_target 5
+
+consumables:
+  pot major_spellblasting_potion
+  flask flask_of_supreme_power
+  food lobster_stew
+  conjured demonic_rune
+  explosive ez_thro_dynamite_ii
+  mh_imbue brilliant_wizard_oil
+  extra goblin_sapper_charge, r_o_i_d_s
+  elixir elixir_of_holy_power,
+      elixir_of_sages,
+      elixir_of_the_mongoose,
+      elixir_of_the_owl,
+      elixir_of_the_grizzly,
+      greater_arcane_elixir,
+      greater_mageblood_elixir,
+      juju_might
+
+buffs:
+  greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_wisdom
+  greater_blessing_of_salvation
+
+party_buffs:
+  battle_shout, leader_of_the_pack, mana_spring_totem, strength_of_earth_totem, windfury_totem
+
+raid_buffs:
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  prayer_of_shadow_protection
+
+debuffs:
+  judgement_of_light, judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire
+  expose_armor, sunder_armor
+
 apl: type auto

@@ -186,10 +186,9 @@ func (c *client) initialize(root string, capabilities any) {
 	c.t.Helper()
 	var result map[string]any
 	c.request("initialize", map[string]any{
-		"processId":             os.Getpid(),
-		"rootUri":               pathURI(root),
-		"capabilities":          capabilities,
-		"initializationOptions": map[string]any{"goBinary": "/no/go"},
+		"processId":    os.Getpid(),
+		"rootUri":      pathURI(root),
+		"capabilities": capabilities,
 	}, &result)
 	c.notify("initialized", map[string]any{})
 }

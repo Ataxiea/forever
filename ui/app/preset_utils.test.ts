@@ -45,6 +45,22 @@ describe('makePresetBuildFromJSON settings', () => {
 	});
 });
 
+describe('makePresetBuildFromJSON rotation', () => {
+	it('switches the rotation to Auto for a file that says apl: type auto', () => {
+		const build = buildFrom({ rotation: { type: 'TypeAuto' } });
+
+		expect(build.rotationType).toBe(APLRotation_Type.TypeAuto);
+		expect(build).not.toHaveProperty('rotation');
+	});
+
+	it('keeps the rotation of any other type and leaves the rotation type to it', () => {
+		const build = buildFrom({ rotation: { type: 'TypeAPL', priorityList: [] } });
+
+		expect(build.rotation?.rotation.rotation?.type).toBe(APLRotation_Type.TypeAPL);
+		expect(build).not.toHaveProperty('rotationType');
+	});
+});
+
 describe('specDefaultsFromSettings', () => {
 	const hunter = {
 		player: {

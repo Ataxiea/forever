@@ -1,4 +1,4 @@
-package main
+package printer
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ func rankValues(t *testing.T, key string) func(rank int32) string {
 
 func TestFamilyIndex(t *testing.T) {
 	var out bytes.Buffer
-	if err := run([]string{"-family", "warrior/Execute"}, &out); err != nil {
+	if err := Run([]string{"-family", "warrior/Execute"}, &out); err != nil {
 		t.Fatal(err)
 	}
 
@@ -44,7 +44,7 @@ func TestFamilyIndex(t *testing.T) {
 // Talent builds, with the value the curve gives effect 1 at that rank.
 func TestFamilyIndexTalent(t *testing.T) {
 	var out bytes.Buffer
-	if err := run([]string{"-family", "warrior/Cruelty"}, &out); err != nil {
+	if err := Run([]string{"-family", "warrior/Cruelty"}, &out); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,7 +69,7 @@ func TestFamilyIndexTalent(t *testing.T) {
 
 func TestFamilyTalentJSON(t *testing.T) {
 	var out bytes.Buffer
-	if err := run([]string{"-family", "warrior/ImprovedRend", "-json"}, &out); err != nil {
+	if err := Run([]string{"-family", "warrior/ImprovedRend", "-json"}, &out); err != nil {
 		t.Fatal(err)
 	}
 
@@ -92,7 +92,7 @@ func TestFamilyTalentJSON(t *testing.T) {
 
 func TestFamilyWithoutAPackage(t *testing.T) {
 	var out bytes.Buffer
-	if err := run([]string{"-family", "Execute"}, &out); err != nil {
+	if err := Run([]string{"-family", "Execute"}, &out); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasPrefix(out.String(), "warrior spellData.Execute\n") {
@@ -102,7 +102,7 @@ func TestFamilyWithoutAPackage(t *testing.T) {
 
 func TestFamilyJSON(t *testing.T) {
 	var out bytes.Buffer
-	if err := run([]string{"-family", "warrior/Execute", "-json"}, &out); err != nil {
+	if err := Run([]string{"-family", "warrior/Execute", "-json"}, &out); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,7 +143,7 @@ func TestExpr(t *testing.T) {
 
 	for _, c := range cases {
 		var out bytes.Buffer
-		if err := run([]string{"-expr", c.expr, "-package", "warrior", "-json"}, &out); err != nil {
+		if err := Run([]string{"-expr", c.expr, "-package", "warrior", "-json"}, &out); err != nil {
 			t.Errorf("%s: %v", c.expr, err)
 			continue
 		}
@@ -187,7 +187,7 @@ func TestExprTalentRank(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := run([]string{"-expr", "spellData.Cruelty.Rank(3).EffectN(1)", "-package", "warrior"}, &out); err != nil {
+	if err := Run([]string{"-expr", "spellData.Cruelty.Rank(3).EffectN(1)", "-package", "warrior"}, &out); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
@@ -203,7 +203,7 @@ func TestExprTalentRank(t *testing.T) {
 
 func TestExprText(t *testing.T) {
 	var out bytes.Buffer
-	if err := run([]string{"-expr", "spellData.Execute.Highest()", "-package", "warrior"}, &out); err != nil {
+	if err := Run([]string{"-expr", "spellData.Execute.Highest()", "-package", "warrior"}, &out); err != nil {
 		t.Fatal(err)
 	}
 
@@ -233,7 +233,7 @@ func TestExprRefused(t *testing.T) {
 
 	for _, c := range cases {
 		var out bytes.Buffer
-		err := run(c.args, &out)
+		err := Run(c.args, &out)
 		if err == nil {
 			t.Errorf("%v answered %q", c.args, out.String())
 			continue

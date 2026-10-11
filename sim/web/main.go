@@ -146,7 +146,7 @@ var (
 
 // sim/siml/names.json, as the site serves it, read on the first SIML request that finds it: the server is built
 // without the with_db tag, so it holds no table of its own.
-var simlNames = func() (*siml.Names, error) {
+func simlNames() (*siml.Names, error) {
 	simlNamesMu.Lock()
 	defer simlNamesMu.Unlock()
 	if simlNamesTable != nil {

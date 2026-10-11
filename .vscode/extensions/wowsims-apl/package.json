@@ -83,7 +83,7 @@
 				"wowsims-apl.goBinary": {
 					"type": "string",
 					"default": "go",
-					"description": "The go binary that builds the SIML server (cmd/wowsimcli) and that the server reads a spell's game files row with for hovers (tools/spelldata). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
+					"description": "The go binary that builds the SIML server (cmd/wowsimcli). `go` searches the PATH, then GOROOT and the usual install directories; set a full path if none of them has it."
 				},
 				"wowsims-apl.server": {
 					"type": "string",

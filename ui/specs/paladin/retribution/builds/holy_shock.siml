@@ -25,6 +25,13 @@ gear:
 item_swap:
   main_hand  shin_blade of_healing_12919 + enchant_2h_weapon_mighty_spell_power
 
+settings:
+  race human
+  profession1 engineering
+  profession2 blacksmithing
+  reaction_time_ms 100
+  distance_from_target 5
+
 consumables:
   pot major_spellblasting_potion
   flask flask_of_supreme_power
@@ -41,5 +48,20 @@ consumables:
       greater_arcane_elixir,
       greater_mageblood_elixir,
       juju_might
+
+buffs:
+  greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_wisdom
+  greater_blessing_of_salvation
+
+party_buffs:
+  battle_shout, leader_of_the_pack, mana_spring_totem, strength_of_earth_totem, windfury_totem
+
+raid_buffs:
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  prayer_of_shadow_protection
+
+debuffs:
+  judgement_of_light, judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire
+  expose_armor, sunder_armor
 
 apl: type auto

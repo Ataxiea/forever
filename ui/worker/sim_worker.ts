@@ -96,8 +96,8 @@ declare global {
 let simlNamesLoad: Promise<void> | null = null;
 const loadSimlNames = (): Promise<void> =>
 	(simlNamesLoad ??= (async () => {
-		// Copied next to this worker by the makefile.
-		const response = await fetch('siml_names.json');
+		// Copied next to this worker by the makefile; the query is a hash of its contents (vite.build-workers.mts).
+		const response = await fetch(`siml_names.json?v=${import.meta.env.VITE_SIML_NAMES_VERSION}`);
 		if (!response.ok) throw new Error(`Failed to fetch the SIML name table: HTTP ${response.status}`);
 		const error = simlNames(new Uint8Array(await response.arrayBuffer()));
 		if (error) throw new Error(`The SIML name table does not read: ${error}`);

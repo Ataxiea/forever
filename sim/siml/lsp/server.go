@@ -210,9 +210,6 @@ func (s *server) lifecycle(method string, params json.RawMessage) (any, *Respons
 				} `json:"didChangeWatchedFiles"`
 			} `json:"workspace"`
 		} `json:"capabilities"`
-		InitializationOptions struct {
-			GoBinary string `json:"goBinary"`
-		} `json:"initializationOptions"`
 	}
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, invalidParams(err)
@@ -228,9 +225,6 @@ func (s *server) lifecycle(method string, params json.RawMessage) (any, *Respons
 	}
 	s.watches = p.Capabilities.Workspace.DidChangeWatchedFiles.DynamicRegistration
 	s.mu.Unlock()
-	if p.InitializationOptions.GoBinary != "" {
-		s.cards.setGo(p.InitializationOptions.GoBinary)
-	}
 	return map[string]any{
 		"capabilities": map[string]any{
 			"textDocumentSync":       map[string]any{"openClose": true, "change": 1},
@@ -294,17 +288,6 @@ func (s *server) notification(method string, params json.RawMessage) {
 				cancel()
 			}
 			s.mu.Unlock()
-		}
-	case "workspace/didChangeConfiguration":
-		var p struct {
-			Settings struct {
-				Extension struct {
-					GoBinary string `json:"goBinary"`
-				} `json:"wowsims-apl"`
-			} `json:"settings"`
-		}
-		if json.Unmarshal(params, &p) == nil && p.Settings.Extension.GoBinary != "" {
-			s.cards.setGo(p.Settings.Extension.GoBinary)
 		}
 	case "workspace/didChangeWatchedFiles":
 		var p struct {

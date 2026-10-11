@@ -15,7 +15,6 @@ import (
 	_ "github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/siml"
 	googleProto "google.golang.org/protobuf/proto"
 )
 
@@ -132,15 +131,15 @@ func TestSimlNamesMissingAtFirstIsReadLater(t *testing.T) {
 	}
 }
 
-// The SIML routes, read with the committed name table in place of the one the site serves.
+// The SIML routes, read with the committed name table served as the site's.
 func TestSimlRoutes(t *testing.T) {
-	simlNames = func() (*siml.Names, error) {
-		data, err := os.ReadFile("../siml/names.json")
-		if err != nil {
-			return nil, err
-		}
-		return siml.ParseNames(data)
+	data, err := os.ReadFile("../siml/names.json")
+	if err != nil {
+		t.Fatal(err)
 	}
+	saved := siteFS
+	siteFS = fstest.MapFS{"forever/siml_names.json": &fstest.MapFile{Data: data}}
+	defer func() { siteFS, simlNamesTable = saved, nil }()
 	post := func(route string, req, result googleProto.Message) {
 		t.Helper()
 		msgBytes, err := googleProto.Marshal(req)

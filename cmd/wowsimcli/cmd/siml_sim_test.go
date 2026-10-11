@@ -102,6 +102,48 @@ func TestCharacterFromRepoLoadsTheBuildOfTheRotation(t *testing.T) {
 	}
 }
 
+func TestSpecDefaultsSkipsAnotherSpecsBrokenDefaults(t *testing.T) {
+	dir := t.TempDir()
+	write := func(folder, text string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(dir, "ui/specs/hunter", folder), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "ui/specs/hunter", folder, "defaults.siml"), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("a", "siml 1\nspec hunter\n\nbroken:\n")
+	write("b", "siml 1\nspec hunter\ntalents \"-005-55\"\n")
+
+	folder, defaults, err := specDefaults(dir, proto.Spec_SpecHunter)
+	if err != nil || folder != "hunter/b" || defaults.Settings.GetPlayer().GetTalentsString() != "-005-55" {
+		t.Errorf("got folder %q (%v), want hunter/b past the broken hunter/a", folder, err)
+	}
+
+	write("b", "siml 1\nspec hunter\n\nbroken:\n")
+	_, _, err = specDefaults(dir, proto.Spec_SpecHunter)
+	if err == nil || !strings.Contains(err.Error(), "holds no defaults.siml for SpecHunter") ||
+		!strings.Contains(err.Error(), filepath.Join("hunter", "a", "defaults.siml")) || !strings.Contains(err.Error(), filepath.Join("hunter", "b", "defaults.siml")) {
+		t.Errorf("error %v, want it to name both broken files", err)
+	}
+}
+
+func TestLoadBuildKeepsTheRotationOverAnAutoOne(t *testing.T) {
+	apl := &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{{}}}
+	s := &proto.IndividualSimSettings{Player: &proto.Player{Rotation: apl}}
+	loadBuild(s, &proto.IndividualSimSettings{Player: &proto.Player{Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAuto}}})
+	if s.Player.Rotation != apl {
+		t.Errorf("rotation %v, want the defaults' APL kept under an Auto build", s.Player.Rotation)
+	}
+
+	simple := &proto.APLRotation{Type: proto.APLRotation_TypeSimple}
+	loadBuild(s, &proto.IndividualSimSettings{Player: &proto.Player{Rotation: simple}})
+	if s.Player.Rotation != simple {
+		t.Errorf("rotation %v, want the build's own", s.Player.Rotation)
+	}
+}
+
 func TestSimlSimCountsEveryRowAndKeepsPathsAcrossHiddenRows(t *testing.T) {
 	rotation, text := printedAPL(t, "hunter/dps", "default", proto.Spec_SpecHunter)
 	path := tempPath(t, "default.apl.siml")

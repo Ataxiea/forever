@@ -2,9 +2,10 @@
 // EquipmentSpec JSON and any other `.siml` the IndividualSimSettings JSON: the JSON of the message each file kind
 // loads into (SPEC.md §1), which reads as the same message as a `.json` file of it.
 //
-// The Go reader reads each file: one `wowsimcli siml serve` per process, the binary $WOWSIMCLI names or else
-// `go run ./cmd/wowsimcli`, so the build needs Go.
+// The Go reader reads each file: one `wowsimcli siml serve` per process, the binary $WOWSIMCLI names, else
+// dist/wowsimcli, which `make` builds and keeps fresh, else `go run ./cmd/wowsimcli`, so the build needs Go.
 import { type ChildProcess, spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,7 @@ import { normalizePath, type Plugin } from 'vite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const NAMES = path.join(ROOT, 'sim/siml/names.json');
+const BUILT = path.join(ROOT, 'dist', process.platform === 'win32' ? 'wowsimcli.exe' : 'wowsimcli');
 
 interface Diagnostic {
 	line: number;
@@ -49,7 +51,8 @@ process.once('exit', stop);
 const read = (file: string, text: string): Promise<Response> => {
 	if (!server) {
 		const args = ['siml', 'serve', '-names', NAMES];
-		const [command, argv] = process.env.WOWSIMCLI ? [process.env.WOWSIMCLI, args] : ['go', ['run', './cmd/wowsimcli', ...args]];
+		const binary = process.env.WOWSIMCLI || (fs.existsSync(BUILT) ? BUILT : undefined);
+		const [command, argv] = binary ? [binary, args] : ['go', ['run', './cmd/wowsimcli', ...args]];
 		const child = spawn(command, argv, { cwd: ROOT, stdio: ['pipe', 'pipe', 'inherit'] });
 		const pending: Pending = new Map();
 		const fail = (error: Error) => {
@@ -66,7 +69,15 @@ const read = (file: string, text: string): Promise<Response> => {
 			child.kill();
 		});
 		readline.createInterface({ input: child.stdout! }).on('line', line => {
-			const response = JSON.parse(line) as Response;
+			let response: Response;
+			try {
+				response = JSON.parse(line) as Response;
+			} catch {
+				// A line that is not an answer leaves every request unmatched: fail them all and start another server.
+				fail(new Error(`wowsimcli siml serve wrote a line that is not JSON: ${line.slice(0, 200)}`));
+				child.kill();
+				return;
+			}
 			pending.get(response.id)?.resolve(response);
 			pending.delete(response.id);
 			// The child keeps the process alive only while it owes an answer.

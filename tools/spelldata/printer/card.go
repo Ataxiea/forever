@@ -1,4 +1,4 @@
-package main
+package printer
 
 import (
 	"fmt"
@@ -59,6 +59,17 @@ func newCard(s *spelldata.Spell, rank string, read int) card {
 		Effects: effects,
 		Wowhead: fmt.Sprintf("https://www.wowhead.com/forever/spell=%d", s.ID),
 	}
+}
+
+// The text a bare id prints, or false for an id the store does not carry.
+func Row(id int32) (string, bool) {
+	s, err := findSpell(id)
+	if err != nil {
+		return "", false
+	}
+	var out strings.Builder
+	newCard(s, s.Rank, 0).writeText(&out)
+	return out.String(), true
 }
 
 func (c card) heading() string {

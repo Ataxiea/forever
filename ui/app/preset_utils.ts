@@ -313,7 +313,9 @@ export const makePresetBuildFromJSON = (
 			buildConfig.talents = makePresetTalents(name, SavedTalents.create({ talentsString: simSettings.player?.talentsString }), options);
 		}
 
-		if (simSettings.player?.rotation && simSettings.player?.rotation.type !== APLRotationType.TypeAuto) {
+		if (simSettings.player?.rotation?.type === APLRotationType.TypeAuto) {
+			buildConfig.rotationType = APLRotationType.TypeAuto;
+		} else if (simSettings.player?.rotation) {
 			buildConfig.rotation = makePresetRotationHelper(name, SavedRotation.create({ rotation: simSettings.player.rotation }), options);
 		}
 	}

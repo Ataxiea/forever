@@ -1,4 +1,4 @@
-package main
+package printer
 
 import (
 	"bytes"
@@ -200,7 +200,7 @@ func TestHoverSpellConfigUnevaluated(t *testing.T) {
 func TestConfigText(t *testing.T) {
 	var out bytes.Buffer
 	call := "spelldata.SpellConfig(&warrior.Unit, executeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))"
-	if err := run([]string{"-config", call, "-package", "warrior"}, &out); err != nil {
+	if err := Run([]string{"-config", call, "-package", "warrior"}, &out); err != nil {
 		t.Fatal(err)
 	}
 	text := out.String()
@@ -224,7 +224,7 @@ func TestConfigCastRequirement(t *testing.T) {
 	} {
 		var out bytes.Buffer
 		call := "spelldata.SpellConfig(&" + c.pkg + ".Unit, spellData." + c.family + ".Highest())"
-		if err := run([]string{"-config", call, "-package", c.pkg}, &out); err != nil {
+		if err := Run([]string{"-config", call, "-package", c.pkg}, &out); err != nil {
 			t.Fatal(err)
 		}
 		for _, want := range c.want {

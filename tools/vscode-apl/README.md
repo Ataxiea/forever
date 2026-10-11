@@ -55,8 +55,7 @@ rotation again with them.
 Build the server, `go build --tags=with_db -o wowsimcli ./cmd/wowsimcli`, and start `wowsimcli siml lsp` in the
 repository root for files that end in `.siml`, with the language id `siml`; it logs on stderr. The server needs no
 settings: it finds the repository above each file it is given, and reads an untitled file in the first workspace
-folder's. Hovers run go for a spell's game files row; the initialization option `goBinary` names the binary, and
-`workspace/didChangeConfiguration` with `{"settings": {"wowsims-apl": {"goBinary": "..."}}}` changes it.
+folder's.
 
 The server provides: full sync, `publishDiagnostics`, completion, hover, definition, references, rename with prepare,
 document symbols, document links, folding ranges, full semantic tokens, formatting and code actions. When the client

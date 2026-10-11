@@ -23,6 +23,7 @@ $(OUT_DIR)/.dirstamp: \
 	touch $@
 
 $(OUT_DIR)/bundle/.dirstamp: \
+  dist/wowsimcli$(BIN_EXT) \
   $(UI_SRC) \
   $(AUTO_GEN_FILES_TS) \
   vite.config.mts \
@@ -94,6 +95,16 @@ package-lock.json:
 
 node_modules: package-lock.json
 	npm ci
+
+# What tools/vite/siml.mts reads .siml imports with when $WOWSIMCLI is unset. It sits outside $(OUT_DIR), which the
+# deploy publishes as the site.
+dist/wowsimcli$(BIN_EXT): sim/core/proto/api.pb.go $(filter-out %_test.go,$(call rwildcard,sim,*.go) $(call rwildcard,cmd/wowsimcli,*.go))
+	go build -o $@ ./cmd/wowsimcli
+
+# Run before committing: refresh the SIML name table, then check the files under ui/specs read and are canonical.
+.PHONY: siml
+siml: sim/siml/names.json
+	go run --tags=with_db ./cmd/wowsimcli siml fmt -check ui/specs
 
 # Generic rule for hosting any class directory
 .PHONY: host_%

@@ -1,4 +1,4 @@
-package main
+package printer
 
 import (
 	"bytes"
@@ -40,7 +40,7 @@ func evalJSON(t *testing.T, expr string) exprJSON {
 	t.Helper()
 
 	var out bytes.Buffer
-	if err := run([]string{"-expr", expr, "-package", "warrior", "-json"}, &out); err != nil {
+	if err := Run([]string{"-expr", expr, "-package", "warrior", "-json"}, &out); err != nil {
 		t.Fatalf("%s: %v", expr, err)
 	}
 
@@ -191,7 +191,7 @@ func TestExprDoc(t *testing.T) {
 func TestExprValueText(t *testing.T) {
 	var out bytes.Buffer
 	args := []string{"-expr", "spellData.Execute.Highest().EffectN(1).AverageAt(core.CharacterLevel)", "-package", "warrior"}
-	if err := run(args, &out); err != nil {
+	if err := Run(args, &out); err != nil {
 		t.Fatal(err)
 	}
 
@@ -232,7 +232,7 @@ func TestExprChainRefused(t *testing.T) {
 
 	for _, c := range cases {
 		var out bytes.Buffer
-		err := run([]string{"-expr", c.expr, "-package", "warrior"}, &out)
+		err := Run([]string{"-expr", c.expr, "-package", "warrior"}, &out)
 		if err == nil {
 			t.Errorf("%s answered %q", c.expr, out.String())
 			continue
@@ -284,7 +284,7 @@ func TestExprLadderAccessors(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	err := run([]string{"-expr", "spellData.Bloodrage.EffectAt(1)", "-package", "warrior"}, &out)
+	err := Run([]string{"-expr", "spellData.Bloodrage.EffectAt(1)", "-package", "warrior"}, &out)
 	if err == nil || !strings.Contains(err.Error(), "names a ladder, not a rank") {
 		t.Errorf("a chain ending on the ladder answered %q, %v", out.String(), err)
 	}

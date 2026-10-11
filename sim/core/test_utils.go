@@ -310,7 +310,13 @@ func GetGearSet(dir string, file string) GearSetCombo {
 	return GearSetCombo{Label: file, GearSet: f.Equipment()}
 }
 
+// The item_swap: section of x.siml, with its prepull bonus stats, when that file holds one; otherwise the items of
+// x.gear.siml.
 func GetItemSwapGearSet(dir string, file string) ItemSwapSetCombo {
+	if full := readPreset(dir+"/"+file+".siml", "", ""); full != nil && full.Settings.GetPlayer().GetItemSwap() != nil {
+		return ItemSwapSetCombo{Label: file, ItemSwap: full.Settings.GetPlayer().GetItemSwap()}
+	}
+
 	filePath := dir + "/" + file + ".gear.siml"
 	f := readPreset(filePath, dir+"/"+file+".gear.json", "-kind gear")
 	if f == nil {

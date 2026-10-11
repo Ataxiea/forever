@@ -148,6 +148,6 @@ func (r *Report) Write(w io.Writer, verbose bool) {
 			fmt.Fprintln(w, "skipped", line)
 		}
 	} else if len(r.Skipped) > 0 {
-		fmt.Fprintf(w, "skipped %d specs and sources the sim cannot build (-v lists them)\n", len(r.Skipped))
+		fmt.Fprintf(w, "skipped %d specs and sources the sim cannot build (-v lists them); a spec that does not build adds none of its spell and aura names until it does\n", len(r.Skipped))
 	}
 }

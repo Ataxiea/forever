@@ -62,6 +62,13 @@ func TestPresetsReadAsSIML(t *testing.T) {
 	if items := GetItemSwapGearSet(dir, "x").ItemSwap.GetItems(); len(items) != 17 || items[proto.ItemSlot_ItemSlotRanged].GetId() != bow {
 		t.Errorf("GetItemSwapGearSet gave the items %v, want 17 with Fahrad's Reloading Repeater in the ranged slot", items)
 	}
+	swapDir := presetDir(t, map[string]string{
+		"x.gear.siml": gear,
+		"x.siml":      "siml 1\nspec hunter\n\nitem_swap:\n  ranged  fahrads_reloading_repeater\n  prepull_bonus_stats(stats(agility=5))\n",
+	})
+	if swap := GetItemSwapGearSet(swapDir, "x").ItemSwap; swap.GetItems()[proto.ItemSlot_ItemSlotRanged].GetId() != bow || swap.GetPrepullBonusStats().GetStats()[proto.Stat_StatAgility] != 5 {
+		t.Errorf("GetItemSwapGearSet gave %v, want the item_swap: of x.siml with Fahrad's Reloading Repeater and 5 prepull agility", swap)
+	}
 	build := GetTestBuild(proto.Class_ClassHunter, dir, "x", ItemFilter{}, nil, nil)
 	if build.Race != proto.Race_RaceOrc || build.Talents != "-00530501114-550200030050220151" || build.GearSet.GearSet.GetItems()[proto.ItemSlot_ItemSlotRanged].GetId() != bow {
 		t.Errorf("GetTestBuild gave the race %v, the talents %q and the gear %v", build.Race, build.Talents, build.GearSet.GearSet)

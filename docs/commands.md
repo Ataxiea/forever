@@ -142,4 +142,6 @@ go run ./cmd/wowsimcli siml grammar -o .vscode/extensions/wowsims-apl/syntaxes/s
 
 # Add names for newly registered spells and new database rows to the SIML name table; commit it with the change
 make sim/siml/names.json
+# Before committing: the name table as above, then siml fmt -check over ui/specs
+make siml
 ```

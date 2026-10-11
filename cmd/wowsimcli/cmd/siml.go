@@ -188,11 +188,11 @@ func printDiagnostics(w io.Writer, diags siml.Diagnostics) {
 
 // Parses the file at path with its uses, as the sim's loaders read it.
 func parseFile(path string, names *siml.Names) (*siml.File, error) {
-	src, err := os.ReadFile(path)
+	src, err := siml.ReadSource(path)
 	if err != nil {
 		return nil, err
 	}
-	return siml.Parse(path, src, names, os.ReadFile)
+	return siml.Parse(path, src, names, siml.ReadSource)
 }
 
 func simlParse(out, errOut io.Writer, args []string) error {
@@ -423,11 +423,11 @@ func simlFmt(out, errOut io.Writer, args []string) error {
 	var game *gameData // Loaded for the first file under ui/specs.
 	failed := 0
 	for _, path := range files {
-		src, err := os.ReadFile(path)
+		src, err := siml.ReadSource(path)
 		if err != nil {
 			return err
 		}
-		f, err := siml.Parse(path, src, names, os.ReadFile)
+		f, err := siml.Parse(path, src, names, siml.ReadSource)
 		fail, warn, err := failures(path, f, err)
 		if err != nil {
 			return err

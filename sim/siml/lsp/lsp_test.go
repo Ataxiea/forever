@@ -45,7 +45,7 @@ func TestInitialize(t *testing.T) {
 			DocumentLinkProvider map[string]any `json:"documentLinkProvider"`
 		} `json:"capabilities"`
 	}
-	c.request("initialize", map[string]any{"rootUri": pathURI(repository), "capabilities": map[string]any{}, "initializationOptions": map[string]any{"goBinary": "/no/go"}}, &result)
+	c.request("initialize", map[string]any{"rootUri": pathURI(repository), "capabilities": map[string]any{}}, &result)
 	caps := result.Capabilities
 	if !slices.Contains(caps.CompletionProvider.TriggerCharacters, ".") || !caps.HoverProvider || !caps.DocumentFormattingProvider {
 		t.Errorf("capabilities = %+v", caps)
@@ -135,7 +135,8 @@ func TestHoverNamesASpellOfTheTable(t *testing.T) {
 	c.change(smokeURI, 2, lines("siml 1", "spec hunter", "", "priority:", "  cast hunters_mark", ""))
 	var hover Hover
 	c.request("textDocument/hover", map[string]any{"textDocument": textDocument(smokeURI), "position": pos(4, 9)}, &hover)
-	if !strings.Contains(hover.Contents.Value, "Hunter's Mark") || !strings.Contains(hover.Contents.Value, "spell 14325") {
+	if !strings.Contains(hover.Contents.Value, "Hunter's Mark") || !strings.Contains(hover.Contents.Value, "spell 14325") ||
+		!strings.Contains(hover.Contents.Value, "https://www.wowhead.com/forever/spell=14325") {
 		t.Errorf("hover = %q", hover.Contents.Value)
 	}
 }

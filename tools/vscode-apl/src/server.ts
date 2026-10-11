@@ -104,7 +104,6 @@ async function start(root: string): Promise<LanguageClient> {
 				// Untitled files are read in the first workspace folder's repository, as the server reads them.
 				...(rootOf(vscode.Uri.parse('untitled:x')) === root ? [{ scheme: 'untitled', language: 'siml' }] : []),
 			],
-			initializationOptions: { goBinary: settings().get<string>('goBinary', 'go') },
 			synchronize: { configurationSection: 'wowsims-apl' },
 			outputChannel: output,
 			revealOutputChannelOn: RevealOutputChannelOn.Never,

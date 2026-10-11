@@ -23,11 +23,12 @@ func (s *server) request(ctx context.Context, method string, params json.RawMess
 	uri := p.TextDocument.URI
 	switch method {
 	case "textDocument/hover":
-		return s.hover(ctx, uri, p.Position)
+		return s.hover(uri, p.Position)
 	case "textDocument/completion":
+		catalog := s.readCatalog(uri)
 		return s.withDoc(uri, []CompletionItem{}, func(a *analysis) any {
 			items := []CompletionItem{}
-			for _, c := range a.doc.Complete(fromPosition(p.Position), siml.CatalogAt(a.root)) {
+			for _, c := range a.doc.Complete(fromPosition(p.Position), catalog.of(a)) {
 				items = append(items, completionItem(c))
 			}
 			return items
@@ -79,9 +80,10 @@ func (s *server) request(ctx context.Context, method string, params json.RawMess
 	case "textDocument/formatting":
 		return s.withDoc(uri, []TextEdit{}, func(a *analysis) any { return formatting(a) })
 	case "textDocument/codeAction":
+		catalog := s.readCatalog(uri)
 		return s.withDoc(uri, []CodeAction{}, func(a *analysis) any {
 			out := []CodeAction{}
-			for _, fix := range a.doc.QuickFixes(fromRange(p.Range), siml.CatalogAt(a.root)) {
+			for _, fix := range a.doc.QuickFixes(fromRange(p.Range), catalog.of(a)) {
 				action := CodeAction{
 					Title:       fix.Title,
 					Kind:        fix.Kind,
@@ -110,6 +112,37 @@ func (s *server) withDoc(uri string, empty any, answer func(a *analysis) any) (a
 	return answer(a), nil
 }
 
+// The catalog of a document's repository, read without holding the server: the first read, and the first after the
+// database files change, parses the 3 MB db.json.
+type catalogRead struct {
+	root    string
+	catalog *siml.DatabaseCatalog
+}
+
+func (s *server) readCatalog(uri string) catalogRead {
+	s.mu.Lock()
+	a := s.analyzeLocked(uri)
+	open := a != nil && a.doc != nil
+	root := ""
+	if open {
+		root = a.root
+	}
+	s.mu.Unlock()
+	if !open {
+		return catalogRead{}
+	}
+	return catalogRead{root: root, catalog: siml.CatalogAt(root)}
+}
+
+// The catalog for the analysis an answer reads, which is read again, under the lock, only when the document left or
+// changed repository in between.
+func (c catalogRead) of(a *analysis) *siml.DatabaseCatalog {
+	if c.catalog != nil && c.root == a.root {
+		return c.catalog
+	}
+	return siml.CatalogAt(a.root)
+}
+
 // The URI of a file: the open document's, else its file: URI.
 func (s *server) uriOfLocked(path string) string {
 	if d := s.docByPathLocked(path); d != nil {
@@ -118,9 +151,10 @@ func (s *server) uriOfLocked(path string) string {
 	return pathURI(path)
 }
 
-// A hover, with the game files' row of the spell it is about appended. The row is read without holding the server,
-// since `go run` can take a while.
-func (s *server) hover(ctx context.Context, uri string, at Position) (any, *ResponseError) {
+// A hover, with the game files' row of the spell it is about appended. The catalog is read without holding the
+// server.
+func (s *server) hover(uri string, at Position) (any, *ResponseError) {
+	catalog := s.readCatalog(uri)
 	h, root, ok := func() (siml.Hover, string, bool) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
@@ -128,7 +162,7 @@ func (s *server) hover(ctx context.Context, uri string, at Position) (any, *Resp
 		if a == nil || a.doc == nil {
 			return siml.Hover{}, "", false
 		}
-		h, ok := a.doc.Hover(fromPosition(at), siml.CatalogAt(a.root))
+		h, ok := a.doc.Hover(fromPosition(at), catalog.of(a))
 		return h, a.root, ok
 	}()
 	if !ok {
@@ -136,7 +170,7 @@ func (s *server) hover(ctx context.Context, uri string, at Position) (any, *Resp
 	}
 	markdown := h.Markdown
 	if h.SpellID > 0 {
-		if row, ok := s.cards.row(ctx, root, h.SpellID); ok && row != "" {
+		if row, ok := s.cards.row(root, h.SpellID); ok && row != "" {
 			markdown += "\n\n```text\n" + row + "\n```"
 		}
 	}

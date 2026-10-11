@@ -782,7 +782,8 @@ a table not committed. The generator:
    the spec's options at their defaults; with every number of the options at 1; and with every number at 1 and one
    bool of the options true or one enum at another value. So the warrior's `use_battle_shout` registers the tag-0
    Battle Shout aura, and the hunter's `pet_type` a pet. Every party buff, raid buff, debuff and individual buff is
-   on, and a build that fails is retried without them, then without talents.
+   on, and a build that fails is retried without them, then without talents. A spec none of whose builds succeeds
+   adds no names of its own until the sim builds it, and the report (step 11) counts it.
 2. **Collects** a build's player spells into `spell`, its player auras into `aura`, its pets' auras into
    `pet_aura`, and its targets' auras and spells into `target_aura` and `target_spell`. Each is collected by spell
    id and tag, with the highest rank any build registers it with, and whether any build registers it castable

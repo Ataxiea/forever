@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,8 +37,10 @@ func specField(p *proto.Player) protoreflect.FieldDescriptor {
 }
 
 // The spec's folder under ui/specs, such as hunter/dps, and its defaults: the folder of the spec's class whose
-// defaults.siml is for the spec.
+// defaults.siml is for the spec. A defaults.siml that does not read is skipped, so another spec's broken file does not
+// stop this one; the error names it when no folder is the spec's.
 func specDefaults(root string, spec proto.Spec) (string, *siml.File, error) {
+	var skipped []error
 	if info, ok := siml.SpecOf(spec); ok {
 		class := siml.ClassName(info.Class)
 		paths, err := filepath.Glob(filepath.Join(root, "ui/specs", class, "*", "defaults.siml"))
@@ -47,14 +50,15 @@ func specDefaults(root string, spec proto.Spec) (string, *siml.File, error) {
 		for _, path := range paths {
 			f, err := siml.ReadFile(path)
 			if err != nil {
-				return "", nil, err
+				skipped = append(skipped, err)
+				continue
 			}
 			if f.Spec == spec {
 				return class + "/" + filepath.Base(filepath.Dir(path)), f, nil
 			}
 		}
 	}
-	return "", nil, fmt.Errorf("ui/specs holds no defaults.siml for %s", spec)
+	return "", nil, errors.Join(append([]error{fmt.Errorf("ui/specs holds no defaults.siml for %s", spec)}, skipped...)...)
 }
 
 // The character the site sims a rotation with: the spec's defaults, with the build loaded over them whose rotation
@@ -109,11 +113,11 @@ func buildOf(root, folder, path string) (*siml.File, error) {
 }
 
 // Loads the settings of a build b over s, as the site loads a preset build (makePresetBuildFromJSON and applyBuild in
-// the UI): each message b holds replaces s's own, and without an item swap set b turns item swap off. b's settings: section, which sets the spec's options, sets the options, the distance
+// the UI): each message b holds replaces s's own, except an Auto rotation, which keeps s's, and without an item swap set b turns item swap off. b's settings: section, which sets the spec's options, sets the options, the distance
 // and whether the player stands in front of the target, and the race, professions and timings it does not leave at 0.
 func loadBuild(s, b *proto.IndividualSimSettings) {
 	p, bp := s.Player, b.GetPlayer()
-	if bp.Rotation != nil {
+	if bp.Rotation != nil && bp.Rotation.Type != proto.APLRotation_TypeAuto {
 		p.Rotation = bp.Rotation
 	}
 	if bp.Equipment != nil {
