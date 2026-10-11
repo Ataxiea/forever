@@ -871,9 +871,12 @@ The record is committed with the table, and its lines are kept.
 
 **Checks.**
 
-- **Up to date.** A `with_db` test in `sim/siml/gen` regenerates the table in memory, and fails when it differs
-  from the committed file, listing the new entries, the changed lines and the command `make sim/siml/names.json`.
-- **Names keep their meaning.** The up-to-date test regenerates from the table it is given, so it passes two names
+- **The table keeps its entries.** A `with_db` test in `sim/siml/gen` regenerates the table in memory and fails
+  when the committed file is not in the generator's form, or when an entry of it comes back with another meaning
+  or registered-by list, listing each with the command `make sim/siml/names.json`. The names the sim and the
+  database give beyond the committed table are logged, not failed: a database update or a class change adds names
+  without changing what is committed, and `make` adds them before anything reads the table.
+- **Names keep their meaning.** The test above regenerates from the table it is given, so it passes two names
   that swapped their ids. `go run ./sim/siml/cmd/simlnames -base <commit>` reads the table and the repin record at
   `<commit>`, and fails, listing each, when a name of that table means another id, tag, rank or slots, or nothing, in
   the working tree's table (`registeredBy` is no part of a meaning), unless the working tree's record holds a line

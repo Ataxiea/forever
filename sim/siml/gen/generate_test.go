@@ -4,9 +4,11 @@ package gen
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -65,27 +67,56 @@ func missingLines(a, b []byte, prefix string) []string {
 	return out
 }
 
-func TestTableIsUpToDate(t *testing.T) {
+// The committed file is in the generator's form, and a regeneration gives every entry of it back as it is: the
+// name, its meaning and its registered-by list. What the sim and the database give beyond the table is only
+// reported, since a database update or a class change adds names without changing what is committed, and make
+// regenerates the table from them before anything reads it.
+func TestTableKeepsItsEntries(t *testing.T) {
 	old, data, c := committedTable(t)
+	if got := old.Encode(); !bytes.Equal(got, data) {
+		t.Errorf("%s is not in the generator's form; run %s and commit the table:\n  %s", TablePath, MakeCommand,
+			strings.Join(append(missingLines(data, got, "+ "), missingLines(got, data, "- ")...), "\n  "))
+	}
 	names, report, err := Update(old, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := names.Encode(); !bytes.Equal(got, data) {
-		var b strings.Builder
-		b.WriteString(TablePath + " is not what the sim and the database give now. Run " + MakeCommand + " and commit the table.")
-		if len(report.Added) > 0 {
-			b.WriteString("\nnew entries:")
-			for _, line := range report.Added[:min(len(report.Added), 60)] {
-				b.WriteString("\n  " + line)
+	var changed []string
+	spellLike := func(scope string, old, now siml.SpellNames) {
+		for _, ns := range slices.Sorted(maps.Keys(old)) {
+			for _, name := range slices.Sorted(maps.Keys(old[ns])) {
+				if e, g := old[ns][name], now[ns][name]; e.SpellID != g.SpellID || e.Tag != g.Tag || e.Rank != g.Rank || !slices.Equal(e.RegisteredBy, g.RegisteredBy) {
+					changed = append(changed, fmt.Sprintf("%s.%s.%s is %+v, want %+v", scope, ns, name, g, e))
+				}
 			}
 		}
-		b.WriteString("\nchanged lines:")
-		diff := append(missingLines(data, got, "+ "), missingLines(got, data, "- ")...)
-		for _, line := range diff[:min(len(diff), 60)] {
-			b.WriteString("\n  " + line)
+	}
+	for _, class := range slices.Sorted(maps.Keys(old.Classes)) {
+		spellLike(scopeName(class), old.Classes[class], names.Classes[class])
+	}
+	spellLike("shared", old.Shared, names.Shared)
+	for _, name := range slices.Sorted(maps.Keys(old.Items)) {
+		if e, g := old.Items[name], names.Items[name]; e != g {
+			changed = append(changed, fmt.Sprintf("item.%s is item %d, want item %d", name, g, e))
 		}
-		t.Error(b.String())
+	}
+	for _, name := range slices.Sorted(maps.Keys(old.Enchants)) {
+		if e, g := old.Enchants[name], names.Enchants[name]; !reflect.DeepEqual(e, g) {
+			changed = append(changed, fmt.Sprintf("enchant.%s is %s, want %s", name, enchantText(g), enchantText(e)))
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(old.Suffixes)) {
+		if e, g := old.Suffixes[name], names.Suffixes[name]; e != g {
+			changed = append(changed, fmt.Sprintf("suffix.%s is suffix %d, want suffix %d", name, g, e))
+		}
+	}
+	if len(changed) > 0 {
+		t.Errorf("%s holds entries the sim and the database do not give now; run %s and commit the table:\n  %s",
+			TablePath, MakeCommand, strings.Join(changed[:min(len(changed), 60)], "\n  "))
+	}
+	if len(report.Added) > 0 {
+		t.Logf("%s lacks %d names the sim and the database give; %s adds them:\n  %s",
+			TablePath, len(report.Added), MakeCommand, strings.Join(report.Added[:min(len(report.Added), 60)], "\n  "))
 	}
 }
 
@@ -142,7 +173,8 @@ func TestPinnedNamesSurviveTheSim(t *testing.T) {
 			t.Errorf("warrior.spell.%s is %+v, want its pinned %+v", name, g, e)
 		}
 	}
-	if len(report.Added) != 1 {
-		t.Errorf("the run added %v, want heroic_strike_tag1 alone", report.Added)
+	added := slices.DeleteFunc(slices.Clone(report.Added), func(line string) bool { return !strings.HasPrefix(line, "warrior.spell.") })
+	if want := []string{"warrior.spell.heroic_strike_tag1 = spell 25286 tag 1"}; !reflect.DeepEqual(added, want) {
+		t.Errorf("the run added %v to warrior.spell, want heroic_strike_tag1 alone", added)
 	}
 }

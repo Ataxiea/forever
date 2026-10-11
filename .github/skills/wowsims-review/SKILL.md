@@ -126,8 +126,8 @@ go run ./sim/siml/cmd/simlnames -base "$(git merge-base origin/master HEAD)"   #
 git diff "$(git merge-base origin/master HEAD)" -- sim/siml/gen/repinned.txt   # the repins the change makes; read each one
 ```
 
-A table that differs from what the sim registers fails `TestTableIsUpToDate`, so a spell registered without the
-table regenerated shows in CI.
+A committed entry that regenerates with another meaning or registered-by list fails `TestTableKeepsItsEntries`; a
+spell registered without the table regenerated is only logged there, and the site build adds its name at deploy.
 
 **Rotations and gear sets, `ui/specs/**/*.siml`.** Their diff reads as SIML rows (`cast mortal_strike if …`,
 `main_hand arcanite_reaper + weapon_crusader`), so read each changed row for what it does. Check that each name means

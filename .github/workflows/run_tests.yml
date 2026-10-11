@@ -105,8 +105,8 @@ jobs:
             - name: Build Storybook 📚
               run: npm run storybook:build
 
-            # The checkout's Go files are newer than the committed name table, which the test job's
-            # TestTableIsUpToDate already checks, so the stamp marks it current rather than regenerating it here.
+            # The site is built from the committed name table: the stamp marks it current rather than regenerating
+            # it here, since deploy regenerates it and the test job checks the committed one keeps its entries.
             - name: Build 🔧
               run: |
                   touch sim/siml/.names.stamp
@@ -260,8 +260,8 @@ jobs:
             - name: Generate proto and dist stubs
               run: make sim/core/proto/api.pb.go binary_dist/dist.go
 
-            # TestTableIsUpToDate regenerates from the table the pull request holds, so it passes a table whose names
-            # changed meaning. This fails when a name of the base branch's table means something else, or nothing,
+            # TestTableKeepsItsEntries regenerates from the table the pull request holds, so it passes a table whose
+            # names changed meaning. This fails when a name of the base branch's table means something else, or nothing,
             # unless the pull request adds the name's line to sim/siml/gen/repinned.txt, which simlnames -w -repin
             # writes. A pull request is checked out as its merge commit, whose first parent is the base.
             - name: Check the name table keeps its names
@@ -278,8 +278,8 @@ jobs:
               run: go test ./tools/database/... ./tools/gen_buffs_proto/...
 
             # The tools that read and sim SIML files, wowsimcli's check of the files under ui/specs among them, and
-            # sim/siml built without the with_db tag, which holds no name table. The table's up-to-date test runs with
-            # ./sim/... below.
+            # sim/siml built without the with_db tag, which holds no name table. The test that the table keeps its
+            # entries runs with ./sim/... below.
             - name: Test the SIML tools
               if: matrix.shard == 0
               run: |

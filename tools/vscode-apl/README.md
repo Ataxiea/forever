@@ -36,8 +36,8 @@ rotation again with them.
   the table for the position: the spells and auras the file's spec registers, the class's first, then the shared ones
   that gear, consumables and encounters add; `item.` with the items that have a use, `other.`, the items of a slot, the
   suffixes of an item, the enchants that fit, and the consumables of a field.
-- **Hover.** A spell's or aura's game name, ids and the specs that register it, with its row of the game files from
-  `go run ./tools/spelldata <id>`; an item, an enchant or a suffix from the database; a kind's fields; a unit's JSON;
+- **Hover.** A spell's or aura's game name, ids and the specs that register it, with its row of the game files as
+  `go run ./tools/spelldata <id>` prints it, read from the server's own spell store; an item, an enchant or a suffix from the database; a kind's fields; a unit's JSON;
   a variable's, group's or sequence's declaration.
 - **Navigation.** Go to definition, find references and rename for variables (both `$name` and `${Exact Name}`),
   groups, sequences and placeholders; the outline of sections, variables and sequences; folding. A variable that a

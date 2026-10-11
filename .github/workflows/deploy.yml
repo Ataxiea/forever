@@ -59,13 +59,13 @@ jobs:
             - name: Install binaryen
               run: sudo apt-get update && sudo apt-get install -y binaryen
 
-            # The checkout's Go files are newer than the committed name table, which the tests job's
-            # TestTableIsUpToDate already checks, so the stamp marks it current rather than regenerating it here. The
-            # stamp's rule needs the generated protos, which are made first so they are not newer than it.
+            # The name table is regenerated here, so what ships names every spell the sim registers and every row
+            # of the database, whether or not the commit regenerated the committed table. The protos are made first:
+            # the table's rule reads them.
             - name: Build 🔧
               run: |
                   make sim/core/proto/api.pb.go
-                  touch sim/siml/.names.stamp
+                  make sim/siml/names.json
                   make dist/forever/.dirstamp
 
             - name: Update proto version file

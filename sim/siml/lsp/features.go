@@ -155,22 +155,21 @@ func (s *server) uriOfLocked(path string) string {
 // server.
 func (s *server) hover(uri string, at Position) (any, *ResponseError) {
 	catalog := s.readCatalog(uri)
-	h, root, ok := func() (siml.Hover, string, bool) {
+	h, ok := func() (siml.Hover, bool) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		a := s.analyzeLocked(uri)
 		if a == nil || a.doc == nil {
-			return siml.Hover{}, "", false
+			return siml.Hover{}, false
 		}
-		h, ok := a.doc.Hover(fromPosition(at), catalog.of(a))
-		return h, a.root, ok
+		return a.doc.Hover(fromPosition(at), catalog.of(a))
 	}()
 	if !ok {
 		return nil, nil
 	}
 	markdown := h.Markdown
 	if h.SpellID > 0 {
-		if row, ok := s.cards.row(root, h.SpellID); ok && row != "" {
+		if row, ok := s.cards.row(h.SpellID); ok && row != "" {
 			markdown += "\n\n```text\n" + row + "\n```"
 		}
 	}
