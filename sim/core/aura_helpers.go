@@ -2,6 +2,7 @@
 package core
 
 import (
+	"slices"
 	"time"
 
 	"github.com/wowsims/forever/sim/core/stats"
@@ -69,6 +70,7 @@ type ProcTrigger struct {
 	// (SpellItemEnchantment.Effect 1, e.g. Mongoose, Crusader, poisons, imbues).
 	// The game casts these off every melee or ranged hit that lacks SpellFlagSuppressWeaponProcs,
 	// whether or not that hit was itself a proc, so SpellFlagProc and CanProcFromProcs are ignored.
+	// A weapon proc's own strike is such a hit, unless an off-hand hit cast it.
 	// Which hand's hits qualify is still the DPM's or ProcMask's job.
 	IsWeaponProc bool
 }
@@ -76,7 +78,7 @@ type ProcTrigger struct {
 // The game's rule for whether a hit may reach a listener at all, before the proc flags are
 // matched. Weapon procs (Player::CastItemCombatSpell) hear only melee and ranged hits, and of those
 // skip the spells with Suppress Weapon Procs; a hit with no melee or ranged mask, such as the damage
-// an item proc deals, never casts them. Aura procs (Aura::IsProcTriggeredOnEvent) skip triggered
+// of a magic item proc, never casts them. Aura procs (Aura::IsProcTriggeredOnEvent) skip triggered
 // spells that lack Not a Proc, unless the listener carries Can Proc From Procs. Auto attacks, extra
 // attacks included, carry neither flag and so are always eligible.
 func (config *ProcTrigger) canProcFrom(spell *Spell) bool {
@@ -358,16 +360,32 @@ func (aura *StatBuffAura) CanProc(sim *Simulation) bool {
 	return !aura.IsSwapped && ((aura.CustomProcCondition == nil) || aura.CustomProcCondition(sim, aura.Aura))
 }
 
-func (aura *StatBuffAura) InferCDType() CooldownType {
-	cdType := CooldownTypeUnknown
+// The stats a buff to any of makes a survival cooldown.
+var SurvivalStats = []stats.Stat{stats.Armor, stats.BlockPercent, stats.BlockValue, stats.DodgeRating, stats.ParryRating,
+	stats.DodgePercent, stats.ParryPercent, stats.Health, stats.ArcaneResistance, stats.FireResistance, stats.FrostResistance,
+	stats.NatureResistance, stats.ShadowResistance}
 
-	if aura.BuffsMatchingStat([]stats.Stat{stats.Armor, stats.BlockPercent, stats.DodgeRating, stats.ParryRating, stats.DodgePercent, stats.ParryPercent, stats.Health}) {
-		cdType |= CooldownTypeSurvival
-	} else {
-		cdType |= CooldownTypeDPS
+// The stats a buff to only these makes a mana cooldown.
+var ManaStats = []stats.Stat{stats.MP5, stats.Spirit}
+
+// A buff to any defensive stat or resistance is a survival cooldown, one to mana regen or spirit
+// alone a mana cooldown, and any other a DPS cooldown.
+func CooldownTypeOf(buffed []stats.Stat) CooldownType {
+	if CheckSliceOverlap(buffed, SurvivalStats) {
+		return CooldownTypeSurvival
 	}
 
-	return cdType
+	if len(buffed) > 0 && !slices.ContainsFunc(buffed, func(stat stats.Stat) bool {
+		return !slices.Contains(ManaStats, stat)
+	}) {
+		return CooldownTypeMana
+	}
+
+	return CooldownTypeDPS
+}
+
+func (aura *StatBuffAura) InferCDType() CooldownType {
+	return CooldownTypeOf(aura.BuffedStatTypes)
 }
 
 type StackingStatAura struct {

@@ -407,6 +407,46 @@ func NewSpellDataFlametongueTotemAura(unit *core.Unit, isPlayer bool, talentPoin
 	return newBuff(unit, flametongueTotemMeta, isPlayer, talentPoints)
 }
 
+// Darkspear
+var DarkspearCategory = "Darkspear"
+var darkspearSpell = spelldata.MustFind(16939)
+var darkspearMeta = &Meta{
+	Label:      "Darkspear",
+	Spell:      darkspearSpell,
+	Category:   DarkspearCategory,
+	SingleAura: true,
+}
+
+func DarkspearValue(talentPoints int32) float64 {
+	return darkspearMeta.Value(talentPoints)
+}
+func DarkspearDuration(talentPoints int32) time.Duration {
+	return darkspearMeta.Duration(talentPoints)
+}
+func NewSpellDataDarkspearAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, darkspearMeta, isPlayer, talentPoints)
+}
+
+// Admiral's Hat
+var AdmiralsHatCategory = "AdmiralsHat"
+var admiralsHatSpell = spelldata.MustFind(12022)
+var admiralsHatMeta = &Meta{
+	Label:      "Admiral's Hat",
+	Spell:      admiralsHatSpell,
+	Category:   AdmiralsHatCategory,
+	SingleAura: true,
+}
+
+func AdmiralsHatValue(talentPoints int32) float64 {
+	return admiralsHatMeta.Value(talentPoints)
+}
+func AdmiralsHatDuration(talentPoints int32) time.Duration {
+	return admiralsHatMeta.Duration(talentPoints)
+}
+func NewSpellDataAdmiralsHatAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, admiralsHatMeta, isPlayer, talentPoints)
+}
+
 // Arcane Brilliance
 var ArcaneBrillianceCategory = "StatBuff"
 var arcaneBrillianceSpell = spelldata.MustFind(23028)
@@ -795,7 +835,7 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 		core.MakePermanent(NewSpellDataLeaderOfThePackAura(&char.Unit, false, 0))
 	}
 	if party.ManaSpringTotem != proto.TristateEffect_TristateEffectMissing {
-		core.MakePermanent(NewSpellDataManaSpringTotemAura(&char.Unit, false, core.GetTristateValueInt32(party.ManaSpringTotem, 0, 5)))
+		standTotem(char, manaSpringTotemSpell, NewSpellDataManaSpringTotemAura, core.GetTristateValueInt32(party.ManaSpringTotem, 0, 5))
 	}
 	if party.ManaTideTotems > 0 {
 		driveManaTideTotems(char, party)
@@ -819,7 +859,7 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 		driveAtieshWarlock(char, party)
 	}
 	if party.StrengthOfEarthTotem {
-		core.MakePermanent(NewSpellDataStrengthOfEarthTotemAura(&char.Unit, false, 0))
+		standTotem(char, strengthOfEarthTotemSpell, NewSpellDataStrengthOfEarthTotemAura, 0)
 	}
 	if party.GraceOfAirTotem {
 		driveGraceOfAirTotem(char, party)
@@ -834,13 +874,19 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 		driveAtieshPriest(char, party)
 	}
 	if party.StoneskinTotem != proto.TristateEffect_TristateEffectMissing {
-		core.MakePermanent(NewSpellDataStoneskinTotemAura(&char.Unit, false, core.GetTristateValueInt32(party.StoneskinTotem, 0, 2)))
+		standTotem(char, stoneskinTotemSpell, NewSpellDataStoneskinTotemAura, core.GetTristateValueInt32(party.StoneskinTotem, 0, 2))
 	}
 	if party.FuriousHowl {
 		core.MakePermanent(NewSpellDataFuriousHowlAura(&char.Unit, false, 0))
 	}
 	if party.FlametongueTotem {
 		driveFlametongueTotem(char, party)
+	}
+	if party.Darkspear {
+		driveDarkspear(char, party)
+	}
+	if party.AdmiralsHat {
+		core.MakePermanent(NewSpellDataAdmiralsHatAura(&char.Unit, false, 0))
 	}
 	if raid.ArcaneBrilliance {
 		core.MakePermanent(NewSpellDataArcaneBrillianceAura(&char.Unit, false, 0))
@@ -867,13 +913,13 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 		core.MakePermanent(NewSpellDataShadowResistanceAura(&char.Unit, false, 0))
 	}
 	if raid.FireResistanceTotem {
-		core.MakePermanent(NewSpellDataFireResistanceTotemAura(&char.Unit, false, 0))
+		standTotem(char, fireResistanceTotemSpell, NewSpellDataFireResistanceTotemAura, 0)
 	}
 	if raid.FrostResistanceTotem {
-		core.MakePermanent(NewSpellDataFrostResistanceTotemAura(&char.Unit, false, 0))
+		standTotem(char, frostResistanceTotemSpell, NewSpellDataFrostResistanceTotemAura, 0)
 	}
 	if raid.NatureResistanceTotem {
-		core.MakePermanent(NewSpellDataNatureResistanceTotemAura(&char.Unit, false, 0))
+		standTotem(char, natureResistanceTotemSpell, NewSpellDataNatureResistanceTotemAura, 0)
 	}
 	if raid.AspectOfTheWild {
 		core.MakePermanent(NewSpellDataAspectOfTheWildAura(&char.Unit, false, 0))

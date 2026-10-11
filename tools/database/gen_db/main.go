@@ -201,6 +201,9 @@ func main() {
 	if err := database.AddUnparsedStats(db); err != nil {
 		log.Fatalf("failed to add the stats the parse leaves out: %v", err)
 	}
+	if err := database.AddPotionClasses(db); err != nil {
+		log.Fatalf("failed to classify the potions: %v", err)
+	}
 
 	db.MergeItems(database.ItemOverrides)
 	db.MergeEnchants(database.EnchantOverrides)
@@ -220,7 +223,9 @@ func main() {
 	if err := database.GenerateConsumablesTSFile(db); err != nil {
 		log.Fatalf("failed to generate the consumables TS file: %v", err)
 	}
-	database.GenerateMissingEffectsFile()
+	if err := database.GenerateMissingEffectsFile(instance, db); err != nil {
+		log.Fatalf("failed to generate the missing effects TS file: %v", err)
+	}
 	database.GenerateItemEffectRandomPropPoints(instance, db)
 
 	// Disbabled due to duplicate SpellIDs
