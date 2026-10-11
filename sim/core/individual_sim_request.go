@@ -11,7 +11,7 @@ import (
 // target, are simmed against one default target, which the warnings say. s is not changed.
 func IndividualSimRequest(s *proto.IndividualSimSettings, options *proto.SimOptions) (*proto.RaidSimRequest, []string) {
 	var warnings []string
-	player := googleProto.Clone(s.GetPlayer()).(*proto.Player)
+	player := googleProto.Clone(orEmpty(s.GetPlayer())).(*proto.Player)
 	if player.Profession1 != proto.Profession_Enchanting && player.Profession2 != proto.Profession_Enchanting {
 		for _, slot := range []proto.ItemSlot{proto.ItemSlot_ItemSlotFinger1, proto.ItemSlot_ItemSlotFinger2} {
 			if items := player.GetEquipment().GetItems(); int(slot) < len(items) && items[slot] != nil {

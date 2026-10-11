@@ -43,6 +43,10 @@ describe('makePresetBuildFromJSON settings', () => {
 		expect(build.settings?.playerOptions?.enableItemSwap).toBe(true);
 		expect(build.settings?.playerOptions?.itemSwap?.items).toEqual([expect.objectContaining({ id: 1 })]);
 	});
+
+	it('turns item swap off for settings that hold no item swap set', () => {
+		expect(buildFrom({}).settings?.playerOptions?.enableItemSwap).toBe(false);
+	});
 });
 
 describe('makePresetBuildFromJSON rotation', () => {

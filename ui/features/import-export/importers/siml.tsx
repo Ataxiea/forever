@@ -22,7 +22,7 @@ const CATEGORY_OF_KEY = new Map([...SIM_CATEGORY_KEYS].map(([category, key]) => 
  * leaves the gear and the talents as they are, and an empty section resets its category. A file that does not read
  * is refused with each problem at its line and column; `use` is among them, as the site reads no other files.
  */
-export const importSiml = async (host: IndividualSimHost<any>, text: string, path: string): Promise<void> => {
+const importSiml = async (host: IndividualSimHost<any>, text: string, path: string): Promise<void> => {
 	const parsed = await parseSiml(host.sim, path, text);
 	const errors = parsed.diagnostics.filter(d => !d.warning);
 	if (errors.length) throw new ImportProblems(i18n.t('import.siml.error_problems'), errors.map(located));

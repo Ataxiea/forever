@@ -245,6 +245,8 @@ const makePresetSettingsHelper = (name: string, spec: Spec, simSettings: Individ
 		settings.playerOptions = {
 			inFrontOfTarget: simSettings.player.inFrontOfTarget,
 			distanceFromTarget: simSettings.player.distanceFromTarget,
+			// Settings with no `item_swap:` section turn swapping off, as the hand-written presets did.
+			enableItemSwap: simSettings.player.enableItemSwap,
 		};
 
 		// proto3 cannot tell an absent scalar from a zero one, so a JSON that never mentions these

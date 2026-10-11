@@ -88,7 +88,6 @@ declare global {
 	const simlNames: (table: Uint8Array) => string;
 	const simlParse: SimRequestSync;
 	const simlPrint: SimRequestSync;
-	const simlFormat: SimRequestSync;
 }
 
 // The name table SIML is read and written with, fetched and handed to the sim on the first SIML request: lib.wasm
@@ -144,7 +143,6 @@ function setupWorkerInterface() {
 		abortById: abortById,
 		simlParse: withSimlNames(simlParse),
 		simlPrint: withSimlNames(simlPrint),
-		simlFormat: withSimlNames(simlFormat),
 	}).ready(true);
 }
 

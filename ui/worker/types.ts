@@ -20,7 +20,6 @@ export enum SimRequest {
 	abortById = 'abortById',
 	simlParse = 'simlParse',
 	simlPrint = 'simlPrint',
-	simlFormat = 'simlFormat',
 }
 
 // The endpoints that run asynchronously (progress-id handshake + progress polling). Single

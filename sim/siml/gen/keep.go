@@ -188,10 +188,10 @@ func IsCheckout(root string) bool {
 
 // The file at path in commit rev of the checkout at root; ok is false when rev does not hold it.
 func GitFile(root, rev, path string) (data []byte, ok bool, err error) {
-	if err := exec.Command("git", "-C", root, "rev-parse", "--verify", "--quiet", rev+"^{commit}").Run(); err != nil {
+	if err := exec.Command("git", "-C", root, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}").Run(); err != nil {
 		return nil, false, fmt.Errorf("%s is no commit of the checkout at %s", rev, root)
 	}
-	data, err = exec.Command("git", "-C", root, "show", rev+":"+path).Output()
+	data, err = exec.Command("git", "-C", root, "show", "--end-of-options", rev+":"+path).Output()
 	if exit := (*exec.ExitError)(nil); errors.As(err, &exit) {
 		return nil, false, nil
 	}

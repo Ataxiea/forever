@@ -1,6 +1,6 @@
 import { Player as PlayerProto } from '@generated/proto/api';
 import { Spec } from '@generated/proto/common';
-import { type SimlDiagnostic, SimlFormatRequest, SimlParseRequest, SimlPrintRequest } from '@generated/proto/ui';
+import { type SimlDiagnostic, SimlParseRequest, SimlPrintRequest } from '@generated/proto/ui';
 import type { Sim } from '@sim/sim';
 
 // SIML (sim/siml/SPEC.md), read and written by the sim: in its web worker, or by the server it runs on.
@@ -26,6 +26,3 @@ export const parseSiml = async (sim: Sim, path: string, text: string) => answere
 
 /** Settings printed as a file of `section`, or a full setup with none; text that would not read back gives its problems. */
 export const printSiml = async (sim: Sim, request: Partial<SimlPrintRequest>) => answered(await sim.simlPrint(SimlPrintRequest.create(request)));
-
-/** `text`, the file `path` names, in canonical form. */
-export const formatSiml = async (sim: Sim, path: string, text: string) => answered(await sim.simlFormat(SimlFormatRequest.create({ path, text })));

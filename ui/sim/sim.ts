@@ -39,8 +39,6 @@ import {
 import {
 	DatabaseFilters,
 	RaidFilterOption,
-	SimlFormatRequest,
-	SimlFormatResult,
 	SimlParseRequest,
 	SimlParseResult,
 	SimlPrintRequest,
@@ -475,10 +473,6 @@ export class Sim {
 
 	simlPrint(request: SimlPrintRequest): Promise<SimlPrintResult> {
 		return this.workerPool.simlPrint(request);
-	}
-
-	simlFormat(request: SimlFormatRequest): Promise<SimlFormatResult> {
-		return this.workerPool.simlFormat(request);
 	}
 
 	// Stats for a hypothetical gear set, without touching the player's own current stats or
