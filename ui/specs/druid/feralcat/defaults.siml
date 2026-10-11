@@ -8,7 +8,7 @@ settings:
   reaction_time_ms 250
 
 consumables:
-  pot major_frenzy_potion
+  offensive_pot major_frenzy_potion
   food swiftstrike_steak
   conjured demonic_rune
   mh_imbue dense_weightstone

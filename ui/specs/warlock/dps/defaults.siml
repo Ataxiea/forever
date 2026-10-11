@@ -13,7 +13,7 @@ settings:
   curse_options recklessness
 
 consumables:
-  pot major_spellblasting_potion
+  offensive_pot major_spellblasting_potion
   flask flask_of_supreme_power
   food nightfin_soup
   conjured demonic_rune

@@ -14,7 +14,7 @@ settings:
   `{"race": "RaceOrc", "nope": 1}`
 
 consumables:
-  pot falcons_call
+  offensive_pot falcons_call
   food steak
   extra=[falcons_call]
 

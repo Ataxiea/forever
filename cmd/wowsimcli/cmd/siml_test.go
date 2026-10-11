@@ -334,7 +334,7 @@ func TestSimLoadsAPresetBuildOverItsSpecDefaults(t *testing.T) {
 	}
 	player := request.Raid.Parties[0].Players[0]
 	if player.Race != proto.Race_RaceOrc || player.TalentsString != "1-00531500114-52225303000021005" || player.DistanceFromTarget != 11 ||
-		player.Consumables.GetPotId() == 0 || len(player.Rotation.GetPriorityList()) == 0 {
+		player.Consumables.GetResourcePotId() == 0 || len(player.Rotation.GetPriorityList()) == 0 {
 		t.Errorf("race %v, talents %q, distance %v, consumables %v, %d priority rows, want the defaults' race and consumables under the build's talents, distance and rotation",
 			player.Race, player.TalentsString, player.DistanceFromTarget, player.Consumables, len(player.Rotation.GetPriorityList()))
 	}

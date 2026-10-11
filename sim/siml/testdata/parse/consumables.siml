@@ -2,7 +2,7 @@ siml 1
 spec hunter
 
 consumables:
-  pot major_frenzy_potion
+  offensive_pot major_frenzy_potion
   flask flask_of_the_titans
   food swiftstrike_steak
   conjured demonic_rune

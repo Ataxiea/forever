@@ -104,7 +104,7 @@ func TestCompleteAuraNamespace(t *testing.T) {
 
 func TestCompleteNamesAndDefinitions(t *testing.T) {
 	hasAll(t, "item.", complete(t, langPreface+"priority:\n  cast item.|\n"), "goblin_sapper_charge")
-	hasAll(t, "other.", complete(t, langPreface+"priority:\n  cast other.|\n"), "potion")
+	hasAll(t, "other.", complete(t, langPreface+"priority:\n  cast other.|\n"), "offensive_potion")
 	hasAll(t, "on", complete(t, langPreface+"priority:\n  cast hunters_mark on |\n"), "previous_target")
 	hasAll(t, "enum", complete(t, langPreface+"priority:\n  cast x if is_execute_phase(|\n"), "e20")
 	text, at := marked(langPreface + "priority:\n  group \"|\"\n\ngroup \"Weave\":\n  none\n")
@@ -177,9 +177,9 @@ func TestCompleteEntries(t *testing.T) {
 }
 
 func TestCompleteConsumables(t *testing.T) {
-	pots := complete(t, "siml 1\n\nconsumables:\n  pot |\n", setupPath)
-	hasAll(t, "pot", pots, "major_frenzy_potion")
-	hasNone(t, "pot", pots, "swiftstrike_steak")
+	pots := complete(t, "siml 1\n\nconsumables:\n  offensive_pot |\n", setupPath)
+	hasAll(t, "offensive_pot", pots, "major_frenzy_potion")
+	hasNone(t, "offensive_pot", pots, "swiftstrike_steak")
 	food := complete(t, "siml 1\n\nconsumables:\n  food |\n", setupPath)
 	hasAll(t, "food", food, "swiftstrike_steak")
 	hasNone(t, "food", food, "major_frenzy_potion")

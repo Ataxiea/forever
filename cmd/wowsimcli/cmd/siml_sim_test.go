@@ -73,7 +73,7 @@ func TestCharacterFromRepoReadsTheSpecDefaults(t *testing.T) {
 	if p.TalentsString != "-00530501114-550200030050220151" || p.Race != proto.Race_RaceOrc || c.info.Gear != "p1" {
 		t.Errorf("got talents %q, race %v and gear %q, want the SV Weave talents, an orc and the P1 set", p.TalentsString, p.Race, c.info.Gear)
 	}
-	if p.Consumables.GetPotId() == 0 || p.GetHunter().GetOptions().GetClassOptions().GetAmmo() == proto.HunterOptions_AmmoNone {
+	if p.Consumables.GetResourcePotId() == 0 || p.GetHunter().GetOptions().GetClassOptions().GetAmmo() == proto.HunterOptions_AmmoNone {
 		t.Errorf("consumables %v, options %v", p.Consumables, p.GetHunter().GetOptions())
 	}
 	if !c.settings.RaidBuffs.GetGiftOfTheWild() || !c.settings.Debuffs.GetSunderArmor() || !p.Buffs.GetGreaterBlessingOfKings() {
@@ -97,7 +97,7 @@ func TestCharacterFromRepoLoadsTheBuildOfTheRotation(t *testing.T) {
 		t.Errorf("options %v, want the build's raptor", p.GetHunter().GetOptions())
 	}
 	// The build sets no race, professions or consumables, so the defaults' stay.
-	if p.Race != proto.Race_RaceOrc || p.Profession1 != proto.Profession_Engineering || p.Consumables.GetPotId() == 0 {
+	if p.Race != proto.Race_RaceOrc || p.Profession1 != proto.Profession_Engineering || p.Consumables.GetResourcePotId() == 0 {
 		t.Errorf("race %v, profession %v, consumables %v, want the defaults'", p.Race, p.Profession1, p.Consumables)
 	}
 }

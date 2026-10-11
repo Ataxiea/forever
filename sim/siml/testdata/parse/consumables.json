@@ -2,7 +2,7 @@
 	"player": {
 		"class": "ClassHunter",
 		"consumables": {
-			"potId": 250943,
+			"offensivePotId": 250943,
 			"flaskId": 13510,
 			"foodId": 250072,
 			"conjuredId": 12662,

@@ -11,7 +11,7 @@ priority:
   cast item.goblin_sapper_charge
   cast `{"itemId":10646,"rank":1}`
   cast `{"itemId":900099}`
-  cast other.potion
+  cast other.offensive_potion
   cast x
       if aura(steady_shot).is_active
       and target.aura(steady_shot).is_active

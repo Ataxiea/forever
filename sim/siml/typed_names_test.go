@@ -60,7 +60,7 @@ func TestUnknownNames(t *testing.T) {
 			t.Errorf("%q gave %v, want unknown-name at %d:%d: %s", c.text, err, c.at.Line, c.at.Col, c.message)
 		}
 	}
-	_, err := Parse("x.consumables.siml", []byte("siml 1\n\npot item.sapper\n"), namespaceNames, nil)
+	_, err := Parse("x.consumables.siml", []byte("siml 1\n\noffensive_pot item.sapper\n"), namespaceNames, nil)
 	var diags Diagnostics
 	if !errors.As(err, &diags) || len(diags) != 1 || diags[0].Code != "wrong-type" {
 		t.Errorf("item.<name> outside an ActionID gave %v, want wrong-type", err)
@@ -152,8 +152,8 @@ func TestPrintSlotRows(t *testing.T) {
 
 // Raw JSON that holds a spell, item, enchant or suffix id is raw-ref, and raw JSON that holds none is not.
 func TestRawRefs(t *testing.T) {
-	src := "siml 1\nspec hunter\n\ngear:\n  head       `{\"id\":3}`\n\nconsumables:\n  `{\"potId\":5}`\n  flask `0`\n\n" +
-		"priority:\n  cast other.potion if aura_is_active(x, source_unit=`{\"type\":\"Pet\"}`)\n  cast `{\"spellId\":1}`\n"
+	src := "siml 1\nspec hunter\n\ngear:\n  head       `{\"id\":3}`\n\nconsumables:\n  `{\"offensivePotId\":5}`\n  flask `0`\n\n" +
+		"priority:\n  cast other.offensive_potion if aura_is_active(x, source_unit=`{\"type\":\"Pet\"}`)\n  cast `{\"spellId\":1}`\n"
 	f, err := Parse("x.siml", []byte(src), namespaceNames, nil)
 	if err != nil {
 		t.Fatal(err)

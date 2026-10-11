@@ -33,7 +33,7 @@ gear:
   ranged     fahrads_reloading_repeater + saf_t_ultra_precision_scope
 
 consumables:
-  pot major_frenzy_potion
+  offensive_pot major_frenzy_potion
   food swiftstrike_steak
   conjured demonic_rune
   explosive ez_thro_dynamite_ii

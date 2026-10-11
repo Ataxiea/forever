@@ -8,7 +8,7 @@ var ${Defensive Cooldown Active} = aura(last_stand).is_active or aura(shield_wal
 prepull:
   -1.5s cast battle_shout
   -1.5s cast bloodrage
-  -1.5s cast other.potion
+  -1.5s cast other.offensive_potion
 
 priority:
   group "Engineering"
@@ -19,7 +19,9 @@ priority:
   cast shield_wall if current_health_percent <= 35% and not $defensive_cooldown_active
   # schedule "0s, 0s" cast shield_wall
   cast item.major_healthstone if current_health_percent <= 30%
-  cast other.potion
+  cast other.defensive_potion if current_health_percent <= 35%
+  cast other.offensive_potion
+  cast other.resource_potion
   cast death_wish
   # group "CD: Racials"
   cast shield_block

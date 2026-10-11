@@ -9,7 +9,7 @@ settings:
   distance_from_target 20
 
 consumables:
-  pot major_mana_potion
+  resource_pot major_mana_potion
   food soaring_pamplona
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom, greater_blessing_of_light

@@ -358,7 +358,7 @@ func TestSchemaDerivations(t *testing.T) {
 		{"proto.APLValueIsExecutePhase.ExecutePhaseThreshold", "E20", "e20"},
 		{"proto.HunterOptions.PetAttackSpeed", "PetAttackSpeedNone", "pet_attack_speed_none"},
 		{"proto.HunterOptions.PetAttackSpeed", "FasterAttackII", "faster_attack_ii"},
-		{"proto.OtherAction", "OtherActionPotion", "potion"},
+		{"proto.OtherAction", "OtherActionOffensivePotion", "offensive_potion"},
 		{"proto.FeralBearDruid.Rotation.SwipeUsage", "SwipeUsage_Never", "never"},
 		{"proto.FeralCatDruid.Rotation.FinishingMove", "None", "finishing_move_none"},
 		{"proto.HunterOptions.PetType", "PetNone", "pet_none"},
@@ -383,7 +383,7 @@ func TestSchemaDerivations(t *testing.T) {
 	for _, c := range []struct {
 		message, name, siml, alias, printed, ref string
 	}{
-		{"proto.ConsumesSpec", "pot_id", "pot", "pot_id", "ref", "item"},
+		{"proto.ConsumesSpec", "offensive_pot_id", "offensive_pot", "offensive_pot_id", "ref", "item"},
 		{"proto.ConsumesSpec", "extra_ids", "extra", "extra_ids", "ref", "item"},
 		{"proto.ConsumesSpec", "mhImbue_id", "mh_imbue", "mh_imbue_id", "ref", "item"},
 		{"proto.ConsumesSpec", "potions", "potions", "", "ref", "item"},

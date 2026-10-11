@@ -34,7 +34,7 @@ priority:
   change_target(new_target=target3)
   activate_aura_with_stacks(rapid_fire, num_stacks=2)
   cat_optimal_rotation_action(bite, biteweave, rip_min_combo_points=5)
-  cast other.potion
+  cast other.offensive_potion
   `{"castSpell": {"spellId": {"spellId": 3044}}}` if current_time > 2s
   `{"action": {"castSpell": {"spellId": {"spellId": 3044}}}, "hide": true}`
 

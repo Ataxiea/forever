@@ -444,7 +444,7 @@
 			"action": {
 				"castSpell": {
 					"spellId": {
-						"otherId": "OtherActionPotion"
+						"otherId": "OtherActionOffensivePotion"
 					}
 				}
 			}

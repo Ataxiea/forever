@@ -346,7 +346,7 @@
 							{
 								"selectedPotion": {
 									"potionId": {
-										"otherId": "OtherActionPotion"
+										"otherId": "OtherActionOffensivePotion"
 									}
 								}
 							},

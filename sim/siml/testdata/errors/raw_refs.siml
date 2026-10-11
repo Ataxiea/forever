@@ -7,12 +7,12 @@ gear:
   neck       `{}`
 
 consumables:
-  `{"potId": 13442}`
+  `{"offensivePotId": 13442}`
 
 priority:
   cast `{"spellId": 900099}`
   cast x if aura(`{"spellId": 900001, "tag": 2}`).is_active
   `{"castSpell": {"spellId": {"itemId": 10646}}}` if true
-  cast `{"otherId": "OtherActionPotion"}`
+  cast `{"otherId": "OtherActionOffensivePotion"}`
   cast x on `{"type": "Pet"}`
   cast hunter_sht

@@ -20,7 +20,8 @@ priority:
   group "CD: Trinkets"
   group "Sunder Armor" if number_targets == 1
   # group "Sunder Armor: Refresh" if number_targets == 1
-  cast other.potion
+  cast other.offensive_potion
+  cast other.resource_potion
   group "CD: Racials"
   cast death_wish
   cast recklessness if and(action_group_used("Recklessness ON/OFF"))

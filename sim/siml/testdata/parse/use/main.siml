@@ -9,7 +9,7 @@ settings:
   distance_from_target 11
   quiver_bonus ancient_sinew_wrapped_lamina
 
-consumables: pot major_frenzy_potion
+consumables: offensive_pot major_frenzy_potion
 
 cooldowns:
   cooldowns(id=rapid_fire, timings=[20])

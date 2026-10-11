@@ -31,10 +31,10 @@ describe('makePresetBuildFromJSON player timings', () => {
 describe('makePresetBuildFromJSON settings', () => {
 	it('states none of the player settings for a file without a settings: section', () => {
 		const build = makePresetBuildFromJSON('p', Spec.SpecDpsWarrior, {
-			player: { class: 'ClassWarrior', dpsWarrior: {}, talentsString: '1-2-3', consumables: { potId: 22838 } },
+			player: { class: 'ClassWarrior', dpsWarrior: {}, talentsString: '1-2-3', consumables: { offensivePotId: 22838 } },
 		});
 
-		expect(build.settings).toEqual({ name: 'p', consumables: ConsumesSpec.create({ potId: 22838 }) });
+		expect(build.settings).toEqual({ name: 'p', consumables: ConsumesSpec.create({ offensivePotId: 22838 }) });
 	});
 
 	it('states the item swap set a file holds', () => {

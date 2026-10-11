@@ -19,7 +19,7 @@ settings:
   tanks player1
 
 consumables:
-  pot greater_stoneshield_potion
+  defensive_pot greater_stoneshield_potion
   flask flask_of_supreme_power
   food nightfin_soup
   conjured demonic_rune

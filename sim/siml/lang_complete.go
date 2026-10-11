@@ -40,7 +40,9 @@ var topLines = [][3]string{ // label, insert, detail
 // The item fields of ConsumesSpec, by proto name, and the consumable types each offers; a field not listed offers
 // every consumable.
 var consumableTypes = map[string][]proto.ConsumableType{
-	"pot_id":             {proto.ConsumableType_ConsumableTypePotion},
+	"resource_pot_id":    {proto.ConsumableType_ConsumableTypePotion},
+	"defensive_pot_id":   {proto.ConsumableType_ConsumableTypePotion},
+	"offensive_pot_id":   {proto.ConsumableType_ConsumableTypePotion},
 	"potions":            {proto.ConsumableType_ConsumableTypePotion},
 	"flask_id":           {proto.ConsumableType_ConsumableTypeFlask},
 	"food_id":            {proto.ConsumableType_ConsumableTypeFood},
@@ -446,7 +448,7 @@ func (b *completer) refs(ns Namespace) {
 		b.add(n.Name, CompletionConstant, ranked(rank).with("", fmt.Sprintf("%s(%d%s)%s", game, n.Entry.SpellID, tag, from)))
 	}
 	b.add("item.", CompletionKeyword, ranked(6).with("", "an item"))
-	b.add("other.", CompletionKeyword, ranked(6).with("", "another action, such as other.potion"))
+	b.add("other.", CompletionKeyword, ranked(6).with("", "another action, such as other.offensive_potion"))
 	b.add("none", CompletionKeyword, ranked(7))
 }
 

@@ -11,7 +11,7 @@ priority:
   cast x if auto_swing_time(off_hand) == 0s
   cast x if action_group_used("Stance Dance ON/OFF")
   cast x if multiple_cd_usages(x, target_spell_id=item.y, offset=2s, align_cd_end)
-  cast x if selected_potion(other.potion) and selected_conjured(conjured_id=item.y)
+  cast x if selected_potion(other.offensive_potion) and selected_conjured(conjured_id=item.y)
   cast x if energy_time_to_target(50) < 1s
   cast x if totem_remaining_time(air, include_reaction_time=true) <= 0s
   cast x if target_is_mob_type(undead) and encounter_in_area(forest_grassland)

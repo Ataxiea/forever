@@ -34,7 +34,7 @@ gear:
 item_swap: prepull_bonus_stats()
 
 consumables:
-  pot major_mana_potion
+  resource_pot major_mana_potion
   flask flask_of_supreme_power
   food baked_salmon
   conjured demonic_rune
@@ -59,7 +59,7 @@ debuffs:
   sunder_armor, gift_of_arthas
 
 encounter:
-  duration 120
+  duration 180
   duration_variation 5
   execute_proportion_20 0.2
   execute_proportion_25 0.25
@@ -86,11 +86,13 @@ prepull:
   -1s cast searing_totem
 
 priority:
-  cast other.potion
+  cast other.resource_potion if current_mana_percent < 80%
+  cast item.demonic_rune if current_mana_percent < 70%
+  autocast_other_cooldowns
   cast mana_tide_totem if current_mana_percent < 50%
   cast searing_totem if totem_remaining_time(fire) <= 0s
   cast lava_burst if dot(flame_shock_rank5).is_active
   cast flame_shock_rank5 if not dot(flame_shock_rank5).is_active
   cast chain_lightning if number_targets > 1
-  cast lightning_bolt_10392_tag0 if current_mana_percent < 40%
+  cast lightning_bolt_10392_tag0 if current_mana_percent < 20%
   cast lightning_bolt

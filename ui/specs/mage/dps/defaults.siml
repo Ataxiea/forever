@@ -10,7 +10,7 @@ settings:
   default_mage_armor mage_armor
 
 consumables:
-  pot major_mana_potion
+  resource_pot major_mana_potion
   food nightfin_soup
   mh_imbue brilliant_wizard_oil
   elixir greater_arcane_elixir, elixir_of_the_sages

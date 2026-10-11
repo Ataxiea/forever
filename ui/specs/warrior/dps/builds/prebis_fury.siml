@@ -4,7 +4,7 @@ talents "30305013002-25053005052010501"
 use "../gear_sets/prebis_fury.gear.siml"
 
 consumables:
-  pot major_frenzy_potion
+  resource_pot mighty_rage_potion
   food smoked_desert_dumplings
   explosive ez_thro_dark_bomb
   mh_imbue dense_weightstone

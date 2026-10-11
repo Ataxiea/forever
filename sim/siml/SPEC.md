@@ -317,7 +317,7 @@ An entry line sets fields of the section's message. How each field type is writt
 | an enum with a bare-flag value (`TristateEffect` → `TristateEffectRegular`) | bare means that value; otherwise its short name                                                | `battle_shout`, `battle_shout=improved`                   | `"battleShout": "TristateEffectRegular"`        |
 | `int32`, `uint32`, `int64`, `double`, `float`                               | a number with no unit                                                                          | `distance_from_target 11`                                 | `"distanceFromTarget": 11`                      |
 | `string`                                                                    | a JSON string                                                                                  | `name "Pre-BiS - Arms"`                                   | `"name": "Pre-BiS - Arms"`                      |
-| item, enchant or suffix ref field (§8.1)                                    | a name of that namespace (§7.2)                                                                | `pot major_frenzy_potion`                                 | `"potId": 250943`                               |
+| item, enchant or suffix ref field (§8.1)                                    | a name of that namespace (§7.2)                                                                | `offensive_pot major_frenzy_potion`                       | `"offensivePotId": 250943`                      |
 | stat field (§8.1)                                                           | a `Stat` short name, or an integer that is no `Stat` value                                     | `stat_type2=attack_power`                                 | `"statType2": 14`                               |
 | repeated scalar                                                             | values separated by commas                                                                     | `elixir elixir_of_the_mongoose, greater_mageblood_elixir` | `"elixirIds": [13452, 250341]`                  |
 | message                                                                     | `field(arg, …)` with named arguments, bare bool flags, or both; `field()` is present but empty | `healing_model(hps=1200)`                                 | `"healingModel": {"hps": 1200}`                 |
@@ -348,7 +348,7 @@ An entry line sets fields of the section's message. How each field type is writt
 - **Field names.** A field is written by its proto name. A proto name that is not lower snake case is written
   as the snake case of its JSON name (`mhImbue_id` → `mh_imbue_id`). An item ref field whose name ends in
   `_id` or `_ids` drops that suffix when the shorter name names no other field of the message
-  (`pot_id` → `pot`, `extra_ids` → `extra`). Both the short name and the full name are accepted, and the
+  (`offensive_pot_id` → `offensive_pot`, `extra_ids` → `extra`). Both the short name and the full name are accepted, and the
   printer writes the short one.
 - **Errors.** Unknown names are `unknown-field`. A field set twice is `duplicate-field`. A value that does not
   fit is `wrong-type`. An unknown enum value is `unknown-enum`. A number with a unit is `bad-literal`.
@@ -378,7 +378,7 @@ line whose first word is a slot word is a slot row, and any other line an entry.
 | Section                                         | What it reads like                                                                                                                                                                    |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `settings`                                      | `race orc`, `profession1 engineering`, `distance_from_target 11`, the spec options flattened (`quiver_bonus ancient_sinew_wrapped_lamina`, `cobra_reflexes`), `tanks player1`         |
-| `consumables`                                   | `pot major_frenzy_potion`, `food swiftstrike_steak`, `extra goblin_sapper_charge, scroll_of_strength_iv`                                                                              |
+| `consumables`                                   | `offensive_pot major_frenzy_potion`, `food swiftstrike_steak`, `extra goblin_sapper_charge, scroll_of_strength_iv`                                                                    |
 | `buffs`, `party_buffs`, `raid_buffs`, `debuffs` | flag lists of the buff fields, `battle_shout=improved` for a tristate, `target_dummies 2` in `raid_buffs`                                                                             |
 | `encounter`                                     | `duration 180`, `duration_variation 5`, `execute_proportion_20 0.2`, one `targets(id=…, name="…", level=63, mob_type=mechanical, stats(…), …)` per target, written out field by field |
 | `sim`                                           | `iterations 25000`, `ep_weights_stats(stats(agility=2.1))`, `dps_ref_stat attack_power`                                                                                               |
@@ -620,19 +620,19 @@ meaning among the shared entries.
 
 ### 7.2 Positions
 
-| Position                                                                                                                                                     | Namespace                     | JSON                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | ---------------------------------------------------- |
-| the subject of `cast` and `channel`, the `spell` and `dot` heads, `multidot`, `Cooldown.id`, and every other `ActionID` field this table does not name       | `spell`                       | `{"spellId": id}`, with the entry's `tag` and `rank` |
-| an `ActionID` field named `aura_id` (the `aura` head, `cancel_aura`, …) whose kind's unit (§6.7) is none, `self`, `playerN`, `all_players` or `unknown_unit` | `aura`                        | as above                                             |
-| … whose unit is `target`, `targetN`, `previous_target`, `next_target` or `all_targets`                                                                       | `target_aura`                 | as above                                             |
-| … whose unit is `petN`                                                                                                                                       | `pet_aura`                    | as above                                             |
-| the `ActionID` field of a kind named `boss_spell_<prop>` (the `boss_spell` head)                                                                             | `target_spell`                | as above                                             |
-| `item.<name>` in any `ActionID` position                                                                                                                     | `item`                        | `{"itemId": id}`                                     |
-| `other.<short>` in any `ActionID` position                                                                                                                   | the `OtherAction` enum (§8.2) | `{"otherId": "OtherAction…"}` (`other.potion`)       |
-| `none` in any `ActionID` position                                                                                                                            |                               | `{}`                                                 |
-| `ItemSpec.id`, the item of a slot row, and the item ref fields of `ConsumesSpec` (§8.1 `refs`)                                                               | `item`                        | the item id                                          |
-| `ItemSpec.enchant`, `+ <name>` on a slot row                                                                                                                 | `enchant`                     | the effect id                                        |
-| `ItemSpec.random_suffix`, the suffix of a slot row                                                                                                           | `suffix`                      | the random suffix id                                 |
+| Position                                                                                                                                                     | Namespace                     | JSON                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | -------------------------------------------------------- |
+| the subject of `cast` and `channel`, the `spell` and `dot` heads, `multidot`, `Cooldown.id`, and every other `ActionID` field this table does not name       | `spell`                       | `{"spellId": id}`, with the entry's `tag` and `rank`     |
+| an `ActionID` field named `aura_id` (the `aura` head, `cancel_aura`, …) whose kind's unit (§6.7) is none, `self`, `playerN`, `all_players` or `unknown_unit` | `aura`                        | as above                                                 |
+| … whose unit is `target`, `targetN`, `previous_target`, `next_target` or `all_targets`                                                                       | `target_aura`                 | as above                                                 |
+| … whose unit is `petN`                                                                                                                                       | `pet_aura`                    | as above                                                 |
+| the `ActionID` field of a kind named `boss_spell_<prop>` (the `boss_spell` head)                                                                             | `target_spell`                | as above                                                 |
+| `item.<name>` in any `ActionID` position                                                                                                                     | `item`                        | `{"itemId": id}`                                         |
+| `other.<short>` in any `ActionID` position                                                                                                                   | the `OtherAction` enum (§8.2) | `{"otherId": "OtherAction…"}` (`other.offensive_potion`) |
+| `none` in any `ActionID` position                                                                                                                            |                               | `{}`                                                     |
+| `ItemSpec.id`, the item of a slot row, and the item ref fields of `ConsumesSpec` (§8.1 `refs`)                                                               | `item`                        | the item id                                              |
+| `ItemSpec.enchant`, `+ <name>` on a slot row                                                                                                                 | `enchant`                     | the effect id                                            |
+| `ItemSpec.random_suffix`, the suffix of a slot row                                                                                                           | `suffix`                      | the random suffix id                                     |
 
 - **Units.** An aura's unit is its kind's `UnitReference` field (the first in declaration order), written as the
   prefix (`target.aura(x)`) or as an argument, before or after the aura (`aura_is_active(x, source_unit=target)`);
@@ -660,7 +660,7 @@ meaning among the shared entries.
     The things are: a spell, an aura, an aura on a target, a boss spell, a pet aura, an item, an enchant, a random
     suffix. The place is `this position` for a name in an `ActionID` position, `item.` for the name after it,
     `a slot`, `a slot row's suffix` and `+` for the parts of a slot row, and the field's name for any other item,
-    enchant or suffix field (`pot takes an item`).
+    enchant or suffix field (`offensive_pot takes an item`).
 
 ### 7.3 What a name means
 
@@ -1005,7 +1005,7 @@ an upper-case letter that follows an upper-case letter and precedes a lower-case
 | `MainHandAuto`                         | `main_hand_auto`                                                  |
 | `E20`                                  | `e20`                                                             |
 | `PetAttackSpeedNone`                   | `pet_attack_speed_none` (the keyword `none` forces the full name) |
-| `OtherActionPotion`                    | `potion`                                                          |
+| `OtherActionOffensivePotion`           | `offensive_potion`                                                |
 | `SwipeUsage_Never` (enum `SwipeUsage`) | `never`                                                           |
 | `None` (enum `FinishingMove`)          | `finishing_move_none` (`none` is a keyword, and so is `snake(V)`) |
 
@@ -1572,7 +1572,7 @@ priority:
   group "CD: Trinkets"
   group "Sunder Armor" if number_targets == 1
   # group "Sunder Armor: Refresh" if number_targets == 1
-  cast other.potion
+  cast other.offensive_potion
   group "CD: Racials"
   cast death_wish
   cast recklessness if and(action_group_used("Recklessness ON/OFF"))
@@ -1762,7 +1762,7 @@ gear:
   ranged     fahrads_reloading_repeater + saf_t_ultra_precision_scope
 
 consumables:
-  pot major_frenzy_potion
+  offensive_pot major_frenzy_potion
   food swiftstrike_steak
   conjured demonic_rune
   explosive ez_thro_dynamite_ii

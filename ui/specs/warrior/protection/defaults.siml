@@ -25,7 +25,7 @@ settings:
   tanks player1
 
 consumables:
-  pot major_frenzy_potion
+  offensive_pot major_frenzy_potion
   food smoked_desert_dumplings
   conjured major_healthstone
   explosive ez_thro_dark_bomb

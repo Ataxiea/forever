@@ -8,7 +8,7 @@ settings:
   distance_from_target 5
 
 consumables:
-  pot major_frenzy_potion
+  offensive_pot major_frenzy_potion
   food swiftstrike_steak
   conjured thistle_tea
   elixir elixir_of_the_mongoose, elixir_of_greater_fortitude

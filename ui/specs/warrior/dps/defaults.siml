@@ -15,7 +15,7 @@ settings:
   queue_delay 250
 
 consumables:
-  pot major_frenzy_potion
+  resource_pot mighty_rage_potion
   food smoked_desert_dumplings
   explosive ez_thro_dark_bomb
   mh_imbue dense_weightstone

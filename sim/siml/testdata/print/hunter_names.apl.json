@@ -10,7 +10,7 @@
 		{ "action": { "castSpell": { "spellId": { "itemId": 10646 } } } },
 		{ "action": { "castSpell": { "spellId": { "itemId": 10646, "rank": 1 } } } },
 		{ "action": { "castSpell": { "spellId": { "itemId": 900099 } } } },
-		{ "action": { "castSpell": { "spellId": { "otherId": "OtherActionPotion" } } } },
+		{ "action": { "castSpell": { "spellId": { "otherId": "OtherActionOffensivePotion" } } } },
 		{
 			"action": {
 				"condition": {

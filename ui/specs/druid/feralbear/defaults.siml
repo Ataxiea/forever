@@ -17,7 +17,7 @@ settings:
   tanks player1
 
 consumables:
-  pot greater_stoneshield_potion
+  defensive_pot greater_stoneshield_potion
   food dirges_kickin_chimaerok_chops
   conjured major_healthstone
   mh_imbue dense_weightstone

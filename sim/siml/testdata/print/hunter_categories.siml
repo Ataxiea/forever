@@ -5,7 +5,7 @@ talents ""
 gear:
   head       lieutenant_commanders_chain_helmet
 
-consumables: pot major_frenzy_potion
+consumables: offensive_pot major_frenzy_potion
 
 sim:
 

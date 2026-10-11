@@ -319,11 +319,11 @@ var patterns = []pattern{
 	{
 		ID:           "potion-at-pull",
 		Label:        "Potion",
-		Description:  "Drinks the selected potion as soon as it is ready; placed near the top, that is at the pull.",
+		Description:  "Drinks the selected offensive potion as soon as it is ready; placed near the top, that is at the pull.",
 		Target:       "row",
 		Placeholders: []placeholder{},
 		build: func(map[string]any) fragment {
-			return fragment{rows: []any{row(obj{"castSpell": obj{"spellId": obj{"otherId": "OtherActionPotion"}}}, nil)}}
+			return fragment{rows: []any{row(obj{"castSpell": obj{"spellId": obj{"otherId": "OtherActionOffensivePotion"}}}, nil)}}
 		},
 	},
 	{

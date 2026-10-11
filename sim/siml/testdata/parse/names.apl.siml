@@ -8,7 +8,7 @@ priority:
   cast shared_shot
   channel steady_shot_tag1 on target
   cast item.goblin_sapper_charge
-  cast other.potion
+  cast other.offensive_potion
   cast none
   cast `{"spellId": 900099, "rank": 2}`
   cast x if aura(steady_shot).is_active and self.aura(steady_shot).is_known and player2.aura(steady_shot).is_known

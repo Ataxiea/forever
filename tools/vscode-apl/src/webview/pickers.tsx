@@ -177,7 +177,29 @@ export function ActionIdPicker({
 			);
 			const placeholders =
 				set === 'castable_spells'
-					? [dbOption(db, { otherId: 'OtherActionPotion' }, 'placeholder', 'other.potion', 'whichever potion the player has')]
+					? [
+							dbOption(
+								db,
+								{ otherId: 'OtherActionOffensivePotion' },
+								'placeholder',
+								'other.offensive_potion',
+								'the offensive potion the player has',
+							),
+							dbOption(
+								db,
+								{ otherId: 'OtherActionDefensivePotion' },
+								'placeholder',
+								'other.defensive_potion',
+								'the defensive potion the player has',
+							),
+							dbOption(
+								db,
+								{ otherId: 'OtherActionResourcePotion' },
+								'placeholder',
+								'other.resource_potion',
+								'the resource potion the player has',
+							),
+						]
 					: [];
 			return first([...named, ...placeholders]);
 		},

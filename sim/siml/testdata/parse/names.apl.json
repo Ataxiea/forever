@@ -5,7 +5,7 @@
 		{ "action": { "castSpell": { "spellId": { "spellId": 900010 } } } },
 		{ "action": { "channelSpell": { "spellId": { "spellId": 900001, "tag": 1 }, "target": { "type": "CurrentTarget" } } } },
 		{ "action": { "castSpell": { "spellId": { "itemId": 10646 } } } },
-		{ "action": { "castSpell": { "spellId": { "otherId": "OtherActionPotion" } } } },
+		{ "action": { "castSpell": { "spellId": { "otherId": "OtherActionOffensivePotion" } } } },
 		{ "action": { "castSpell": { "spellId": {} } } },
 		{ "action": { "castSpell": { "spellId": { "spellId": 900099, "rank": 2 } } } },
 		{

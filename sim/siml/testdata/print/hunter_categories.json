@@ -9,7 +9,7 @@
 			}
 		},
 		"consumables": {
-			"potId": 250943
+			"offensivePotId": 250943
 		},
 		"equipment": {
 			"items": [

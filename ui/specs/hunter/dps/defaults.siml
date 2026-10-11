@@ -17,7 +17,7 @@ settings:
   pet_attack_speed faster_attack_ii
 
 consumables:
-  pot major_mana_potion
+  resource_pot major_mana_potion
   food swiftstrike_steak
   conjured demonic_rune
   explosive ez_thro_dynamite_ii

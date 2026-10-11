@@ -14,7 +14,7 @@ settings:
   imbue_mh rockbiter_weapon
 
 consumables:
-  pot major_mana_potion
+  resource_pot major_mana_potion
   flask flask_of_supreme_power
   food smoked_desert_dumplings
   conjured demonic_rune
