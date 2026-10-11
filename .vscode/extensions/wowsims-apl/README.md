@@ -52,24 +52,11 @@ rotation again with them.
 
 ### Another editor
 
-Build the server, `go build --tags=with_db -o wowsimcli ./cmd/wowsimcli`, and start `wowsimcli siml lsp` in the
-repository root for files that end in `.siml`, with the language id `siml`; it logs on stderr. The server needs no
-settings: it finds the repository above each file it is given, and reads an untitled file in the first workspace
-folder's.
-
-The server provides: full sync, `publishDiagnostics`, completion, hover, definition, references, rename with prepare,
-document symbols, document links, folding ranges, full semantic tokens, formatting and code actions. When the client
-registers file watchers dynamically, the server watches the table, the database and the `*.siml` files through
-`workspace/didChangeWatchedFiles`. The panel's requests (`siml/rotation`, `siml/splice`, `siml/database`,
-`siml/patterns`, `siml/insertPattern`, `siml/sim`) are in `sim/siml/lsp/panel.go`.
-
-For Neovim, for example:
-
-```lua
-vim.filetype.add({ extension = { siml = 'siml' } })
-vim.lsp.config('siml', { cmd = { '/path/to/wowsimcli', 'siml', 'lsp' }, cmd_cwd = '/path/to/forever', filetypes = { 'siml' } })
-vim.lsp.enable('siml')
-```
+`docs/siml_editors.md` is the guide: the language data (file type, comments, brackets), the grammar, the server's
+capabilities and semantic token legend, and the setup for Neovim, Helix, Zed, Emacs, Sublime Text and JetBrains. The
+short form: build `wowsimcli`, and start `wowsimcli siml lsp` for files that end in `.siml`, with the language id
+`siml`; it needs no settings and logs on stderr. The panel's requests (`siml/rotation`, `siml/splice`,
+`siml/database`, `siml/patterns`, `siml/insertPattern`, `siml/sim`) are in `sim/siml/lsp/panel.go`.
 
 ## Commands
 
