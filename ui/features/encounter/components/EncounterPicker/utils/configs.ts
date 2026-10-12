@@ -46,6 +46,8 @@ export const durationConfigs = (encounter: Encounter): Array<NumberFieldConfig<E
 		] satisfies Array<Field>
 	).map(spec => field(encounter, spec));
 
+const percentFromProportion = (proportion: number) => Math.round(proportion * 10000) / 100;
+
 // Stored as a proportion, shown as a percentage.
 const EXECUTE_BANDS: Array<Field> = [
 	{
@@ -53,7 +55,7 @@ const EXECUTE_BANDS: Array<Field> = [
 		key: 'execute_duration_20',
 		label: 'execute_20',
 		category: 'execute',
-		get: (e: Encounter) => e.getExecuteProportion20() * 100,
+		get: (e: Encounter) => percentFromProportion(e.getExecuteProportion20()),
 		set: (e: Encounter, v: number) => e.setExecuteProportion20(v / 100),
 	},
 	{
@@ -61,7 +63,7 @@ const EXECUTE_BANDS: Array<Field> = [
 		key: 'execute_duration_25',
 		label: 'execute_25',
 		category: 'execute',
-		get: (e: Encounter) => e.getExecuteProportion25() * 100,
+		get: (e: Encounter) => percentFromProportion(e.getExecuteProportion25()),
 		set: (e: Encounter, v: number) => e.setExecuteProportion25(v / 100),
 	},
 	{
@@ -69,7 +71,7 @@ const EXECUTE_BANDS: Array<Field> = [
 		key: 'execute_duration_35',
 		label: 'execute_35',
 		category: 'execute',
-		get: (e: Encounter) => e.getExecuteProportion35() * 100,
+		get: (e: Encounter) => percentFromProportion(e.getExecuteProportion35()),
 		set: (e: Encounter, v: number) => e.setExecuteProportion35(v / 100),
 	},
 	{
@@ -77,7 +79,7 @@ const EXECUTE_BANDS: Array<Field> = [
 		key: 'execute_duration_45',
 		label: 'execute_45',
 		category: 'execute',
-		get: (e: Encounter) => e.getExecuteProportion45() * 100,
+		get: (e: Encounter) => percentFromProportion(e.getExecuteProportion45()),
 		set: (e: Encounter, v: number) => e.setExecuteProportion45(v / 100),
 	},
 	{
@@ -85,7 +87,7 @@ const EXECUTE_BANDS: Array<Field> = [
 		key: 'duration_below_high_hp',
 		label: 'execute_90',
 		category: 'execute',
-		get: (e: Encounter) => e.getExecuteProportion90() * 100,
+		get: (e: Encounter) => percentFromProportion(e.getExecuteProportion90()),
 		set: (e: Encounter, v: number) => e.setExecuteProportion90(v / 100),
 	},
 ];
