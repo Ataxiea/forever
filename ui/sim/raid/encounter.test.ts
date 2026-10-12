@@ -124,4 +124,48 @@ describe('Encounter', () => {
 		expect(dbTarget.level).toBe(93);
 		expect(dbTarget.targetInputs[0].numberValue).toBe(3);
 	});
+
+	describe('execute proportions', () => {
+		it('raises higher thresholds when a lower threshold is increased', () => {
+			const encounter = makeEncounter();
+			encounter.setExecuteProportion20(0.5);
+
+			expect(encounter.getExecuteProportion20()).toBe(0.5);
+			expect(encounter.getExecuteProportion25()).toBe(0.5);
+			expect(encounter.getExecuteProportion35()).toBe(0.5);
+			expect(encounter.getExecuteProportion45()).toBe(0.5);
+			expect(encounter.getExecuteProportion90()).toBe(0.9);
+		});
+
+		it('lowers lower thresholds when a higher threshold is decreased', () => {
+			const encounter = makeEncounter();
+			encounter.setExecuteProportion90(0.1);
+
+			expect(encounter.getExecuteProportion90()).toBe(0.1);
+			expect(encounter.getExecuteProportion45()).toBe(0.1);
+			expect(encounter.getExecuteProportion35()).toBe(0.1);
+			expect(encounter.getExecuteProportion25()).toBe(0.1);
+			expect(encounter.getExecuteProportion20()).toBe(0.1);
+		});
+
+		it('clamps bounds between 0 and 1', () => {
+			const encounter = makeEncounter();
+			encounter.setExecuteProportion90(2.5);
+			expect(encounter.getExecuteProportion90()).toBe(1);
+
+			encounter.setExecuteProportion20(-0.5);
+			expect(encounter.getExecuteProportion20()).toBe(0);
+		});
+
+		it('sanitizes monotonic order from proto', () => {
+			const encounter = makeEncounter();
+			encounter.fromProto(EncounterProto.create({ executeProportion20: 0.3 }));
+
+			expect(encounter.getExecuteProportion20()).toBe(0.3);
+			expect(encounter.getExecuteProportion25()).toBe(0.3);
+			expect(encounter.getExecuteProportion35()).toBe(0.3);
+			expect(encounter.getExecuteProportion45()).toBe(0.3);
+			expect(encounter.getExecuteProportion90()).toBe(0.3);
+		});
+	});
 });
