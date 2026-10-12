@@ -52,19 +52,21 @@ func (encounter *Encounter) InArea(areaType proto.AreaType) bool {
 }
 
 func NewEncounter(options *proto.Encounter) Encounter {
-	options.ExecuteProportion_25 = max(options.ExecuteProportion_25, options.ExecuteProportion_20)
-	options.ExecuteProportion_35 = max(options.ExecuteProportion_35, options.ExecuteProportion_25)
-	options.ExecuteProportion_45 = max(options.ExecuteProportion_45, options.ExecuteProportion_35)
+	options.ExecuteProportion_20 = min(max(options.ExecuteProportion_20, 0), 1)
+	options.ExecuteProportion_25 = min(max(options.ExecuteProportion_25, options.ExecuteProportion_20), 1)
+	options.ExecuteProportion_35 = min(max(options.ExecuteProportion_35, options.ExecuteProportion_25), 1)
+	options.ExecuteProportion_45 = min(max(options.ExecuteProportion_45, options.ExecuteProportion_35), 1)
+	options.ExecuteProportion_90 = min(max(options.ExecuteProportion_90, options.ExecuteProportion_45), 1)
 	totalTargetCount := max(len(options.Targets), 1)
 
 	encounter := Encounter{
 		Duration:             DurationFromSeconds(options.Duration),
 		DurationVariation:    DurationFromSeconds(options.DurationVariation),
-		ExecuteProportion_20: max(options.ExecuteProportion_20, 0),
-		ExecuteProportion_25: max(options.ExecuteProportion_25, 0),
-		ExecuteProportion_35: max(options.ExecuteProportion_35, 0),
-		ExecuteProportion_45: max(options.ExecuteProportion_45, 0),
-		ExecuteProportion_90: max(options.ExecuteProportion_90, 0),
+		ExecuteProportion_20: options.ExecuteProportion_20,
+		ExecuteProportion_25: options.ExecuteProportion_25,
+		ExecuteProportion_35: options.ExecuteProportion_35,
+		ExecuteProportion_45: options.ExecuteProportion_45,
+		ExecuteProportion_90: options.ExecuteProportion_90,
 		AreaTypes:            areaTypeSet(options.AreaTypes),
 		AllTargets:           make([]*Target, 0, totalTargetCount),
 		ActiveTargets:        make([]*Target, 0, totalTargetCount),
