@@ -649,11 +649,22 @@ func TestValueUnknownIDs(t *testing.T) {
 
 func TestValueSpellIsKnown(t *testing.T) {
 	sim, _, rot := setupFakeRageRotation()
+	rot.curValidations = nil
 
 	known := rot.newValueSpellIsKnown(&proto.APLValueSpellIsKnown{SpellId: fakeRendActionID.ToProto()}, nil)
 	unknown := rot.newValueSpellIsKnown(&proto.APLValueSpellIsKnown{SpellId: ActionID{SpellID: 1}.ToProto()}, nil)
 	if !known.GetBool(sim) || unknown.GetBool(sim) {
 		t.Fatalf("Is Known: Rend = %t, unknown = %t, want true, false", known.GetBool(sim), unknown.GetBool(sim))
+	}
+	if len(rot.curValidations) != 0 {
+		t.Errorf("Is Known validations = %v, want none for an availability query", rot.curValidations)
+	}
+	rot.curValidations = nil
+	if action := rot.newActionCastSpell(&proto.APLActionCastSpell{SpellId: ActionID{SpellID: 1}.ToProto()}); action != nil {
+		t.Error("unknown spell produced a cast action")
+	}
+	if len(rot.curValidations) != 1 || rot.curValidations[0].LogLevel != proto.LogLevel_Warning {
+		t.Errorf("unknown cast validations = %v, want one warning", rot.curValidations)
 	}
 }
 
@@ -830,13 +841,26 @@ func TestValueSelectedConsumables(t *testing.T) {
 func TestPotionPlaceholdersCastTheirClassPick(t *testing.T) {
 	const resourceID, offensiveID int32 = 910201, 910202
 	potions := map[int32]*Spell{}
-	_, fw, rot := setupFakeRageRotationWith(func(char *Character) {
+	sim, fw, rot := setupFakeRageRotationWith(func(char *Character) {
 		for _, id := range []int32{resourceID, offensiveID} {
 			potions[id] = char.RegisterSpell(SpellConfig{ActionID: ActionID{ItemID: id}, Flags: SpellFlagPotion | SpellFlagAPL})
 		}
 	})
 	fw.Consumables.ResourcePotId = resourceID
 	fw.Consumables.OffensivePotId = offensiveID
+	rot.curValidations = nil
+	for _, row := range []struct {
+		action proto.OtherAction
+		known  bool
+	}{{proto.OtherAction_OtherActionResourcePotion, true}, {proto.OtherAction_OtherActionOffensivePotion, true}, {proto.OtherAction_OtherActionDefensivePotion, false}} {
+		value := rot.newValueSpellIsKnown(&proto.APLValueSpellIsKnown{SpellId: ActionID{OtherID: row.action}.ToProto()}, nil)
+		if got := value.GetBool(sim); got != row.known {
+			t.Errorf("Is Known(%s) = %t, want %t", row.action, got, row.known)
+		}
+	}
+	if len(rot.curValidations) != 0 {
+		t.Errorf("potion availability validations = %v, want none", rot.curValidations)
+	}
 
 	placeholder := func(action proto.OtherAction) *Spell {
 		return rot.GetAPLSpell(ActionID{OtherID: action}.ToProto())
@@ -849,6 +873,9 @@ func TestPotionPlaceholdersCastTheirClassPick(t *testing.T) {
 	}
 	if got := placeholder(proto.OtherAction_OtherActionDefensivePotion); got != nil {
 		t.Errorf("Defensive Potion without a pick casts %v, want nothing", got)
+	}
+	if len(rot.curValidations) != 1 || rot.curValidations[0].LogLevel != proto.LogLevel_Warning {
+		t.Errorf("unselected potion cast validations = %v, want one warning", rot.curValidations)
 	}
 }
 

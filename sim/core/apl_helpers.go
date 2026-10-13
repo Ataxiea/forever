@@ -203,6 +203,10 @@ func (rot *APLRotation) GetAPLItemProcAuras(statTypesToMatch []stats.Stat, minIc
 }
 
 func (rot *APLRotation) GetAPLSpell(spellId *proto.ActionID) *Spell {
+	return rot.getAPLSpell(spellId, true)
+}
+
+func (rot *APLRotation) getAPLSpell(spellId *proto.ActionID, reportMissing bool) *Spell {
 	if spellId == nil {
 		return nil
 	}
@@ -215,7 +219,9 @@ func (rot *APLRotation) GetAPLSpell(spellId *proto.ActionID) *Spell {
 	}
 	if potionID, isPlaceholder := placeholderPotionID(consumables, actionID.OtherID); isPlaceholder {
 		if potionID == 0 {
-			rot.ValidationMessage(proto.LogLevel_Warning, "%s picks no potion for %s", rot.unit.Label, actionID)
+			if reportMissing {
+				rot.ValidationMessage(proto.LogLevel_Warning, "%s picks no potion for %s", rot.unit.Label, actionID)
+			}
 			return nil
 		}
 		for _, s := range rot.unit.Spellbook {
@@ -240,7 +246,7 @@ func (rot *APLRotation) GetAPLSpell(spellId *proto.ActionID) *Spell {
 		}
 	}
 
-	if spell == nil {
+	if spell == nil && reportMissing {
 		rot.ValidationMessage(proto.LogLevel_Warning, "%s does not know spell %s", rot.unit.Label, actionID)
 	}
 	return spell
