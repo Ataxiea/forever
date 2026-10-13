@@ -156,6 +156,16 @@ type printer struct {
 	class        proto.Class // The class of the printed file's spec line, whose names it writes (SPEC.md §7.1).
 	declarations []declared  // The variables the rotation declares, which decide how a reference is written.
 	kind         kindScope   // The kind whose own fields are being printed.
+	// The values def calls read as, which format writes as the calls.
+	calls map[*proto.APLValue]string
+}
+
+// The call a value is read from, as format writes it, or "".
+func (p *printer) defCall(v protoreflect.Message) string {
+	if m, ok := v.Interface().(*proto.APLValue); ok {
+		return p.calls[m]
+	}
+	return ""
 }
 
 // The schema field of m named name in the protos.
@@ -206,6 +216,9 @@ func (p *printer) value(v protoreflect.Message, prec int, sc scope) text {
 	if !v.IsValid() {
 		return rawWord("null")
 	}
+	if c := p.defCall(v); c != "" {
+		return word(c)
+	}
 	if len(p.setFields(v)) == 0 {
 		return word("none")
 	}
@@ -225,7 +238,7 @@ func (p *printer) value(v protoreflect.Message, prec int, sc scope) text {
 // The operator and operands of a value written as a run of two or more `and` or `or` operands.
 func (p *printer) infix(v protoreflect.Message, sc scope) (string, []text, bool) {
 	set := p.setFields(v)
-	if len(set) != 1 || logicPrec[set[0].Name] == 0 {
+	if len(set) != 1 || logicPrec[set[0].Name] == 0 || p.defCall(v) != "" {
 		return "", nil, false
 	}
 	operands, ok := p.operands(set[0].Name, v.Get(set[0].desc).Message(), sc)

@@ -14,6 +14,7 @@ var ${Use Aimed Shot} = false
 var ${Use Multi-Shot} = true
 var ${Use Arcane Shot} = true
 var ${Use Summon Hawk} = false
+def fits_weave(x) = spell(x).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave
 
 prepull:
   -22s cast hunters_mark
@@ -33,12 +34,8 @@ priority:
       and $use_arcane_shot
   cast summon_hawk if $use_summon_hawk and not $use_arcane_shot
   cast arcane_shot if $use_arcane_shot and not $use_summon_hawk
-  cast multi_shot
-      if $use_multi_shot
-      and (spell(multi_shot).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave)
-  cast aimed_shot
-      if $use_aimed_shot
-      and (spell(aimed_shot).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave)
+  cast multi_shot if $use_multi_shot and fits_weave(multi_shot)
+  cast aimed_shot if $use_aimed_shot and fits_weave(aimed_shot)
   wait auto_time_to_next(main_hand_auto) - $move_duration
       if $melee_weave
       and auto_time_to_next(main_hand_auto) > $move_duration

@@ -104,7 +104,9 @@ type SymbolKind int
 const (
 	SymbolModule    SymbolKind = 2
 	SymbolNamespace SymbolKind = 3
+	SymbolFunction  SymbolKind = 12
 	SymbolVariable  SymbolKind = 13
+	SymbolBoolean   SymbolKind = 17
 	SymbolEvent     SymbolKind = 24
 )
 
@@ -115,7 +117,8 @@ type Symbol struct {
 	Children         []Symbol
 }
 
-// The sections, with their variables and sequences, and the file's variables before the first header, for the outline.
+// The sections, with their variables, sequences, defs and when blocks, and the file's variables and defs before the
+// first header, for the outline.
 func (d *Doc) Symbols() []Symbol { return d.symbols() }
 
 // Each section, each statement that runs over several lines, the block of use lines and each run of comment lines.

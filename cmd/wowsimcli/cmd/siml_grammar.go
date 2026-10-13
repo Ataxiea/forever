@@ -145,6 +145,15 @@ func simlGrammarObject() (orderedObject, error) {
 				{"captures", captures("entity.name.section.siml", "punctuation.separator.colon.siml")},
 			},
 			orderedObject{{"match", `^\s*(#)(?=\s)`}, {"captures", captures("keyword.other.hidden.siml")}},
+			// `def name(p, …) =`: the def's name, and its parameters (SPEC.md §6.10).
+			orderedObject{
+				{"match", `^\s*(def)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(([^()]*)\))?\s*(?==)`},
+				{"captures", orderedObject{
+					{"1", grammarScope("keyword.control.siml")},
+					{"2", grammarScope("entity.name.function.siml")},
+					{"3", orderedObject{{"name", "meta.parameters.siml"}, {"patterns", []any{grammarNamed("variable.parameter.siml", `[A-Za-z_][A-Za-z0-9_]*`)}}}},
+				}},
+			},
 			orderedObject{{"include", "#value"}},
 		}},
 		{"repository", orderedObject{{"value", orderedObject{{"patterns", []any{

@@ -25,7 +25,9 @@
 		"group",
 		"sequence",
 		"schedule",
-		"item"
+		"item",
+		"when",
+		"def"
 	],
 	"heads": [
 		{ "name": "aura", "subject": "action_id" },

@@ -84,6 +84,7 @@ func (t *typer) checkReferences(declarations []*variableDecl, groups []nameUse, 
 	visible := append(declaredNames(declarations), used.variables...)
 	targets := map[*variableUse]*variableDecl{}
 	for _, use := range t.variableUses {
+		t.site = use.site
 		n := use.node
 		res := resolveVariable(n.name, n.braced, declaredIn(visible, use.scope))
 		use.ref.Name = n.name
@@ -105,6 +106,7 @@ func (t *typer) checkReferences(declarations []*variableDecl, groups []nameUse, 
 			t.warn("undefined-variable", "no variable here is named "+written, n.span)
 		}
 	}
+	t.site = nil
 	uses := func(d *variableDecl) []*variableDecl {
 		var out []*variableDecl
 		for _, u := range d.uses {
@@ -159,7 +161,9 @@ func (t *typer) checkReferences(declarations []*variableDecl, groups []nameUse, 
 
 	for _, use := range t.sequenceUses {
 		if !t.sequenceDefs[use.name] {
+			t.site = use.site
 			t.warn("undefined-sequence", fmt.Sprintf(`no sequence is named "%s"`, use.name), use.span)
+			t.site = nil
 		}
 	}
 }

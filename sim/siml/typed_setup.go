@@ -36,6 +36,7 @@ type typedFile struct {
 	paths        map[stmt][]any                // Each row's and var line's JSON path within the rotation, as if every statement read.
 	entries      map[stmt][]entryWrite         // What each entry line and slot row writes.
 	withs        map[stmt][]*proto.APLValue    // The values each use line's with list gives, nil where one does not read.
+	whens        map[*whenStmt]*proto.APLValue // Each when line's condition, read on its own.
 	declarations []*variableDecl
 	explicitType bool // Whether an apl: entry of the file, or of a file it uses, sets the rotation type.
 	diags        []diag
@@ -100,6 +101,7 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 		paths:    map[stmt][]any{},
 		entries:  map[stmt][]entryWrite{},
 		withs:    map[stmt][]*proto.APLValue{},
+		whens:    map[*whenStmt]*proto.APLValue{},
 	}
 	f.spec = typeSpec(t, tree, kind)
 	if f.spec != nil {
@@ -108,6 +110,8 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 		player.Class = f.spec.Class
 		player.ProtoReflect().Mutable(f.spec.Field)
 	}
+	t.lines = tree.lines
+	t.readDefs(tree)
 	for _, s := range tree.top {
 		if s, ok := s.(*talentsStmt); ok {
 			f.player().TalentsString = s.talents.value
@@ -136,6 +140,7 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 	f.encodeSimple()
 
 	t.checkReferences(rotation.declarations, rotation.groups, used.declared)
+	t.checkDefsUsed()
 
 	for _, s := range used.settings {
 		merge(f.settings.ProtoReflect(), s.ProtoReflect())

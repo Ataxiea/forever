@@ -86,6 +86,28 @@ func TestDocSpansAndPaths(t *testing.T) {
 	}
 }
 
+// The rotation panel finds a row of a when block by the row's own line, and a conjunct the block gives it by the when
+// line (SPEC.md §6.9).
+func TestDocSpansInWhenBlock(t *testing.T) {
+	text := textLines("siml 1", "spec hunter", "", "var $burst = true", "", "priority:", "  when $burst:", "    cast multi_shot if current_time > 1s", "    cast rapid_fire")
+	d := Analyze(splicePath, []byte(text), corpusNames(t), nil)
+	if _, err := d.File(); err != nil {
+		t.Fatal(err)
+	}
+	for path, want := range map[string]Range{
+		"priorityList/0": {Position{8, 5}, Position{8, 41}},
+		"priorityList/0/action/condition/and/vals/0": {Position{7, 8}, Position{7, 14}},
+		"priorityList/1": {Position{9, 5}, Position{9, 20}},
+	} {
+		if !slices.ContainsFunc(d.Spans(), func(s PathSpan) bool { return pathString(s.Path) == path && s.Range == want }) {
+			t.Errorf("no span %s at %v", path, want)
+		}
+	}
+	if got := pathString(d.PathAt(Position{9, 10})); got != "priorityList/1/action/castSpell/spellId" {
+		t.Errorf("the path at 9:10 is %s", got)
+	}
+}
+
 func TestDocWithErrors(t *testing.T) {
 	d := Analyze(splicePath, []byte(strings.Replace(docText, "rapid_fire", "rapid_fir", 1)), corpusNames(t), nil)
 	if _, err := d.File(); err == nil {

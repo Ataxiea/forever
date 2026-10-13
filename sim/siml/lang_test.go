@@ -1,6 +1,7 @@
 package siml
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -188,3 +189,151 @@ func TestIdentifierRefusal(t *testing.T) {
 }
 
 func readDisk(path string) ([]byte, error) { return os.ReadFile(path) }
+
+// A def with two parameters, called in a row and in a when block (SPEC.md §6.9, §6.10).
+var defsText = langPreface + textLines(
+	"def fits(x, y) = spell(x).cast_time < y or not $melee_weave",
+	"",
+	"priority:",
+	"  cast steady if fits(steady, 2s)",
+	"  when $melee_weave:",
+	"    when current_time > 1s:",
+	"      cast steady if fits(everyones, 1s)",
+)
+
+func defsDoc() *Doc { return Analyze(hunterPath, []byte(defsText), smallNames(), langOpen) }
+
+// Each location as line:column, 1-based.
+func defLocations(locations []Location) []string {
+	out := []string{}
+	for _, l := range locations {
+		out = append(out, fmt.Sprintf("%d:%d", l.Range.Start.Line, l.Range.Start.Col))
+	}
+	return out
+}
+
+func TestDefNavigation(t *testing.T) {
+	d := defsDoc()
+	if got, want := defLocations(d.Definition(positionOf(defsText, "fits(steady", 1))), []string{"5:5"}; !slices.Equal(got, want) {
+		t.Errorf("definition of a call: %v, want %v", got, want)
+	}
+	if got, want := defLocations(d.References(positionOf(defsText, "fits(x", 1), true)), []string{"5:5", "8:18", "11:22"}; !slices.Equal(got, want) {
+		t.Errorf("references of the def: %v, want %v", got, want)
+	}
+	if got, want := defLocations(d.References(positionOf(defsText, "x, y", 0), true)), []string{"5:10", "5:24"}; !slices.Equal(got, want) {
+		t.Errorf("references of a parameter: %v, want %v", got, want)
+	}
+	if got, want := defLocations(d.Definition(positionOf(defsText, "< y", 2))), []string{"5:13"}; !slices.Equal(got, want) {
+		t.Errorf("definition of a parameter: %v, want %v", got, want)
+	}
+	edits, err := d.Rename(positionOf(defsText, "fits(steady", 1), "fits_weave")
+	if err != nil || len(edits) != 1 || len(edits[0].Edits) != 3 || edits[0].Edits[2].NewText != "fits_weave" {
+		t.Errorf("rename of the def: %v, %v", edits, err)
+	}
+	edits, err = d.Rename(positionOf(defsText, "< y", 2), "limit")
+	if err != nil || len(edits) != 1 || len(edits[0].Edits) != 2 || edits[0].Edits[0].NewText != "limit" {
+		t.Errorf("rename of a parameter: %v, %v", edits, err)
+	}
+	for _, c := range []struct{ needle, newName, want string }{
+		{"fits(x", "target", "target is a unit; a def takes a name of its own."},
+		{"fits(x", "2x", "A def's name is a word: letters, digits and _, not starting with a digit."},
+		{"x, y", "and", "and is a reserved word."},
+		{"x, y", "y", "x.apl.siml has a parameter named y already."},
+	} {
+		if _, err := d.Rename(positionOf(defsText, c.needle, 0), c.newName); err == nil || err.Error() != c.want {
+			t.Errorf("%s → %s: %v, want %q", c.needle, c.newName, err, c.want)
+		}
+	}
+}
+
+func TestDefCompletion(t *testing.T) {
+	find := func(items []Completion, label string) (Completion, bool) {
+		i := slices.IndexFunc(items, func(x Completion) bool { return x.Label == label })
+		if i < 0 {
+			return Completion{}, false
+		}
+		return items[i], true
+	}
+	names := smallNames()
+	row := completionsIn(t, names, nil, hunterPath, strings.Replace(defsText, "if fits(steady", "if |fits(steady", 1))
+	if c, ok := find(row, "fits"); !ok || c.Detail != "def fits(x, y)" || c.InsertText != "fits(" {
+		t.Errorf("a value offers the def as %+v (%v)", c, ok)
+	}
+	if _, ok := find(row, "x"); ok {
+		t.Errorf("a row offers a def's parameter: %v", labelsOf(row))
+	}
+	value := completionsIn(t, names, nil, hunterPath, strings.Replace(defsText, "< y or", "< | or", 1))
+	if _, ok := find(value, "y"); !ok {
+		t.Errorf("the def's value does not offer its parameter: %v", labelsOf(value))
+	}
+	ref := completionsIn(t, names, nil, hunterPath, strings.Replace(defsText, "spell(x)", "spell(|)", 1))
+	if _, ok := find(ref, "x"); !ok {
+		t.Errorf("a ref in the def's value does not offer the parameter: %v", labelsOf(ref))
+	}
+	if _, ok := find(completionsIn(t, names, nil, hunterPath, defsText+"  |\n"), "when"); !ok {
+		t.Error("a priority row does not offer when")
+	}
+	if _, ok := find(completionsIn(t, names, nil, hunterPath, plainPreface+"prepull:\n  |\n"), "when"); ok {
+		t.Error("a prepull row offers when")
+	}
+	if _, ok := find(completionsIn(t, names, nil, hunterPath, plainPreface+"|\n"), "def"); !ok {
+		t.Error("a top line does not offer def")
+	}
+	when := completionsIn(t, names, nil, hunterPath, strings.Replace(defsText, "when $melee_weave:", "when $melee_weave |", 1))
+	if c, ok := find(when, ":"); !ok || c.InsertText != ":" {
+		t.Errorf("a when condition does not offer its colon: %v", labelsOf(when))
+	}
+}
+
+func TestDefAndWhenHover(t *testing.T) {
+	d := defsDoc()
+	hover := func(at Position) string {
+		h, ok := d.Hover(at, nil)
+		if !ok {
+			t.Fatalf("no hover at %v", at)
+		}
+		return h.Markdown
+	}
+	call := hover(positionOf(defsText, "fits(steady", 1))
+	for _, want := range []string{"def **fits**", "def fits(x, y) = spell(x).cast_time < y or not $melee_weave", "spell(steady).cast_time < 2s or not $melee_weave"} {
+		if !strings.Contains(call, want) {
+			t.Errorf("the hover of a call lacks %q:\n%s", want, call)
+		}
+	}
+	if got := hover(positionOf(defsText, "< y", 2)); !strings.Contains(got, "parameter **y** of def fits") {
+		t.Errorf("the hover of a parameter:\n%s", got)
+	}
+	if got := hover(positionOf(defsText, "when current_time", 1)); !strings.Contains(got, "$melee_weave and current_time > 1s") {
+		t.Errorf("the hover of a nested when line:\n%s", got)
+	}
+}
+
+func TestDefTokensAndOutline(t *testing.T) {
+	d := defsDoc()
+	var got [][2]string
+	for _, tok := range d.Tokens() {
+		if tok.Type == "function" || tok.Type == "parameter" {
+			got = append(got, [2]string{defsText[d.Offset(tok.Range.Start):d.Offset(tok.Range.End)], tok.Type})
+		}
+	}
+	want := [][2]string{
+		{"fits", "function"}, {"x", "parameter"}, {"y", "parameter"}, {"spell", "function"}, {"x", "parameter"},
+		{"y", "parameter"}, {"fits", "function"}, {"current_time", "function"}, {"fits", "function"},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+	symbols := d.Symbols()
+	var outline []string
+	var walk func(prefix string, symbols []Symbol)
+	walk = func(prefix string, symbols []Symbol) {
+		for _, s := range symbols {
+			outline = append(outline, prefix+s.Name)
+			walk(prefix+"  ", s.Children)
+		}
+	}
+	walk("", symbols)
+	if want := []string{"Melee weave", "fits", "priority", "  when $melee_weave", "    when current_time > 1s"}; !slices.Equal(outline, want) {
+		t.Errorf("outline %q, want %q", outline, want)
+	}
+}

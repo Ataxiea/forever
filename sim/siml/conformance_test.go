@@ -544,7 +544,7 @@ func TestParseCasesCoverTheLanguage(t *testing.T) {
 		}
 	}
 	for _, st := range []string{"versionStmt", "specStmt", "talentsStmt", "useStmt", "headerStmt", "varStmt", "rowStmt", "slotRowStmt",
-		"flagListStmt", "fieldEntryStmt", "messageEntryStmt", "rawEntryStmt"} {
+		"flagListStmt", "fieldEntryStmt", "messageEntryStmt", "rawEntryStmt", "whenStmt", "defStmt"} {
 		if !statements[st] {
 			t.Errorf("no parse case writes a %s", st)
 		}

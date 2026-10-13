@@ -90,11 +90,13 @@ A file is a sequence of **statements**, each starting on a new line.
 - it is not a header (§3.2), and the next line that is not blank and not comment-only is indented deeper than
   the statement's first line and does not start with a header's tokens.
 
+A `when` line (§6.9) ends at the first `:` that ends one of its lines with no bracket open.
+
 **What ends a statement.** A blank line ends a statement unless a bracket is open. Comment-only lines never
 decide continuation, and they are trivia.
 
-**Indentation.** Indentation carries no other meaning. Every statement after a header belongs to that section,
-whatever its indentation, until the next header.
+**Indentation.** Indentation carries no other meaning, except that it says where a `when` body ends (§6.9). Every
+statement after a header belongs to that section, whatever its indentation, until the next header.
 
 ### 3.2 Headers
 
@@ -126,6 +128,7 @@ entry, a slot row, a row or a `var` line. That is how `buffs: greater_blessing_o
 | `talents "<string>"`                    | `Player.talents_string` (category t)                                                                          | In `x.siml` only.                                                                                                                                              |
 | `use "<path>" [with <var> = <expr>, …]` | composition (§9)                                                                                              |                                                                                                                                                                |
 | `var …`                                 | rotation value variables (§6.1)                                                                               |                                                                                                                                                                |
+| `def …`                                 | rotation value macros (§6.10)                                                                                 |                                                                                                                                                                |
 
 `siml`, `spec`, `talents` and `use` must come before the first header (`misplaced-statement`), and each may
 appear once, except `use`.
@@ -136,8 +139,8 @@ section file whose section reads the spec (`settings`, `simple`) or holds a rota
 only. Either line in any other file kind is `misplaced-statement`, so a section file holds only its own category
 (§1).
 
-A line whose first word is `siml`, `spec`, `talents`, `use` or `var` and whose next token is `=` is none of these
-statements. It reads as a line of its section, so `var = 1` under `apl:` is an entry (`unknown-field`).
+A line whose first word is `siml`, `spec`, `talents`, `use`, `var` or `def` and whose next token is `=` is none of
+these statements. It reads as a line of its section, so `var = 1` under `apl:` is an entry (`unknown-field`).
 
 ---
 
@@ -151,7 +154,7 @@ file          = { trivia } , version , { statement | trivia } ;
 trivia        = comment | blank ;
 version       = "siml" , int ;
 
-statement     = header | top | var_decl | row | slot_row | entry ;
+statement     = header | top | var_decl | def_decl | when_line | row | slot_row | entry ;
 
 (* §3 *)
 header        = ( ident , ":" | "group" , string , ":" ) , [ entry ] ;          (* column 1 only *)
@@ -162,6 +165,8 @@ var_bind      = var , "=" , expr ;
 
 (* §6: rotation sections *)
 var_decl      = "var" , var , [ "=" , ( expr | raw ) ] ;
+def_decl      = "def" , ident , [ "(" , [ ident , { "," , ident } ] , ")" ] , "=" , expr ;   (* §6.10 *)
+when_line     = [ "#" ] , "when" , expr , ":" ;                   (* its body: §6.9 *)
 row           = { note_line } , [ "#" ] , [ do_at ] , action ;    (* do_at present exactly in prepull: *)
 note_line     = note ;                                            (* directly above, no blank line between *)
 do_at         = unary ;                                           (* -22s, (1s + $x) *)
@@ -226,10 +231,10 @@ value         = literal | int | [ "-" ] , int | string | "true" | "false" | iden
    by `=`, is a `flag_list`; a flag with a value sets a flag-value enum to another of its values (§5.2), and
    is typed by its field as any entry value is. An entry's values, a flag's value and every argument are read
    as `term`s, and typing gives `wrong-type` for a term that does not fit its field. `siml`, `spec`, `talents`,
-   `use` and `var` followed by `=` begin such a line, not a top-level line or a `var` line, so a field of one of
-   those names is written `spec=arms` (`DpsWarrior.Rotation.spec`).
+   `use`, `var` and `def` followed by `=` begin such a line, not a top-level line, a `var` line or a `def` line, so
+   a field of one of those names is written `spec=arms` (`DpsWarrior.Rotation.spec`).
 6. **Reserved words.** The name table never holds these as names (§7.4):
-    - `siml spec talents use var with if on until recast for and or not true false none other item`;
+    - `siml spec talents use var with if on until recast for and or not true false none other item when def`;
     - `cast channel wait move group sequence schedule`;
     - the heads (§8.3) and the unit words (§6.6).
 
@@ -240,7 +245,7 @@ value         = literal | int | [ "-" ] , int | string | "true" | "false" | iden
    must be a call, raw JSON or `none`. In step position, `schedule` and `sequence` not followed by a string
    begin a call.
 8. **Names.** In a ref, unit or operand position, `if`, `on`, `until`, `recast`, `for`, `with`, `and`, `or`,
-   `not`, `cast`, `channel`, `wait`, `move` and `group` never read as a name. `and(`, `or(` and `not(` are calls
+   `not`, `cast`, `channel`, `wait`, `move`, `group` and `when` never read as a name. `and(`, `or(` and `not(` are calls
    only with no space before the `(`.
 9. **Times.** In `prepull:`, a row that starts with an action keyword of note 7, or whose time would be followed
    by nothing or `if`, is `missing-time`, and the rest reads as its action. A row that is raw JSON alone is a
@@ -410,9 +415,12 @@ This is the text the site writes (`JSON.stringify(rotationToJson(...))` in `ui/a
 | `priority:`                                   | header                                   | `priorityList`                                                                |
 | `group "Name":`                               | header                                   | a `groups[]` element `{"name": "Name", "actions": [...], "variables": [...]}` |
 | a row                                         | under `prepull:`, `priority:` or a group | an `APLPrepullAction` or an `APLListItem`                                     |
+| `when <expr>:` and its body                   | under `priority:` or a group             | its body's rows, each with the block's condition joined to its own (§6.9)     |
+| `def name(p, …) = <expr>`                     | top level or `apl:`                      | none: each call reads as the def's value (§6.10)                              |
 
 **Where `var` may appear.** A `var` line at top level or under `apl:` is a rotation value variable. Under a
-group header it is one of the group's `variables`. Anywhere else it is `misplaced-var`.
+group header it is one of the group's `variables`. Anywhere else, a `when` body among those places, it is
+`misplaced-var`.
 
 **Duplicates.** A duplicate group name is `duplicate-group`. A duplicate variable name in one scope is
 `duplicate-variable`.
@@ -503,6 +511,7 @@ one whose notes cannot be `///` lines (§12.3) or a prepull row with no time.
 | `[u.]head(x).prop[(f=v, …)]`                         | the accessor kind (§6.7)                                    |
 | `u.kind`                                             | a kind whose only field is a unit (§6.8)                    |
 | `kind`, `kind(…)`                                    | any value kind, by §8.3                                     |
+| `name`, `name(a, …)` for a def                       | the def's value, its arguments in place (§6.10)             |
 | raw                                                  | the value's JSON                                            |
 
 **Precedence**, loosest first:
@@ -577,6 +586,144 @@ These rules are in §8.3; the v1 instances are listed for reference.
 | unit prefix     | a value kind whose only field is a `UnitReference`: `[u.]kind` | `current_health`, `current_health_percent`, `current_mana`, `current_mana_percent`, `unit_is_moving`, `unit_distance`, `boss_current_target`, `warlock_assigned_curse_is_active`                                                                                                                                                                                                                                                                                                                                 |
 | plain arguments | a kind whose only field is repeated                            | `max(a, b)`, `min(a, b)`, `and(x)`, `or(x)`, `strict_sequence(a, b)`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | generic         | any other kind                                                 | `is_execute_phase(e20)`, `auto_time_to_next(main_hand_auto)`, `auto_time_since_last(main_hand_auto)`, `action_group_used("Stance Dance ON/OFF")`, `multiple_cd_usages(x, target_spell_id=y, offset=2s)`, `selected_potion(x)`, `energy_time_to_target(50)`, `totem_remaining_time(air)`                                                                                                                                                                                                                          |
+
+### 6.9 `when` blocks
+
+```
+priority:
+  cast execute if is_execute_phase(e20)
+  when not is_execute_phase(e20) and aura(battle_stance).is_active:
+    cast rend if dot(rend).remaining_time <= 1.5s
+    cast overpower
+    # cast spearing_strike
+  cast whirlwind
+```
+
+reads exactly as
+
+```
+priority:
+  cast execute if is_execute_phase(e20)
+  cast rend if not is_execute_phase(e20) and aura(battle_stance).is_active and dot(rend).remaining_time <= 1.5s
+  cast overpower if not is_execute_phase(e20) and aura(battle_stance).is_active
+  # cast spearing_strike if not is_execute_phase(e20) and aura(battle_stance).is_active
+  cast whirlwind
+```
+
+A `when` line is followed by its **body**: the statements after it whose first line is indented deeper than the
+`when` line. The body ends at the first statement indented no deeper than the `when` line, at a header, or at the end
+of the file. It holds rows, other `when` blocks and comments. No block reaches the proto: each row of a body is a row
+of the list, and `print` writes the rows flat.
+
+**The line.** `when`, or `# when` (below), an expression and `:`. The statement ends at the first `:` that ends one of
+its lines with no bracket open (§3.1), so a long condition may go on continuation lines; one that ends otherwise, with
+no `:` or with more text after it, is `parse` ("a when line ends with :"). `when` followed by `=` begins no `when`
+line.
+
+**Where.** Under `priority:` and under a group header. A `when` line anywhere else is `misplaced-when`, at its first
+token, and neither it nor its body is read. `when` reads as no value (§4 note 8), so a `when` inside a
+`sequence "N" [...]` or a `with` list does not parse. A `var` line in a body is `misplaced-var`. A `when` line with
+nothing in its body is the warning `empty-when`.
+
+**What the rows read as.** Each row of a body reads with its condition joined to the block's:
+
+- the _conjuncts_ of an expression are the values of an `and` written without parentheses at its top, and otherwise
+  the expression alone;
+- a row with condition `C` in blocks with conditions `W1`, the outermost, to `Wn` reads with the condition
+  `{"and": {"vals": conj(W1) ++ … ++ conj(Wn) ++ conj(C)}}`;
+- a row with no `if` reads the same way without `conj(C)`;
+- a row whose join holds one condition, as a row with no `if` in one block does, reads with that condition as
+  written: no `and` is built around it.
+
+So `when a and b:` over `cast x if c and d` gives the JSON of `cast x if a and b and c and d`, `when a or b:` over
+`cast x if c` that of `cast x if (a or b) and c`, and `when (a and b):` over `cast x if c` that of
+`cast x if (a and b) and c`.
+
+**Hidden blocks.** `# when …:` hides the block: every row in it, nested blocks' included, reads with `"hide": true`.
+A `#` on a row inside works as it does anywhere else.
+
+**Raw rows.** A raw row (§6.3) is the whole row's JSON in a body too: the block adds neither its condition nor
+`"hide"` to it.
+
+**Notes and positions.** `///` lines directly above a row of a body are that row's notes, and `///` lines above a
+`when` line are `misplaced-note` (§10). Each row of a body keeps its own place in its list, in the order the text
+writes the rows, so a row's index is the one the flat text gives it.
+
+`format` keeps every block (§12.3).
+
+### 6.10 Defs
+
+```
+var ${Move duration} = 1s * (($ranged_range - $melee_range) / 7)
+def fits(x) = spell(x).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave
+
+priority:
+  cast multi_shot if $use_multi_shot and fits(multi_shot)
+  cast aimed_shot if $use_aimed_shot and fits(aimed_shot)
+```
+
+reads as if each call were the def's value, every parameter replaced by the argument written for it:
+
+```
+priority:
+  cast multi_shot
+      if $use_multi_shot
+      and (spell(multi_shot).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave)
+  cast aimed_shot
+      if $use_aimed_shot
+      and (spell(aimed_shot).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave)
+```
+
+A def names a value expression. A `var` is a value the sim reads when the rotation runs, and takes no arguments. A def
+is read when the file is read, and takes arguments, which lets one value serve several spells, auras or units. No def
+reaches the proto.
+
+**Forms.** `def name(p1, p2, …) = <expr>` declares a def with parameters, each an ident, and `def name = <expr>` (or
+`def name() = <expr>`) one with none. `name(a1, a2, …)` and bare `name` call it where a value goes (§6.5): in a row,
+a `var` value, a `when` condition, a `with` value and another def's value. A word that names a def reads as the def in
+a value position only, before the kinds of §8.3; in step position it is `unknown-kind`.
+
+**Where.** At top level or under `apl:`, where a rotation `var` line goes. Anywhere else it is `misplaced-def`, at
+`def`, and the line is still read. A def may be called anywhere in its file, before or after its line.
+
+**Scope.** A def belongs to its file. A file that `use`s another (§9) does not see its defs, and `use … with` cannot
+set one. So `format`, which reads one file, reads every call.
+
+**Calls.**
+
+- Arguments are positional, each one term (§4). A named argument (`fits(x=y)`) is `positional-only`, at the argument.
+  A call with another number of arguments than the def has parameters, bare `name` having none, is `def-arity`, at
+  the call ("fits takes 1 argument").
+- A call reads as the def's value with each parameter replaced by its argument, on the syntax tree, before typing
+  (§8). In the value, a word equal to a parameter's name is that parameter in every position: a ref (`spell(x)`), an
+  operand, an argument, and a unit before a dot (`x.current_health`, `x.aura(a).is_active`). Written bare, a
+  parameter shadows a name of the table, a kind or a def of the same text. A unit before a dot takes a unit word
+  only, and any other argument there is `wrong-type`, at the argument.
+- The value is typed where the call is, so an argument is a ref, a unit or a value as its parameter's position
+  needs. Variables, placeholders and names in the value are read at the call, so `$move_duration` in a group's row
+  may mean that group's variable.
+- An argument stays one node, as if written in parentheses: passing `a or b` for `x` in `x and c` reads as
+  `(a or b) and c`, and passing `a and b` reads as `(a and b) and c`. A call keeps the def's value together the same
+  way: `$a and fits(x)` reads as `$a and (…)`.
+- A diagnostic in the def's value is reported at the call, its message ending in `(in def fits, at L:C)`, where it is
+  in the value. One at an argument stays at the argument, its message ending in `(passed to def fits, at L:C)`, where
+  the def's name is. A diagnostic of a call in a def's value moves again at each call around it.
+- Typing reads a def's value at each call, and only there, so a def that no call reads has only its name and
+  parameters checked.
+- A file's calls expand at most 65536 times, and each call past that is `parse` ("the defs expand past 65536 calls").
+
+**Names and errors.**
+
+- A def's name must not be a reserved word (§4 note 6), a head, a unit word, a kind of §8.3, or a name the table holds
+  for the file's class (§7.1): `def-shadows`, at the name. Such a def is not read.
+- A second def of a name is `duplicate-def`, at its name, and is not read. A parameter written twice is
+  `duplicate-parameter`, at the second.
+- A def that calls itself, directly or through other defs, is `reference-cycle` at its name. Its calls read as nothing
+  and report nothing more.
+- A def that no row, `var`, `when`, `with` or other def calls is the warning `unused-def`, at its name. A parameter its
+  value never mentions is the warning `unused-parameter`, at the parameter.
+
+`format` keeps every def line and every call (§12.3), and `print` writes neither.
 
 ---
 
@@ -1108,9 +1255,9 @@ use "default.apl.siml" with $use_summon_hawk = true
     - a full-line comment directly above a statement, with no blank line between, moves with that statement;
     - any other comment keeps its place between the statements around it.
 - **`///` notes.** One or more `///` lines directly above a `priority:` or group row, with no blank line
-  between, are that row's `notes`. One optional space after `///` is not part of the text, and neither are the
-  spaces and tabs that end the line. A `///` anywhere else is `misplaced-note`, including above a prepull row,
-  a `var` line, a header or an entry.
+  between, are that row's `notes`, in a `when` body too. One optional space after `///` is not part of the text, and
+  neither are the spaces and tabs that end the line. A `///` anywhere else is `misplaced-note`, including above a
+  prepull row, a `var` line, a `def` line, a `when` line, a header or an entry.
 - **Hidden rows.** `#` before a row hides it, and the row stays in the proto with `"hide": true`.
 
 ---
@@ -1190,6 +1337,8 @@ their order; only `print` orders a file as above.
 - **Entries** are re-printed as `print` writes the fields each one sets (§12.2): a run of flags of one line as
   flag lists, the values one line gives a list together, and every other field on a line of its own.
 - **Slot rows** are re-printed as §12.2 writes them, with the names they are written with.
+- **`when` blocks and defs** are kept, as §12.3 writes them. `print` writes flat rows and each call's value, and
+  never writes `when` or `def`, so §12.4 holds as it is.
 
 **Indentation.**
 
@@ -1197,6 +1346,7 @@ their order; only `print` orders a file as above.
   at column 1. An `x.group.siml` writes each group under its header (§1), indented as in any other file.
 - In an `x.apl.siml` the rotation's `var` lines are at column 1. In `x.siml` they sit under `apl:`.
 - Continuation lines are indented 4 more than their statement.
+- A `when` body is indented 2 more than its `when` line, and a `def` line as a `var` line in its place.
 
 **When a body goes on the header line.** A section whose body is a single entry line (not a slot row, row or
 `var` line) is written on the header line (`buffs: greater_blessing_of_kings`) when that fits in 100 columns.
@@ -1231,7 +1381,7 @@ section only, with no header but a group's; an `x.gear.siml` writes its slot row
 - An indexed array lists its non-zero entries in index order. One that is all zeros is left out, as §12.4 reads
   it as absent. One with an entry that no value of its enum names, or that is no number, is written
   `field=` and raw JSON.
-- A field named `siml`, `spec`, `talents`, `use` or `var` is written `name=value` on a line of its own (§4
+- A field named `siml`, `spec`, `talents`, `use`, `var` or `def` is written `name=value` on a line of its own (§4
   note 5).
 - An entry line longer than 100 columns breaks after each comma between a list's values, and after each comma
   between the top-level arguments of a `field(...)`; each piece goes on a continuation line.
@@ -1284,7 +1434,8 @@ section only, with no header but a group's; an `x.gear.siml` writes its slot row
 the end of the line does not count.
 
 - A row breaks before ` if` and before each top-level `and`/`or` of its condition.
-- A `var` line breaks after `=`, then before each top-level `and`/`or` of its value.
+- A `var` line, and a `def` line, breaks after `=`, then before each top-level `and`/`or` of its value.
+- A `when` line breaks before each top-level `and`/`or` of its condition, its `:` ending the last piece.
 
 Each piece goes on a continuation line. A continuation line may itself exceed 100 columns.
 
@@ -1297,6 +1448,19 @@ Each piece goes on a continuation line. A continuation line may itself exceed 10
 - Placeholders print as `%x` when the name is an ident, otherwise as `%{Exact}`.
 - In `${Exact}` and `%{Exact}`, `\`, `}` and a line feed are written `\\`, `\}` and `\n` (§2), and every other
   character as itself.
+
+**`when` blocks and defs.** `format` writes them as follows.
+
+- A `when` line is written `when <condition>:`, or `# when <condition>:` for a hidden block, the condition as a row's
+  condition is written.
+- Each row of a body is written with its own `#` and its own condition, as they are before the join (§6.9): the
+  condition its conjuncts give. A condition written as one conjunct, on a row of a body or a `when` line, that would
+  print as a top-level `and` is written in parentheses, so that the join keeps it one value.
+- A `def` line is written `def name(p1, p2) = <value>`, or `def name = <value>` for a def with no parameters, and a
+  call as it is written. Both write the value or arguments as written, with single spaces around operators and `, `
+  between arguments. A row, `var` line or `when` line around a call is written from what it reads as before the call
+  is replaced (§6.10).
+- Each row is read back against the row it reads as, its block's conditions and the defs' values in place.
 
 **Notes.** They print as `///` lines, one per line of the text, and an empty line as `///` alone. A note that
 holds a control character other than the line feed (a tab or `\r` among them), or a line that ends in a space,
@@ -1331,6 +1495,8 @@ are errors.
 | `misplaced-statement`                                                                                         | error    | §3.3, and a group file's line before its first header (§1)        |
 | `indented-header`, `unknown-section`, `section-not-allowed`, `duplicate-section`                              | error    | §3.2                                                              |
 | `misplaced-note`, `misplaced-var`, `bad-hidden-row`                                                           | error    | §10, §6.1, §6.3                                                   |
+| `misplaced-when`, `misplaced-def`                                                                             | error    | §6.9, §6.10                                                       |
+| `empty-when`                                                                                                  | warning  | §6.9                                                              |
 | `missing-time`, `unexpected-time`                                                                             | error    | a prepull row without a time, or another row with one             |
 | `spec-required`, `unknown-spec`, `spec-mismatch`                                                              | error    | §3.3, §9                                                          |
 | `use-not-found`, `use-cycle`, `use-refused`, `section-conflict`, `with-unknown-variable`, `with-not-rotation` | error    | §9                                                                |
@@ -1346,8 +1512,10 @@ are errors.
 | `unknown-slot`, `duplicate-slot`                                                                              | error    | §5.3                                                              |
 | `unknown-name`                                                                                                | error    | §7.2; the message names where the name is, or a did-you-mean      |
 | `ambiguous-variable`                                                                                          | error    | §7.5                                                              |
-| `duplicate-group`, `duplicate-variable`, `reference-cycle`                                                    | error    | §6.1, §7.5                                                        |
+| `duplicate-group`, `duplicate-variable`, `reference-cycle`                                                    | error    | §6.1, §7.5, §6.10                                                 |
 | `undefined-variable`, `undefined-group`, `undefined-placeholder`, `undefined-sequence`                        | warning  | §7.5                                                              |
+| `def-shadows`, `duplicate-def`, `duplicate-parameter`, `def-arity`, `positional-only`                         | error    | §6.10                                                             |
+| `unused-def`, `unused-parameter`                                                                              | warning  | §6.10                                                             |
 | `raw-ref`                                                                                                     | error    | §7.3; reported by the repository check only, never by the parser  |
 
 **Recovery.** Each statement is read on its own, so a bad statement costs only itself. A file with any error
@@ -1357,7 +1525,9 @@ produces no proto. The diagnostics are exactly these:
   lexer diagnostic is reported, and a parse error only when it lies in front of that token.
 - A statement's first parse error ends it. `missing-version`, `unsupported-version`, `misplaced-statement`,
   `indented-header`, `unknown-section`, `section-not-allowed`, `duplicate-section`, `duplicate-group`,
-  `misplaced-var`, `missing-time` and `unexpected-time` do not: the statement is still read.
+  `misplaced-var`, `misplaced-def`, `missing-time` and `unexpected-time` do not: the statement is still read.
+- A `when` line that does not read still holds its body, whose statements are read. A misplaced one's body is not
+  read, as under a header that names no section.
 - An error at the end of a statement is reported where its last readable token ends.
 - A bracket still open at the end of the file is `unclosed-bracket` at the outermost one.
 - A `#` line that does not read as a row, by a parse error or any lexer diagnostic, is `bad-hidden-row` alone.
@@ -1375,7 +1545,8 @@ produces no proto. The diagnostics are exactly these:
 
 `siml 1` is the major version. It goes up only when existing text would change meaning: a keyword, a literal
 rule, a §8 derivation rule, or a section's mapping. New proto fields, enum values, kinds and specs need no
-bump.
+bump. Reserving a word that the name table cannot hold, as `when` and `def` are (§4 note 6, §7.4 "What a loader
+checks"), changes the meaning of no text and needs none either.
 
 A proto rename breaks the files that use the old name loudly, in the parser and in CI.
 
@@ -1449,6 +1620,10 @@ and no raw ref.
 - `use` with and without `with`, nested, and in a section file;
 - the category rules of a full print;
 - notes, comments and hidden rows;
+- `when` blocks: each join rule of §6.9 (an `and` in the block and in the row, an `or` and parentheses in the block,
+  a row with no `if`, nesting, a hidden block, a raw row), in a group too, and their format;
+- defs: with zero, one and two parameters, a parameter in a ref, unit and operand position, an `or` argument, a call
+  in a `var` value and in a `when` condition, a def under `apl:`, and their format;
 - every literal form;
 - each enum short-name rule, including the fallback;
 - every diagnostic code that the parser emits.
@@ -1483,6 +1658,7 @@ var ${Use Aimed Shot} = false
 var ${Use Multi-Shot} = true
 var ${Use Arcane Shot} = true
 var ${Use Summon Hawk} = false
+def fits_weave(x) = spell(x).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave
 
 prepull:
   -22s cast hunters_mark
@@ -1502,12 +1678,8 @@ priority:
       and $use_arcane_shot
   cast summon_hawk if $use_summon_hawk and not $use_arcane_shot
   cast arcane_shot if $use_arcane_shot and not $use_summon_hawk
-  cast multi_shot
-      if $use_multi_shot
-      and (spell(multi_shot).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave)
-  cast aimed_shot
-      if $use_aimed_shot
-      and (spell(aimed_shot).cast_time + $move_duration <= $time_to_next_weave or not $melee_weave)
+  cast multi_shot if $use_multi_shot and fits_weave(multi_shot)
+  cast aimed_shot if $use_aimed_shot and fits_weave(aimed_shot)
   wait auto_time_to_next(main_hand_auto) - $move_duration
       if $melee_weave
       and auto_time_to_next(main_hand_auto) > $move_duration
@@ -1534,6 +1706,8 @@ Some notes on this file:
 - `5.00` keeps its text.
 - `$ranged_range` folds to `Ranged range`, while the proto keeps the exact names that
   `ui/specs/hunter/dps/spec.ts` sets.
+- `fits_weave(multi_shot)` reads as the def's value with `multi_shot` for `x` (§6.10), in parentheses within the
+  row's `and`.
 
 The two variable presets are one-line files:
 
@@ -1593,11 +1767,11 @@ priority:
       and aura(battle_stance).is_active
       and aura(overpower).is_inactive
       and (is_execute_phase(e20) or dot(rend).remaining_time > 1.5s)
-  cast slam if not is_execute_phase(e20) and spell(slam).cast_time < 1.5s
-  cast slam
-      if not is_execute_phase(e20)
-      and spell(slam).cast_time >= 1.5s
-      and auto_time_since_last(main_hand_auto) <= input_delay + 300ms
+  when not is_execute_phase(e20):
+    cast slam if spell(slam).cast_time < 1.5s
+    cast slam
+        if spell(slam).cast_time >= 1.5s
+        and auto_time_since_last(main_hand_auto) <= input_delay + 300ms
   cast whirlwind if action_group_used("Stance Dance ON/OFF")
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")
@@ -1681,6 +1855,8 @@ Some notes on this file:
   proto3's zero value, so it is not printed.
 - **One-operand `and` and `or`.** `and(…)`, `or(…)` and the stat-type form read back to the rotation's proto
   exactly. Unwrapping them changes the proto, which only the `.results` files can show is safe.
+- **The `when` block.** The two Slam rows read with `not is_execute_phase(e20)` first in their `and` (§6.9), as the
+  flat rows wrote it.
 
 ### 16.3 `ui/specs/hunter/dps/gear_sets/p1.gear.siml` (hunter, P1 gear)
 

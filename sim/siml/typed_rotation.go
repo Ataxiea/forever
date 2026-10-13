@@ -132,6 +132,13 @@ func (f *typedFile) typeRotation() rotationTyping {
 					group.Actions = append(group.Actions, item)
 				}
 			}
+		case *whenStmt:
+			// The rows read the condition joined to theirs; format writes it as typed here, which marks no span.
+			if section == sectionPriority || section == sectionGroup && group != nil {
+				marks := len(t.spans)
+				f.whens[s] = t.value(s.condition)
+				t.spans = t.spans[:marks]
+			}
 		default:
 			if section == sectionAPL && isEntry(s) {
 				f.entries[s] = t.entry(s, aplFields, f.holder, set)
@@ -162,7 +169,7 @@ func (t *typer) listItem(s *rowStmt) *proto.APLListItem {
 	}
 	// A time outside prepull: is unexpected-time, and is not read.
 	pop := t.in("action")
-	action := t.action(s.action)
+	action := t.action(&actionNode{span: s.action.span, step: s.action.step, condition: joinedCondition(s)})
 	pop()
 	if action == nil {
 		return nil
@@ -171,7 +178,61 @@ func (t *typer) listItem(s *rowStmt) *proto.APLListItem {
 	for i, n := range s.notes {
 		notes[i] = n.text
 	}
-	return &proto.APLListItem{Action: action, Hide: s.hide, Notes: strings.Join(notes, "\n")}
+	hide := s.hide
+	for w := s.when; w != nil; w = w.parent {
+		hide = hide || w.hide
+	}
+	return &proto.APLListItem{Action: action, Hide: hide, Notes: strings.Join(notes, "\n")}
+}
+
+// The condition a row reads with (SPEC.md §6.9): the conjuncts of each when block's condition around it, the
+// outermost first, then the row's own, in one and. A row in no block, or with no condition of its own in one block,
+// reads with its one condition as written.
+func joinedCondition(s *rowStmt) node {
+	var sources []node
+	for w := s.when; w != nil; w = w.parent {
+		sources = append([]node{w.condition}, sources...)
+	}
+	if s.action.condition != nil {
+		sources = append(sources, s.action.condition)
+	}
+	switch len(sources) {
+	case 0:
+		return nil
+	case 1:
+		return sources[0]
+	}
+	joined := &logicNode{span: sources[len(sources)-1].pos(), op: "and"}
+	for _, c := range sources {
+		joined.operands = append(joined.operands, conjuncts(c)...)
+	}
+	return joined
+}
+
+// The values of an `and` written without parentheses at the top of n, or n alone.
+func conjuncts(n node) []node {
+	if l, ok := n.(*logicNode); ok && l.op == "and" {
+		return l.operands
+	}
+	return []node{n}
+}
+
+// The condition a row of a when block writes itself: the values of its own conjuncts at the end of joined, the
+// condition it reads with; nil when it writes none.
+func ownCondition(s *rowStmt, joined *proto.APLValue) *proto.APLValue {
+	own := s.action.condition
+	switch {
+	case own == nil:
+		return nil
+	case s.when == nil:
+		return joined
+	}
+	vals := joined.GetAnd().GetVals()
+	vals = vals[len(vals)-len(conjuncts(own)):]
+	if len(conjuncts(own)) == 1 {
+		return vals[0]
+	}
+	return &proto.APLValue{Value: &proto.APLValue_And{And: &proto.APLValueAnd{Vals: vals}}}
 }
 
 // A prepull row.

@@ -10,15 +10,16 @@ import (
 )
 
 // The names a rotation gives its own parts, which go to definition, find references and rename work on: value and
-// group variables, groups, sequences and placeholders; and the outline, folding and links of a file.
+// group variables, groups, sequences, placeholders, defs and their parameters; and the outline, folding and links of a
+// file.
 
 // An occurrence as the analysis reads it, at byte offsets of the file it is found in.
 type occurrence struct {
-	kind       string // variable, group, sequence or placeholder.
+	kind       string // variable, group, sequence, placeholder, def or parameter.
 	name       string // The exact name it means; the written name when it resolves to nothing.
-	span              // `$x`, `${X}`, `"Name"` or `%p`.
+	span              // `$x`, `${X}`, `"Name"`, `%p` or a def's or parameter's word.
 	definition bool
-	scope      scope  // The group a variable or placeholder belongs to.
+	scope      scope  // The group a variable or placeholder belongs to; for a parameter, its def's name as the group.
 	resolved   bool   // Whether this file, or the file a use … with bind sets a variable of, declares what it names.
 	file       string // For a use … with bind: the file that declares the variable it sets.
 }
@@ -61,6 +62,10 @@ func walkTree(n any, parent any, visit func(n, parent any)) {
 		each(x.variable, x.value)
 	case *varStmt:
 		each(x.variable, x.value)
+	case *whenStmt:
+		each(x.condition)
+	case *defStmt:
+		each(x.value)
 	case *rowStmt:
 		each(x.doAt)
 		if x.action != nil {
@@ -182,8 +187,29 @@ func (d *Doc) occurrences() []occurrence {
 	var declarations []declaration
 	var uses []use
 	var used []declaredVariable
+	defs := map[string]bool{}
+	for _, s := range tree.statements {
+		if d, ok := s.(*defStmt); ok {
+			defs[d.name.text] = true
+		}
+	}
 	for _, statement := range tree.statements {
 		sc := scopeOf(sections[statement])
+		def, _ := statement.(*defStmt)
+		// A word of a def's value that names one of its parameters is the parameter (SPEC.md §6.10).
+		parameter := func(n name) bool {
+			if def == nil || !def.isParam(n.text) {
+				return false
+			}
+			out = append(out, occurrence{kind: "parameter", name: n.text, span: n.span, scope: scope{group: def.name.text}, resolved: true})
+			return true
+		}
+		if def != nil {
+			out = append(out, occurrence{kind: "def", name: def.name.text, span: def.name.span, definition: true, resolved: true})
+			for _, p := range def.params {
+				out = append(out, occurrence{kind: "parameter", name: p.text, span: p.span, definition: true, scope: scope{group: def.name.text}, resolved: true})
+			}
+		}
 		if u, ok := statement.(*useStmt); ok {
 			found := d.declaredThrough(resolveUse(d.path, u.path.value), []string{d.path})
 			used = append(used, found...)
@@ -220,7 +246,19 @@ func (d *Doc) occurrences() []occurrence {
 				if s, ok := x.subject.(*stringNode); ok && x.head.text == "sequence" {
 					out = append(out, occurrence{kind: "sequence", name: s.value, span: s.span, resolved: true})
 				}
+				if x.unit != nil {
+					parameter(*x.unit)
+				}
+			case *memberNode:
+				parameter(x.object)
 			case *callNode:
+				if x.args == nil && parameter(x.name) {
+					break
+				}
+				if defs[x.name.text] {
+					out = append(out, occurrence{kind: "def", name: x.name.text, span: x.name.span, resolved: true})
+					break
+				}
 				kind := ix.actionKinds[x.name.text]
 				if kind == nil {
 					kind = ix.valueKinds[x.name.text]
@@ -577,7 +615,7 @@ func (d *Doc) References(at Position, includeDeclaration bool) []Location {
 func (d *Doc) PrepareRename(at Position) (Range, string, error) {
 	o, ok := d.occurrenceAt(d.Offset(at))
 	if !ok {
-		return Range{}, "", fmt.Errorf("Only variables, groups, sequences and placeholders rename.")
+		return Range{}, "", fmt.Errorf("Only variables, groups, sequences, placeholders, defs and parameters rename.")
 	}
 	if !o.resolved {
 		file := "This file"
@@ -596,6 +634,8 @@ func spelled(kind, name string) string {
 		return variableRef(name)
 	case "placeholder":
 		return placeholderRef(name)
+	case "def", "parameter":
+		return name
 	}
 	return jsonString(name)
 }
@@ -607,6 +647,9 @@ func identifierRefusal(kind, name string) string {
 	if (kind == "variable" || kind == "placeholder") && strings.ContainsAny(name, "}\r\n") {
 		return fmt.Sprintf("A %s's name cannot hold } or a line break.", kind)
 	}
+	if (kind == "def" || kind == "parameter") && !identPattern.MatchString(name) {
+		return fmt.Sprintf("A %s's name is a word: letters, digits and _, not starting with a digit.", kind)
+	}
 	return ""
 }
 
@@ -615,6 +658,14 @@ func identifierRefusal(kind, name string) string {
 func (d *Doc) renameRefusal(key occurrence, newName string) string {
 	if why := identifierRefusal(key.kind, newName); why != "" {
 		return why
+	}
+	if key.kind == "parameter" && d.ix.keywords[newName] {
+		return newName + " is a reserved word."
+	}
+	if t := d.typed; key.kind == "def" && t != nil {
+		if what := t.typer.meaning(newName); what != "" {
+			return fmt.Sprintf("%s is %s; a def takes a name of its own.", newName, what)
+		}
 	}
 	seen := func(o occurrence) bool {
 		return key.kind == "group" || key.kind == "sequence" || o.scope == key.scope ||
@@ -696,12 +747,35 @@ func (d *Doc) symbols() []Symbol {
 			break
 		}
 	}
+	// A def, and a when block with the blocks inside it, from its line to its body's last statement.
+	defSymbol := func(x *defStmt) Symbol { return symbol(x.name.text, "def", SymbolFunction, x.span, x.name.span) }
+	var whenSymbol func(w *whenStmt) Symbol
+	whenSymbol = func(w *whenStmt) Symbol {
+		at := w.span
+		var children []Symbol
+		for _, b := range w.body {
+			if inner, ok := b.(*whenStmt); ok {
+				children = append(children, whenSymbol(inner))
+				at.end = max(at.end, d.Offset(children[len(children)-1].Range.End))
+			}
+			at.end = max(at.end, b.base().end)
+		}
+		sym := symbol("when "+nodeText(w.condition, d.src), "", SymbolBoolean, at, w.span)
+		sym.Children = children
+		return sym
+	}
 	var out []Symbol
 	for _, v := range variables(nil, scope{}) {
 		if d.Offset(v.Range.Start) < firstHeader {
 			out = append(out, v)
 		}
 	}
+	for _, x := range tree.statements {
+		if def, ok := x.(*defStmt); ok && def.start < firstHeader {
+			out = append(out, defSymbol(def))
+		}
+	}
+	slices.SortStableFunc(out, func(a, b Symbol) int { return d.Offset(a.Range.Start) - d.Offset(b.Range.Start) })
 	for _, s := range tree.sections {
 		if s.header == nil {
 			continue
@@ -720,6 +794,17 @@ func (d *Doc) symbols() []Symbol {
 				children = append(children, symbol(o.name, "sequence", SymbolEvent, o.span, o.span))
 			}
 		}
+		for _, x := range s.body {
+			switch x := x.(type) {
+			case *defStmt:
+				children = append(children, defSymbol(x))
+			case *whenStmt:
+				if x.parent == nil {
+					children = append(children, whenSymbol(x))
+				}
+			}
+		}
+		slices.SortStableFunc(children, func(a, b Symbol) int { return d.Offset(a.Range.Start) - d.Offset(b.Range.Start) })
 		sym := symbol(name, "", kind, at, s.header.span)
 		sym.Children = children
 		out = append(out, sym)

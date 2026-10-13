@@ -41,6 +41,7 @@ type variableUse struct {
 	node  *varNode
 	ref   *proto.APLValueVariableRef
 	scope scope
+	site  *expansion // The def call it is read in, if any.
 }
 
 // A group reference, with the placeholders its with list sets.
@@ -54,6 +55,7 @@ type groupUse struct {
 type nameUse struct {
 	span
 	name string
+	site *expansion // The def call it is read in, if any.
 }
 
 type typer struct {
@@ -73,6 +75,10 @@ type typer struct {
 	decl         *variableDecl // The declaration whose value is being typed.
 	at           []any         // The JSON path, from IndividualSimSettings, of what is being typed: JSON names and list indices.
 	spans        []pathSpan    // The nodes that read, each at the JSON path it writes, in the order they are read.
+	lines        *lineMap
+	defs         defTyping
+	site         *expansion    // The def call being read, if any.
+	reported     map[diag]bool // A node read more than once, as a when condition is for each row, reports once.
 }
 
 // A node's text and the JSON path of what it writes.
@@ -111,15 +117,25 @@ func newTyper(ix *schemaIndex, names *Names) *typer {
 		names:        names,
 		sequenceDefs: map[string]bool{},
 		placeholders: map[scope]map[string]bool{},
+		reported:     map[diag]bool{},
 	}
 }
 
 func (t *typer) report(code, message string, at span) {
-	t.diags = append(t.diags, diag{span: at, severity: Error, code: code, message: message})
+	t.add(diag{span: at, severity: Error, code: code, message: message})
 }
 
 func (t *typer) warn(code, message string, at span) {
-	t.diags = append(t.diags, diag{span: at, severity: Warning, code: code, message: message})
+	t.add(diag{span: at, severity: Warning, code: code, message: message})
+}
+
+// Adds d, at the def call it is in when it lies in a def's value (SPEC.md §6.10), unless it is reported already.
+func (t *typer) add(d diag) {
+	d = t.site.relocate(d, t.lines)
+	if !t.reported[d] {
+		t.reported[d] = true
+		t.diags = append(t.diags, d)
+	}
 }
 
 // "; did you mean a, b?" for the candidates within edit distance 2 of word, closest first, at most three.
@@ -236,7 +252,7 @@ func (t *typer) valueOf(n node) *proto.APLValue {
 	case *noneNode:
 		return &proto.APLValue{}
 	case *varNode:
-		use := &variableUse{node: n, ref: &proto.APLValueVariableRef{}, scope: t.scope}
+		use := &variableUse{node: n, ref: &proto.APLValueVariableRef{}, scope: t.scope, site: t.site}
 		t.variableUses = append(t.variableUses, use)
 		if t.decl != nil {
 			t.decl.uses = append(t.decl.uses, use)
@@ -334,8 +350,11 @@ func (t *typer) kindBody(k *aplKind, args *argList) protoreflect.Message {
 	return body
 }
 
-// `kind` or `kind(args)`.
+// `kind` or `kind(args)`, or a call of a def, which reads as the def's value.
 func (t *typer) valueCall(c *callNode) *proto.APLValue {
+	if d := t.defs.byName[c.name.text]; d != nil {
+		return t.expand(c, d)
+	}
 	k := t.ix.valueKinds[c.name.text]
 	if k == nil {
 		t.report("unknown-kind", t.unknownKind(c.name.text, true), c.name.span)
@@ -351,6 +370,9 @@ func (t *typer) unknownKind(name string, value bool) string {
 	noun, kinds, others := "action", t.ix.actionKinds, t.ix.valueKinds
 	if value {
 		noun, kinds, others = "value", t.ix.valueKinds, t.ix.actionKinds
+	}
+	if !value && t.defs.byName[name] != nil {
+		return fmt.Sprintf("%s is a def, which reads as a value, and an action goes here", name)
 	}
 	if others[name] != nil {
 		other := "a value"
@@ -679,7 +701,7 @@ func (t *typer) singleOf(f *field, n node) (protoreflect.Value, bool) {
 	case "string":
 		if s, ok := n.(*stringNode); ok {
 			if t.ix.sequenceFields[f.Name] {
-				t.sequenceUses = append(t.sequenceUses, nameUse{s.span, s.value})
+				t.sequenceUses = append(t.sequenceUses, nameUse{s.span, s.value, t.site})
 			}
 			return protoreflect.ValueOfString(s.value), true
 		}

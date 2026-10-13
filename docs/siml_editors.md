@@ -50,7 +50,7 @@ Taken from its `initialize` answer (`serverInfo.name` is `wowsims-siml`):
 | `textDocumentSync`                                                                           | open and close, full text on change                                                                          |
 | `publishDiagnostics`                                                                         | parser errors and warnings with did-you-mean, the registered-name check, the rotation lints, the slot checks |
 | `completionProvider`                                                                         | trigger characters ` ` `(` `.` `"` `$` `%` `,` `=` `[` `+`                                                   |
-| `hoverProvider`, `definitionProvider`, `referencesProvider`, `renameProvider` (with prepare) | variables, groups, sequences and placeholders; a spell's row of the game files on hover                      |
+| `hoverProvider`, `definitionProvider`, `referencesProvider`, `renameProvider` (with prepare) | variables, groups, sequences, placeholders, defs and parameters; a spell's row of the game files on hover    |
 | `documentSymbolProvider`, `foldingRangeProvider`, `documentLinkProvider`                     | outline, folds, `use` paths                                                                                  |
 | `documentFormattingProvider`                                                                 | the printer every committed file is a fixed point of                                                         |
 | `codeActionProvider`                                                                         | kinds `quickfix` and `refactor.rewrite`                                                                      |

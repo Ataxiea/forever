@@ -241,6 +241,24 @@ type rowStmt struct {
 	hide   bool
 	doAt   node
 	action *actionNode
+	when   *whenStmt // The innermost when block it is in, if any.
+}
+
+// `when <expr>:`, whose body is the statements after it indented deeper than it (SPEC.md §6.9).
+type whenStmt struct {
+	stmtBase
+	hide      bool
+	condition node
+	parent    *whenStmt // The block it is in, if any.
+	body      []stmt    // Its own statements, a nested block's line among them.
+}
+
+// `def name(p, …) = value`: a macro each call reads as its value (SPEC.md §6.10).
+type defStmt struct {
+	stmtBase
+	name   name
+	params []name
+	value  node
 }
 
 type slotRowStmt struct {
@@ -326,11 +344,11 @@ const (
 // Words that end an expression or start an action, and so never read as a name or value.
 var stopWords = map[string]bool{
 	"if": true, "on": true, "until": true, "recast": true, "for": true, "with": true, "and": true, "or": true,
-	"not": true, "cast": true, "channel": true, "wait": true, "move": true, "group": true,
+	"not": true, "cast": true, "channel": true, "wait": true, "move": true, "group": true, "when": true,
 }
 
-// Words that start a top-level line or a var line, unless `=` follows, which makes the line an entry.
-var topWords = map[string]bool{"siml": true, "spec": true, "talents": true, "use": true, "var": true}
+// Words that start a top-level line, a var line or a def line, unless `=` follows, which makes the line an entry.
+var topWords = map[string]bool{"siml": true, "spec": true, "talents": true, "use": true, "var": true, "def": true}
 
 var (
 	compareOps = []string{"==", "!=", ">=", ">", "<=", "<"}
@@ -370,8 +388,8 @@ type failure struct {
 }
 
 // The tokens of each statement (SPEC.md §3.1). A statement continues while a bracket is open, and, unless it is a
-// header, onto a later line indented deeper than its first, with no blank line between, that does not itself
-// start with a header; comment lines never decide.
+// header, onto a later line indented deeper than its first, with no blank line between, that does not itself start
+// with a header; comment lines never decide. A when line ends at the first : that ends a line.
 func statementsOf(tokens []token, triv []trivia, lines *lineMap) [][]token {
 	blank := map[int]bool{}
 	for _, t := range triv {
@@ -383,7 +401,7 @@ func statementsOf(tokens []token, triv []trivia, lines *lineMap) [][]token {
 	i := 0
 	for i < len(tokens) {
 		indent := tokens[i].start - lines.starts[lines.line(tokens[i].start)]
-		header := headerShape(tokens, i, lines)
+		header, when := headerShape(tokens, i, lines), whenShape(tokens, i)
 		var open []int
 		j := i
 		for ; ; j++ {
@@ -401,6 +419,9 @@ func statementsOf(tokens []token, triv []trivia, lines *lineMap) [][]token {
 			nextLine := lines.line(next.start)
 			if nextLine == endLine || len(open) > 0 {
 				continue
+			}
+			if when && t.kind == tokPunct && t.text == ":" {
+				break
 			}
 			gap := false
 			for l := endLine + 1; l < nextLine && !gap; l++ {
@@ -434,6 +455,17 @@ func headerShape(tokens []token, i int, lines *lineMap) bool {
 		return true
 	}
 	return a.text == sectionGroup && i+1 < len(tokens) && tokens[i+1].kind == tokString && tokens[i+1].err == nil && colon(i+2)
+}
+
+// `when` or `# when` at tokens[i], which starts a when line unless `=` follows the word (SPEC.md §6.9).
+func whenShape(tokens []token, i int) bool {
+	if i < len(tokens) && tokens[i].kind == tokPunct && tokens[i].text == "#" {
+		i++
+	}
+	word := func(k int, text string) bool {
+		return k < len(tokens) && tokens[k].kind == tokIdent && tokens[k].text == text
+	}
+	return word(i, "when") && !(i+1 < len(tokens) && tokens[i+1].kind == tokPunct && tokens[i+1].text == "=")
 }
 
 // Whether a file of kind holds a spec line: a full file, and a section file whose section reads the spec or holds a
@@ -495,6 +527,15 @@ type fileParser struct {
 	seenSpec     bool
 	seenTalents  bool
 	versionFirst bool
+	blocks       []openBlock // The when blocks open at the current statement, outermost first.
+}
+
+// A when line and the column it starts at, whose body is the statements indented deeper. A misplaced when's body is
+// not read; a when line that does not read still holds its body, which is read on its own.
+type openBlock struct {
+	indent int
+	when   *whenStmt // Nil for a when line that did not read.
+	skip   bool
 }
 
 func (f *fileParser) run() (*syntaxTree, []diag) {
@@ -509,6 +550,7 @@ func (f *fileParser) run() (*syntaxTree, []diag) {
 		}
 		f.diags = append(f.diags, errorAt("missing-version", "a file starts with siml 1", at))
 	}
+	f.closeBlocks(-1)
 	f.tree.trailing = f.trivia[f.nextTrivia:]
 	if !f.skip {
 		for _, t := range f.tree.trailing {
@@ -542,11 +584,21 @@ func (f *fileParser) physical(toks []token, first bool) {
 	start, end := toks[0].start, toks[len(toks)-1].end
 	leading := f.triviaBefore(f.lines.line(start))
 	inner := f.triviaBefore(f.lines.line(end-1) + 1)
+	isHeader := headerShape(toks, 0, f.lines)
+	if isHeader {
+		f.closeBlocks(-1)
+	} else {
+		f.closeBlocks(start - f.lines.starts[f.lines.line(start)])
+	}
+	block := f.block()
 	var statement stmt
 	row := false
 	switch {
-	case headerShape(toks, 0, f.lines):
+	case isHeader:
 		statement = f.header(p, end)
+	case block != nil && block.skip:
+		statement = &unparsedStmt{}
+		f.place(f.section, statement)
 	case p.atEnd():
 		// Its first token has a lexer error, which is all there is to report.
 		statement = &unparsedStmt{}
@@ -559,7 +611,15 @@ func (f *fileParser) physical(toks []token, first bool) {
 	}
 	b := statement.base()
 	b.span, b.leading, b.inner = span{start, end}, leading, inner
-	f.attachNotes(statement, row)
+	if block != nil && block.when != nil {
+		block.when.body = append(block.when.body, statement)
+		if r, ok := statement.(*rowStmt); ok {
+			r.when = block.when
+		}
+	}
+	if block == nil || !block.skip {
+		f.attachNotes(statement, row)
+	}
 	f.tree.statements = append(f.tree.statements, statement)
 	for k, t := range toks {
 		if t.err != nil && k < p.suppressFrom {
@@ -567,6 +627,25 @@ func (f *fileParser) physical(toks []token, first bool) {
 		}
 	}
 	f.diags = append(f.diags, p.diags...)
+}
+
+// The innermost open when block, or nil.
+func (f *fileParser) block() *openBlock {
+	if len(f.blocks) == 0 {
+		return nil
+	}
+	return &f.blocks[len(f.blocks)-1]
+}
+
+// Closes the blocks a statement at column indent ends, those that start at it or deeper; -1 closes all. An empty one
+// is empty-when.
+func (f *fileParser) closeBlocks(indent int) {
+	for len(f.blocks) > 0 && (indent < 0 || f.blocks[len(f.blocks)-1].indent >= indent) {
+		if w := f.blocks[len(f.blocks)-1].when; w != nil && len(w.body) == 0 {
+			f.diags = append(f.diags, diag{span: w.span, severity: Warning, code: "empty-when", message: "the when block holds no row; its rows go on the lines below it, indented deeper"})
+		}
+		f.blocks = f.blocks[:len(f.blocks)-1]
+	}
 }
 
 func (f *fileParser) place(s *section, statement stmt) {
@@ -701,9 +780,25 @@ func (f *fileParser) line(p *parser, first bool) lineRead {
 	if f.section == f.implied && f.kind.Section == sectionGroup {
 		p.report("misplaced-statement", `in an x.group.siml, a row or var line goes under a group "Name": header`, t.at())
 	}
+	if whenShape(p.toks, p.i) {
+		return f.when(p, here)
+	}
+	if word == "def" {
+		if f.section != nil && (f.def == nil || f.def.Name != sectionAPL) {
+			p.report("misplaced-def", "def goes at the top of a file or under apl:", t.at())
+		}
+		s := attempt(p, p.defDecl)
+		if f.section == nil {
+			return top(s)
+		}
+		return here(s, false)
+	}
 	if word == "var" {
-		if f.def != nil && !slices.Contains(f.def.Body, "var") {
+		switch {
+		case f.def != nil && !slices.Contains(f.def.Body, "var"):
 			p.report("misplaced-var", "var goes at the top of a file, under apl: or under a group", t.at())
+		case len(f.blocks) > 0:
+			p.report("misplaced-var", "a var line goes outside when blocks", t.at())
 		}
 		s := attempt(p, p.varDecl)
 		if f.section == nil {
@@ -726,6 +821,28 @@ func (f *fileParser) line(p *parser, first bool) lineRead {
 		return here(attempt(p, p.slotRow), false)
 	}
 	return here(attempt(p, p.entry), false)
+}
+
+// A when line, which opens a block (SPEC.md §6.9). One outside priority: and the groups is misplaced-when, and
+// neither it nor its body is read.
+func (f *fileParser) when(p *parser, here func(stmt, bool) lineRead) lineRead {
+	t := p.peek(0)
+	block := openBlock{indent: t.start - f.lines.starts[f.lines.line(t.start)]}
+	if f.def == nil || !slices.Contains(f.def.Body, "rows") || f.def.Name == sectionPrepull {
+		p.report("misplaced-when", "a when block goes under priority: or a group", t.at())
+		block.skip = true
+		f.blocks = append(f.blocks, block)
+		return here(&unparsedStmt{}, false)
+	}
+	s := attempt(p, p.when)
+	if w, ok := s.(*whenStmt); ok {
+		if parent := f.block(); parent != nil {
+			w.parent = parent.when
+		}
+		block.when = w
+	}
+	f.blocks = append(f.blocks, block)
+	return here(s, false)
 }
 
 // A row; a hidden row that does not read is bad-hidden-row alone, since a `#` line is most often a comment.
@@ -1024,6 +1141,52 @@ func (p *parser) varDecl() stmt {
 	p.expectPunct("=", "'=' or the end of the var line")
 	s.value = p.expr()
 	p.finish("an operator or the end of the var line")
+	return s
+}
+
+// `def name(p, …) = value`, or `def name = value` for a def with no parameters.
+func (p *parser) defDecl() stmt {
+	p.take()
+	t := p.peek(0)
+	if t.kind != tokIdent {
+		p.expected("the def's name, such as def fits(x) = …", "parse")
+	}
+	p.take()
+	s := &defStmt{name: t.name()}
+	if p.isPunct("(", 0) {
+		p.take()
+		for !p.isPunct(")", 0) {
+			if len(s.params) > 0 {
+				p.expectPunct(",", "',' or ')'")
+			}
+			if !p.peekKind(0, tokIdent) {
+				p.expected("a parameter's name", "parse")
+			}
+			s.params = append(s.params, p.take().name())
+		}
+		p.take()
+	}
+	p.expectPunct("=", "'=' and the def's value")
+	s.value = p.expr()
+	p.finish("an operator or the end of the def line")
+	return s
+}
+
+// `[#] when <expr>:`, the colon ending its line.
+func (p *parser) when() stmt {
+	s := &whenStmt{hide: p.isPunct("#", 0)}
+	if s.hide {
+		p.take()
+	}
+	p.take()
+	s.condition = p.expr()
+	if !p.isPunct(":", 0) || p.has(1) {
+		if p.isPunct(":", 0) {
+			p.take()
+		}
+		p.fail("a when line ends with :", "parse")
+	}
+	p.take()
 	return s
 }
 

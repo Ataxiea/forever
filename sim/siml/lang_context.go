@@ -17,6 +17,7 @@ type want struct {
 	t       string
 	column0 bool     // line: the cursor is at the start of its line.
 	prepull bool     // step.
+	when    bool     // step: a when line may start here.
 	words   []string // words.
 	ns      Namespace
 	enum    string   // enum: the enum's name.
@@ -44,6 +45,8 @@ type cursorContext struct {
 	section string // The section the statement belongs to; "" for none.
 	group   scope  // The group, when the section is one.
 	headers int    // How many headers come before the statement.
+	// The parameters of the def whose value the cursor is in.
+	params []string
 }
 
 var (
@@ -114,7 +117,7 @@ func (d *Doc) cursorAt(offset int) *cursorContext {
 		}
 	}
 	column0 := upTo == lineStartOf(text, offset) && len(before) == 0
-	ctx.wants = d.readContext(before, after, ctx.section, column0)
+	ctx.wants, ctx.params = d.readContext(before, after, ctx.section, column0)
 	has := func(ts ...string) bool {
 		return slices.ContainsFunc(ctx.wants, func(w want) bool { return slices.Contains(ts, w.t) })
 	}
@@ -139,20 +142,21 @@ func (d *Doc) cursorAt(offset int) *cursorContext {
 	return ctx
 }
 
-// Runs the reader over the tokens before the cursor and gives what it expected where they ran out.
-func (d *Doc) readContext(before, after []token, section string, column0 bool) (wants []want) {
+// Runs the reader over the tokens before the cursor and gives what it expected where they ran out, with the
+// parameters of the def whose value they ran out in.
+func (d *Doc) readContext(before, after []token, section string, column0 bool) (wants []want, params []string) {
+	r := &contextReader{d: d, ix: d.ix, ts: before, after: after, section: section}
 	defer func() {
-		if r := recover(); r != nil {
-			end, ok := r.(contextEnd)
+		if x := recover(); x != nil {
+			end, ok := x.(contextEnd)
 			if !ok {
-				panic(r)
+				panic(x)
 			}
-			wants = end.wants
+			wants, params = end.wants, r.params
 		}
 	}()
-	r := &contextReader{d: d, ix: d.ix, ts: before, after: after, section: section}
 	r.statement(column0)
-	return nil
+	return nil, nil
 }
 
 func lineIndentEnd(text string, offset int) int {
@@ -236,6 +240,7 @@ type contextReader struct {
 	ts      []token // The statement's tokens before the word at the cursor.
 	after   []token // The tokens after the cursor, which only say what an accessor goes on to.
 	section string
+	params  []string // The parameters of the def line being read.
 }
 
 func (r *contextReader) tok() *token { return r.peek(0) }
@@ -289,7 +294,8 @@ func (r *contextReader) statement(column0 bool) {
 		r.body(r.ix.sections[sectionGroup])
 		return
 	}
-	if a.kind == tokIdent && topWords[a.text] && !isText(b, "=") && (a.text != "var" || r.allowsVar(def)) {
+	if a.kind == tokIdent && topWords[a.text] && !isText(b, "=") && (a.text != "var" || r.allowsVar(def)) &&
+		(a.text != "def" || def == nil || def.Name == sectionAPL) {
 		r.top()
 		return
 	}
@@ -311,7 +317,7 @@ func (r *contextReader) bodyStart(def *sectionDef) []want {
 	case slices.Contains(def.Body, "rows") && def.Name == sectionPrepull:
 		return []want{{t: "time"}}
 	case slices.Contains(def.Body, "rows"):
-		return []want{{t: "step"}}
+		return []want{{t: "step", when: true}}
 	}
 	return []want{{t: "entries", def: def}}
 }
@@ -357,6 +363,21 @@ func (r *contextReader) top() {
 	case "var":
 		r.i--
 		r.varLine()
+	case "def":
+		r.need()
+		r.take()
+		if r.is("(") {
+			r.i++
+			for r.need(); !r.is(")"); r.need() {
+				if t := r.take(); t.kind == tokIdent {
+					r.params = append(r.params, t.text)
+				}
+			}
+			r.i++
+		}
+		r.need(want{t: "words", words: []string{"="}})
+		r.take("=")
+		r.expr(nil)
 	}
 }
 
@@ -374,6 +395,14 @@ func (r *contextReader) varLine() {
 func (r *contextReader) row(prepull bool) {
 	if r.is("#") {
 		r.i++
+		if !prepull {
+			r.need(want{t: "step", when: true})
+		}
+	}
+	if !prepull && r.is("when") {
+		r.i++
+		r.expr([]string{":"})
+		return
 	}
 	if prepull {
 		r.need(want{t: "time"})

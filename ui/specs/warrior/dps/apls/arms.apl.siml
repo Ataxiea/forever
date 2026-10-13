@@ -42,11 +42,11 @@ priority:
       and aura(battle_stance).is_active
       and aura(overpower).is_inactive
       and (is_execute_phase(e20) or dot(rend).remaining_time > 1.5s)
-  cast slam if not is_execute_phase(e20) and spell(slam).cast_time < 1.5s
-  cast slam
-      if not is_execute_phase(e20)
-      and spell(slam).cast_time >= 1.5s
-      and auto_time_since_last(main_hand_auto) <= input_delay + 300ms
+  when not is_execute_phase(e20):
+    cast slam if spell(slam).cast_time < 1.5s
+    cast slam
+        if spell(slam).cast_time >= 1.5s
+        and auto_time_since_last(main_hand_auto) <= input_delay + 300ms
   cast whirlwind if action_group_used("Stance Dance ON/OFF")
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")

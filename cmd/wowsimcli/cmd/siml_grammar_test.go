@@ -222,3 +222,17 @@ func TestGrammarColoursLiterals(t *testing.T) {
 		}
 	}
 }
+
+func TestGrammarColoursDefLines(t *testing.T) {
+	patterns := grammarPatterns(t)
+	for _, c := range []struct{ text, part, want string }{
+		{"def fits(x, y) = spell(x).cast_time < y", "def", "keyword.control.siml"},
+		{"def fits(x, y) = spell(x).cast_time < y", "fits", "entity.name.function.siml"},
+		{"def fits(x, y) = spell(x).cast_time < y", "x, y", "meta.parameters.siml"},
+		{"def early = current_time < 10s", "early", "entity.name.function.siml"},
+	} {
+		if got := scopeOf(patterns, c.text, c.part); got != c.want {
+			t.Errorf("%s in %s is coloured %q, want %q", c.part, c.text, got, c.want)
+		}
+	}
+}

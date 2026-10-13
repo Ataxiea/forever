@@ -32,19 +32,23 @@ rotation again with them.
   `ui/specs` warnings are errors and a raw ref is one, as the repository's checks hold them.
 - **Completion.** Sections and the top lines; a section's fields, an enum's values and a flag list's flags; the
   action keywords and kinds of a row, and the time a prepull row starts with; values, accessor heads, their
-  properties and the properties' arguments; units; variables, groups, sequences and placeholders; and the names of
-  the table for the position: the spells and auras the file's spec registers, the class's first, then the shared ones
-  that gear, consumables and encounters add; `item.` with the items that have a use, `other.`, the items of a slot, the
-  suffixes of an item, the enchants that fit, and the consumables of a field.
+  properties and the properties' arguments; units; variables, groups, sequences and placeholders; the file's defs with
+  their parameters, and a def's own parameters inside its value; `when` at the start of a row and `def` on a top line;
+  and the names of the table for the position: the spells and auras the file's spec registers, the class's first, then
+  the shared ones that gear, consumables and encounters add; `item.` with the items that have a use, `other.`, the
+  items of a slot, the suffixes of an item, the enchants that fit, and the consumables of a field.
 - **Hover.** A spell's or aura's game name, ids and the specs that register it, with its row of the game files as
   `go run ./tools/spelldata <id>` prints it, read from the server's own spell store; an item, an enchant or a suffix from the database; a kind's fields; a unit's JSON;
-  a variable's, group's or sequence's declaration.
+  a variable's, group's or sequence's declaration; a def call's def line and the value the call reads as; and on a
+  `when` line, the condition its rows read with, the blocks around it included.
 - **Navigation.** Go to definition, find references and rename for variables (both `$name` and `${Exact Name}`),
-  groups, sequences and placeholders; the outline of sections, variables and sequences; folding. A variable that a
-  `use … with` list sets leads to the file that declares it, and its references and renames take in the `with` lists
-  of the `.siml` files near that file. A rename to a name that cannot be written, or that another of its kind already
-  has, is refused. A `use` path links to the file it names, and go to definition opens it.
-- **Semantic tokens**, on top of the grammar: sections, fields, kinds, units, enum values and the table's names.
+  groups, sequences, placeholders, defs and a def's parameters; the outline of sections, variables, sequences, defs
+  and `when` blocks; folding. A variable that a `use … with` list sets leads to the file that declares it, and its
+  references and renames take in the `with` lists of the `.siml` files near that file. A rename to a name that cannot
+  be written, or that another of its kind already has, is refused. A `use` path links to the file it names, and go to
+  definition opens it.
+- **Semantic tokens**, on top of the grammar: sections, fields, kinds, units, enum values, the table's names, and
+  defs and their parameters.
 - **Formatting** with `format`, the printer every committed file is a fixed point of.
 - **Code actions.** A word the parser does not know changes to a name its did-you-mean offers. An `and(…)` or `or(…)`
   of one operand becomes the operand; an `and` in parentheses inside an `and` (or an `or` in an `or`) joins it. Each
@@ -96,6 +100,13 @@ choice is written as its name.
 - **Edits go through the text.** Each change is made with the server's `siml/splice`: only the statements it touches
   are printed again, and every other line, comment and blank line stays as written. Undo, the dirty marker and git
   work as they do for a hand edit. The panel shows its change at once and the text catches up.
+- **`when` blocks and defs.** The panel shows each row as it reads, with the conditions of the `when` blocks around
+  it joined to its own and each def call in place of its value. A row an edit changes stays in its block while its
+  condition still starts with the block's, and is written with the rest of it; otherwise the block splits at the row
+  and the row is written on its own between the two parts, which repeat the `when` line. A row added or moved next
+  to a block goes in it by the same rule, and a block whose last row goes is removed with its `when` line. A def call
+  in a changed row stays while the edit leaves the value it reads as unchanged; otherwise the row is written with the
+  value in its place.
 - **Read-only.** While the text has an error the panel shows the rotation as it last read, says where the first error
   is, and makes no edits. A rotation put together with another file (`use "default.apl.siml" with …`) is shown with
   the rows it uses and is edited as text.

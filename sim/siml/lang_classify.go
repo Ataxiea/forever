@@ -15,12 +15,12 @@ import (
 // A word and what it is; role says which, and the other fields what it is about.
 type wordRole struct {
 	span
-	role        string // section, spec, field, kind, head, prop, unit, enum, slot, name, variable or placeholder.
+	role        string // section, spec, field, kind, head, prop, unit, enum, slot, name, variable, placeholder, def or parameter.
 	word        string // section, spec, head, unit, enum, slot: the word.
 	field       *field
 	kind        *aplKind // kind, prop.
 	ref         *nameRef // name.
-	declaration bool     // variable.
+	declaration bool     // variable, def, parameter.
 }
 
 func (d *Doc) classify() []wordRole {
@@ -41,6 +41,14 @@ func (d *Doc) classify() []wordRole {
 	push := func(at span, r wordRole) {
 		r.span = at
 		out = append(out, r)
+	}
+	var inDef *defStmt // The def whose value is being read, whose parameters its words may name.
+	parameter := func(n name) bool {
+		if inDef == nil || !inDef.isParam(n.text) {
+			return false
+		}
+		push(n.span, wordRole{role: "parameter"})
+		return true
 	}
 	var term func(t node, f *field, m *message)
 	var expr func(e node)
@@ -110,6 +118,14 @@ func (d *Doc) classify() []wordRole {
 			push(e.name.span, wordRole{role: "name", ref: ref})
 			return
 		}
+		if e.args == nil && parameter(e.name) {
+			return
+		}
+		if d.typed.typer.defs.byName[e.name.text] != nil {
+			push(e.name.span, wordRole{role: "def"})
+			args(e.args, nil, nil)
+			return
+		}
 		var kind *aplKind
 		if isAction {
 			kind = ix.actionKinds[e.name.text]
@@ -156,14 +172,14 @@ func (d *Doc) classify() []wordRole {
 				push(x.name.span, wordRole{role: "enum", word: x.name.text})
 				return
 			}
-			if ix.unitReference(x.object.text) != nil {
+			if !parameter(x.object) && ix.unitReference(x.object.text) != nil {
 				push(x.object.span, wordRole{role: "unit", word: x.object.text})
 			}
 			if kind := ix.valueKinds[x.name.text]; kind != nil {
 				push(x.name.span, wordRole{role: "kind", kind: kind})
 			}
 		case *accessorNode:
-			if x.unit != nil {
+			if x.unit != nil && !parameter(*x.unit) {
 				push(x.unit.span, wordRole{role: "unit", word: x.unit.text})
 			}
 			push(x.head.span, wordRole{role: "head", word: x.head.text})
@@ -244,6 +260,16 @@ func (d *Doc) classify() []wordRole {
 		case *rowStmt:
 			expr(x.doAt)
 			action(x.action)
+		case *whenStmt:
+			expr(x.condition)
+		case *defStmt:
+			push(x.name.span, wordRole{role: "def", declaration: true})
+			for _, p := range x.params {
+				push(p.span, wordRole{role: "parameter", declaration: true})
+			}
+			inDef = x
+			expr(x.value)
+			inDef = nil
 		case *slotRowStmt:
 			push(x.slot.span, wordRole{role: "slot", word: x.slot.text})
 			for _, part := range []*name{x.item, x.suffix, x.enchant} {
@@ -354,6 +380,12 @@ func tokenOf(w wordRole) (string, []string) {
 		return "variable", nil
 	case "placeholder":
 		return "parameter", nil
+	case "def", "parameter":
+		typ := map[string]string{"def": "function", "parameter": "parameter"}[w.role]
+		if w.declaration {
+			return typ, []string{"declaration"}
+		}
+		return typ, nil
 	case "name":
 		if w.ref.ns.SpellLike() {
 			return "type", nil
@@ -387,14 +419,24 @@ func (d *Doc) hover(at Position, c Catalog) (Hover, bool) {
 	}
 	offset := d.Offset(at)
 	w := wordAt(d.classify(), offset)
-	if o, ok := d.occurrenceAt(offset); ok && (w == nil || w.role == "variable" || w.role == "placeholder") {
+	if o, ok := d.occurrenceAt(offset); ok && (w == nil || slices.Contains([]string{"variable", "placeholder", "def", "parameter"}, w.role)) {
 		what := fmt.Sprintf("%s **%s**", o.kind, o.name)
-		if o.scope.inGroup {
+		switch {
+		case o.kind == "parameter":
+			what += " of def " + o.scope.group
+		case o.scope.inGroup:
 			what += fmt.Sprintf(` of group "%s"`, o.scope.group)
 		}
 		parts := []string{what}
 		if home, declaration, ok := d.declarationOf(o); ok {
-			parts = append(parts, fence(home.lineText(declaration.start), "siml"))
+			text := home.lineText(declaration.start)
+			if def := d.typed.typer.defs.byName[o.name]; o.kind == "def" && def != nil {
+				text = strings.Join(statementLines(defLine(def, d.src, 0)), "\n")
+			}
+			parts = append(parts, fence(text, "siml"))
+			if expansion := d.expansionAt(o.span); o.kind == "def" && expansion != "" {
+				parts = append(parts, "Reads here as", fence(expansion, "siml"))
+			}
 		} else if o.file != "" {
 			parts = append(parts, fmt.Sprintf("Not declared in %s.", filepath.Base(o.file)))
 		} else {
@@ -403,13 +445,73 @@ func (d *Doc) hover(at Position, c Catalog) (Hover, bool) {
 		return Hover{Markdown: strings.Join(parts, "\n\n"), Range: d.rangeOf(o.span)}, true
 	}
 	if w == nil {
-		return Hover{}, false
+		return d.whenHover(offset)
 	}
 	text, spellID := d.describe(*w, c)
 	if text == "" {
 		return Hover{}, false
 	}
 	return Hover{Markdown: text, Range: d.rangeOf(w.span), SpellID: spellID}, true
+}
+
+// The value the def call whose name is at reads as, printed; "" unless the call is read once, as a call in a def's
+// value is read for each call of that def.
+func (d *Doc) expansionAt(at span) string {
+	var value *proto.APLValue
+	count := 0
+	for v, c := range d.typed.typer.defs.values {
+		if c.name.span == at {
+			value, count = v, count+1
+		}
+	}
+	if count != 1 {
+		return ""
+	}
+	return d.printValue(value, at.start)
+}
+
+// A value as the printer writes it, its variables as the statement at offset sees them.
+func (d *Doc) printValue(v *proto.APLValue, offset int) string {
+	tree := d.tree()
+	sc := scope{}
+	sections := sectionsByStatement(tree)
+	for _, s := range tree.statements {
+		if s.base().holds(offset) {
+			sc = scopeOf(sections[s])
+		}
+	}
+	p := &printer{ix: d.ix, names: d.names, class: d.typed.typer.class, declarations: declaredNames(d.typed.declarations)}
+	return strings.Join(p.value(v.ProtoReflect(), precTop, sc), "")
+}
+
+// On the word when of a when line: the condition its rows join theirs to, the blocks around it included (SPEC.md
+// §6.9).
+func (d *Doc) whenHover(offset int) (Hover, bool) {
+	for _, s := range d.tree().statements {
+		w, ok := s.(*whenStmt)
+		if !ok || offset < w.start || offset > w.condition.pos().start {
+			continue
+		}
+		var blocks []*whenStmt
+		for b := w; b != nil; b = b.parent {
+			blocks = append([]*whenStmt{b}, blocks...)
+		}
+		joined := blockConjuncts(d.typed.whens, blocks)
+		if slices.Contains(joined, nil) {
+			return Hover{}, false
+		}
+		condition := andOf(joined)
+		if len(joined) == 1 {
+			condition = joined[0]
+		}
+		text := "**when** block: each row in it reads with this condition before its own"
+		if slices.ContainsFunc(blocks, func(b *whenStmt) bool { return b.hide }) {
+			text += ", hidden"
+		}
+		parts := []string{text, fence(d.printValue(condition, w.start), "siml")}
+		return Hover{Markdown: strings.Join(parts, "\n\n"), Range: d.rangeOf(span{w.start, w.condition.pos().start})}, true
+	}
+	return Hover{}, false
 }
 
 // The text of the line holding offset, trimmed.

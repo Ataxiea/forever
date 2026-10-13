@@ -45,6 +45,26 @@
 			}
 		},
 		{
+			"match": "^\\s*(def)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(?:\\(([^()]*)\\))?\\s*(?==)",
+			"captures": {
+				"1": {
+					"name": "keyword.control.siml"
+				},
+				"2": {
+					"name": "entity.name.function.siml"
+				},
+				"3": {
+					"name": "meta.parameters.siml",
+					"patterns": [
+						{
+							"name": "variable.parameter.siml",
+							"match": "[A-Za-z_][A-Za-z0-9_]*"
+						}
+					]
+				}
+			}
+		},
+		{
 			"include": "#value"
 		}
 	],
@@ -112,7 +132,7 @@
 				},
 				{
 					"name": "keyword.control.siml",
-					"match": "\\b(?:siml|spec|talents|use|var|with|if|on|until|recast|for|other|item)(?![A-Za-z0-9_])"
+					"match": "\\b(?:siml|spec|talents|use|var|with|if|on|until|recast|for|other|item|when|def)(?![A-Za-z0-9_])"
 				},
 				{
 					"name": "variable.language.unit.siml",

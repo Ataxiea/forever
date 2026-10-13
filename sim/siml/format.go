@@ -4,6 +4,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/wowsims/forever/sim/core/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -34,7 +35,10 @@ type block struct {
 func (f *typedFile) format() string {
 	ix := f.typer.ix
 	tree := f.tree
-	p := &printer{ix: ix, names: f.typer.names, class: f.typer.class, declarations: declaredNames(f.declarations)}
+	p := &printer{ix: ix, names: f.typer.names, class: f.typer.class, declarations: declaredNames(f.declarations), calls: map[*proto.APLValue]string{}}
+	for v, c := range f.typer.defs.values {
+		p.calls[v] = nodeText(c, tree.lines.src)
+	}
 	sectionOf := map[stmt]*section{}
 	for _, s := range tree.sections {
 		if s.header != nil {
@@ -93,6 +97,17 @@ func (f *typedFile) format() string {
 		indent := 0
 		if section != nil && !isHeader && section != implied {
 			indent = indentWidth
+		}
+		// A when block's body goes 2 deeper than its when line.
+		var in *whenStmt
+		switch s := s.(type) {
+		case *rowStmt:
+			in = s.when
+		case *whenStmt:
+			in = s.parent
+		}
+		for ; in != nil; in = in.parent {
+			indent += indentWidth
 		}
 		startsBlock := previous != nil && group != current
 		prev, afterHeader := previous.(*headerStmt)
@@ -163,7 +178,34 @@ func (f *typedFile) format() string {
 		case *varStmt:
 			add(p.variable(f.written[s], sc, indent))
 		case *rowStmt:
-			add(p.row(f.written[s], section.name == sectionPrepull, sc, indent))
+			item := f.written[s]
+			if s.when == nil || rawRow(s) != nil || !item.IsValid() {
+				add(p.row(item, section.name == sectionPrepull, sc, indent))
+				break
+			}
+			// A row of a when block writes its own condition, and reads back as the row it is joined into.
+			row := item.Interface().(*proto.APLListItem)
+			own := &proto.APLListItem{Hide: s.hide, Notes: row.Notes, Action: &proto.APLAction{Action: row.Action.Action, Condition: ownCondition(s, row.Action.Condition)}}
+			st := p.row(own.ProtoReflect(), false, sc, indent)
+			if c := own.Action.Condition; c != nil && len(conjuncts(s.action.condition)) == 1 && len(st.parts) > 1 {
+				st.parts = append(st.parts[:1], p.conjunctParts(c.ProtoReflect(), sc)...)
+			}
+			st.expect = p.row(item, false, sc, indent).expect
+			add(st)
+		case *whenStmt:
+			parts := p.conditionParts(f.whens[s].ProtoReflect(), sc)
+			if len(conjuncts(s.condition)) == 1 {
+				parts = p.conjunctParts(f.whens[s].ProtoReflect(), sc)
+			}
+			lead := "when "
+			if s.hide {
+				lead = "# when "
+			}
+			parts[0] = cat(word(lead), parts[0][1:])
+			parts[len(parts)-1] = cat(parts[len(parts)-1], word(":"))
+			add(&printedStmt{indent: indent, parts: parts})
+		case *defStmt:
+			add(defLine(s, tree.lines.src, indent))
 		case *slotRowStmt:
 			w := f.entries[s][0]
 			slot := ix.enums[slotEnum].byNumber[int32(w.index)].Short
@@ -203,6 +245,40 @@ func (f *typedFile) format() string {
 		}
 	}
 	return verified(p, f.kind, items)
+}
+
+// `if c` for a condition written as one conjunct: an and in parentheses, which the join of a when block would take
+// apart otherwise (SPEC.md §6.9).
+func (p *printer) conjunctParts(c protoreflect.Message, sc scope) []text {
+	if op, _, ok := p.infix(c, sc); ok && op == "and" {
+		return []text{cat(word("if "), p.value(c, precAnd+1, sc))}
+	}
+	return p.conditionParts(c, sc)
+}
+
+// `def name(p, …) = value`, the value as it is written and broken as a var line's value is (SPEC.md §12.3).
+func defLine(s *defStmt, src string, indent int) *printedStmt {
+	head := "def " + s.name.text
+	if len(s.params) > 0 {
+		params := make([]string, len(s.params))
+		for i, p := range s.params {
+			params[i] = p.text
+		}
+		head += "(" + strings.Join(params, ", ") + ")"
+	}
+	parts := []text{word(head + " =")}
+	l, ok := s.value.(*logicNode)
+	if !ok {
+		return &printedStmt{indent: indent, parts: append(parts, word(nodeText(s.value, src)))}
+	}
+	for i, o := range l.operands {
+		t := nodeText(o, src)
+		if i > 0 {
+			t = l.op + " " + t
+		}
+		parts = append(parts, word(t))
+	}
+	return &printedStmt{indent: indent, parts: parts}
 }
 
 // The writes of an entry line: the values one line gives a list, together.

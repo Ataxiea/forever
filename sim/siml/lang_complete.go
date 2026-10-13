@@ -35,6 +35,7 @@ var topLines = [][3]string{ // label, insert, detail
 	{"talents", `talents "`, "the talents string"},
 	{"use", `use "`, "take the sections of another file"},
 	{"var", "var $", "a rotation value variable"},
+	{"def", "def ", "def name(p, …) = <value>: a value each call reads as, its parameters replaced"},
 }
 
 // The item fields of ConsumesSpec, by proto name, and the consumable types each offers; a field not listed offers
@@ -174,7 +175,7 @@ func (b *completer) offer(w want) {
 	case "line":
 		b.line(w.column0)
 	case "step":
-		b.steps()
+		b.steps(w.when)
 	case "time":
 		b.add("-1s", CompletionValue, ranked(1).with("-1s ", "a time before the pull"))
 		b.variables()
@@ -183,7 +184,7 @@ func (b *completer) offer(w want) {
 	case "words":
 		for _, word := range w.words {
 			insert := word + " "
-			if word == "1" || word == "+" {
+			if word == "1" || word == "+" || word == ":" {
 				insert = word
 			}
 			b.add(word, CompletionKeyword, ranked(1).with(insert, ""))
@@ -284,7 +285,7 @@ func (b *completer) line(column0 bool) {
 			}
 		}
 		for _, l := range topLines {
-			if written[l[0]] || l[0] == "var" && kind.Section != "" && kind.Section != sectionAPL {
+			if written[l[0]] || (l[0] == "var" || l[0] == "def") && kind.Section != "" && kind.Section != sectionAPL {
 				continue
 			}
 			b.add(l[0], CompletionKeyword, ranked(3).with(l[1], l[2]))
@@ -302,9 +303,12 @@ func (ix *schemaIndex) actionKindList() []*aplKind {
 	return out
 }
 
-func (b *completer) steps() {
+func (b *completer) steps(when bool) {
 	for _, w := range actionWords {
 		b.add(w[0], CompletionKeyword, ranked(1).with(w[1], w[2]))
+	}
+	if when {
+		b.add("when", CompletionKeyword, ranked(1).with("when ", "when <condition>: the rows below it, indented deeper, each read with the condition"))
 	}
 	for _, k := range b.d.ix.actionKindList() {
 		if k.Form != "short" {
@@ -355,6 +359,7 @@ func fieldsText(m *message, leave ...string) string {
 func (b *completer) values() {
 	ix := b.d.ix
 	b.variables()
+	b.defs()
 	if b.ctx.group.inGroup {
 		for _, o := range b.definitions() {
 			if o.kind == "placeholder" && o.scope == b.ctx.group {
@@ -378,6 +383,29 @@ func (b *completer) values() {
 		}
 	}
 	b.units(true)
+}
+
+// The file's defs, each with its parameters, and the parameters of the def whose value the cursor is in.
+func (b *completer) defs() {
+	for _, p := range b.ctx.params {
+		b.add(p, CompletionTypeParameter, ranked(0).with("", "parameter"))
+	}
+	params := map[string][]string{}
+	for _, o := range b.definitions() {
+		if o.kind == "parameter" && o.definition {
+			params[o.scope.group] = append(params[o.scope.group], o.name)
+		}
+	}
+	for _, o := range b.definitions() {
+		if o.kind != "def" || !o.definition {
+			continue
+		}
+		signature, insert := o.name, o.name
+		if p := params[o.name]; len(p) > 0 {
+			signature, insert = o.name+"("+strings.Join(p, ", ")+")", o.name+"("
+		}
+		b.add(o.name, CompletionFunction, ranked(1).with(insert, "def "+signature))
+	}
 }
 
 func (b *completer) variables() {
@@ -430,6 +458,9 @@ func (b *completer) members() {
 
 // The names of a spell-like namespace the file's spec registers: the class's first, then the shared ones.
 func (b *completer) refs(ns Namespace) {
+	for _, p := range b.ctx.params {
+		b.add(p, CompletionTypeParameter, ranked(0).with("", "parameter"))
+	}
 	for _, n := range b.d.names.Registered(b.d.class(), b.d.specName(), ns) {
 		game := ""
 		if b.c != nil {
@@ -520,6 +551,9 @@ func (b *completer) entries(sectionName string, flagsOnly bool) {
 	}
 	if slices.Contains(def.Body, "var") && !flagsOnly {
 		b.add("var", CompletionKeyword, offerAs{insert: "var $", detail: "a rotation value variable"})
+	}
+	if def.Name == sectionAPL && !flagsOnly {
+		b.add("def", CompletionKeyword, offerAs{insert: "def ", detail: "def name(p, …) = <value>: a value each call reads as, its parameters replaced"})
 	}
 	for _, p := range ix.sectionFields(def, b.d.specInfo()) {
 		f := p.field
