@@ -457,6 +457,9 @@ func init() {
 		18639: {
 			{BuffId: 23132, BuffName: "Shadow Reflector (23132)", EffectDurationMs: 5000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 300000}}},
 		},
+		18671: {
+			{BuffId: 13442, BuffName: "Firebolt (13442)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
 		18706: {
 			{BuffId: 1317285, BuffName: "Arena Master (1317285)", EffectDurationMs: -1},
 		},

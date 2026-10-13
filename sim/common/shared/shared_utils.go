@@ -210,6 +210,7 @@ func factory_StatBonusEffect(config ProcStatBonusEffect, extraSpell func(agent c
 				DPM:                dpm,
 				ICD:                time.Millisecond * time.Duration(proc.IcdMs),
 				Handler:            procHandler(config, effect, procAura, windowAura, procSpell),
+				ActivatesAura:      core.Ternary(windowAura != nil, windowAura, procAura.Aura),
 
 				RequireDamageComponent: config.RequireDamageComponent,
 			})
@@ -460,6 +461,7 @@ func applySpellDataProc(agent core.Agent, cfg SpellDataProc, source effectSource
 
 	listener := spellDataProcListener(character, cfg, source, trigger)
 	listener.Handler = spellDataProcHandler(buff, procAura)
+	listener.ActivatesAura = procAura.Aura
 
 	// The same fallback the database layer applies: Bulwark of Azzinoth's armor buff sits in a
 	// spell category with a 60s recovery while its trigger states nothing. Only a buff that is a
@@ -725,15 +727,18 @@ func spellDataProcDamageSpell(character *core.Character, damage *spelldata.Spell
 
 type afterDealt func(sim *core.Simulation, spell *core.Spell, target *core.Unit, results core.SpellResultSlice)
 
-// Deals the results the cast calculated, then runs after where it is set: at once, or where the spell
-// has a missile speed once it has flown the caster's distance to the target. The flight carries a
-// copy of the results, since the spell's next cast calculates into the same ones.
+// Deals the results the cast calculated, then runs after where it is set: at once, or, where the
+// spell has a travel time, once it has landed. The flight carries a copy of the results, since the
+// spell's next cast calculates into the same ones.
 func dealOnArrival(sim *core.Simulation, spell *core.Spell, target *core.Unit, results core.SpellResultSlice, after afterDealt) {
-	if spell.MissileSpeed == 0 {
+	if spell.TravelTime() == 0 {
 		dealResults(sim, spell, target, results, after)
 		return
 	}
 	results = slices.Clone(results)
+	for _, result := range results {
+		spell.DealCastResult(sim, result)
+	}
 	suppress := spell.Flags & core.SpellFlagSuppressWeaponProcs
 	spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 		withFlags(spell, suppress, func() { dealResults(sim, spell, target, results, after) })
@@ -744,10 +749,11 @@ func dealOnArrival(sim *core.Simulation, spell *core.Spell, target *core.Unit, r
 // into again: the flight carries the result itself, and the cast's Suppress Weapon Procs with it.
 func dealOneOnArrival(sim *core.Simulation, spell *core.Spell, target *core.Unit, single core.SpellResultSlice, after afterDealt) {
 	result := single[0]
-	if spell.MissileSpeed == 0 {
+	if spell.TravelTime() == 0 {
 		dealOne(sim, spell, target, single, result, after)
 		return
 	}
+	spell.DealCastResult(sim, result)
 	suppress := spell.Flags & core.SpellFlagSuppressWeaponProcs
 	spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 		withFlags(spell, suppress, func() { dealOne(sim, spell, target, single, result, after) })
