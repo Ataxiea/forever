@@ -1,9 +1,14 @@
 siml 1
 spec dps_warrior
 
+def stance_dance = action_group_used("Stance Dance ON/OFF")
+def in_battle_stance = aura(battle_stance).is_active
+def in_execute = is_execute_phase(e20)
+def rend_due = dot(rend).remaining_time <= 1.5s
+
 var ${Delay Check} =
     spell(mortal_strike).time_to_ready >= 1.5s
-    and (not action_group_used("Stance Dance ON/OFF") or spell(whirlwind).time_to_ready >= 1.5s)
+    and (not stance_dance or spell(whirlwind).time_to_ready >= 1.5s)
 
 prepull:
   -4.5s cast berserker_rage
@@ -26,41 +31,36 @@ priority:
   cast death_wish
   cast recklessness if and(action_group_used("Recklessness ON/OFF"))
   cast sweeping_strikes if and(number_targets > 1)
-  cast battle_stance
-      if not action_group_used("Stance Dance ON/OFF")
-      and aura(battle_stance).is_inactive
-  cast mortal_strike if action_group_used("Stance Dance ON/OFF")
-  cast rend
-      if not is_execute_phase(e20)
-      and aura(battle_stance).is_active
-      and dot(rend).remaining_time <= 1.5s
-  cast overpower if aura(battle_stance).is_active
-  cast mortal_strike if not action_group_used("Stance Dance ON/OFF")
-  cast spearing_strike if not is_execute_phase(e20) and aura(battle_stance).is_active
+  cast battle_stance if not stance_dance and aura(battle_stance).is_inactive
+  cast mortal_strike if stance_dance
+  cast rend if not in_execute and in_battle_stance and rend_due
+  cast overpower if in_battle_stance
+  cast mortal_strike if not stance_dance
+  cast spearing_strike if not in_execute and in_battle_stance
   cast berserker_stance
-      if action_group_used("Stance Dance ON/OFF")
-      and aura(battle_stance).is_active
+      if stance_dance
+      and in_battle_stance
       and aura(overpower).is_inactive
-      and (is_execute_phase(e20) or dot(rend).remaining_time > 1.5s)
-  when not is_execute_phase(e20):
+      and (in_execute or dot(rend).remaining_time > 1.5s)
+  when not in_execute:
     cast slam if spell(slam).cast_time < 1.5s
     cast slam
         if spell(slam).cast_time >= 1.5s
         and auto_time_since_last(main_hand_auto) <= input_delay + 300ms
-  cast whirlwind if action_group_used("Stance Dance ON/OFF")
+  cast whirlwind if stance_dance
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")
       and aura(windfury_totem_proc).is_known
-      and not is_execute_phase(e20)
+      and not in_execute
       and aura(windfury_totem_buff).is_inactive
-  cast execute if is_execute_phase(e20)
+  cast execute if in_execute
   cast battle_stance
-      if action_group_used("Stance Dance ON/OFF")
-      and not is_execute_phase(e20)
+      if stance_dance
+      and not in_execute
       and aura(berserker_stance).is_active
-      and (aura(overpower).is_active(include_reaction_time=true) or dot(rend).remaining_time <= 1.5s)
+      and (aura(overpower).is_active(include_reaction_time=true) or rend_due)
   cast cleave if number_targets > 1 and or(current_rage >= 40)
-  cast heroic_strike if not is_execute_phase(e20) and current_rage >= 90
+  cast heroic_strike if not in_execute and current_rage >= 90
   cast bloodrage if current_rage < 90
   cast battle_shout
       if $delay_check
@@ -71,10 +71,10 @@ priority:
   # cast shield_wall if false
 
 group "Pre-pull: Stance":
-  cast battle_stance if not action_group_used("Stance Dance ON/OFF")
+  cast battle_stance if not stance_dance
 
 group "Pre-pull: Move":
-  cast charge if aura(battle_stance).is_active
+  cast charge if in_battle_stance
   cast intercept if aura(berserker_stance).is_active
 
 group "Recklessness ON/OFF":

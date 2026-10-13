@@ -1,6 +1,8 @@
 siml 1
 spec enhancement_shaman
 
+def totem_down(slot) = totem_remaining_time(slot) <= 0s
+
 prepull:
   -8s cast grace_of_air_totem
   -7s cast flametongue_totem
@@ -11,11 +13,11 @@ priority:
   cast other.resource_potion if current_mana_percent < 80%
   cast item.demonic_rune if current_mana_percent < 70%
   autocast_other_cooldowns
-  cast grace_of_air_totem if totem_remaining_time(air) <= 0s
-  cast strength_of_earth_totem if totem_remaining_time(earth) <= 0s
+  cast grace_of_air_totem if totem_down(air)
+  cast strength_of_earth_totem if totem_down(earth)
   cast fire_nova if aura(clearcasting).is_active(include_reaction_time=true)
   cast lightning_shield if not aura(lightning_shield).is_active
-  cast searing_totem if totem_remaining_time(fire) <= 0s
+  cast searing_totem if totem_down(fire)
   cast stormstrike
   cast lightning_bolt if aura(maelstrom_weapon).is_known and aura(maelstrom_weapon).num_stacks >= 5
   cast flame_shock if not dot(flame_shock).is_active

@@ -1,17 +1,19 @@
 siml 1
 spec dps_warrior
 
+def in_execute = is_execute_phase(e20)
+
 var ${Delay Check} =
     spell(bloodthirst).time_to_ready >= 1.5s
     and spell(whirlwind).time_to_ready >= 1.5s
 var ${Overpower: Can Cast} =
     $delay_check
-    and not is_execute_phase(e20)
+    and not in_execute
     and or(aura(overpower).is_active(include_reaction_time=true) and current_rage >= 5 and current_rage <= 100)
 var ${Rend: Can Cast} =
     action_group_used("Rend Weave ON/OFF")
     and $delay_check
-    and not is_execute_phase(e20)
+    and not in_execute
     and dot(rend).remaining_time <= 3s
     and current_rage >= 10
 
@@ -38,18 +40,18 @@ priority:
   cast whirlwind if number_targets > 1
   cast bloodthirst
   cast whirlwind if spell(bloodthirst).time_to_ready >= 1.5s
-  cast execute if is_execute_phase(e20)
+  cast execute if in_execute
   cast cleave if number_targets > 1 and or(current_rage >= 40)
   group "Overpower Weaving"
   cast hamstring
       if action_group_used("Hamstring Weave ON/OFF")
       and aura(windfury_totem_proc).is_known
       and $delay_check
-      and not is_execute_phase(e20)
+      and not in_execute
   cast berserker_stance
       if aura(berserker_stance).is_inactive
       and (spell(bloodthirst).time_to_ready <= input_delay or spell(whirlwind).time_to_ready <= input_delay)
-  cast heroic_strike if number_targets == 1 and not is_execute_phase(e20) and current_rage >= 40
+  cast heroic_strike if number_targets == 1 and not in_execute and current_rage >= 40
   cast heroic_strike if $delay_check and current_rage > 60
   cast bloodrage if current_rage < 90
   cast berserker_rage
@@ -104,8 +106,9 @@ group "CD: Trinkets":
   cast item.everlook_pathcarver
 
 group "Overpower Weaving":
-  wait gcd_time_to_ready if $overpower_can_cast and gcd_time_to_ready <= 100ms
-  cast battle_stance if $overpower_can_cast and gcd_time_to_ready == 0ms
+  when $overpower_can_cast:
+    wait gcd_time_to_ready if gcd_time_to_ready <= 100ms
+    cast battle_stance if gcd_time_to_ready == 0ms
   cast overpower if aura(overpower).is_active
   cast rend if aura(battle_stance).is_active and $rend_can_cast
   cast berserker_stance
