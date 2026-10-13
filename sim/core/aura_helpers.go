@@ -25,6 +25,7 @@ const (
 	CallbackOnCastComplete
 	CallbackOnApplyEffects
 	CallbackOnPeriodicDamageTaken
+	CallbackOnCastResult
 
 	CallbackLast
 )
@@ -307,6 +308,9 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 	}
 	if config.Callback.Matches(CallbackOnPeriodicDamageTaken) {
 		procAura.OnPeriodicDamageTaken = callback
+	}
+	if config.Callback.Matches(CallbackOnCastResult) {
+		procAura.OnCastResult = callback
 	}
 }
 
@@ -784,6 +788,18 @@ func (parentAura *Aura) AttachMultiplyMeleeSpeed(multiplier float64) *Aura {
 
 	parentAura.ApplyOnExpire(func(_ *Aura, sim *Simulation) {
 		parentAura.Unit.MultiplyMeleeSpeed(sim, 1/multiplier)
+	})
+
+	return parentAura
+}
+
+func (parentAura *Aura) AttachMultiplyWeaponSpeed(multiplier float64) *Aura {
+	parentAura.ApplyOnGain(func(_ *Aura, sim *Simulation) {
+		parentAura.Unit.MultiplyWeaponSpeed(sim, multiplier)
+	})
+
+	parentAura.ApplyOnExpire(func(_ *Aura, sim *Simulation) {
+		parentAura.Unit.MultiplyWeaponSpeed(sim, 1/multiplier)
 	})
 
 	return parentAura

@@ -988,6 +988,12 @@ export const MISSING_ITEM_EFFECTS = new Map<number, string[]>([
 		]
 	],
 	[
+		18671, // Baron Charr's Sceptre
+		[
+			"Blasts a target for 90 Fire damage.", // 13442 - https://www.wowhead.com/forever/spell=13442
+		]
+	],
+	[
 		18706, // Arena Master
 		[
 			"Reduces your damage taken by 5% in the Battle Ring and The Maul.", // 1317285 - https://www.wowhead.com/forever/spell=1317285
@@ -1567,12 +1573,6 @@ export const MISSING_ITEM_EFFECTS = new Map<number, string[]>([
 		249396, // Mystic Mushroom
 		[
 			"Increases Spirit by 5%.", // 1248751 - https://www.wowhead.com/forever/spell=1248751
-		]
-	],
-	[
-		249398, // Polished Driftwood Icon
-		[
-			"Allows 8% of your Mana regeneration to continue while casting.", // 1248756 - https://www.wowhead.com/forever/spell=1248756
 		]
 	],
 	[

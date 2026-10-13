@@ -684,8 +684,9 @@
 		"consumables": {
 			"title": "Consumables",
 			"filters": {
-				"title": "Consumable filters",
-				"min_lvl": "Minimum required level",
+				"title": "Consumables filter",
+				"trigger": "Filter consumables",
+				"min_lvl": "Minimum level",
 				"reset": "Reset to defaults",
 				"types": {
 					"potion": "Potions",
@@ -2429,6 +2430,7 @@
 			"label": "Warnings",
 			"profession_requirement": "{{itemName}} requires {{professionName}}, but it is not selected.",
 			"unspent_talent_points": "You have {{count}} unspent talent point(s).",
+			"broken_talents": "These talents are missing their tier or prerequisite points, so the build is not possible in game. The sim still applies them: {{talents}}.",
 			"windfury_over_grace_of_air": "Windfury Totem and Grace of Air Totem do not stack: only Windfury Totem applies.",
 			"windfury_over_flametongue": "Windfury Totem and Flametongue Totem do not stack: only Windfury Totem applies."
 		},
@@ -2441,7 +2443,6 @@
 					"ep": "EP",
 					"weights": "Weights",
 					"stats_type": "Stat display type",
-					"show_all_stats": "Show All Stats",
 					"dps_tps_reference": "DPS/TPS reference:",
 					"healing_reference": "Healing reference:",
 					"mitigation_reference": "Mitigation reference:",
@@ -2642,11 +2643,6 @@
 		},
 		"character_stats": {
 			"title": "Stats",
-			"mode": {
-				"label": "Stats shown",
-				"key": "Key",
-				"all": "All"
-			},
 			"groups": {
 				"attributes": "Attributes",
 				"physical": "Physical",
@@ -2709,5 +2705,25 @@
 			"points_suffix": "Points",
 			"percent_suffix": "%"
 		}
+	},
+	"stat_filters": {
+		"title": "Stats to show",
+		"triggers": {
+			"character_stats": "Filter character stats",
+			"ep": "Filter EP stats",
+			"buffs": "Filter buff stats",
+			"debuffs": "Filter debuff stats"
+		},
+		"spec_defaults": "Spec defaults",
+		"all": "All",
+		"groups": {
+			"primary": "Primary",
+			"ratings": "Ratings",
+			"other": "Other"
+		},
+		"group_count": "{{group}} ({{shown}}/{{total}})",
+		"kept_tooltip": "This item is showing because you have it selected. Use the stat filters to permanently show it.",
+		"rating_label": "{{stat}} Rating",
+		"percent_label": "{{stat}} %"
 	}
 }

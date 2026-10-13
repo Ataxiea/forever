@@ -1,7 +1,24 @@
 siml 1
 spec protection_paladin
 
+prepull:
+  -10s cast retribution_aura
+  -1.5s cast seal_of_the_crusader
+
 priority:
-  cast seal_of_righteousness if aura(seal_of_righteousness_20293).is_inactive
+  autocast_other_cooldowns
   cast judgement
+  cast swift_judgement
+  cast seal_of_fury
+      if aura(seal_of_fury_20423_tag0).remaining_time < auto_time_to_next(main_hand_auto)
+      and aura(seal_of_fury_20423_tag0).is_inactive
+  # cast seal_of_righteousness
+      if aura(seal_of_righteousness_20293).remaining_time < auto_time_to_next(main_hand_auto)
+      and aura(seal_of_righteousness_20293).is_inactive
+  cast consecration
+  cast holy_shock_25903
+      if not target.aura(consecrated_ground).is_known
+      or target.aura(consecrated_ground).is_active
+  cast holy_shield
   cast holy_strike
+  cast exorcism

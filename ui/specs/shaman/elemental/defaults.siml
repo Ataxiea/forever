@@ -12,16 +12,16 @@ settings:
 gear:
   head       blue_dragonscale_helm + lesser_arcane_amalgamation_1509
   neck       chains_of_the_lich + necklace_spell_power
-  shoulder   theramore_shoulderguards
+  shoulder   mantle_of_the_timbermaw
   back       arcanoweave_cloak + cloak_subtlety
-  chest      vest_of_the_five_thunders + chest_major_intellect
-  wrist      dryads_wrist_bindings + bracer_superior_intellect
-  hands      storm_gauntlets + gloves_natural_power
+  chest      masters_vest of_magic + chest_major_intellect
+  wrist      masters_bracers of_magic + bracer_superior_intellect
+  hands      gloves_of_the_greatfather + gloves_natural_power
   waist      highlanders_cloth_girdle
   legs       ironfeather_leggings + lesser_arcane_amalgamation_1509
-  feet       boots_of_the_five_thunders + mystic_rugged_armor_kit
+  feet       masters_boots of_magic + mystic_rugged_armor_kit
   finger1    blessed_band_of_light
-  finger2    brilliant_watchers_signet
+  finger2    maidens_circle
   trinket1   weakness_analyzer
   trinket2   jewel_of_the_guard_captain
   main_hand  verimondes_last_resort + weapon_spell_power

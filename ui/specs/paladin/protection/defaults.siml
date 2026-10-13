@@ -1,5 +1,6 @@
 siml 1
 spec protection_paladin
+talents "50003-0530313321301531-5022"
 use "gear_sets/default.gear.siml"
 use "apls/default.apl.siml"
 
@@ -21,22 +22,32 @@ settings:
 consumables:
   defensive_pot greater_stoneshield_potion
   flask flask_of_supreme_power
-  food nightfin_soup
+  food baked_salmon
   conjured demonic_rune
   explosive ez_thro_dynamite_ii
   mh_imbue brilliant_wizard_oil
-  extra goblin_sapper_charge, scroll_of_strength_iv, scroll_of_agility_iv, scroll_of_protection_iv
+  extra goblin_sapper_charge, juju_might, scroll_of_stamina_iv
+  elixir elixir_of_holy_power,
+      greater_arcane_elixir,
+      elixir_of_the_owl,
+      elixir_of_sages,
+      elixir_of_greater_fortitude,
+      greater_mageblood_elixir,
+      elixir_of_greater_defense,
+      elixir_of_ferocity,
+      elixir_of_the_mongoose
 
 buffs: greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_wisdom, thorns
 
-party_buffs: mana_spring_totem, strength_of_earth_totem
+party_buffs: mana_spring_totem, leader_of_the_pack, windfury_totem, battle_shout
 
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
   prayer_of_shadow_protection
 
 debuffs:
-  judgement_of_light, judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire
-  expose_armor, sunder_armor, insect_swarm
+  judgement_of_the_crusader, judgement_of_light, judgement_of_wisdom, curse_of_elements
+  curse_of_recklessness, faerie_fire
+  expose_armor, sunder_armor, gift_of_arthas, demoralizing_shout, insect_swarm
 
 sim: iterations 25000

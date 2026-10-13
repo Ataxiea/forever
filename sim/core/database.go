@@ -173,7 +173,7 @@ type Item struct {
 	RangedWeaponType proto.RangedWeaponType
 	WeaponDamageMin  float64
 	WeaponDamageMax  float64
-	UnroundedDPS     *float64
+	UnroundedDPS     float64
 	SwingSpeed       float64
 	QualityModifier  float64           // Per-item offset to weapon "average damage"; negative for caster weapons.
 	SpellSchool      proto.SpellSchool // The weapon's damage school; unset means physical.
@@ -246,18 +246,20 @@ func (item *Item) ToItemSpecProto() *proto.ItemSpec {
 }
 
 type RandomSuffix struct {
-	ID          int32
-	Name        string
-	Stats       stats.Stats // Allocations per 10000 of the item's random property points.
-	PseudoStats []float64   // Indexed by proto.PseudoStat; flat, through stats.FromPseudoStatsProto.
+	ID               int32
+	Name             string
+	Stats            stats.Stats // Allocations per 10000 of the item's random property points.
+	PseudoStats      []float64   // Indexed by proto.PseudoStat; flat, through stats.FromPseudoStatsProto.
+	ReducedCasterDps bool        // A weapon with the suffix deals its scaling options' ReducedCasterWeaponDamage.
 }
 
 func RandomSuffixFromProto(pData *proto.ItemRandomSuffix) RandomSuffix {
 	return RandomSuffix{
-		ID:          pData.Id,
-		Name:        pData.Name,
-		Stats:       stats.FromProtoArray(pData.Stats),
-		PseudoStats: pData.PseudoStats,
+		ID:               pData.Id,
+		Name:             pData.Name,
+		Stats:            stats.FromProtoArray(pData.Stats),
+		PseudoStats:      pData.PseudoStats,
+		ReducedCasterDps: pData.ReducedCasterDps,
 	}
 }
 
@@ -598,6 +600,11 @@ func NewItem(itemSpec ItemSpec) Item {
 			item.RandomSuffix = randomSuffix
 		} else {
 			panic(fmt.Sprintf("No random suffix with id: %d", itemSpec.RandomSuffix))
+		}
+		if reduced := scalingOptions.ReducedCasterWeaponDamage; item.RandomSuffix.ReducedCasterDps && reduced != nil {
+			item.WeaponDamageMin = reduced.WeaponDamageMin
+			item.WeaponDamageMax = reduced.WeaponDamageMax
+			item.UnroundedDPS = reduced.UnroundedDps
 		}
 	}
 

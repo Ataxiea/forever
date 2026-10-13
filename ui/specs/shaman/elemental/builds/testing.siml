@@ -14,16 +14,16 @@ settings:
 gear:
   head       blue_dragonscale_helm + lesser_arcane_amalgamation_1509
   neck       chains_of_the_lich + necklace_spell_power
-  shoulder   theramore_shoulderguards
+  shoulder   mantle_of_the_timbermaw
   back       arcanoweave_cloak + cloak_subtlety
-  chest      vest_of_the_five_thunders + chest_major_intellect
-  wrist      dryads_wrist_bindings + bracer_superior_intellect
-  hands      storm_gauntlets + gloves_natural_power
+  chest      masters_vest of_magic + chest_major_intellect
+  wrist      masters_bracers of_magic + bracer_superior_intellect
+  hands      gloves_of_the_greatfather + gloves_natural_power
   waist      highlanders_cloth_girdle
   legs       ironfeather_leggings + lesser_arcane_amalgamation_1509
-  feet       boots_of_the_five_thunders + mystic_rugged_armor_kit
+  feet       masters_boots of_magic + mystic_rugged_armor_kit
   finger1    blessed_band_of_light
-  finger2    brilliant_watchers_signet
+  finger2    maidens_circle
   trinket1   weakness_analyzer
   trinket2   jewel_of_the_guard_captain
   main_hand  verimondes_last_resort + weapon_spell_power
@@ -34,7 +34,6 @@ gear:
 item_swap: prepull_bonus_stats()
 
 consumables:
-  resource_pot major_mana_potion
   flask flask_of_supreme_power
   food baked_salmon
   conjured demonic_rune
@@ -47,6 +46,7 @@ consumables:
       elixir_of_the_grizzly,
       elixir_of_the_mongoose,
       elixir_of_the_owl
+  resource_pot major_mana_potion
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
 
@@ -59,7 +59,7 @@ debuffs:
   sunder_armor, gift_of_arthas
 
 encounter:
-  duration 180
+  duration 60
   duration_variation 5
   execute_proportion_20 0.2
   execute_proportion_25 0.25
@@ -76,6 +76,26 @@ encounter:
       swing_speed=2,
       parry_haste,
       can_crush)
+  targets(id=31146,
+      name="Raid Target",
+      level=63,
+      mob_type=mechanical,
+      stats(attack_power=320, block_value=54, armor=3731, health=1299000),
+      min_base_damage=2601,
+      damage_spread=0.5,
+      swing_speed=2,
+      parry_haste,
+      can_crush)
+  targets(id=31146,
+      name="Raid Target",
+      level=63,
+      mob_type=mechanical,
+      stats(attack_power=320, block_value=54, armor=3731, health=1299000),
+      min_base_damage=2601,
+      damage_spread=0.5,
+      swing_speed=2,
+      parry_haste,
+      can_crush)
 
 cooldowns:
 
@@ -83,16 +103,18 @@ prepull:
   -4s cast strength_of_earth_totem
   -3s cast windfury_totem
   -2s cast mana_spring_totem
-  -1s cast searing_totem
+  -1s cast searing_totem if number_targets == 1
 
 priority:
   cast other.resource_potion if current_mana_percent < 80%
   cast item.demonic_rune if current_mana_percent < 70%
   autocast_other_cooldowns
   cast mana_tide_totem if current_mana_percent < 50%
-  cast searing_totem if totem_remaining_time(fire) <= 0s
+  cast searing_totem if number_targets == 1 and totem_remaining_time(fire) <= 0s
+  cast magma_totem if number_targets > 1 and totem_remaining_time(fire) <= 0s
+  cast fire_nova if number_targets > 1
+  cast chain_lightning if number_targets > 1
   cast lava_burst if dot(flame_shock_rank5).is_active
   cast flame_shock_rank5 if not dot(flame_shock_rank5).is_active
-  cast chain_lightning if number_targets > 1
   cast lightning_bolt_10392_tag0 if current_mana_percent < 20%
   cast lightning_bolt

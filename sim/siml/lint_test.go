@@ -199,17 +199,6 @@ func TestLintUnnamedReferences(t *testing.T) {
 	)
 }
 
-func TestLintPrepullCondition(t *testing.T) {
-	findings := lintText(t, `{
-		"prepullActions": [
-			{"action": {"condition": {"gcdIsReady": {}}, `+castOf(1)+`}, "doAtValue": `+constOfText("-1s")+`},
-			{"action": {"condition": `+constOfText("false")+`, `+castOf(2)+`}, "doAtValue": `+constOfText("-1s")+`}
-		]
-	}`)
-	// A prepull row's condition is not read.
-	wantLines(t, findingLines(findingsOf(findings, "prepull-condition"), "path"), "prepullActions/0/action/condition")
-}
-
 func TestLintPrepullTimes(t *testing.T) {
 	findings := lintText(t, `{
 		"prepullActions": [

@@ -37,7 +37,6 @@ import (
 // | `prepull-not-time`      | warning  | A Do At value read from the fight; the sim reads it once, before the fight, and can fail on it.   |
 // |                         |          | Constant times and spell and aura durations, which need no fight, are fine.                       |
 // | `prepull-order`         | info     | A prepull row listed after one with a later time; prepull rows run in time order, not list order. |
-// | `prepull-condition`     | warning  | A condition on a prepull row; the sim runs the action at its Do At time without reading it.       |
 // | `never-runs`            | warning  | A condition that is always false (the sim drops the row). A literal `false` is `info`: it keeps   |
 // |                         |          | the spell out of automatic cooldown use, a deliberate way to turn a cooldown off.                 |
 // | `always-true`           | info     | A condition, or a comparison, `not`, `and` or `or` inside one, that is always true or false.      |
@@ -824,9 +823,6 @@ func lintPrepull(apl lintObject, variables []lintObject, report lintReport) {
 	for i, row := range apl.list("prepullActions") {
 		if row.value("hide") == true {
 			continue
-		}
-		if condition := row.object("action").object("condition"); !absent(condition) && condition.kind() != "const" {
-			report([]any{"prepullActions", i, "action", "condition"}, "warning", "prepull-condition", "The sim does not read a prepull row's condition; the action runs at its Do At time.")
 		}
 		path := []any{"prepullActions", i, "doAtValue"}
 		if absent(row.object("doAtValue")) {

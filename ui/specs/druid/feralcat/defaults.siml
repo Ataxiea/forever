@@ -21,7 +21,6 @@ party_buffs: battle_shout, mana_spring_totem, strength_of_earth_totem, windfury_
 
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
-  prayer_of_shadow_protection
 
 debuffs:
   judgement_of_wisdom, curse_of_recklessness, faerie_fire, expose_armor, sunder_armor
