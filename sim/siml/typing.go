@@ -1075,6 +1075,10 @@ func (t *typer) unit(n node) *proto.UnitReference {
 }
 
 func (t *typer) unitName(n name) *proto.UnitReference {
+	if n.text == "none" {
+		t.mark(n.span)
+		return &proto.UnitReference{}
+	}
 	u := t.ix.unitReference(n.text)
 	if u == nil {
 		words := t.ix.unitWordList()

@@ -20,6 +20,8 @@ priority:
   cast x if early() and $early_weave
   // Two parameters: a unit and an operand, and a unit and a ref of an accessor.
   cast x if below(target, 20%)
+  // none is the empty unit, as an argument and before a dot.
+  cast x if below(none, 20%) or none.current_health_percent < 30%
   cast hunters_mark if not active(target, hunters_mark)
   // An argument written as an or keeps its precedence.
   cast x if both($weave or early)

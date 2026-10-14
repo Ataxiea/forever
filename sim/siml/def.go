@@ -207,6 +207,9 @@ func (t *typer) substitute(n node, args map[string]node) (node, bool) {
 		if c, bare := a.(*callNode); bare && c.args == nil {
 			return c.name
 		}
+		if n, isNone := a.(*noneNode); isNone {
+			return name{span: n.span, text: "none"}
+		}
 		t.report("wrong-type", "a unit word goes here, such as target", a.pos())
 		ok = false
 		return u

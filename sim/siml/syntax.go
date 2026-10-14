@@ -1667,10 +1667,12 @@ func (p *parser) word() node {
 		p.take()
 		return &boolNode{span: t.at(), value: t.text == "true"}
 	case "none":
-		p.take()
-		return &noneNode{span: t.at()}
+		if !p.isPunct(".", 1) {
+			p.take()
+			return &noneNode{span: t.at()}
+		}
 	}
-	if !p.callable() {
+	if t.text != "none" && !p.callable() {
 		p.expected("a value", "parse")
 	}
 	p.take()

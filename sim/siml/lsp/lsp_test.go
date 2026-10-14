@@ -359,3 +359,14 @@ func TestBrokenTableIsReadAgainWhenItChanges(t *testing.T) {
 	c.notify("workspace/didChangeWatchedFiles", map[string]any{"changes": []any{map[string]any{"uri": pathURI(tablePath), "type": 2}}})
 	c.diagnostics(uri, func(d []Diagnostic) bool { return len(d) == 0 })
 }
+
+func TestUNCPathRoundTrips(t *testing.T) {
+	const uri = "file://wsl.localhost/Ubuntu/home/a.apl.siml"
+	path, ok := uriPath(uri)
+	if !ok || filepath.ToSlash(path) != "//wsl.localhost/Ubuntu/home/a.apl.siml" {
+		t.Fatalf("uriPath(%s) = %q, %v; want //wsl.localhost/Ubuntu/home/a.apl.siml", uri, path, ok)
+	}
+	if got := pathURI(path); got != uri {
+		t.Errorf("pathURI(%q) = %s, want %s", path, got, uri)
+	}
+}

@@ -147,6 +147,51 @@
 		{
 			"action": {
 				"condition": {
+					"or": {
+						"vals": [
+							{
+								"cmp": {
+									"op": "OpLt",
+									"lhs": {
+										"currentHealthPercent": {
+											"sourceUnit": {}
+										}
+									},
+									"rhs": {
+										"const": {
+											"val": "20%"
+										}
+									}
+								}
+							},
+							{
+								"cmp": {
+									"op": "OpLt",
+									"lhs": {
+										"currentHealthPercent": {
+											"sourceUnit": {}
+										}
+									},
+									"rhs": {
+										"const": {
+											"val": "30%"
+										}
+									}
+								}
+							}
+						]
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 5
+					}
+				}
+			}
+		},
+		{
+			"action": {
+				"condition": {
 					"not": {
 						"val": {
 							"auraIsActive": {

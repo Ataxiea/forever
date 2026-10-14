@@ -105,11 +105,10 @@ func uriPath(uri string) (string, bool) {
 		return "", false
 	}
 	path := u.Path
-	if runtime.GOOS == "windows" {
-		path = strings.TrimPrefix(path, "/")
-	}
 	if u.Host != "" && u.Host != "localhost" {
 		path = "//" + u.Host + path
+	} else if runtime.GOOS == "windows" {
+		path = strings.TrimPrefix(path, "/")
 	}
 	return filepath.FromSlash(path), true
 }
@@ -117,6 +116,9 @@ func uriPath(uri string) (string, bool) {
 // The file: URI of a path, as editors write it.
 func pathURI(path string) string {
 	slashed := filepath.ToSlash(path)
+	if host, rest, unc := strings.Cut(strings.TrimPrefix(slashed, "//"), "/"); unc && strings.HasPrefix(slashed, "//") {
+		return (&url.URL{Scheme: "file", Host: host, Path: "/" + rest}).String()
+	}
 	if !strings.HasPrefix(slashed, "/") {
 		slashed = "/" + slashed
 	}
