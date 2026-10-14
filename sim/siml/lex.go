@@ -428,60 +428,61 @@ func scanNumber(src string, pos int) token {
 }
 
 // Where the literal at pos ends (SPEC.md §2): a number, then %, a unit, or a compound duration such as 1h2m3.5s,
-// with no letter, digit or _ after it. It tries the longest reading first and falls back to shorter ones, so
-// 1.5x reads as the literal 1 and 1.5 ends on a letter.
+// with no letter, digit or _ after it. The fraction is tried first and the whole number alone when that fails, so
+// 1.5x reads as the literal 1 and 1.5 ends on a letter. A loop, not a recursion, so a run such as 1s1s1s… costs no
+// stack however long it is.
 func literalEnd(src string, pos int) (int, bool) {
-	end := -1
-	done := func(e int) bool {
-		if e < len(src) && isIdentChar(src[e]) {
-			return false
-		}
-		end = e
-		return true
-	}
-	ok := matchNumber(src, pos, func(p int) bool { return matchSuffix(src, p, done) })
-	return end, ok
-}
-
-// `[0-9]+(\.[0-9]+)?`, offering each way it can end to k, the longest first.
-func matchNumber(src string, pos int, k func(int) bool) bool {
-	digits := func(p int) int {
-		for p < len(src) && isDigit(src[p]) {
-			p++
-		}
-		return p
-	}
-	whole := digits(pos)
+	whole := digits(src, pos)
 	if whole == pos {
-		return false
+		return 0, false
 	}
-	if whole+1 < len(src) && src[whole] == '.' && isDigit(src[whole+1]) && k(digits(whole+1)) {
-		return true
-	}
-	return k(whole)
-}
-
-// `%`, or a unit followed by any number of further number-and-unit pairs, or nothing.
-func matchSuffix(src string, pos int, k func(int) bool) bool {
-	if strings.HasPrefix(src[pos:], "%") && k(pos+1) {
-		return true
-	}
-	if matchUnits(src, pos, k) {
-		return true
-	}
-	return k(pos)
-}
-
-// A unit, then any number of number-and-unit pairs, the most pairs first.
-func matchUnits(src string, pos int, k func(int) bool) bool {
-	for _, u := range durationUnits {
-		if !strings.HasPrefix(src[pos:], u) {
-			continue
-		}
-		next := pos + len(u)
-		if matchNumber(src, next, func(p int) bool { return matchUnits(src, p, k) }) || k(next) {
-			return true
+	if whole+1 < len(src) && src[whole] == '.' && isDigit(src[whole+1]) {
+		if end, ok := suffixEnd(src, digits(src, whole+1)); ok {
+			return end, true
 		}
 	}
-	return false
+	return suffixEnd(src, whole)
+}
+
+// The end of the digits at pos.
+func digits(src string, pos int) int {
+	for pos < len(src) && isDigit(src[pos]) {
+		pos++
+	}
+	return pos
+}
+
+// Where a literal whose number ends at pos ends: after %, or after a unit, with any number of number-and-unit pairs
+// between, when no letter, digit or _ follows; else at pos, the number alone. Only ms and m share a start, and m then
+// needs a digit, which the s is not, so the first unit that fits is the only one that can.
+func suffixEnd(src string, pos int) (int, bool) {
+	ends := func(e int) bool { return e >= len(src) || !isIdentChar(src[e]) }
+	if strings.HasPrefix(src[pos:], "%") && ends(pos+1) {
+		return pos + 1, true
+	}
+	for end := pos; ; {
+		unit := ""
+		for _, u := range durationUnits {
+			if strings.HasPrefix(src[end:], u) {
+				unit = u
+				break
+			}
+		}
+		if unit == "" {
+			break
+		}
+		end += len(unit)
+		if ends(end) {
+			return end, true
+		}
+		next := digits(src, end)
+		if next == end {
+			break
+		}
+		if next+1 < len(src) && src[next] == '.' && isDigit(src[next+1]) {
+			next = digits(src, next+1)
+		}
+		end = next
+	}
+	return pos, ends(pos)
 }

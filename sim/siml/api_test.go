@@ -124,3 +124,24 @@ func TestFormatRequest(t *testing.T) {
 		t.Errorf("got %q, diagnostics %v; want no text and one diagnostic", broken.Text, broken.Diagnostics)
 	}
 }
+
+// A literal run as long as a file may be reads without a stack of its own length (SPEC.md §2 reads a compound
+// duration as any number of number-and-unit pairs).
+func TestParseRequestReadsALongLiteralRun(t *testing.T) {
+	text := "siml 1\nspec hunter\n\nvar $x = " + strings.Repeat("1s", maxSourceSize/4) + "\n"
+	r := ParseRequest(&proto.SimlParseRequest{Path: "x.apl.siml", Text: text}, readNames(t, "names.json"))
+	if r.Error != "" || len(r.Diagnostics) > 0 {
+		t.Fatalf("got error %q, diagnostics %v, want the run read as one duration", r.Error, r.Diagnostics)
+	}
+}
+
+func TestRequestsRefuseTextLargerThanAFile(t *testing.T) {
+	text := "siml 1\nspec hunter\n\n// " + strings.Repeat("x", maxSourceSize) + "\n"
+	names := readNames(t, "names.json")
+	if r := ParseRequest(&proto.SimlParseRequest{Path: "x.apl.siml", Text: text}, names); !strings.Contains(r.Error, "larger than") {
+		t.Errorf("ParseRequest gave the error %q, want one naming the size", r.Error)
+	}
+	if r := FormatRequest(&proto.SimlFormatRequest{Path: "x.apl.siml", Text: text}, names); !strings.Contains(r.Error, "larger than") {
+		t.Errorf("FormatRequest gave the error %q, want one naming the size", r.Error)
+	}
+}

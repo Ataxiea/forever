@@ -10,9 +10,12 @@ import (
 // The site's requests (proto/ui.proto), which it sends to lib.wasm or to the web server. Neither reads other files,
 // so a use line is refused.
 
-// Reads req.Text as the file at req.Path, with names.
+// Reads req.Text as the file at req.Path, with names. Text over the size a file may have is refused.
 func ParseRequest(req *proto.SimlParseRequest, names *Names) (result *proto.SimlParseResult) {
 	defer recovered(func(message string) { result = &proto.SimlParseResult{Error: message} })
+	if err := textSize(req.Text); err != nil {
+		return &proto.SimlParseResult{Error: err.Error()}
+	}
 	f, err := Parse(req.Path, []byte(req.Text), names, nil)
 	var diags Diagnostics
 	if errors.As(err, &diags) {
@@ -46,9 +49,13 @@ func PrintRequest(req *proto.SimlPrintRequest, names *Names) (result *proto.Siml
 	return &proto.SimlPrintResult{Text: string(text)}
 }
 
-// Re-prints req.Text, the file at req.Path, in canonical form, with names.
+// Re-prints req.Text, the file at req.Path, in canonical form, with names. Text over the size a file may have is
+// refused.
 func FormatRequest(req *proto.SimlFormatRequest, names *Names) (result *proto.SimlFormatResult) {
 	defer recovered(func(message string) { result = &proto.SimlFormatResult{Error: message} })
+	if err := textSize(req.Text); err != nil {
+		return &proto.SimlFormatResult{Error: err.Error()}
+	}
 	text, err := Format(req.Path, []byte(req.Text), names)
 	var diags Diagnostics
 	if errors.As(err, &diags) {
@@ -57,6 +64,15 @@ func FormatRequest(req *proto.SimlFormatRequest, names *Names) (result *proto.Si
 		return &proto.SimlFormatResult{Error: err.Error()}
 	}
 	return &proto.SimlFormatResult{Text: string(text)}
+}
+
+// Why text is too large to read: the limit of a file (maxSourceSize), so a request costs the reader no more than
+// a file does.
+func textSize(text string) error {
+	if len(text) > maxSourceSize {
+		return fmt.Errorf("the text is larger than %d MB", maxSourceSize>>20)
+	}
+	return nil
 }
 
 // Hands a panic's message to fail, so a request the reader or printer cannot take answers with an error rather than
