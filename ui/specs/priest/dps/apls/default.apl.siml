@@ -1,2 +1,22 @@
 siml 1
 spec dps_priest
+
+var ${Dark Sac} = current_mana <= 2000
+var ${Inner Focus Rules} = spell(mind_blast).is_ready
+var ${SWP Refresh} = not dot(shadow_word_pain).is_active
+
+prepull:
+  -1.5s cast mind_blast
+
+priority:
+  cast shadowform if not aura(shadowform).is_active
+  cast dark_sacrifice if $dark_sac
+  cast other.offensive_potion
+  autocast_other_cooldowns
+  cast inner_focus if $inner_focus_rules
+  cast mind_blast
+  cast shadow_word_pain if $swp_refresh
+  cast shadow_word_death
+  cast devouring_plague if not dot(devouring_plague).is_active
+  # cast starshards if spell(starshards).is_known
+  channel mind_flay until none

@@ -1,5 +1,7 @@
 siml 1
 spec healer_priest
+talents "005203011301-33505003030121531"
+use "gear_sets/preraid.gear.siml"
 
 settings:
   race human
@@ -8,10 +10,21 @@ settings:
   reaction_time_ms 100
   distance_from_target 20
   armor inner_fire
+  prayer_of_mending_jumps 5
+  prayer_of_mending_delay 2.5
+  holy_nova_heal_targets 5
 
 consumables:
   resource_pot major_mana_potion
-  food soaring_pamplona
+  food sunny_tea
+  conjured demonic_rune
+  mh_imbue brilliant_mana_oil
+  elixir elixir_of_the_grizzly,
+      elixir_of_cunning,
+      elixir_of_the_owl,
+      elixir_of_the_sages,
+      greater_mageblood_elixir,
+      greater_clerics_elixir
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom, greater_blessing_of_light
 

@@ -1,29 +1,38 @@
 siml 1
 spec dps_priest
+talents "005300211303--500320501201312251"
+use "gear_sets/preraid.gear.siml"
 
 settings:
-  race human
+  race undead
   profession1 enchanting
   profession2 tailoring
   reaction_time_ms 100
   channel_clip_delay_ms 100
   distance_from_target 28
+  armor inner_fire
   pre_shadowform
 
 consumables:
   offensive_pot major_spellblasting_potion
+  resource_pot major_mana_potion
   flask flask_of_supreme_power
   food nightfin_soup
   conjured demonic_rune
-  explosive ez_thro_dynamite_ii
   mh_imbue brilliant_wizard_oil
+  elixir elixir_of_shadow_power,
+      greater_arcane_elixir,
+      elixir_of_cunning,
+      elixir_of_the_owl,
+      elixir_of_the_sages,
+      greater_mageblood_elixir
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
 
-party_buffs: mana_spring_totem
+party_buffs: mana_spring_totem, moonkin_aura
 
 raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
 
-debuffs: judgement_of_wisdom, curse_of_elements, faerie_fire, expose_armor
+debuffs: judgement_of_the_crusader, judgement_of_wisdom, curse_of_elements
 
 apl: type auto

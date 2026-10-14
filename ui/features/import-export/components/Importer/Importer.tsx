@@ -49,7 +49,7 @@ export const Importer = ({ open, onOpenChange, title, allowFileUpload = false, o
 			changeOpen(false);
 		} catch (error: any) {
 			if (error instanceof ImportProblems) setProblems(error);
-			else toastManager.add({ variant: 'error', body: `Import error: ${error?.message || error}` });
+			else toastManager.add({ variant: 'error', body: `${i18n.t('import.error')} ${error?.message || error}` });
 		}
 	};
 

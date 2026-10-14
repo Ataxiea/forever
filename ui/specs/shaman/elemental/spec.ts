@@ -27,6 +27,7 @@ export default defineSpec<Spec.SpecElementalShaman>({
 		Stat.StatSpellDamage,
 		Stat.StatFireDamage,
 		Stat.StatNatureDamage,
+		Stat.StatSpellPiercing,
 		Stat.StatHitRating,
 		Stat.StatCritRating,
 		Stat.StatHasteRating,
@@ -37,7 +38,16 @@ export default defineSpec<Spec.SpecElementalShaman>({
 	epReferenceStat: Stat.StatSpellDamage,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
 	displayStats: UnitStat.createDisplayStatArray(
-		[Stat.StatHealth, Stat.StatMana, Stat.StatStamina, Stat.StatIntellect, Stat.StatSpellDamage, Stat.StatNatureDamage, Stat.StatMP5],
+		[
+			Stat.StatHealth,
+			Stat.StatMana,
+			Stat.StatStamina,
+			Stat.StatIntellect,
+			Stat.StatSpellDamage,
+			Stat.StatNatureDamage,
+			Stat.StatSpellPiercing,
+			Stat.StatMP5,
+		],
 		[PseudoStat.PseudoStatSpellCritPercent, PseudoStat.PseudoStatSpellHastePercent, PseudoStat.PseudoStatSpellHitPercent],
 	),
 	defaults: {

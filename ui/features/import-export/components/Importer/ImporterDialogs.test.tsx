@@ -43,12 +43,7 @@ const CASES: Array<[string, ComponentType<ImporterDialogProps>, string, string]>
 	['JsonImporterDialog', JsonImporterDialog, JSON_IMPORTER.title, i18n.t('import.json.instructions')],
 	['SimlImporterDialog', SimlImporterDialog, SIML_IMPORTER.title, i18n.t('import.siml.instructions')],
 	['SimlRotationImporterDialog', SimlRotationImporterDialog, SIML_ROTATION_IMPORTER.title, i18n.t('import.siml_rotation.instructions')],
-	[
-		'SixtyUpgradesImporterDialog',
-		SixtyUpgradesImporterDialog,
-		SIXTY_UPGRADES_IMPORTER.title,
-		"To import, paste the output from the site's export option below and click, 'Import'.",
-	],
+	['SixtyUpgradesImporterDialog', SixtyUpgradesImporterDialog, SIXTY_UPGRADES_IMPORTER.title, i18n.t('import.sixty_upgrades.instructions')],
 	['WowheadImporterDialog', WowheadImporterDialog, WOWHEAD_GEAR_PLANNER_IMPORTER.title, i18n.t('import.wowhead.instructions')],
 ];
 

@@ -1,0 +1,19 @@
+siml 1
+
+head       felcloth_hood
+neck       chains_of_the_lich
+shoulder   felcloth_shoulders
+back       arcanoweave_cloak
+chest      robe_of_winter_night + chest_major_intellect
+wrist      netherpearl_cuffs + bracer_superior_intellect
+hands      felcloth_gloves
+waist      virtuous_belt
+legs       felcloth_pants
+feet       black_sandals
+finger1    jereman_band
+finger2    deep_rooted_ring
+trinket1   weakness_analyzer
+trinket2   jewel_of_the_guard_captain
+main_hand  darkspear_insurgents_spellblade_ilvl53 + weapon_revelation
+off_hand   tome_of_devouring_shadows
+ranged     brilliant_wand

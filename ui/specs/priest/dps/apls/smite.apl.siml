@@ -1,0 +1,18 @@
+siml 1
+spec dps_priest
+
+prepull:
+  -1s cast power_infusion
+
+priority:
+  cast shoot on target1 if current_mana_percent <= 10%
+  cast holy_fire_rank5 if not dot(holy_fire_rank5).is_active and current_mana_percent <= 20%
+  cast holy_fire if not dot(holy_fire).is_active and current_mana_percent >= 20%
+  cast holy_nova if aura(holy_purpose).is_active(include_reaction_time=true) and number_targets >= 3
+  cast shadow_word_pain if not target1.dot(shadow_word_pain).is_active
+  # cast devouring_plague if spell(devouring_plague).can_cast
+  # cast shadow_word_death on target1 if spell(shadow_word_death).can_cast
+  # cast mind_blast if spell(mind_blast).can_cast
+  cast penance if spell(penance).can_cast
+  cast smite_rank5 if current_mana_percent <= 20%
+  cast smite
