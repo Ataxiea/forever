@@ -9250,7 +9250,7 @@
 						"below_max_level"
 					]
 				},
-"error": {
+				"error": {
 					"type": "string"
 				},
 				"success": {
@@ -9402,7 +9402,21 @@
 				}
 			},
 			"additionalProperties": false,
-			"required": ["title", "json", "wowhead", "addon", "error", "success", "talents_not_imported", "missing_ids", "errors", "sixty_upgrades", "menu", "siml", "siml_rotation"]
+			"required": [
+				"title",
+				"json",
+				"wowhead",
+				"addon",
+				"error",
+				"success",
+				"talents_not_imported",
+				"missing_ids",
+				"errors",
+				"sixty_upgrades",
+				"menu",
+				"siml",
+				"siml_rotation"
+			]
 		},
 		"export": {
 			"type": "object",
