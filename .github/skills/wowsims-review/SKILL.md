@@ -137,7 +137,7 @@ git diff "$(git merge-base origin/master HEAD)" -- sim/siml/gen/repinned.txt   #
 ```
 
 A committed entry that regenerates with another meaning or registered-by list fails `TestTableKeepsItsEntries`; a
-spell registered without the table regenerated is only logged there, and the site build adds its name at deploy.
+spell registered without the table regenerated is only logged there, and has no name on the site until the table is committed.
 
 **Rotations and gear sets, `ui/specs/**/*.siml`.** Their diff reads as SIML rows (`cast mortal_strike if …`,
 `main_hand arcanite_reaper + weapon_crusader`), so read each changed row for what it does. Check that each name means

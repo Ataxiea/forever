@@ -105,8 +105,8 @@ jobs:
             - name: Build Storybook 📚
               run: npm run storybook:build
 
-            # The site is built from the committed name table: the stamp marks it current rather than regenerating
-            # it here, since deploy regenerates it and the test job checks the committed one keeps its entries.
+            # The site is built from the committed name table, as deploy and release build it: the stamp marks it
+            # current, and the test job checks the committed one keeps its entries.
             - name: Build 🔧
               run: |
                   touch sim/siml/.names.stamp

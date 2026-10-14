@@ -56,14 +56,12 @@ jobs:
             - name: Install npm dependencies
               run: npm ci
 
-            # The name table is regenerated here, so what ships names every spell the sim registers and every row
-            # of the database, whether or not the commit regenerated the committed table. The protos are made first:
-            # the table's rule reads them.
+            # The release is built from the committed name table, as the site is (deploy.yml): the stamp marks it
+            # current, so the build regenerates nothing.
             - name: Build 🔧
               run: |
                   make clean
-                  make sim/core/proto/api.pb.go
-                  make sim/siml/names.json
+                  touch sim/siml/.names.stamp
                   VERSION=${{ github.event.inputs.tag }} make release
 
             - name: Release
