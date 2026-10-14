@@ -10,6 +10,11 @@ const PATHS = {
 	down: 'M4 6l4 4 4-4',
 	right: 'M6 4l4 4-4 4',
 	jump: 'M9 3h4v4M13 3L7 9M11 9.5V13H3V5h3.5',
+	check: 'M3 8.5l3.5 3.5L13 4.5',
+	expand: 'M2.5 8h11M5 5.5L2.5 8 5 10.5M11 5.5l2.5 2.5-2.5 2.5',
+	extract: 'M3 3.5h5M3 8h5M3 12.5h5M10.5 5.5l3 2.5-3 2.5',
+	block: 'M3 3v10M3 3h3M3 13h3M8 6h5M8 10h5',
+	unblock: 'M3 3v10M3 3h3M3 13h3M9 6l4 4M13 6l-4 4',
 };
 
 export function Icon({ name }: { name: keyof typeof PATHS }) {

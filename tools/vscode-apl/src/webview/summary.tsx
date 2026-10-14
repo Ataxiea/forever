@@ -2,7 +2,21 @@ import type { AplFieldSpec } from '@features/apl/model/field_specs';
 import { Fragment, type ReactNode } from 'react';
 
 import { IdChip } from './db';
-import { enumNumber, type Family, fieldInfo, humanize, isObject, type Json, type JsonObject, kindMessage, kindModel, kindOf, resolve } from './model';
+import {
+	enumNumber,
+	type Family,
+	fieldInfo,
+	humanize,
+	isObject,
+	type Json,
+	type JsonObject,
+	type JsonPath,
+	kindMessage,
+	kindModel,
+	kindOf,
+	resolve,
+} from './model';
+import { callAt, callText, useStructure } from './structure';
 
 const COMPARE: Record<string, string> = { OpEq: '=', OpNe: '≠', OpGe: '≥', OpGt: '>', OpLe: '≤', OpLt: '<' };
 const MATH: Record<string, string> = { OpAdd: '+', OpSub: '−', OpMul: '×', OpDiv: '÷' };
@@ -61,29 +75,34 @@ function joined(items: ReactNode[], separator: ReactNode): ReactNode {
 	));
 }
 
-// One argument of a kind, as it reads inline; undefined when the field is unset and has nothing to say.
-function argument(family: Family, kind: string, body: JsonObject, spec: AplFieldSpec): ReactNode | undefined {
+// A path below `path`, or none where the value has no path.
+const below = (path: JsonPath | undefined, ...keys: JsonPath) => (path ? [...path, ...keys] : undefined);
+
+// One argument of a kind, as it reads inline; undefined when the field is unset and has nothing to say. `path` is the
+// kind's body's.
+function argument(family: Family, kind: string, body: JsonObject, spec: AplFieldSpec, path?: JsonPath): ReactNode | undefined {
 	const json = body[spec.field];
+	const at = below(path, spec.field);
 	switch (spec.kind) {
 		case 'actionId':
 			return <IdChip json={json} />;
 		case 'unit':
 			return unitText(json) ? <span className="unit">{unitText(json)}</span> : undefined;
 		case 'value':
-			return json === undefined ? undefined : <ValueText json={json} />;
+			return json === undefined ? undefined : <ValueText json={json} path={at} />;
 		case 'valueList':
 			return Array.isArray(json)
 				? joined(
-						json.map(v => <ValueText json={v} />),
+						json.map((v, i) => <ValueText json={v} path={below(at, i)} />),
 						', ',
 					)
 				: undefined;
 		case 'action':
-			return json === undefined ? undefined : <ActionText json={json} />;
+			return json === undefined ? undefined : <ActionText json={json} path={at} />;
 		case 'actionList':
 			return Array.isArray(json)
 				? joined(
-						json.map(a => <ActionText json={a} />),
+						json.map((a, i) => <ActionText json={a} path={below(at, i)} />),
 						op(' → '),
 					)
 				: undefined;
@@ -101,15 +120,26 @@ function argument(family: Family, kind: string, body: JsonObject, spec: AplField
 	}
 }
 
-function args(family: Family, kind: string, body: JsonObject): ReactNode[] {
+function args(family: Family, kind: string, body: JsonObject, path?: JsonPath): ReactNode[] {
 	const model = kindModel(family, kind);
 	if (!model) {
 		return [];
 	}
-	return model.fields.map(descriptor => argument(family, kind, body, resolve(descriptor))).filter((node): node is ReactNode => node !== undefined);
+	return model.fields
+		.map(descriptor => argument(family, kind, body, resolve(descriptor), below(path, kind)))
+		.filter((node): node is ReactNode => node !== undefined);
 }
 
-export function ValueText({ json, parent = 0 }: { json: Json | undefined; parent?: number }) {
+// A value as it reads inline. With its path, a value the text writes as a def call reads as the call.
+export function ValueText({ json, parent = 0, path }: { json: Json | undefined; parent?: number; path?: JsonPath }) {
+	const call = callAt(useStructure(), path);
+	if (call) {
+		return (
+			<span className="call def-call" title={`def ${call.name}`}>
+				{callText(call.name, call.args)}
+			</span>
+		);
+	}
 	const kind = kindOf('value', json);
 	if (!kind || !isObject(json)) {
 		return <span className="lit invalid">{json === undefined || (isObject(json) && Object.keys(json).length === 0) ? 'none' : JSON.stringify(json)}</span>;
@@ -129,15 +159,15 @@ export function ValueText({ json, parent = 0 }: { json: Json | undefined; parent
 		case 'cmp':
 			return wrap(
 				<>
-					<ValueText json={body.lhs} parent={right} /> {op(COMPARE[String(body.op ?? 'OpEq')] ?? String(body.op))}{' '}
-					<ValueText json={body.rhs} parent={right} />
+					<ValueText json={body.lhs} parent={right} path={below(path, kind, 'lhs')} /> {op(COMPARE[String(body.op ?? 'OpEq')] ?? String(body.op))}{' '}
+					<ValueText json={body.rhs} parent={right} path={below(path, kind, 'rhs')} />
 				</>,
 			);
 		case 'math':
 			return wrap(
 				<>
-					<ValueText json={body.lhs} parent={own} /> {op(MATH[String(body.op ?? 'OpAdd')] ?? String(body.op))}{' '}
-					<ValueText json={body.rhs} parent={right} />
+					<ValueText json={body.lhs} parent={own} path={below(path, kind, 'lhs')} /> {op(MATH[String(body.op ?? 'OpAdd')] ?? String(body.op))}{' '}
+					<ValueText json={body.rhs} parent={right} path={below(path, kind, 'rhs')} />
 				</>,
 			);
 		case 'and':
@@ -146,7 +176,7 @@ export function ValueText({ json, parent = 0 }: { json: Json | undefined; parent
 			return wrap(
 				<>
 					{joined(
-						vals.map(v => <ValueText json={v} parent={own} />),
+						vals.map((v, i) => <ValueText json={v} parent={own} path={below(path, kind, 'vals', i)} />),
 						<> {op(kind)} </>,
 					)}
 				</>,
@@ -156,12 +186,12 @@ export function ValueText({ json, parent = 0 }: { json: Json | undefined; parent
 			return wrap(
 				<>
 					{op('not ')}
-					<ValueText json={body.val} parent={ATOM} />
+					<ValueText json={body.val} parent={ATOM} path={below(path, kind, 'val')} />
 				</>,
 			);
 	}
 	const label = kindModel('value', kind)?.label ?? kind;
-	const shown = args('value', kind, body);
+	const shown = args('value', kind, body, path);
 	return (
 		<span className="call">
 			<span className="fn">{label}</span>
@@ -170,7 +200,7 @@ export function ValueText({ json, parent = 0 }: { json: Json | undefined; parent
 	);
 }
 
-export function ActionText({ json }: { json: Json | undefined }) {
+export function ActionText({ json, path }: { json: Json | undefined; path?: JsonPath }) {
 	const kind = kindOf('action', json);
 	if (!kind || !isObject(json)) {
 		return (
@@ -181,7 +211,7 @@ export function ActionText({ json }: { json: Json | undefined }) {
 	}
 	const body = isObject(json[kind]) ? (json[kind] as JsonObject) : {};
 	const label = kindModel('action', kind)?.label ?? kind;
-	const shown = args('action', kind, body);
+	const shown = args('action', kind, body, path);
 	return (
 		<span className="action">
 			<span className="fn">{label}</span>

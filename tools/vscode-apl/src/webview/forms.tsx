@@ -18,7 +18,8 @@ import {
 	newKindJson,
 	resolve,
 } from './model';
-import { ActionIdPicker, EnumSelect, KindPicker, UnitPicker } from './pickers';
+import { ActionIdPicker, EnumSelect, KindPicker, SearchPicker, UnitPicker } from './pickers';
+import { callAt, callText, conditionOf, type DefCall, useStructure } from './structure';
 import { ActionText, ValueText } from './summary';
 
 // The JSON itself, for a field or kind the forms do not cover.
@@ -309,8 +310,142 @@ function KindFields({ family, kind, json, path, ctx }: { family: Family; kind: s
 	);
 }
 
+// A value written as a def call: its arguments as SIML, the def's text a click away, and the value it reads as on
+// request.
+function DefCallEditor({ call, path }: { call: DefCall; path: JsonPath }) {
+	const { edit, revealRange } = useEditor();
+	const structure = useStructure();
+	const def = structure.defs.findIndex(d => d.name === call.name);
+	const params = structure.defs[def]?.params ?? [];
+	return (
+		<span className="def-call-editor">
+			<button type="button" className="def-name" title="Show the def in the text" onClick={() => def >= 0 && revealRange(structure.defRanges[def])}>
+				{call.name}
+			</button>
+			{call.args.length > 0 ? (
+				<>
+					(
+					{call.args.map((arg, i) => (
+						<span key={i} className="def-arg">
+							{i > 0 ? ', ' : null}
+							<CommitInput
+								value={arg}
+								placeholder={params[i]}
+								onCommit={v => {
+									const args = [...call.args];
+									args[i] = v.trim();
+									edit({ op: 'set', path, call: callText(call.name, args) });
+								}}
+							/>
+						</span>
+					))}
+					)
+				</>
+			) : null}
+			<button type="button" className="icon-btn" title="Write the def's value here in its place" onClick={() => edit({ op: 'inline', path })}>
+				<Icon name="expand" />
+			</button>
+		</span>
+	);
+}
+
+// Writes a call of one of the file's defs at `path`, asking for its arguments when it takes any.
+function DefPicker({ path }: { path: JsonPath }) {
+	const { edit } = useEditor();
+	const { defs } = useStructure();
+	const [picked, setPicked] = useState<{ name: string; params: string[] }>();
+	const [args, setArgs] = useState<string[]>([]);
+	if (defs.length === 0) return null;
+	if (picked) {
+		const write = () => {
+			edit({
+				op: 'set',
+				path,
+				call: callText(
+					picked.name,
+					args.map(a => a.trim()),
+				),
+			});
+			setPicked(undefined);
+		};
+		return (
+			<span className="def-call-editor">
+				<span className="def-name">{picked.name}</span>(
+				{picked.params.map((param, i) => (
+					<span key={param} className="def-arg">
+						{i > 0 ? ', ' : null}
+						<input
+							value={args[i] ?? ''}
+							placeholder={param}
+							onChange={e => setArgs(current => Object.assign([...current], { [i]: e.target.value }))}
+							onKeyDown={e => {
+								if (e.key === 'Enter') write();
+								if (e.key === 'Escape') setPicked(undefined);
+							}}
+						/>
+					</span>
+				))}
+				)
+				<button type="button" className="icon-btn" title="Write the call" onClick={write}>
+					<Icon name="check" />
+				</button>
+				<button type="button" className="icon-btn" title="Cancel" onClick={() => setPicked(undefined)}>
+					<Icon name="close" />
+				</button>
+			</span>
+		);
+	}
+	return (
+		<SearchPicker
+			trigger={
+				<span className="def-pick" title="Call a def of the file">
+					ƒ
+				</span>
+			}
+			placeholder="Call a def…"
+			options={() => defs.map(d => ({ key: d.name, label: callText(d.name, d.params), hint: d.value, value: d.name }))}
+			onPick={name => {
+				const def = defs.find(d => d.name === name)!;
+				if (def.params.length === 0) {
+					edit({ op: 'set', path, call: def.name });
+					return;
+				}
+				setArgs(def.params.map(() => ''));
+				setPicked(def);
+			}}
+		/>
+	);
+}
+
+// Names a value with a new def, which the text then writes the value as a call of.
+function ExtractButton({ path }: { path: JsonPath }) {
+	const { edit } = useEditor();
+	const [naming, setNaming] = useState(false);
+	if (naming) {
+		return (
+			<span className="extract">
+				def{' '}
+				<CommitInput
+					value=""
+					placeholder="name"
+					onCommit={name => {
+						setNaming(false);
+						if (name.trim()) edit({ op: 'extract', path, name: name.trim() });
+					}}
+				/>
+			</span>
+		);
+	}
+	return (
+		<button type="button" className="icon-btn" title="Name this value with a def" onClick={() => setNaming(true)}>
+			<Icon name="extract" />
+		</button>
+	);
+}
+
 export function ValueEditor({ json, path, ctx, optional = false }: { json: Json | undefined; path: JsonPath; ctx: ListContext; optional?: boolean }) {
 	const { edit, reveal } = useEditor();
+	const call = callAt(useStructure(), path);
 	const kind = kindOf('value', json);
 	const [open, setOpen] = useState(false);
 	const replace = (k: string) => edit({ op: 'set', path, value: { [k]: newKindJson('value', k) } });
@@ -322,13 +457,15 @@ export function ValueEditor({ json, path, ctx, optional = false }: { json: Json 
 			<div className="value-head">
 				<KindPicker
 					family="value"
-					current={kind}
+					current={call ? undefined : kind}
 					isPrepull={ctx.isPrepull}
 					isGroup={ctx.isGroup}
 					onPick={replace}
-					trigger={<span className="kind-name">{kind ? (kindModel('value', kind)?.label ?? kind) : 'none'}</span>}
+					trigger={<span className="kind-name">{call ? 'def' : kind ? (kindModel('value', kind)?.label ?? kind) : 'none'}</span>}
 				/>
-				{kind === 'const' ? (
+				{call ? (
+					<DefCallEditor call={call} path={path} />
+				) : kind === 'const' ? (
 					<CommitInput
 						className="const"
 						value={String(body.val ?? '')}
@@ -343,16 +480,18 @@ export function ValueEditor({ json, path, ctx, optional = false }: { json: Json 
 				) : kind ? (
 					<button type="button" className="value-preview" onClick={() => setOpen(!open)} onDoubleClick={() => reveal(path)} title="Show the fields">
 						<Icon name={open ? 'down' : 'right'} />
-						<ValueText json={json} />
+						<ValueText json={json} path={path} />
 					</button>
 				) : null}
-				{optional && kind ? (
+				{call ? null : <DefPicker path={path} />}
+				{kind && !call ? <ExtractButton path={path} /> : null}
+				{optional && (kind || call) ? (
 					<button type="button" className="icon-btn" title="Remove" onClick={() => edit({ op: 'set', path, value: undefined })}>
 						<Icon name="close" />
 					</button>
 				) : null}
 			</div>
-			{kind && !simple && open ? (
+			{kind && !simple && open && !call ? (
 				<div className="nested">
 					<KindFields family="value" kind={kind} json={json as JsonObject} path={path} ctx={ctx} />
 				</div>
@@ -361,7 +500,41 @@ export function ValueEditor({ json, path, ctx, optional = false }: { json: Json 
 	);
 }
 
-export function ActionEditor({ json, path, ctx }: { json: Json | undefined; path: JsonPath; ctx: ListContext }) {
+// The condition of a row in when blocks: what the blocks join, then its own conjuncts, each edited where it is in
+// the condition's and. Adding or removing one writes the condition again, as the blocks and the rest give it.
+function BlockCondition({ condition, inherited, path, ctx }: { condition: Json | undefined; inherited: Json[]; path: JsonPath; ctx: ListContext }) {
+	const { edit } = useEditor();
+	const vals = isObject(condition) && isObject(condition.and) && Array.isArray(condition.and.vals) ? condition.and.vals : [];
+	const own = vals.length > inherited.length ? vals.slice(inherited.length) : [];
+	const write = (conjuncts: Json[]) => edit({ op: 'set', path, value: conditionOf([...inherited, ...conjuncts]) });
+	return (
+		<div className="list">
+			<div className="from-when">
+				<span className="op">when</span>{' '}
+				{inherited.map((c, i) => <ValueText key={i} json={c} />).reduce<ReactNode[]>((a, n, i) => (i ? [...a, ' and ', n] : [n]), [])}
+			</div>
+			{own.map((value, i) => (
+				<div className="list-item" key={i}>
+					<span className="op">and</span>
+					<ValueEditor json={value} path={[...path, 'and', 'vals', inherited.length + i]} ctx={ctx} />
+					<button type="button" className="icon-btn" title="Remove" onClick={() => write(own.filter((_, k) => k !== i))}>
+						<Icon name="close" />
+					</button>
+				</div>
+			))}
+			<KindPicker
+				family="value"
+				isPrepull={ctx.isPrepull}
+				isGroup={ctx.isGroup}
+				trigger={<span className="add">+ and</span>}
+				onPick={k => write([...own, { [k]: newKindJson('value', k) }])}
+			/>
+		</div>
+	);
+}
+
+// An action and its condition. `inherited` is what the when blocks a list row is in join to its condition.
+export function ActionEditor({ json, path, ctx, inherited }: { json: Json | undefined; path: JsonPath; ctx: ListContext; inherited?: Json[] }) {
 	const { edit } = useEditor();
 	const kind = kindOf('action', json);
 	const condition = isObject(json) ? json.condition : undefined;
@@ -384,14 +557,19 @@ export function ActionEditor({ json, path, ctx }: { json: Json | undefined; path
 				<div className="nested">
 					<KindFields family="action" kind={kind} json={json as JsonObject} path={path} ctx={ctx} />
 					<Row label="Condition" wide>
-						{condition === undefined ? (
-							<KindPicker
-								family="value"
-								isPrepull={ctx.isPrepull}
-								isGroup={ctx.isGroup}
-								trigger={<span className="add">+ condition</span>}
-								onPick={k => edit({ op: 'set', path: [...path, 'condition'], value: { [k]: newKindJson('value', k) } })}
-							/>
+						{inherited && inherited.length > 0 ? (
+							<BlockCondition condition={condition} inherited={inherited} path={[...path, 'condition']} ctx={ctx} />
+						) : condition === undefined ? (
+							<div className="value-head">
+								<KindPicker
+									family="value"
+									isPrepull={ctx.isPrepull}
+									isGroup={ctx.isGroup}
+									trigger={<span className="add">+ condition</span>}
+									onPick={k => edit({ op: 'set', path: [...path, 'condition'], value: { [k]: newKindJson('value', k) } })}
+								/>
+								<DefPicker path={[...path, 'condition']} />
+							</div>
 						) : (
 							<ValueEditor json={condition} path={[...path, 'condition']} ctx={ctx} optional />
 						)}

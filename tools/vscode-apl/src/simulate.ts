@@ -86,7 +86,7 @@ async function simulate(document: vscode.TextDocument, compare: boolean): Promis
 				decorateAll(document.uri);
 				const run = result.compare ?? result;
 				const summary = result.difference
-					? `${run.dps.mean.toFixed(1)} DPS, ${result.difference.delta >= 0 ? '+' : ''}${result.difference.delta.toFixed(1)} (${result.difference.percent.toFixed(2)}%) against ${result.baseline}${result.difference.significant ? '' : ', within noise'}`
+					? `${run.dps.mean.toFixed(1)} DPS, ${result.difference.delta >= 0 ? '+' : ''}${result.difference.delta.toFixed(1)} (${result.difference.percent.toFixed(2)}%) against ${result.baseline}`
 					: `${run.dps.mean.toFixed(1)} DPS ± ${(run.dps.stdev / Math.sqrt(run.iterations)).toFixed(1)}`;
 				void vscode.window.setStatusBarMessage(`$(pulse) ${name}: ${summary}`, 30000);
 				if (result.character.warnings?.length) void vscode.window.showWarningMessage(`Sim character: ${result.character.warnings.join('; ')}`);

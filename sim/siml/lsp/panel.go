@@ -115,6 +115,28 @@ type rotationResult struct {
 	Spans      []panelSpan     `json:"spans"`
 	Used       []string        `json:"used"` // The files the use lines read, and the files those use.
 	Registered registered      `json:"registered"`
+	Structure  *panelStructure `json:"structure,omitempty"` // Left out while the text has errors.
+}
+
+// The when blocks, def calls and defs of the rotation, with the text of each block's line and each def.
+type panelStructure struct {
+	*siml.Structure
+	WhenRanges []Range `json:"whenRanges"` // By block id.
+	DefRanges  []Range `json:"defRanges"`  // In the order of the defs.
+}
+
+func newPanelStructure(s *siml.Structure) *panelStructure {
+	if s == nil {
+		return nil
+	}
+	out := &panelStructure{Structure: s, WhenRanges: []Range{}, DefRanges: []Range{}}
+	for _, w := range s.Whens {
+		out.WhenRanges = append(out.WhenRanges, toRange(w.Range))
+	}
+	for _, d := range s.Defs {
+		out.DefRanges = append(out.DefRanges, toRange(d.Range))
+	}
+	return out
 }
 
 var severityNames = map[int]string{severityError: "error", severityWarning: "warning", severityInformation: "info"}
@@ -135,6 +157,7 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 	d := a.doc
 	out.Rotation = d.RotationJSON()
 	out.ReadOnly = readOnlyReason(d, a.used)
+	out.Structure = newPanelStructure(d.Structure())
 	out.Used = append(out.Used, a.used...)
 	f, _ := d.File()
 	var info siml.SpecInfo

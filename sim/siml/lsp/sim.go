@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -52,32 +51,17 @@ type simRun struct {
 	Iterations int `json:"iterations"`
 }
 
-// The difference of a compare: compare minus base, and whether it is beyond the noise. Both runs share a seed, so
-// their iterations are correlated and the error from independent samples overstates the noise.
+// The difference of a compare: compare minus base. No error goes with it: both runs share a seed, so their iterations
+// are paired, and the honest error needs each pair's difference, which a run does not report.
 type dpsDifference struct {
-	Delta       float64 `json:"delta"`
-	Percent     float64 `json:"percent"`
-	Stderr      float64 `json:"stderr"`
-	Z           float64 `json:"z"`
-	Significant bool    `json:"significant"` // |z| at or above 1.96, about 95% confidence.
+	Delta   float64 `json:"delta"`
+	Percent float64 `json:"percent"`
 }
 
 func difference(base, compare simRun) dpsDifference {
-	delta := compare.DPS.Mean - base.DPS.Mean
-	se := func(r simRun) float64 { return r.DPS.Stdev / math.Sqrt(float64(max(r.Iterations, 1))) }
-	stderr := math.Hypot(se(base), se(compare))
-	var z float64
-	switch {
-	case stderr > 0:
-		z = delta / stderr
-	case delta > 0:
-		z = math.MaxFloat64
-	case delta < 0:
-		z = -math.MaxFloat64
-	}
-	d := dpsDifference{Delta: delta, Stderr: stderr, Z: z, Significant: math.Abs(z) >= 1.96}
+	d := dpsDifference{Delta: compare.DPS.Mean - base.DPS.Mean}
 	if base.DPS.Mean > 0 {
-		d.Percent = delta / base.DPS.Mean * 100
+		d.Percent = d.Delta / base.DPS.Mean * 100
 	}
 	return d
 }

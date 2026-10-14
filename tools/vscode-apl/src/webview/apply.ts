@@ -29,9 +29,12 @@ function update(value: Json | undefined, path: JsonPath, change: (old: Json | un
 const valueAt = (json: Json | undefined, path: JsonPath): Json | undefined =>
 	path.reduce<Json | undefined>((node, key) => (Array.isArray(node) || isObject(node) ? (node as Record<string | number, Json>)[key] : undefined), json);
 
+// Edits of when blocks and defs, and def calls, change JSON the panel cannot work out; it waits for the text's.
 export function applyEdit(rotation: JsonObject, edit: AplEdit): JsonObject {
+	if ('path' in edit && edit.path[0] === 'whens') return rotation;
 	switch (edit.op) {
 		case 'set':
+			if (edit.call !== undefined) return rotation;
 			if (edit.value === undefined && valueAt(rotation, edit.path) === undefined) return rotation;
 			return update(rotation, edit.path, () => edit.value as Json | undefined) as JsonObject;
 		case 'insert':
@@ -48,11 +51,14 @@ export function applyEdit(rotation: JsonObject, edit: AplEdit): JsonObject {
 				items.splice(edit.to, 0, moved);
 				return items;
 			}) as JsonObject;
+		default:
+			return rotation;
 	}
 }
 
 // Where an element of the list an edit changes ends up: its new index, or undefined when the edit removes it.
 function indexMap(edit: AplEdit): { list: string; to: (i: number) => number | undefined } | undefined {
+	if ('path' in edit && edit.path[0] === 'whens') return undefined;
 	switch (edit.op) {
 		case 'insert':
 			return { list: edit.path.join('/'), to: i => (i >= edit.index ? i + 1 : i) };
@@ -68,6 +74,8 @@ function indexMap(edit: AplEdit): { list: string; to: (i: number) => number | un
 			if (edit.value !== undefined || typeof last !== 'number') return undefined;
 			return { list: edit.path.slice(0, -1).join('/'), to: i => (i === last ? undefined : i > last ? i - 1 : i) };
 		}
+		default:
+			return undefined;
 	}
 }
 

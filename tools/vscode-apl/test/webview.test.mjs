@@ -24,9 +24,12 @@ let panel;
 let document_;
 const sent = [];
 
+// Waits for condition to hold, and gives what it gave.
 async function until(condition, ms = 5000) {
 	const end = Date.now() + ms;
-	while (!condition()) {
+	for (;;) {
+		const held = condition();
+		if (held) return held;
 		if (Date.now() > end) throw new Error('timed out');
 		await new Promise(resolve => setTimeout(resolve, 10));
 	}
@@ -152,4 +155,117 @@ test('nothing is sent while the text has errors', async () => {
 	click(priority()[1].querySelector('button[title="Delete"]'));
 	await new Promise(resolve => setTimeout(resolve, 100));
 	assert.equal(sent.filter(m => m.type === 'edit').length, edits);
+});
+
+// When blocks and defs: the rows below are those of this text.
+const blocksText = [
+	'siml 1',
+	'spec hunter',
+	'',
+	'def fits(x) = spell(x).cast_time < 2s',
+	'',
+	'priority:',
+	'  cast hunters_mark',
+	'  when current_time > 1s:',
+	'    cast aimed_shot if fits(aimed_shot)',
+	'    cast multi_shot',
+	'  cast arcane_shot',
+	'  cast serpent_sting',
+	'',
+].join('\n');
+
+const head = id => document.querySelector(`[data-when="${id}"]`);
+const condText = row => row.querySelector('.summary-cond')?.textContent;
+// Types into a box that writes on Enter: after the box's first effects, which set its text, and once the panel has
+// drawn what was typed.
+const commit = async (input, value) => {
+	await new Promise(resolve => setTimeout(resolve, 20));
+	input.focus();
+	Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+	input.dispatchEvent(new Event('input', { bubbles: true }));
+	await new Promise(resolve => setTimeout(resolve, 20));
+	key(input, { key: 'Enter' });
+};
+// Opens a row's editor, which a row opened before stays.
+const openRow = row => row.querySelector('.row-body') || click(row.querySelector('.chevron'));
+// Puts the text above in the document, and waits until the panel shows it at the document's version.
+const useBlocksText = async () => {
+	if (document_.getText() !== blocksText) stand.change(document_, blocksText);
+	await until(() => lastRotation()?.version === document_.version && head(0) && priority().length === 5 && !document.querySelector('fieldset').disabled);
+};
+
+test('a when block is a line over its rows, which show their own conditions and their def calls', async () => {
+	await useBlocksText();
+	assert.match(head(0).textContent, /^when Current Time > 1s/);
+	assert.equal(condText(priority()[1]), 'if fits(aimed_shot)');
+	assert.equal(condText(priority()[2]), undefined, 'the block gives multi_shot its only condition');
+	assert.equal(getComputedStyle(priority()[1]).getPropertyValue('--depth').trim(), '1');
+});
+
+test('a def call keeps its call when an argument changes', async () => {
+	await useBlocksText();
+	openRow(priority()[1]);
+	await commit(await until(() => priority()[1].querySelector('.def-arg input')), 'multi_shot');
+	await settled();
+	await until(() => condText(priority()[1]) === 'if fits(multi_shot)');
+	assert.match(document_.getText(), /\n {4}cast aimed_shot if fits\(multi_shot\)\n/);
+});
+
+test('picked rows go in a new when block', async () => {
+	await useBlocksText();
+	click(priority()[3].querySelector('.index'));
+	priority()[4]
+		.querySelector('.index')
+		.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+	await until(() => document.querySelector('.pick-bar'));
+	click([...document.querySelectorAll('.pick-bar button')].find(b => b.textContent === 'Put in a when block'));
+	await settled();
+	await until(() => head(1));
+	assert.match(document_.getText(), /\n {2}when true:\n {4}cast arcane_shot\n {4}cast serpent_sting\n/);
+});
+
+test('a block taken apart writes its condition on each of its rows', async () => {
+	await useBlocksText();
+	click(head(0).querySelector('button[title^="Take the block apart"]'));
+	await settled();
+	await until(() => !head(0));
+	assert.match(document_.getText(), /\n {2}cast aimed_shot if current_time > 1s and fits\(aimed_shot\)\n {2}cast multi_shot if current_time > 1s\n/);
+});
+
+test("a block's condition edits on its line, and its rows keep theirs", async () => {
+	await useBlocksText();
+	click(head(0).querySelector('.summary'));
+	// The condition `current_time > 1s`: its fields, then the constant.
+	click(await until(() => head(0).querySelector('.row-body .value-preview')));
+	await commit(await until(() => head(0).querySelector('.row-body input.const')), '3s');
+	await settled();
+	await until(() => /when current_time > 3s:/.test(document_.getText()));
+	assert.match(document_.getText(), /\n {2}when current_time > 3s:\n {4}cast aimed_shot if fits\(aimed_shot\)\n {4}cast multi_shot\n/);
+});
+
+test('a def deleted from the defs section leaves its calls as the values they read as', async () => {
+	await useBlocksText();
+	const line = () => document.querySelector('[data-def="fits"]');
+	await until(line);
+	click(line().querySelector('button[title^="Delete the def"]'));
+	await settled();
+	await until(() => !line());
+	assert.doesNotMatch(document_.getText(), /def fits/);
+	assert.match(document_.getText(), /cast aimed_shot if spell\(aimed_shot\)\.cast_time < 2s\n/);
+});
+
+test('a new def from the defs section, then called from a picker', async () => {
+	await useBlocksText();
+	click([...document.querySelectorAll('.defs .add')].at(-1));
+	await settled();
+	await until(() => document.querySelector('[data-def="def1"]'));
+	assert.match(document_.getText(), /\ndef fits\(x\) = spell\(x\)\.cast_time < 2s\ndef def1 = true\n/);
+	openRow(priority()[4]);
+	await until(() => priority()[4].querySelector('.row-body .def-pick'));
+	click(priority()[4].querySelector('.row-body .def-pick').closest('button'));
+	await until(() => priority()[4].querySelector('.picker-pop li'));
+	const option = [...priority()[4].querySelectorAll('.picker-pop li')].find(li => li.textContent.startsWith('def1'));
+	option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+	await settled();
+	await until(() => /cast serpent_sting if def1\n/.test(document_.getText()));
 });

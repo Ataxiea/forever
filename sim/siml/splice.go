@@ -24,14 +24,20 @@ import (
 
 const spliceRounds = 4 // A statement is read as written, then printed from its JSON, then written as raw JSON.
 
-// An edit the rotation panel asks for, addressed by the JSON path, within the rotation, of what it changes.
+// An edit the rotation panel asks for, addressed by the JSON path, within the rotation, of what it changes. A path
+// ["whens", id, …] leads into the when block id of Structure: "condition" and the path in it, "hide", or the block
+// itself, which set to none takes apart.
 type AplEdit struct {
-	Op    string          `json:"op"`              // set, insert or move.
-	Path  []any           `json:"path"`            // JSON names and list indices; insert's and move's name the list.
-	Value json.RawMessage `json:"value,omitempty"` // set's new value, where none removes the property or element; insert's element.
-	Index int             `json:"index,omitempty"` // Where insert puts its element.
-	From  int             `json:"from,omitempty"`  // The element move takes.
-	To    int             `json:"to,omitempty"`    // The index the moved element ends at.
+	Op     string          `json:"op"`               // set, insert, move, wrap, inline, extract, defInsert, defDelete, defSet or defRename.
+	Path   []any           `json:"path"`             // JSON names and list indices; insert's, move's and wrap's name the list.
+	Value  json.RawMessage `json:"value,omitempty"`  // set's new value, where none removes the property or element; insert's element; wrap's condition.
+	Index  int             `json:"index,omitempty"`  // Where insert puts its element.
+	From   int             `json:"from,omitempty"`   // The element move takes; the first row wrap puts in a block.
+	To     int             `json:"to,omitempty"`     // The index the moved element ends at; the last row wrap puts in a block.
+	Call   string          `json:"call,omitempty"`   // set's def call, written as SIML in place of the value: fits(multi_shot).
+	Name   string          `json:"name,omitempty"`   // The def that extract, defInsert, defDelete, defSet and defRename write.
+	Params []string        `json:"params,omitempty"` // defInsert's and defSet's parameters.
+	Text   string          `json:"text,omitempty"`   // defInsert's and defSet's value, as SIML; defRename's new name.
 }
 
 // Text that takes the place of a range of a file's text.
@@ -60,6 +66,14 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 			return nil, fmt.Errorf("the rotation is put together with %s; edit it as text", use.path.value)
 		}
 	}
+	if len(edits) == 1 && (edits[0].Op == "defSet" || edits[0].Op == "defRename") {
+		return d.editDef(edits[0])
+	}
+	for _, e := range edits {
+		if e.Op == "defSet" || e.Op == "defRename" {
+			return nil, fmt.Errorf("%s goes alone, with no other edit", e.Op)
+		}
+	}
 	m := newRotationModel(d.ix, f)
 	for _, e := range edits {
 		if problem := m.apply(e); problem != "" {
@@ -76,7 +90,7 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 			s.dirty = true
 		}
 	}
-	for range spliceRounds {
+	for round := 0; round < spliceRounds; round++ {
 		out := w().statements()
 		back := readFile(d.ix, d.names, out.result(), f.kind, nil)
 		// The forms the printer writes read back, so an error is the edited rotation's own: a cycle, or a name written
@@ -87,14 +101,14 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 			}
 		}
 		got := back.settings.GetPlayer().GetRotation()
+		// A def call an edit writes reads as what the new text gives it, which the statements around it then hold.
+		if m.adopt(back, got) {
+			round--
+			continue
+		}
 		var misread []*spliceSlot
 		for _, list := range m.lists() {
-			var read []protoreflect.Message
-			if list.group == nil {
-				read = elements(got.ProtoReflect(), list.key)
-			} else if g := slices.Index(m.groups, list.group); g < len(got.GetGroups()) {
-				read = elements(got.GetGroups()[g].ProtoReflect(), list.key)
-			}
+			read := m.readBack(got, list)
 			for k, s := range list.slots {
 				if len(read) != len(list.slots) || d.ix.comparedJSON(read[k]) != d.ix.comparedJSON(s.msg) {
 					misread = append(misread, s)
@@ -482,14 +496,21 @@ type spliceSlot struct {
 	dirty  bool                  // Printed again, as every slot the text does not hold is.
 	raw    bool                  // Printed as raw JSON, which only a dirty slot is.
 	blocks []*whenStmt           // The when blocks it is printed in, the outermost first.
+	pinned bool                  // An edit put it in its blocks, which stay.
 	calls  map[string]spliceCall // The def calls its statement writes, by their path in its JSON.
+	forced map[string]string     // The def calls edits write in it, by their path in its JSON.
+	adopt  bool                  // An edit wrote a call in it, whose value the new text gives.
+	lead   []trivia              // Comment lines an edit puts above it.
 	when   *whenStmt             // The block a when line opens, for a when line.
 }
 
 // A def call in a statement: the value it reads as, and the call as written (SPEC.md §6.10).
 type spliceCall struct {
 	value *proto.APLValue
+	path  []any
 	text  string
+	name  string   // The def it calls.
+	args  []string // Its arguments as written.
 }
 
 type spliceList struct {
@@ -517,12 +538,17 @@ type spliceGroup struct {
 
 type rotationModel struct {
 	ix       *schemaIndex
+	f        *typedFile
 	lines    *lineMap
 	rotation *proto.APLRotation // The rotation the text writes.
 	own      []*spliceList      // The value variables, the prepull rows and the priority rows.
 	groups   []*spliceGroup
 	old      []*spliceGroup
-	whens    map[*whenStmt]*proto.APLValue // Each when line's condition, typed alone.
+	blocks   map[*whenStmt]*spliceWhen
+	whens    []*whenStmt        // The when blocks by their id: the text's in its order, then those edits add.
+	dropped  map[*whenStmt]bool // The blocks edits take apart.
+	newDefs  []*spliceDef       // The def lines edits add, in their order.
+	gone     map[*defStmt]bool  // The def lines edits remove.
 }
 
 func unitOf(s stmt, header *headerStmt, lines *lineMap) *spliceUnit {
@@ -564,7 +590,7 @@ func columnOf(s stmt, lines *lineMap) int {
 
 func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 	lines := f.tree.lines
-	m := &rotationModel{ix: ix, lines: lines, rotation: f.settings.GetPlayer().GetRotation(), whens: f.whens}
+	m := &rotationModel{ix: ix, f: f, lines: lines, rotation: f.settings.GetPlayer().GetRotation(), blocks: map[*whenStmt]*spliceWhen{}, dropped: map[*whenStmt]bool{}, gone: map[*defStmt]bool{}}
 	if m.rotation == nil {
 		m.rotation = &proto.APLRotation{}
 	}
@@ -583,13 +609,7 @@ func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 		for i, msg := range elements(holder, list.key) {
 			s := statements[pathKey(slices.Concat(path, []any{list.key, i}))]
 			v, _ := decodeJSON([]byte(ix.jsonText(msg)))
-			calls := map[string]spliceCall{}
-			valuesIn(msg, "", func(path string, v *proto.APLValue) {
-				if c := f.typer.defs.values[v]; c != nil {
-					calls[path] = spliceCall{value: v, text: nodeText(c, lines.src)}
-				}
-			})
-			list.old = append(list.old, &spliceSlot{json: v, msg: msg, unit: unitOf(s, headers[s], lines), blocks: blocksOf(s), calls: calls})
+			list.old = append(list.old, &spliceSlot{json: v, msg: msg, unit: unitOf(s, headers[s], lines), blocks: blocksOf(s), calls: m.callsIn(msg)})
 		}
 		list.slots = slices.Clone(list.old)
 		if k := slices.IndexFunc(list.old, func(s *spliceSlot) bool { return s.unit.header == nil }); k >= 0 {
@@ -607,6 +627,8 @@ func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 			if w, ok := s.(*whenStmt); ok {
 				list.opens[w] = &spliceSlot{when: w, unit: unitOf(w, nil, lines)}
 				list.lines = append(list.lines, list.opens[w])
+				value := f.whens[w]
+				m.blocks[w] = &spliceWhen{stmt: w, list: list, value: value, split: len(conjuncts(w.condition)) > 1, hide: w.hide, calls: m.callsIn(value.ProtoReflect())}
 			}
 		}
 		slices.SortStableFunc(list.lines, func(a, b *spliceSlot) int { return a.unit.statement.base().start - b.unit.statement.base().start })
@@ -638,7 +660,30 @@ func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 		m.old = append(m.old, group)
 	}
 	m.groups = slices.Clone(m.old)
+	for w := range m.blocks {
+		m.whens = append(m.whens, w)
+	}
+	slices.SortFunc(m.whens, func(a, b *whenStmt) int { return a.start - b.start })
 	return m
+}
+
+// The def calls a message writes, by their path in its JSON.
+func (m *rotationModel) callsIn(msg protoreflect.Message) map[string]spliceCall {
+	calls := map[string]spliceCall{}
+	valuesIn(msg, nil, func(path []any, v *proto.APLValue) {
+		c := m.f.typer.defs.values[v]
+		if c == nil {
+			return
+		}
+		var args []string
+		if c.args != nil {
+			for _, a := range c.args.items {
+				args = append(args, nodeText(a.value, m.lines.src))
+			}
+		}
+		calls[pathKey(path)] = spliceCall{value: v, path: path, text: nodeText(c, m.lines.src), name: c.name.text, args: args}
+	})
+	return calls
 }
 
 func pathKey(path []any) string { return fmt.Sprint(path) }
@@ -656,8 +701,8 @@ func blocksOf(s stmt) []*whenStmt {
 	return out
 }
 
-// Visits each APLValue in m with its path in m.
-func valuesIn(m protoreflect.Message, path string, visit func(path string, v *proto.APLValue)) {
+// Visits each APLValue in m with its JSON path in m.
+func valuesIn(m protoreflect.Message, path []any, visit func(path []any, v *proto.APLValue)) {
 	if !m.IsValid() {
 		return
 	}
@@ -665,16 +710,49 @@ func valuesIn(m protoreflect.Message, path string, visit func(path string, v *pr
 		visit(path, v)
 	}
 	m.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		at := append(slices.Clone(path), fd.JSONName())
 		switch {
 		case fd.IsList() && fd.Message() != nil:
 			for i := range v.List().Len() {
-				valuesIn(v.List().Get(i).Message(), fmt.Sprintf("%s.%s[%d]", path, fd.Name(), i), visit)
+				valuesIn(v.List().Get(i).Message(), append(slices.Clone(at), i), visit)
 			}
 		case !fd.IsList() && !fd.IsMap() && fd.Message() != nil:
-			valuesIn(v.Message(), path+"."+string(fd.Name()), visit)
+			valuesIn(v.Message(), at, visit)
 		}
 		return true
 	})
+}
+
+// The APLValue at a JSON path in m, or nil.
+func valueAt(m protoreflect.Message, path []any) *proto.APLValue {
+	for i := 0; i < len(path); i++ {
+		name, ok := path[i].(string)
+		if !ok || !m.IsValid() {
+			return nil
+		}
+		fd := m.Descriptor().Fields().ByJSONName(name)
+		if fd == nil || fd.Message() == nil || fd.IsMap() {
+			return nil
+		}
+		if !fd.IsList() {
+			m = m.Get(fd).Message()
+			continue
+		}
+		if i++; i == len(path) {
+			return nil
+		}
+		list := m.Get(fd).List()
+		k, ok := pathIndex(path[i], list.Len())
+		if !ok {
+			return nil
+		}
+		m = list.Get(k).Message()
+	}
+	if !m.IsValid() {
+		return nil
+	}
+	v, _ := m.Interface().(*proto.APLValue)
+	return v
 }
 
 // The conjuncts a row writes itself inside blocks, the outermost first, and whether it goes in them (SPEC.md §6.9):
@@ -688,10 +766,10 @@ func (m *rotationModel) fits(msg protoreflect.Message, blocks []*whenStmt) ([]*p
 		}
 		return []*proto.APLValue{condition}, true
 	}
-	if slices.ContainsFunc(blocks, func(b *whenStmt) bool { return b.hide }) && !item.GetHide() {
+	if m.hidden(blocks) && !item.GetHide() {
 		return nil, false
 	}
-	joined := blockConjuncts(m.whens, blocks)
+	joined := m.conjunctsOf(blocks)
 	same := func(a, b *proto.APLValue) bool {
 		return m.ix.comparedJSON(a.ProtoReflect()) == m.ix.comparedJSON(b.ProtoReflect())
 	}
@@ -717,6 +795,20 @@ func blockConjuncts(whens map[*whenStmt]*proto.APLValue, blocks []*whenStmt) []*
 		}
 	}
 	return out
+}
+
+// The conjuncts blocks join to the condition of a row in them, the outermost first.
+func (m *rotationModel) conjunctsOf(blocks []*whenStmt) []*proto.APLValue {
+	var out []*proto.APLValue
+	for _, b := range blocks {
+		out = append(out, m.blocks[b].conjuncts()...)
+	}
+	return out
+}
+
+// Whether one of blocks is hidden.
+func (m *rotationModel) hidden(blocks []*whenStmt) bool {
+	return slices.ContainsFunc(blocks, func(b *whenStmt) bool { return m.blocks[b].hide })
 }
 
 func andOf(vals []*proto.APLValue) *proto.APLValue {
@@ -895,6 +987,9 @@ func (m *rotationModel) locate(path []any) (spliceTarget, string) {
 
 // Applies one edit; gives why not when its path leads nowhere, or to something other than rows, var lines and groups.
 func (m *rotationModel) apply(e AplEdit) string {
+	if handled, problem := m.applyBlocks(e); handled {
+		return problem
+	}
 	t, problem := m.locate(e.Path)
 	if problem != "" {
 		return problem
@@ -910,6 +1005,10 @@ func (m *rotationModel) apply(e AplEdit) string {
 		value = v
 	}
 	_, isList := value.([]any)
+	if t.index >= 0 {
+		s := t.list.slots[t.index]
+		clearCalls(s.forced, map[string]spliceCall{}, t.rest)
+	}
 	if e.Op == "set" {
 		switch {
 		case t.groups:
@@ -957,7 +1056,7 @@ func (m *rotationModel) apply(e AplEdit) string {
 	insert := e.Op == "insert"
 	switch {
 	case !insert && e.Op != "move":
-		return fmt.Sprintf("no edit is named %q: an edit is set, insert or move", e.Op)
+		return fmt.Sprintf("no edit is named %q: an edit is set, insert, move, wrap, inline, extract, defInsert, defDelete, defSet or defRename", e.Op)
 	case t.group >= 0:
 		return describePath(path) + " is no list"
 	case insert && !has:
@@ -1254,6 +1353,7 @@ func (w *spliceWriter) statements() *lineEdits {
 		w.list(list)
 	}
 	w.groups()
+	w.defs()
 	return w.out
 }
 
@@ -1296,9 +1396,12 @@ func (w *spliceWriter) list(list *spliceList) {
 		// written again where a row that leaves it splits it.
 		w.place(list, anchors)
 		slots, old = opened(list), list.lines
-		for _, o := range list.opens {
-			if !slices.Contains(slots, o) {
+		for b, o := range list.opens {
+			if o.unit != nil && !slices.Contains(slots, o) {
 				out.drop(o.unit.first, o.unit.last)
+			}
+			if w.model.blocks[b].changed {
+				o.dirty = true
 			}
 		}
 		anchors = stable(keptLines(slots), old)
@@ -1311,8 +1414,8 @@ func (w *spliceWriter) list(list *spliceList) {
 		}
 		var lines []spliceLine
 		switch {
-		case s.when != nil && s.unit == nil:
-			lines = out.written(w.lines.line(s.when.start), w.lines.line(s.when.end))
+		case s.when != nil:
+			lines = w.whenLines(s, list)
 		case lined(s) && !s.dirty:
 			lines = out.written(s.unit.first, s.unit.last)
 		default:
@@ -1348,19 +1451,19 @@ func (w *spliceWriter) list(list *spliceList) {
 // change is printed from its JSON.
 func (w *spliceWriter) place(list *spliceList, anchors map[*spliceSlot]bool) {
 	for k, s := range list.slots {
-		if anchors[s] && !s.dirty {
+		if anchors[s] && !s.dirty || s.pinned {
 			continue
 		}
 		var around [][]*whenStmt
 		switch {
 		case anchors[s]:
-			around = append(around, s.blocks)
+			around = append(around, w.model.standing(s.blocks))
 		default:
 			if k > 0 {
 				around = append(around, list.slots[k-1].blocks)
 			}
 			if k+1 < len(list.slots) && list.slots[k+1].unit != nil {
-				around = append(around, blocksOf(list.slots[k+1].unit.statement))
+				around = append(around, w.model.standing(blocksOf(list.slots[k+1].unit.statement)))
 			}
 		}
 		var best []*whenStmt
@@ -1376,6 +1479,14 @@ func (w *spliceWriter) place(list *spliceList, anchors map[*spliceSlot]bool) {
 			s.blocks, s.dirty = best, true
 		}
 	}
+}
+
+// blocks up to the first an edit takes apart.
+func (m *rotationModel) standing(blocks []*whenStmt) []*whenStmt {
+	if k := slices.IndexFunc(blocks, func(b *whenStmt) bool { return m.dropped[b] }); k >= 0 {
+		return blocks[:k]
+	}
+	return blocks
 }
 
 // A list's slots with the when lines that open their blocks: a block's first opening is its line in the text, and a
@@ -1509,8 +1620,15 @@ func (w *spliceWriter) group(g *spliceGroup) []spliceLine {
 func (w *spliceWriter) inBlocks(s *spliceSlot, p *printer, sc scope, indent int) *printedStmt {
 	item := s.msg.Interface().(*proto.APLListItem)
 	own, _ := w.model.fits(s.msg, s.blocks)
-	hidden := slices.ContainsFunc(s.blocks, func(b *whenStmt) bool { return b.hide })
-	row := &proto.APLListItem{Hide: item.Hide && !hidden, Notes: item.Notes, Action: &proto.APLAction{Action: item.GetAction().GetAction()}}
+	// A row hidden by its own line as well as by a block keeps its #.
+	ownHide := false
+	if s.unit != nil {
+		if r, ok := s.unit.statement.(*rowStmt); ok {
+			ownHide = r.hide
+		}
+	}
+	hidden := w.model.hidden(s.blocks)
+	row := &proto.APLListItem{Hide: item.Hide && (!hidden || ownHide), Notes: item.Notes, Action: &proto.APLAction{Action: item.GetAction().GetAction()}}
 	switch len(own) {
 	case 0:
 	case 1:
@@ -1537,17 +1655,9 @@ func (w *spliceWriter) render(s *spliceSlot, list *spliceList, p *printer, sc sc
 	case u != nil && u.header == nil && slices.Equal(s.blocks, blocksOf(u.statement)):
 		indent, moved = columnOf(u.statement, w.lines), false
 	case len(s.blocks) > 0:
-		indent = columnOf(s.blocks[len(s.blocks)-1].body[0], w.lines)
+		indent = w.bodyIndent(list, s.blocks)
 	}
-	// The def calls whose values the edits leave as they are stay calls.
-	q := *p
-	q.calls = map[*proto.APLValue]string{}
-	valuesIn(s.msg, "", func(path string, v *proto.APLValue) {
-		if c, ok := s.calls[path]; ok && googleProto.Equal(c.value, v) {
-			q.calls[v] = c.text
-		}
-	})
-	p = &q
+	p = withCalls(p, s.msg, s.calls, s.forced)
 	var ps *printedStmt
 	switch {
 	case !list.row:
@@ -1561,6 +1671,9 @@ func (w *spliceWriter) render(s *spliceSlot, list *spliceList, p *printer, sc sc
 		ps = ps.expect.fallback()
 	}
 	var above []string
+	for _, c := range s.lead {
+		above = append(above, commentLine(c, indent).line)
+	}
 	if u != nil {
 		for _, c := range u.comments {
 			if moved && u.header == nil {

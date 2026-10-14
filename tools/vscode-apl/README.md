@@ -100,13 +100,20 @@ choice is written as its name.
 - **Edits go through the text.** Each change is made with the server's `siml/splice`: only the statements it touches
   are printed again, and every other line, comment and blank line stays as written. Undo, the dirty marker and git
   work as they do for a hand edit. The panel shows its change at once and the text catches up.
-- **`when` blocks and defs.** The panel shows each row as it reads, with the conditions of the `when` blocks around
-  it joined to its own and each def call in place of its value. A row an edit changes stays in its block while its
-  condition still starts with the block's, and is written with the rest of it; otherwise the block splits at the row
-  and the row is written on its own between the two parts, which repeat the `when` line. A row added or moved next
-  to a block goes in it by the same rule, and a block whose last row goes is removed with its `when` line. A def call
-  in a changed row stays while the edit leaves the value it reads as unchanged; otherwise the row is written with the
-  value in its place.
+- **`when` blocks.** A `when` line shows as a line over its rows, which sit under it and show only their own
+  conditions. Click the line to edit the condition its rows share; its buttons fold its rows, hide the block, add a
+  row to it, jump to the text, take it apart (each row is written with the block's condition joined to its own) and
+  delete it with its rows. Click a row's number, then shift-click another, to pick a run of rows of one block, and
+  **Put in a when block** puts them in a new one: its condition is the first conjunct the rows share, which leaves
+  their own, or `true` to edit. A row dragged onto a row of another block goes into that block, its own conjuncts
+  joined to the block's. A row an edit changes otherwise stays in its block while its condition still starts with the
+  block's; else the block splits at the row, and a block whose last row goes is removed with its `when` line.
+- **Defs.** A value written as a def call shows as the call. Its arguments edit in place and keep the call; its
+  "write the def's value here" button writes the value in place of the call, and the def's name jumps to its line.
+  `ƒ` beside a value or `+ condition` writes a call of one of the file's defs, asking for its arguments, and a value's
+  "name this value with a def" button adds a def, which the value is then written as a call of. The Defs section lists each def: its name renames its calls too,
+  its parameters and value write its line, and deleting one writes each call as the value it reads as. An edit of a
+  def that leaves a call with an error is refused.
 - **Read-only.** While the text has an error the panel shows the rotation as it last read, says where the first error
   is, and makes no edits. A rotation put together with another file (`use "default.apl.siml" with …`) is shown with
   the rows it uses and is edited as text.

@@ -193,17 +193,7 @@ func (f *typedFile) format() string {
 			st.expect = p.row(item, false, sc, indent).expect
 			add(st)
 		case *whenStmt:
-			parts := p.conditionParts(f.whens[s].ProtoReflect(), sc)
-			if len(conjuncts(s.condition)) == 1 {
-				parts = p.conjunctParts(f.whens[s].ProtoReflect(), sc)
-			}
-			lead := "when "
-			if s.hide {
-				lead = "# when "
-			}
-			parts[0] = cat(word(lead), parts[0][1:])
-			parts[len(parts)-1] = cat(parts[len(parts)-1], word(":"))
-			add(&printedStmt{indent: indent, parts: parts})
+			add(p.whenLine(f.whens[s].ProtoReflect(), len(conjuncts(s.condition)) > 1, s.hide, sc, indent))
 		case *defStmt:
 			add(defLine(s, tree.lines.src, indent))
 		case *slotRowStmt:
@@ -254,6 +244,22 @@ func (p *printer) conjunctParts(c protoreflect.Message, sc scope) []text {
 		return []text{cat(word("if "), p.value(c, precAnd+1, sc))}
 	}
 	return p.conditionParts(c, sc)
+}
+
+// `when c:`, or `# when c:` for a hidden block. split writes c's and as the conjuncts it joins to its rows, and
+// otherwise c is one conjunct, an and in parentheses (SPEC.md §6.9).
+func (p *printer) whenLine(c protoreflect.Message, split, hide bool, sc scope, indent int) *printedStmt {
+	parts := p.conditionParts(c, sc)
+	if !split {
+		parts = p.conjunctParts(c, sc)
+	}
+	lead := "when "
+	if hide {
+		lead = "# when "
+	}
+	parts[0] = cat(word(lead), parts[0][1:])
+	parts[len(parts)-1] = cat(parts[len(parts)-1], word(":"))
+	return &printedStmt{indent: indent, parts: parts}
 }
 
 // `def name(p, …) = value`, the value as it is written and broken as a var line's value is (SPEC.md §12.3).

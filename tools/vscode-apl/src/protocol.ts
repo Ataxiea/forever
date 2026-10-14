@@ -7,11 +7,44 @@ export interface JsonObject {
 	[key: string]: JsonValue;
 }
 
-// An edit of the rotation's JSON, which siml/splice makes in the text.
+// An edit of the rotation's JSON, which siml/splice makes in the text. A path ['whens', id, ...] leads into a when
+// block of the structure: its 'condition', its 'hide', or the block itself, which set to no value takes apart.
 export type AplEdit =
-	| { op: 'set'; path: JsonPath; value?: unknown } // No value removes the property or element.
+	| { op: 'set'; path: JsonPath; value?: unknown; call?: string } // No value removes the property or element; `call` writes a def call there.
 	| { op: 'insert'; path: JsonPath; index: number; value: unknown } // `path` names the array.
-	| { op: 'move'; path: JsonPath; from: number; to: number }; // Within one array; `to` is the index the element ends at.
+	| { op: 'move'; path: JsonPath; from: number; to: number } // Within one array; `to` is the index the element ends at.
+	| { op: 'wrap'; path: JsonPath; from: number; to: number; value: unknown } // Puts rows `from` to `to` in a new block with condition `value`.
+	| { op: 'inline'; path: JsonPath } // Writes the def call at `path` as the value it reads as.
+	| { op: 'extract'; path: JsonPath; name: string } // Names the value at `path` with a new def.
+	| { op: 'defInsert'; name: string; params?: string[]; text: string }
+	| { op: 'defDelete'; name: string } // Its calls are written as the values they read as.
+	| { op: 'defSet'; name: string; params: string[]; text: string } // Goes alone.
+	| { op: 'defRename'; name: string; text: string }; // Renames its calls too; goes alone.
+
+// A when block: the rows `first` to `last` of the list at `list` are in it, nested blocks' included.
+export interface WhenBlock {
+	id: number;
+	list: JsonPath;
+	parent: number; // -1 for none.
+	first: number;
+	last: number; // first - 1 for a block with no rows.
+	hide?: boolean;
+	condition: JsonValue;
+	conjuncts: JsonValue[]; // What it joins to the condition of each row in it, in order.
+}
+
+// What siml/rotation says of the text beyond the rotation's JSON (sim/siml/structure.go).
+export interface AplStructure {
+	whens: WhenBlock[];
+	// Each row of a block: how many conjuncts at the start of its condition its blocks join to it, and whether it has
+	// conjuncts of its own after them.
+	rows: { path: JsonPath; inherited: number; own: boolean }[];
+	// The values written as def calls, at their rotation paths or ['whens', id, 'condition', ...].
+	calls: { path: JsonPath; name: string; args: string[] }[];
+	defs: { name: string; params: string[]; value: string; used: boolean }[];
+	whenRanges: Range[];
+	defRanges: Range[];
+}
 
 // Zero-based, as the protocol counts.
 export interface Range {
@@ -82,6 +115,7 @@ export interface RotationResult {
 	spans: { path: JsonPath; range: Range }[];
 	used: string[];
 	registered: Registered;
+	structure?: AplStructure; // Left out while the text has errors.
 }
 
 // siml/patterns: a common shape Insert Pattern offers, and the values it asks for.
@@ -116,7 +150,7 @@ export interface SimRun {
 export interface SimResult extends SimRun {
 	character: { source: string; race: string; talents: string; gear?: string; warnings?: string[] };
 	compare?: SimRun;
-	difference?: { delta: number; percent: number; stderr: number; z: number; significant: boolean }; // Set with compare.
+	difference?: { delta: number; percent: number }; // Set with compare.
 	baseline?: 'saved' | 'HEAD'; // What a compare's base was.
 }
 
@@ -134,6 +168,7 @@ export type ToPanel =
 			readOnly?: string;
 			className?: string;
 			findings: Finding[];
+			structure?: AplStructure;
 	  }
 	| { type: 'cursor'; path: JsonPath }
 	| { type: 'registered'; registered: Registered }
@@ -146,6 +181,7 @@ export type FromPanel =
 	| { type: 'ready' }
 	| { type: 'edit'; version: number; seq: number; edits: AplEdit[] }
 	| { type: 'reveal'; path: JsonPath }
+	| { type: 'revealRange'; range: Range }
 	| { type: 'sim'; compare: boolean }
 	// Insert a pattern after the row at `path` (an index of -1 is the start of an empty list).
 	| { type: 'pattern'; path: JsonPath };

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { AplEdit } from '../protocol';
+import type { AplEdit, Range } from '../protocol';
 import type { JsonPath } from './model';
 
 export interface EditorApi {
@@ -8,6 +8,8 @@ export interface EditorApi {
 	// nothing, and says so with false.
 	edit: (...edits: AplEdit[]) => boolean;
 	reveal: (path: JsonPath) => void;
+	// Selects text of the file: a when line or a def.
+	revealRange: (range: Range) => void;
 	// Names the rotation defines, for the name pickers.
 	groupNames: string[];
 	variableNames: string[];
@@ -20,6 +22,7 @@ export interface EditorApi {
 export const EditorContext = createContext<EditorApi>({
 	edit: () => false,
 	reveal: () => {},
+	revealRange: () => {},
 	groupNames: [],
 	variableNames: [],
 	usedIds: [],

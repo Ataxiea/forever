@@ -1,9 +1,9 @@
 import './style.css';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, type CSSProperties, Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import type { AplDatabase, AplEdit, Finding, FromPanel, Named, PanelState, Registered, ToPanel } from '../protocol';
+import type { AplDatabase, AplEdit, AplStructure, Finding, FromPanel, Named, PanelState, Registered, ToPanel } from '../protocol';
 import { applyEdit, shiftKeys } from './apply';
 import { CommitInput } from './commit_input';
 import { DbContext } from './db';
@@ -13,6 +13,7 @@ import { Icon } from './icons';
 import { isObject, type Json, type JsonObject, type JsonPath, newKindJson, setClassName } from './model';
 import { KindPicker } from './pickers';
 import { idKey, RegisteredContext } from './registered';
+import { blocksAt, blocksIn, conditionOf, emptyStructure, joinedBy, ownConjuncts, StructureContext, useStructure } from './structure';
 import { ActionText, ValueText } from './summary';
 
 type SimState = Extract<ToPanel, { type: 'sim' }>;
@@ -71,11 +72,10 @@ function SimBar() {
 					title={`${result.character.source}: ${result.character.race}, talents ${result.character.talents}${result.character.gear ? `, gear ${result.character.gear}` : ''}`}>
 					<strong>{run.dps.mean.toFixed(1)} DPS</strong> ± {(run.dps.stdev / Math.sqrt(run.iterations)).toFixed(1)}
 					{result.difference ? (
-						<span className={result.difference.significant ? (result.difference.delta >= 0 ? 'better' : 'worse') : 'noise'}>
+						<span className={result.difference.delta >= 0 ? 'better' : 'worse'}>
 							{' '}
 							{result.difference.delta >= 0 ? '+' : ''}
 							{result.difference.delta.toFixed(1)} ({result.difference.percent.toFixed(2)}%) vs {state.sim?.baseline}
-							{result.difference.significant ? '' : ', within noise'}
 						</span>
 					) : null}
 					{state.sim?.stale ? ' · stale' : ''}
@@ -223,10 +223,108 @@ interface ListProps {
 	open: (rowKey: string) => void;
 }
 
+type Block = ReturnType<typeof blocksIn>[number];
+
+// A when block's line: its condition, which a click edits, and what it does to its rows.
+function WhenHead({
+	block,
+	blocks,
+	path,
+	ctx,
+	collapsed,
+	onCollapse,
+}: {
+	block: Block;
+	blocks: Block[];
+	path: JsonPath;
+	ctx: ListContext;
+	collapsed: boolean;
+	onCollapse: () => void;
+}) {
+	const { edit, revealRange } = useEditor();
+	const structure = useStructure();
+	const [editing, setEditing] = useState(false);
+	const at: JsonPath = ['whens', block.id];
+	// The block and those around it, the outermost first.
+	const chain: Block[] = [];
+	for (let b: Block | undefined = block; b; b = blocks.find(x => x.id === b!.parent)) chain.unshift(b);
+	const hidden = chain.some(b => b.hide);
+	const add = (kind: string) => {
+		const action = { [kind]: newKindJson('action', kind), condition: conditionOf(joinedBy(chain)) };
+		edit({ op: 'insert', path, index: block.last + 1, value: hidden ? { action, hide: true } : { action } });
+	};
+	const rows = block.last - block.first + 1;
+	return (
+		<li className={`when-head${block.hide ? ' hidden' : ''}`} data-when={block.id} style={{ '--depth': block.depth } as CSSProperties}>
+			<div className="row-head">
+				<button type="button" className="icon-btn chevron" onClick={onCollapse} title={collapsed ? 'Show its rows' : 'Fold its rows'}>
+					<Icon name={collapsed ? 'right' : 'down'} />
+				</button>
+				<div
+					className="summary"
+					tabIndex={0}
+					title="Click to edit the condition its rows share"
+					onClick={() => setEditing(!editing)}
+					onDoubleClick={() => revealRange(structure.whenRanges[block.id])}
+					onKeyDown={e => {
+						if (e.key !== 'Enter' && e.key !== ' ') return;
+						setEditing(!editing);
+						e.preventDefault();
+					}}>
+					<span className="op">{block.hide ? '# when' : 'when'}</span> <ValueText json={block.condition as Json} path={[...at, 'condition']} />
+					{collapsed ? <span className="count"> {rows} rows</span> : null}
+				</div>
+				<span className="row-buttons">
+					<KindPicker family="action" isPrepull={false} isGroup={ctx.isGroup} onPick={add} trigger={<span title="Add a row to the block">+</span>} />
+					<button
+						type="button"
+						className="icon-btn"
+						title={block.hide ? 'Show the block (the sim runs its rows)' : 'Hide the block (the sim skips its rows)'}
+						onClick={() => edit({ op: 'set', path: [...at, 'hide'], value: block.hide ? undefined : true })}>
+						<Icon name={block.hide ? 'eyeOff' : 'eye'} />
+					</button>
+					<button type="button" className="icon-btn" title="Jump to the text" onClick={() => revealRange(structure.whenRanges[block.id])}>
+						<Icon name="jump" />
+					</button>
+					<button
+						type="button"
+						className="icon-btn"
+						title="Take the block apart: its rows keep the condition, written on each"
+						onClick={() => edit({ op: 'set', path: at })}>
+						<Icon name="unblock" />
+					</button>
+					<button
+						type="button"
+						className="icon-btn"
+						title="Delete the block and its rows"
+						onClick={() => edit(...Array.from({ length: rows }, (_, k) => ({ op: 'set' as const, path: [...path, block.last - k] })))}>
+						<Icon name="trash" />
+					</button>
+				</span>
+			</div>
+			{editing ? (
+				<div className="row-body">
+					<ValueEditor json={block.condition as Json} path={[...at, 'condition']} ctx={ctx} />
+				</div>
+			) : null}
+		</li>
+	);
+}
+
+// The rows a selection covers, which a when block can be put around.
+interface Selection {
+	anchor: number;
+	from: number;
+	to: number;
+}
+
 function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }: ListProps) {
 	const { edit, reveal } = useEditor();
+	const structure = useStructure();
 	const [dragFrom, setDragFrom] = useState<number>();
 	const [dropAt, setDropAt] = useState<number>();
+	const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+	const [picked, setPicked] = useState<Selection>();
 	const list = useRef<HTMLOListElement>(null);
 	// The row a keyboard move put a row at, which takes the focus once it shows there.
 	const focusAt = useRef<number>(undefined);
@@ -237,7 +335,32 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 		focusAt.current = undefined;
 	});
 
+	const blocks = useMemo(() => blocksIn(structure, path), [structure, path]);
+	const rowInfo = (i: number) => structure.rows.find(row => key(row.path) === key([...path, i]));
+	const conditionAt = (i: number) => {
+		const row = items[i];
+		return isObject(row) && isObject(row.action) ? row.action.condition : undefined;
+	};
+	// A row's own conjuncts, after those its blocks join.
+	const ownAt = (i: number) => {
+		const info = rowInfo(i);
+		return ownConjuncts(conditionAt(i), info?.inherited ?? 0, info?.own ?? true);
+	};
+
 	const move = (from: number, to: number) => to >= 0 && to < items.length && from !== to && edit({ op: 'move', path, from, to });
+
+	// A row dropped on another goes into that row's blocks, with its own conjuncts joined to theirs.
+	const drop = (from: number, to: number) => {
+		if (to < 0 || to >= items.length || from === to) return false;
+		const into = blocksAt(blocks, to);
+		if (key(blocksAt(blocks, from).map(b => b.id)) === key(into.map(b => b.id))) return move(from, to);
+		const edits: AplEdit[] = [
+			{ op: 'move', path, from, to },
+			{ op: 'set', path: [...path, to, 'action', 'condition'], value: conditionOf([...joinedBy(into), ...ownAt(from)]) },
+		];
+		if (into.some(b => b.hide)) edits.push({ op: 'set', path: [...path, to, 'hide'], value: true });
+		return edit(...edits);
+	};
 
 	const add = (kind: string) => {
 		const action = { [kind]: newKindJson('action', kind) };
@@ -245,26 +368,86 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 		open(key([...path, items.length]));
 	};
 
+	// Puts the picked rows in a new block. Its condition is the first conjunct the rows share, else true to edit.
+	const wrap = (sel: Selection) => {
+		const owns = Array.from({ length: sel.to - sel.from + 1 }, (_, k) => ownAt(sel.from + k));
+		const first = owns[0][0];
+		const shared = first !== undefined && owns.every(own => own.length > 0 && JSON.stringify(own[0]) === JSON.stringify(first));
+		edit({ op: 'wrap', path, from: sel.from, to: sel.to, value: shared ? first : { const: { val: 'true' } } });
+		setPicked(undefined);
+	};
+
+	const pick = (i: number, extend: boolean) =>
+		setPicked(current => {
+			if (extend && current) return { anchor: current.anchor, from: Math.min(current.anchor, i), to: Math.max(current.anchor, i) };
+			return current?.from === i && current.to === i ? undefined : { anchor: i, from: i, to: i };
+		});
+
+	const folded = (b: Block) => blocks.some(outer => collapsed.has(outer.id) && outer.depth < b.depth && outer.first <= b.first && b.first <= outer.last);
+	const heads = (i: number) =>
+		blocks
+			.filter(b => b.first === i && !folded(b))
+			.sort((a, b) => a.depth - b.depth)
+			.map(b => (
+				<WhenHead
+					key={`when-${b.id}`}
+					block={b}
+					blocks={blocks}
+					path={path}
+					ctx={ctx}
+					collapsed={collapsed.has(b.id)}
+					onCollapse={() =>
+						setCollapsed(current => {
+							const next = new Set(current);
+							if (!next.delete(b.id)) next.add(b.id);
+							return next;
+						})
+					}
+				/>
+			));
+
 	return (
 		<section>
 			<h2>
 				{title} <span className="count">{items.length}</span>
 			</h2>
+			{picked && !ctx.isPrepull ? (
+				<div className="pick-bar">
+					<span>
+						{picked.from === picked.to ? `Row ${picked.from + 1}` : `Rows ${picked.from + 1}–${picked.to + 1}`} picked; shift-click a number to pick
+						more
+					</span>
+					<button type="button" className="add" onClick={() => wrap(picked)}>
+						Put in a when block
+					</button>
+					<button type="button" className="icon-btn" title="Clear the pick" onClick={() => setPicked(undefined)}>
+						<Icon name="close" />
+					</button>
+				</div>
+			) : null}
 			<ol className="items" ref={list} onDragLeave={() => setDropAt(undefined)}>
-				{items.map((item, i) => {
+				{items.flatMap((item, i) => {
 					const rowPath = [...path, i];
 					const rowKey = key(rowPath);
 					const row = isObject(item) ? item : {};
 					const hidden = row.hide === true;
 					const isOpen = expanded.has(rowKey);
-					return (
+					const around = blocksAt(blocks, i);
+					if (around.some(b => collapsed.has(b.id))) return heads(i);
+					const info = rowInfo(i);
+					const condition = isObject(row.action) ? row.action.condition : undefined;
+					const own = info ? ownConjuncts(condition, info.inherited, info.own) : undefined;
+					return [
+						...heads(i),
 						<li
 							key={i}
 							data-row={rowKey}
+							style={{ '--depth': around.length } as CSSProperties}
 							className={[
 								'row',
 								hidden && 'hidden',
 								selected === rowKey && 'selected',
+								picked && picked.from <= i && i <= picked.to && 'picked',
 								dropAt === i && dragFrom !== undefined && (dragFrom < i ? 'drop-below' : 'drop-above'),
 							]
 								.filter(Boolean)
@@ -276,7 +459,7 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 							}}
 							onDrop={e => {
 								e.preventDefault();
-								if (dragFrom !== undefined) move(dragFrom, i);
+								if (dragFrom !== undefined) drop(dragFrom, i);
 								setDragFrom(undefined);
 								setDropAt(undefined);
 							}}>
@@ -284,7 +467,7 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 								<span
 									className="grip"
 									draggable
-									title="Drag to reorder"
+									title="Drag to reorder, into or out of a when block"
 									onDragStart={e => {
 										e.dataTransfer.effectAllowed = 'move';
 										e.dataTransfer.setData('text/plain', rowKey);
@@ -299,7 +482,12 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 								<button type="button" className="icon-btn chevron" onClick={() => toggle(rowKey)} title={isOpen ? 'Collapse' : 'Edit'}>
 									<Icon name={isOpen ? 'down' : 'right'} />
 								</button>
-								<span className="index">{i + 1}</span>
+								<span
+									className="index"
+									title={ctx.isPrepull ? undefined : 'Click to pick the row, shift-click to pick a run of rows'}
+									onClick={e => !ctx.isPrepull && pick(i, e.shiftKey)}>
+									{i + 1}
+								</span>
 								<div
 									className="summary"
 									tabIndex={0}
@@ -315,11 +503,32 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 									}}>
 									<div className="summary-main">
 										{ctx.isPrepull ? <DoAt json={row.doAtValue} /> : null}
-										<ActionText json={row.action} />
+										<ActionText json={row.action} path={[...rowPath, 'action']} />
 									</div>
-									{isObject(row.action) && row.action.condition !== undefined ? (
+									{own ? (
+										own.length > 0 ? (
+											<div className="summary-cond">
+												<span className="op">if</span>{' '}
+												{own.map((c, k) => (
+													<Fragment key={k}>
+														{k > 0 ? (
+															<>
+																{' '}
+																<span className="op">and</span>{' '}
+															</>
+														) : null}
+														<ValueText
+															json={c}
+															parent={2}
+															path={[...rowPath, 'action', 'condition', 'and', 'vals', info!.inherited + k]}
+														/>
+													</Fragment>
+												))}
+											</div>
+										) : null
+									) : condition !== undefined ? (
 										<div className="summary-cond">
-											<span className="op">if</span> <ValueText json={row.action.condition} />
+											<span className="op">if</span> <ValueText json={condition} path={[...rowPath, 'action', 'condition']} />
 										</div>
 									) : null}
 									{typeof row.notes === 'string' && row.notes ? <div className="summary-notes">{row.notes}</div> : null}
@@ -360,7 +569,7 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 											</div>
 										</div>
 									) : null}
-									<ActionEditor json={row.action} path={[...rowPath, 'action']} ctx={ctx} />
+									<ActionEditor json={row.action} path={[...rowPath, 'action']} ctx={ctx} inherited={info ? joinedBy(around) : undefined} />
 									{ctx.isPrepull ? null : (
 										<div className="field wide">
 											<label>Notes</label>
@@ -375,9 +584,10 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 									)}
 								</div>
 							) : null}
-						</li>
-					);
+						</li>,
+					];
 				})}
+				{heads(items.length)}
 			</ol>
 			<div className="list-adds">
 				<KindPicker family="action" isPrepull={ctx.isPrepull} isGroup={ctx.isGroup} onPick={add} trigger={<span className="add">+ Add action</span>} />
@@ -389,6 +599,74 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 					+ pattern
 				</button>
 			</div>
+		</section>
+	);
+}
+
+// The file's defs: each one's name, which renames its calls too, its parameters and its value, as SIML.
+function Defs() {
+	const { edit, revealRange } = useEditor();
+	const { defs, defRanges } = useStructure();
+	const params = (text: string) =>
+		text
+			.split(',')
+			.map(p => p.trim())
+			.filter(Boolean);
+	return (
+		<section className="defs">
+			<h2>
+				Defs <span className="count">{defs.length}</span>
+			</h2>
+			{defs.map((def, i) => (
+				<div className="def-line" key={def.name} data-def={def.name}>
+					<span className="op">def</span>
+					<CommitInput
+						className="def-name-input"
+						value={def.name}
+						onCommit={name => name.trim() && edit({ op: 'defRename', name: def.name, text: name.trim() })}
+					/>
+					<span className="op">(</span>
+					<CommitInput
+						className="def-params"
+						value={def.params.join(', ')}
+						placeholder="no parameters"
+						onCommit={v => edit({ op: 'defSet', name: def.name, params: params(v), text: def.value })}
+					/>
+					<span className="op">) =</span>
+					<CommitInput className="def-value" value={def.value} onCommit={v => edit({ op: 'defSet', name: def.name, params: def.params, text: v })} />
+					{def.used ? null : (
+						<span className="badge muted" title="No row, var, when line or def calls it">
+							unused
+						</span>
+					)}
+					<button type="button" className="icon-btn" title="Jump to the text" onClick={() => revealRange(defRanges[i])}>
+						<Icon name="jump" />
+					</button>
+					<button
+						type="button"
+						className="icon-btn"
+						title="Delete the def; each call is written as the value it reads as"
+						onClick={() => edit({ op: 'defDelete', name: def.name })}>
+						<Icon name="trash" />
+					</button>
+				</div>
+			))}
+			<button
+				type="button"
+				className="add"
+				title="A def names a value, which its calls read as"
+				onClick={() =>
+					edit({
+						op: 'defInsert',
+						name: freeName(
+							'def',
+							defs.map(d => d.name),
+						),
+						text: 'true',
+					})
+				}>
+				+ def
+			</button>
 		</section>
 	);
 }
@@ -493,6 +771,7 @@ function App({ db, fileName, rotation, readOnly, send }: AppProps) {
 		() => ({
 			edit,
 			reveal: path => vscode.postMessage({ type: 'reveal', path }),
+			revealRange: range => vscode.postMessage({ type: 'revealRange', range }),
 			groupNames: groups.map(g => String(g.name ?? '')),
 			variableNames: variables.filter(isObject).map(v => String(v.name ?? '')),
 			usedIds: [...collectIds(rotation, new Set())],
@@ -620,6 +899,7 @@ function App({ db, fileName, rotation, readOnly, send }: AppProps) {
 					<section>
 						<Variables title="Variables" path={['valueVariables']} variables={variables} ctx={{ isPrepull: false, isGroup: false }} />
 					</section>
+					<Defs />
 					<SimDetails />
 				</fieldset>
 			</EditorContext.Provider>
@@ -633,6 +913,7 @@ interface Doc {
 	rotation: JsonObject;
 	readOnly?: string;
 	findings: Finding[];
+	structure: AplStructure;
 }
 
 function Root() {
@@ -657,6 +938,7 @@ function Root() {
 					rotation: message.rotation ?? current?.rotation ?? {},
 					readOnly: message.readOnly,
 					findings: message.findings,
+					structure: message.structure ?? current?.structure ?? emptyStructure,
 				}));
 				setPending(current => current.filter(p => p.seq > message.handled));
 			} else if (message.type === 'registered') {
@@ -700,9 +982,11 @@ function Root() {
 	return (
 		<RegisteredContext.Provider value={registered}>
 			<FindingsContext.Provider value={doc.findings}>
-				<SimContext.Provider value={sim}>
-					<App db={db} fileName={init.fileName} rotation={rotation} readOnly={doc.readOnly} send={send} />
-				</SimContext.Provider>
+				<StructureContext.Provider value={doc.structure}>
+					<SimContext.Provider value={sim}>
+						<App db={db} fileName={init.fileName} rotation={rotation} readOnly={doc.readOnly} send={send} />
+					</SimContext.Provider>
+				</StructureContext.Provider>
 			</FindingsContext.Provider>
 		</RegisteredContext.Provider>
 	);

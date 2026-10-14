@@ -11,13 +11,20 @@ import (
 // The rotation as the panel reads an .apl.siml through siml/rotation, and its edits through siml/splice.
 
 type rotationAnswer struct {
-	Version    int            `json:"version"`
-	Rotation   map[string]any `json:"rotation"`
-	ReadOnly   string         `json:"readOnly"`
-	ClassName  string         `json:"className"`
-	Findings   []panelFinding `json:"findings"`
-	Spans      []panelSpan    `json:"spans"`
-	Used       []string       `json:"used"`
+	Version   int            `json:"version"`
+	Rotation  map[string]any `json:"rotation"`
+	ReadOnly  string         `json:"readOnly"`
+	ClassName string         `json:"className"`
+	Findings  []panelFinding `json:"findings"`
+	Spans     []panelSpan    `json:"spans"`
+	Used      []string       `json:"used"`
+	Structure *struct {
+		Whens      []map[string]any `json:"whens"`
+		Calls      []map[string]any `json:"calls"`
+		Defs       []map[string]any `json:"defs"`
+		WhenRanges []Range          `json:"whenRanges"`
+		DefRanges  []Range          `json:"defRanges"`
+	} `json:"structure"`
 	Registered struct {
 		Status     string `json:"status"`
 		Spec       string `json:"spec"`
@@ -121,6 +128,23 @@ func TestRotationReadsWithItsRows(t *testing.T) {
 	}
 	if spell == nil || spell.Range.Start != positionOf(text, serpent+len("cast ")) {
 		t.Errorf("the spell's span = %+v", spell)
+	}
+}
+
+func TestRotationHasItsBlocksAndDefs(t *testing.T) {
+	c := started(t)
+	_, uri, _ := fixture(t, "default.apl.siml")
+	text := "siml 1\nspec hunter\n\ndef early = current_time < 10s\n\npriority:\n  when early:\n    cast multi_shot\n"
+	r := readRotation(t, c, uri, text)
+	s := r.Structure
+	if s == nil || len(s.Whens) != 1 || len(s.Defs) != 1 || len(s.Calls) != 1 {
+		t.Fatalf("structure = %+v", s)
+	}
+	if got := key(s.Calls[0]["path"].([]any)); got != "whens/0/condition" {
+		t.Errorf("the call's path = %s", got)
+	}
+	if s.WhenRanges[0].Start.Line != 6 || s.DefRanges[0].Start.Line != 3 {
+		t.Errorf("ranges: when %+v, def %+v", s.WhenRanges[0], s.DefRanges[0])
 	}
 }
 

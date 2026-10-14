@@ -1576,7 +1576,7 @@ sim/siml/testdata/
   <case>.<kind>.siml.raw            (optional, beside a parse/ or errors/ case) its raw-ref diagnostics, as .diag
   errors/<dir>/main.<kind>.siml     multi-file error cases (use), with main.<kind>.siml.diag beside it
   splice/<case>.apl.siml            input of the rotation panel's edits (`splice_test.go`)
-  splice/<case>.edits.json          AplEdit list; a set with no value removes what its path names
+  splice/<case>.edits.json          AplEdit list (splice.go); a set with no value removes what its path names
   splice/<case>.apl.siml.want       expected text after the splice
 ```
 

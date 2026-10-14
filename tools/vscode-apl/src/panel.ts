@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 
 import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, samePath, spanFor, spansOf, vscodeRange } from './host';
 import { insertPattern } from './insert_pattern';
-import type { AplDatabase, FromPanel, PanelState, TextEdit, ToPanel } from './protocol';
+import type { AplDatabase, FromPanel, PanelState, Range, TextEdit, ToPanel } from './protocol';
 import { onServerStarted, request } from './server';
 import { onSimRecord, simDocument, type SimRecord, simRecord } from './simulate';
 
@@ -78,8 +78,8 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 			return;
 		}
 		used = read.used;
-		const { rotation, readOnly, className, findings } = read;
-		post({ type: 'rotation', version: read.version, handled, rotation, readOnly, className, findings });
+		const { rotation, readOnly, className, findings, structure } = read;
+		post({ type: 'rotation', version: read.version, handled, rotation, readOnly, className, findings, structure });
 		if (JSON.stringify(read.registered) !== registered) {
 			registered = JSON.stringify(read.registered);
 			post({ type: 'registered', registered: read.registered });
@@ -133,9 +133,9 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	};
 	let edits = Promise.resolve();
 
-	const reveal = async (path: (string | number)[]) => {
+	const reveal = async (path: (string | number)[], at?: Range) => {
 		const document = await documentFor(uri);
-		const range = spanFor(await spansOf(document).catch(() => []), path);
+		const range = at ?? spanFor(await spansOf(document).catch(() => []), path);
 		if (!range) return;
 		const visible = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === key);
 		const editor = await vscode.window.showTextDocument(document, { viewColumn: visible?.viewColumn ?? vscode.ViewColumn.One, preserveFocus: true });
@@ -180,6 +180,9 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 					break;
 				case 'reveal':
 					await reveal(message.path);
+					break;
+				case 'revealRange':
+					await reveal([], message.range);
 					break;
 			}
 		}),
