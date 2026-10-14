@@ -153,6 +153,9 @@ func init() {
 		9414: {
 			{BuffId: 1320726, BuffName: "Increased Feral Combat (1320726)"},
 		},
+		9419: {
+			{BuffId: 18083, BuffName: "Firebolt (1293980)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{IcdMs: 100}}},
+		},
 		9449: {
 			{BuffId: 13494, BuffName: "Haste (13494)", EffectDurationMs: 30000, Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000, CategoryCooldownMs: -1}}},
 		},
