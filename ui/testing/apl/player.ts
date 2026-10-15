@@ -15,8 +15,18 @@ export interface AplTestPlayer {
 	[key: string]: any;
 }
 
+/** A unit's metadata with no name, spells, auras or forms, with `overrides` in place of any of its getters. */
+export const stubMetadata = <T extends object>(overrides: T = {} as T) => ({
+	getSpells: () => [],
+	getAuras: () => [],
+	getName: () => '',
+	getForms: () => [],
+	isAlwaysInForm: () => false,
+	...overrides,
+});
+
 export const makePlayer = (rotation: APLRotation, notify: () => void = () => {}): AplTestPlayer => {
-	const metadata = { getSpells: () => [], getAuras: () => [], getName: () => '', getForms: () => [], isAlwaysInForm: () => false };
+	const metadata = stubMetadata();
 	const player: AplTestPlayer = {
 		aplRotation: rotation,
 		storeKey: 'p0',

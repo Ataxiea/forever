@@ -1,11 +1,12 @@
 import { ActionCategory } from '@generated/proto/api';
 import type { UnitMetadata } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
+import { stubMetadata } from '@testing/apl/player';
 import { describe, expect, it, vi } from 'vitest';
 
 import { actionIdSets } from './action_id_sets';
 
-// Form labels in English; every other key passes through, as the existing cases expect.
+// Form labels in English; every other key gives its default value, else passes through, as the existing cases expect.
 vi.mock('@i18n/config', () => {
 	const strings: Record<string, string> = {
 		'rotation_tab.apl.forms.any_stance': 'Any stance',
@@ -19,7 +20,8 @@ vi.mock('@i18n/config', () => {
 	};
 	return {
 		default: {
-			t: (key: string, options?: { form?: string }) => (key === 'rotation_tab.apl.forms.only' ? `${options?.form} only` : (strings[key] ?? key)),
+			t: (key: string, options?: { form?: string; defaultValue?: string }) =>
+				key === 'rotation_tab.apl.forms.only' ? `${options?.form} only` : (strings[key] ?? options?.defaultValue ?? key),
 		},
 	};
 });
@@ -44,14 +46,7 @@ const metadata = (
 	spells: Array<ReturnType<typeof spell>> = [],
 	forms: Array<ReturnType<typeof form>> = [],
 	alwaysInForm = false,
-) =>
-	({
-		getAuras: () => auras,
-		getSpells: () => spells,
-		getName: () => '',
-		getForms: () => forms,
-		isAlwaysInForm: () => alwaysInForm,
-	}) as unknown as UnitMetadata;
+) => stubMetadata({ getAuras: () => auras, getSpells: () => spells, getForms: () => forms, isAlwaysInForm: () => alwaysInForm }) as unknown as UnitMetadata;
 
 const stances = [form(17, 'Battle Stance'), form(18, 'Defensive Stance'), form(19, 'Berserker Stance')];
 

@@ -3,8 +3,9 @@ import { OtherAction } from '@generated/proto/common';
 import i18n from '@i18n/config';
 import { AuraStats, SpellStats, UnitMetadata } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
+import { bucket } from '@sim/utils/collections';
 
-import { formBuckets } from './form_buckets';
+import { compareBuckets, formBuckets } from './form_buckets';
 
 export type ACTION_ID_SET =
 	| 'auras'
@@ -24,15 +25,33 @@ export type ACTION_ID_SET =
 	| 'potions'
 	| 'conjured_items';
 
+/** The ranked entries that share `actionId`'s base name and tag: the ranks of its spell. */
+const ranksOf = <T extends AuraStats | SpellStats>(actionId: ActionId, entries: Array<T>): Array<T> =>
+	entries.filter(entry => actionId.baseName === entry.id.baseName && actionId.tag === entry.id.tag && entry.id.hasRank);
+
 /** True when two or more of `spells` share `actionId`'s base name and tag — i.e. `actionId` has ranks. */
-const spellHasRanks = (actionId: ActionId, spells: Array<AuraStats | SpellStats>) =>
-	spells.filter(spell => actionId.baseName === spell.id.baseName && actionId.tag === spell.id.tag && spell.id.hasRank).length > 1;
+const spellHasRanks = (actionId: ActionId, spells: Array<AuraStats | SpellStats>) => ranksOf(actionId, spells).length > 1;
 
 /** The highest rank `offered` of `actionId`'s spell, when one ranks above `actionId`. */
 const higherRank = <T extends AuraStats | SpellStats>(actionId: ActionId, offered: Array<T>): T | undefined =>
-	offered
-		.filter(spell => actionId.baseName === spell.id.baseName && actionId.tag === spell.id.tag && spell.id.hasRank)
-		.reduce<T | undefined>((top, spell) => (spell.id.rank > (top?.id.rank ?? actionId.rank) ? spell : top), undefined);
+	ranksOf(actionId, offered).reduce<T | undefined>((top, spell) => (spell.id.rank > (top?.id.rank ?? actionId.rank) ? spell : top), undefined);
+
+const rankKey = (actionId: ActionId) => `${actionId.baseName}|${actionId.tag}`;
+
+/** Each entry's highest rank among `entries`, or the entry itself when none ranks above it. */
+const highestRanks = <T extends AuraStats | SpellStats>(entries: Array<T>): Map<T, T> => {
+	const tops = new Map<string, T>();
+	for (const entry of entries) {
+		const key = rankKey(entry.id);
+		if (entry.id.hasRank && entry.id.rank > (tops.get(key)?.id.rank ?? 0)) tops.set(key, entry);
+	}
+	return new Map(
+		entries.map(entry => {
+			const top = tops.get(rankKey(entry.id));
+			return [entry, top && top.id.rank > entry.id.rank ? top : entry];
+		}),
+	);
+};
 
 /**
  * The menu path `actionId` is filed under. The ranks of a spell are filed under the highest rank
@@ -64,9 +83,9 @@ const CATEGORY_SUBMENUS: Array<[ActionCategory, string]> = [
 ];
 
 /**
- * Files `entries` under, in this order, the form buckets of the uncategorised ones, the manual
- * groups the sim names, and their category's submenu, one category after another. Hands back the
- * rest for the caller to place.
+ * Sorts `entries` into the manual groups the sim names, their category's submenu, one category
+ * after another, and the form buckets of the uncategorised ones. The caller picks the buckets it
+ * files under and places the rest.
  *
  * The categories are emitted in a fixed order because the menu places a submenu where its first
  * option appears, and the metadata arrives sorted by name.
@@ -76,37 +95,34 @@ const categorise = <T extends AuraStats | SpellStats>(
 	entries: Array<T>,
 	toOption: (entry: T, submenu: Array<string | ActionId>) => ActionIdOption,
 	allEntries: Array<T> = entries,
-	bucketAll = true,
 ) => {
-	const bucket = formBuckets(metadata.getForms(), metadata.isAlwaysInForm());
-	const path = (entry: T, segment: string) => createSpellSubmenu(entry.id, allEntries, [segment], entries);
-	const highest = new Map(entries.map(entry => [entry, higherRank(entry.id, entries) ?? entry]));
+	const formBucket = formBuckets(metadata.getForms(), metadata.isAlwaysInForm());
+	const highest = highestRanks(entries);
+	const ranked = bucket(
+		allEntries.filter(entry => entry.id.hasRank),
+		entry => rankKey(entry.id),
+	);
+	// The lower ranks sit behind the highest, as in createSpellSubmenu.
+	const option = (entry: T, segment: string) => {
+		const top = highest.get(entry)!;
+		return toOption(entry, top !== entry && ranked[rankKey(entry.id)].length > 1 ? [segment, top.id] : [segment]);
+	};
 	const groupOf = (entry: T) => highest.get(entry)!.data.group;
-	const grouped = entries.filter(entry => groupOf(entry));
-	const groupedSet = new Set(grouped);
-	const rest = entries.filter(entry => !groupedSet.has(entry));
+	const rest = entries.filter(entry => !groupOf(entry));
 	const uncategorised = rest.filter(entry => !CATEGORY_SUBMENUS.some(([category]) => entry.data.category === category));
-	const bucketOf = new Map(uncategorised.map(entry => [entry, bucket(highest.get(entry)!.data.forms)]));
-	// One bucket alone only renames Spell; an aura that works everywhere stays at the top level.
-	const oneBucket = new Set([...bucketOf.values()].filter(entryBucket => entryBucket !== undefined)).size <= 1;
-	const bucketed = oneBucket
-		? []
-		: uncategorised.filter(entry => {
-				const entryBucket = bucketOf.get(entry);
-				return entryBucket !== undefined && (bucketAll || !entryBucket.any);
-			});
-	const bucketedSet = new Set(bucketed);
-	const groups = [...new Set(grouped.map(groupOf))];
+	const bucketed = uncategorised.flatMap(entry => {
+		const entryBucket = formBucket(highest.get(entry)!.data.forms);
+		return entryBucket ? [{ entry, bucket: entryBucket }] : [];
+	});
+	bucketed.sort((a, b) => compareBuckets(a.bucket, b.bucket));
 
 	return {
-		bucketed: [...bucketed]
-			.sort((a, b) => bucketOf.get(a)!.order - bucketOf.get(b)!.order)
-			.map(entry => toOption(entry, path(entry, bucketOf.get(entry)!.label))),
-		grouped: groups.flatMap(group => grouped.filter(entry => groupOf(entry) === group).map(entry => toOption(entry, path(entry, group)))),
-		categorised: CATEGORY_SUBMENUS.flatMap(([category, key]) =>
-			rest.filter(entry => entry.data.category === category).map(entry => toOption(entry, path(entry, key))),
-		),
-		uncategorised: uncategorised.filter(entry => !bucketedSet.has(entry)),
+		/** The uncategorised entries that work in some of the unit's states, by bucket. */
+		bucketed: bucketed.map(({ entry, bucket: entryBucket }) => ({ entry, any: entryBucket.any, option: option(entry, entryBucket.label) })),
+		singleBucket: new Set(bucketed.map(({ bucket: entryBucket }) => entryBucket.label)).size <= 1,
+		grouped: Object.entries(bucket(entries.filter(groupOf), groupOf)).flatMap(([group, members]) => members.map(entry => option(entry, group))),
+		categorised: CATEGORY_SUBMENUS.flatMap(([category, key]) => rest.filter(entry => entry.data.category === category).map(entry => option(entry, key))),
+		uncategorised,
 	};
 };
 
@@ -114,8 +130,16 @@ const categorise = <T extends AuraStats | SpellStats>(
 const auraOptions = (metadata: UnitMetadata, allAuras: Array<AuraStats>, keep: (aura: AuraStats) => boolean = () => true): Array<ActionIdOption> => {
 	const toOption = (aura: AuraStats, submenu: Array<string | ActionId>) => ({ value: aura.id, submenu });
 	const kept = allAuras.filter(keep);
-	const { bucketed, grouped, categorised, uncategorised } = categorise(metadata, kept, toOption, allAuras, false);
-	return [...bucketed, ...grouped, ...categorised, ...uncategorised.map(aura => toOption(aura, createSpellSubmenu(aura.id, allAuras, [], kept)))];
+	const { bucketed, singleBucket, grouped, categorised, uncategorised } = categorise(metadata, kept, toOption, allAuras);
+	// One bucket alone files nothing, and an aura that works in every state stays at the top level.
+	const filed = singleBucket ? [] : bucketed.filter(({ any }) => !any);
+	const inBucket = new Set(filed.map(({ entry }) => entry));
+	return [
+		...filed.map(({ option }) => option),
+		...grouped,
+		...categorised,
+		...uncategorised.filter(aura => !inBucket.has(aura)).map(aura => toOption(aura, createSpellSubmenu(aura.id, allAuras, [], kept))),
+	];
 };
 
 /** The one list a spell may be cast from, for the spells the sim only accepts in one of them. */
@@ -178,7 +202,10 @@ export const actionIdSets: Record<
 		getActionIDs: async metadata => {
 			const castableSpells = metadata.getSpells().filter(spell => spell.data.isCastable);
 			const toOption = (spell: SpellStats, submenu: Array<string | ActionId>) => ({ value: spell.id, submenu, listScope: listScopeOf(spell) });
-			const { bucketed, grouped, categorised, uncategorised } = categorise(metadata, castableSpells, toOption);
+			const { bucketed, singleBucket, grouped, categorised, uncategorised } = categorise(metadata, castableSpells, toOption);
+			// One bucket alone would only rename Spell.
+			const filed = singleBucket ? [] : bucketed;
+			const inBucket = new Set(filed.map(({ entry }) => entry));
 
 			const placeholders: Array<ActionId> = [
 				OtherAction.OtherActionOffensivePotion,
@@ -187,9 +214,9 @@ export const actionIdSets: Record<
 			].map(otherId => ActionId.fromOtherId(otherId));
 
 			return [
-				bucketed,
+				filed.map(({ option }) => option),
 				grouped,
-				uncategorised.map(spell => toOption(spell, createSpellSubmenu(spell.id, castableSpells, ['spell']))),
+				uncategorised.filter(spell => !inBucket.has(spell)).map(spell => toOption(spell, createSpellSubmenu(spell.id, castableSpells, ['spell']))),
 				categorised,
 				placeholders.map(actionId => {
 					return {
