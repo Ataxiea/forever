@@ -123,11 +123,11 @@ func (spell *Spell) castRequirementFailure(sim *Simulation, target *Unit) (reaso
 	return "", unshift
 }
 
-// The unit's shift spells, one per form, in form id order.
+// The unit's shift spells the APL can cast, one per form, in form id order.
 func (unit *Unit) shiftForms() []*Spell {
 	var shifts []*Spell
 	for _, spell := range unit.Spellbook {
-		if spell.ShiftsTo == 0 || slices.ContainsFunc(shifts, func(s *Spell) bool { return s.ShiftsTo == spell.ShiftsTo }) {
+		if spell.ShiftsTo == 0 || !spell.Flags.Matches(SpellFlagAPL) || slices.ContainsFunc(shifts, func(s *Spell) bool { return s.ShiftsTo == spell.ShiftsTo }) {
 			continue
 		}
 		shifts = append(shifts, spell)
@@ -152,10 +152,15 @@ func allowedForms(r CastRequirement, states []dbcenums.ShapeshiftForm, category 
 	return forms
 }
 
-// The spell of the unit that casts the aura: it names the aura as its buff or shares its id.
+// Whether the spell casts the aura: it names the aura as its buff or shares its id.
+func castsAura(spell *Spell, aura *Aura) bool {
+	return spell.RelatedSelfBuff == aura || spell.ActionID == aura.ActionID
+}
+
+// The spell of the unit that casts the aura.
 func (unit *Unit) auraSpell(aura *Aura) *Spell {
 	for _, spell := range unit.Spellbook {
-		if spell.RelatedSelfBuff == aura || spell.ActionID == aura.ActionID {
+		if castsAura(spell, aura) {
 			return spell
 		}
 	}

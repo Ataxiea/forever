@@ -281,9 +281,9 @@ func TestMajorCooldownKeepsForm(t *testing.T) {
 }
 
 func TestMetadataFormsFollowTheCastRule(t *testing.T) {
-	battle := &Spell{ActionID: ActionID{SpellID: 2457}, ShiftsTo: dbcenums.FORM_BATTLE_STANCE, MenuGroup: "forms"}
-	defensive := &Spell{ActionID: ActionID{SpellID: 71}, ShiftsTo: dbcenums.FORM_DEFENSIVE_STANCE}
-	berserker := &Spell{ActionID: ActionID{SpellID: 2458}, ShiftsTo: dbcenums.FORM_BERSERKER_STANCE}
+	battle := &Spell{ActionID: ActionID{SpellID: 2457}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BATTLE_STANCE, MenuGroup: "forms"}
+	defensive := &Spell{ActionID: ActionID{SpellID: 71}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_DEFENSIVE_STANCE}
+	berserker := &Spell{ActionID: ActionID{SpellID: 2458}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BERSERKER_STANCE}
 	charge := &Spell{ActionID: ActionID{SpellID: 100}, CastRequirement: chargeRequirement}
 	bloodthirst := &Spell{ActionID: ActionID{SpellID: 23881}}
 	manaTide := &Spell{ActionID: ActionID{SpellID: 16190, Tag: -1}, Source: SourceExternalBuff, Flags: SpellFlagMCD, CastRequirement: chargeRequirement}
@@ -347,14 +347,15 @@ func TestMetadataFormsFollowTheCastRule(t *testing.T) {
 }
 
 func TestMetadataFormsIncludeNoFormAndAuraRequirement(t *testing.T) {
-	cat := &Spell{ActionID: ActionID{SpellID: 768}, ShiftsTo: dbcenums.FORM_CAT_FORM}
-	bear := &Spell{ActionID: ActionID{SpellID: 9634}, ShiftsTo: dbcenums.FORM_DIRE_BEAR_FORM}
-	moonkin := &Spell{ActionID: ActionID{SpellID: 24858}, ShiftsTo: dbcenums.FORM_MOONKIN_FORM}
+	cat := &Spell{ActionID: ActionID{SpellID: 768}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_CAT_FORM}
+	bear := &Spell{ActionID: ActionID{SpellID: 9634}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_DIRE_BEAR_FORM}
+	moonkin := &Spell{ActionID: ActionID{SpellID: 24858}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_MOONKIN_FORM}
 	wrath := &Spell{ActionID: ActionID{SpellID: 5176}, CastRequirement: wrathRequirement}
 	roots := &Spell{ActionID: ActionID{SpellID: 339}, CastRequirement: CastRequirement{NotShapeshifted: true}}
+	leaderOfThePackSpell := &Spell{ActionID: ActionID{SpellID: 24932}}
 	leaderOfThePack := &Aura{ActionID: ActionID{SpellID: 24932}, FormRequirement: CastRequirement{Forms: 0x91}}
 
-	unit := &Unit{Spellbook: []*Spell{cat, bear, moonkin, wrath, roots}, auraTracker: auraTracker{auras: []*Aura{leaderOfThePack}}}
+	unit := &Unit{Spellbook: []*Spell{cat, bear, moonkin, wrath, roots, leaderOfThePackSpell}, auraTracker: auraTracker{auras: []*Aura{leaderOfThePack}}}
 	metadata := unit.GetMetadata()
 
 	forms := map[int32][]int32{}
@@ -368,7 +369,17 @@ func TestMetadataFormsIncludeNoFormAndAuraRequirement(t *testing.T) {
 		t.Errorf("mask-0 not-shapeshifted spell forms = %v, want no form and the stance Moonkin, not Cat or Bear", got)
 	}
 	if got := metadata.Auras[0].Forms; !slices.Equal(got, []int32{1, 8}) {
-		t.Errorf("Leader of the Pack forms = %v, want Cat and Dire Bear from its own requirement", got)
+		t.Errorf("Leader of the Pack forms = %v, want Cat and Dire Bear from its own requirement, its spell stating none", got)
+	}
+}
+
+func TestMetadataFormsSkipShiftsTheAPLCannotCast(t *testing.T) {
+	cat := &Spell{ActionID: ActionID{SpellID: 768}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_CAT_FORM}
+	bear := &Spell{ActionID: ActionID{SpellID: 9634}, ShiftsTo: dbcenums.FORM_DIRE_BEAR_FORM}
+
+	metadata := (&Unit{Spellbook: []*Spell{cat, bear}}).GetMetadata()
+	if ids := MapSlice(metadata.Forms, func(f *proto.FormStats) int32 { return f.Id }); !slices.Equal(ids, []int32{1}) {
+		t.Errorf("unit forms = %v, want Cat only", ids)
 	}
 }
 
