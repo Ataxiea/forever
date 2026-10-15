@@ -123,7 +123,7 @@ func (spell *Spell) castRequirementFailure(sim *Simulation, target *Unit) (reaso
 	return "", unshift
 }
 
-// The forms the unit can enter, from the spells that shift it, in id order.
+// The unit's shift spells, one per form, in form id order.
 func (unit *Unit) shiftForms() []*Spell {
 	var shifts []*Spell
 	for _, spell := range unit.Spellbook {
@@ -136,8 +136,8 @@ func (unit *Unit) shiftForms() []*Spell {
 	return shifts
 }
 
-// The forms of states a requirement allows, as the APL pickers file them. An external entry's mask
-// names its caster's forms, so it gets none.
+// The states a requirement allows the cast in, as form ids. An external entry's mask names its
+// caster's forms, so it gets none.
 func allowedForms(r CastRequirement, states []dbcenums.ShapeshiftForm, category proto.ActionCategory) []int32 {
 	switch category {
 	case proto.ActionCategory_ActionCategoryExternalBuff, proto.ActionCategory_ActionCategoryExternalCooldown, proto.ActionCategory_ActionCategoryExternalDebuff:

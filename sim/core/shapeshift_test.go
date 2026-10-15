@@ -291,11 +291,13 @@ func TestMetadataFormsFollowTheCastRule(t *testing.T) {
 	chargeAura := &Aura{ActionID: ActionID{SpellID: 100}}
 	leaderOfThePack := &Aura{ActionID: ActionID{SpellID: 24932}, FormRequirement: CastRequirement{Forms: 0x91}}
 	giftOfTheWild := &Aura{ActionID: ActionID{SpellID: 21850}, Source: SourceExternalBuff, FormRequirement: CastRequirement{Forms: 0x40000002}}
+	battleStance := &Aura{ActionID: ActionID{SpellID: 2457}}
+	ownGroup := &Aura{ActionID: ActionID{SpellID: 2458}, MenuGroup: "own"}
 
 	unit := &Unit{
 		AlwaysInForm: true,
 		Spellbook:    []*Spell{battle, defensive, berserker, charge, bloodthirst, manaTide},
-		auraTracker:  auraTracker{auras: []*Aura{chargeAura, leaderOfThePack, giftOfTheWild}},
+		auraTracker:  auraTracker{auras: []*Aura{chargeAura, leaderOfThePack, giftOfTheWild, battleStance, ownGroup}},
 	}
 	metadata := unit.GetMetadata()
 
@@ -326,6 +328,12 @@ func TestMetadataFormsFollowTheCastRule(t *testing.T) {
 	auras := map[int32]*proto.AuraStats{}
 	for _, a := range metadata.Auras {
 		auras[a.Id.GetSpellId()] = a
+	}
+	if got := auras[2457].Group; got != "forms" {
+		t.Errorf("Battle Stance aura group = %q, want its spell's forms", got)
+	}
+	if got := auras[2458].Group; got != "own" {
+		t.Errorf("aura with its own group = %q, want own", got)
 	}
 	if got := auras[100].Forms; !slices.Equal(got, []int32{17}) {
 		t.Errorf("Charge aura forms = %v, want its spell's Battle Stance", got)
