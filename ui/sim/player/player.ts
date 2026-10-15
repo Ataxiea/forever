@@ -168,11 +168,17 @@ export class UnitMetadata {
 			this.name = metadata.name;
 			anyUpdates = true;
 		}
-		if (newSpells.length != this.spells.length || newSpells.some((newSpell, i) => !newSpell.id.equals(this.spells[i].id))) {
+		if (
+			newSpells.length != this.spells.length ||
+			newSpells.some((newSpell, i) => !newSpell.id.equals(this.spells[i].id) || !SpellStatsProto.equals(newSpell.data, this.spells[i].data))
+		) {
 			this.spells = newSpells;
 			anyUpdates = true;
 		}
-		if (newAuras.length != this.auras.length || newAuras.some((newAura, i) => !newAura.id.equals(this.auras[i].id))) {
+		if (
+			newAuras.length != this.auras.length ||
+			newAuras.some((newAura, i) => !newAura.id.equals(this.auras[i].id) || !AuraStatsProto.equals(newAura.data, this.auras[i].data))
+		) {
 			this.auras = newAuras;
 			anyUpdates = true;
 		}
