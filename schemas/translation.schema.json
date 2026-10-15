@@ -7218,6 +7218,9 @@
 								},
 								"groups": {
 									"type": "string"
+								},
+								"forms": {
+									"type": "string"
 								}
 							},
 							"additionalProperties": false,
@@ -7263,8 +7266,62 @@
 								"external_cooldowns",
 								"external_debuffs",
 								"variables",
-								"groups"
+								"groups",
+								"forms"
 							]
+						},
+						"forms": {
+							"type": "object",
+							"properties": {
+								"only": {
+									"type": "string"
+								},
+								"any_stance": {
+									"type": "string"
+								},
+								"any_form": {
+									"type": "string"
+								},
+								"no_form": {
+									"type": "string"
+								},
+								"names": {
+									"type": "object",
+									"properties": {
+										"1": {
+											"type": "string"
+										},
+										"2": {
+											"type": "string"
+										},
+										"5": {
+											"type": "string"
+										},
+										"8": {
+											"type": "string"
+										},
+										"17": {
+											"type": "string"
+										},
+										"18": {
+											"type": "string"
+										},
+										"19": {
+											"type": "string"
+										},
+										"28": {
+											"type": "string"
+										},
+										"31": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["1", "2", "5", "8", "17", "18", "19", "28", "31"]
+								}
+							},
+							"additionalProperties": false,
+							"required": ["only", "any_stance", "any_form", "no_form", "names"]
 						},
 						"item_swap_sets": {
 							"type": "object",
@@ -7518,6 +7575,7 @@
 						"totem_types",
 						"curse_types",
 						"submenus",
+						"forms",
 						"item_swap_sets",
 						"helpers"
 					]

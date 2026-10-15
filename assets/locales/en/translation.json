@@ -2040,7 +2040,25 @@
 				"external_cooldowns": "External Cooldowns",
 				"external_debuffs": "External Debuffs",
 				"variables": "Variables",
-				"groups": "Groups"
+				"groups": "Groups",
+				"forms": "Forms"
+			},
+			"forms": {
+				"only": "{{form}} only",
+				"any_stance": "Any stance",
+				"any_form": "Any form",
+				"no_form": "Caster",
+				"names": {
+					"1": "Cat",
+					"2": "Tree",
+					"5": "Bear",
+					"8": "Bear",
+					"17": "Battle",
+					"18": "Defensive",
+					"19": "Berserker",
+					"28": "Shadowform",
+					"31": "Moonkin"
+				}
 			},
 			"item_swap_sets": {
 				"main": "Main",

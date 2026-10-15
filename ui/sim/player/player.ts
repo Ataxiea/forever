@@ -89,15 +89,26 @@ const dropLoneRanks = <T extends { id: ActionId }>(entries: Array<T>): Array<T> 
 	return entries.map(entry => (entry.id.hasRank && ranks.get(keyOf(entry.id))!.size < 2 ? { ...entry, id: entry.id.withoutRank() } : entry));
 };
 
+/** A form the unit can enter and the spell that enters it. */
+export interface UnitForm {
+	id: number;
+	actionId: ActionId;
+	stance: boolean;
+}
+
 export class UnitMetadata {
 	private name: string;
 	private auras: Array<AuraStats>;
 	private spells: Array<SpellStats>;
+	private forms: Array<UnitForm>;
+	private alwaysInForm: boolean;
 
 	constructor() {
 		this.name = '';
 		this.auras = [];
 		this.spells = [];
+		this.forms = [];
+		this.alwaysInForm = false;
 	}
 
 	getName(): string {
@@ -110,6 +121,14 @@ export class UnitMetadata {
 
 	getSpells(): Array<SpellStats> {
 		return this.spells.slice();
+	}
+
+	getForms(): Array<UnitForm> {
+		return this.forms.slice();
+	}
+
+	isAlwaysInForm(): boolean {
+		return this.alwaysInForm;
 	}
 
 	// Returns whether any updates were made.
@@ -133,6 +152,18 @@ export class UnitMetadata {
 		newAuras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
 
 		let anyUpdates = false;
+		const newForms: Array<UnitForm> = await Promise.all(
+			metadata.forms.map(async form => ({ id: form.id, actionId: await ActionId.fromProto(form.spell!).fill(), stance: form.stance })),
+		);
+		if (
+			metadata.alwaysInForm !== this.alwaysInForm ||
+			newForms.length !== this.forms.length ||
+			newForms.some((form, i) => form.id !== this.forms[i].id || !form.actionId.equals(this.forms[i].actionId))
+		) {
+			this.forms = newForms;
+			this.alwaysInForm = metadata.alwaysInForm;
+			anyUpdates = true;
+		}
 		if (metadata.name != this.name) {
 			this.name = metadata.name;
 			anyUpdates = true;
