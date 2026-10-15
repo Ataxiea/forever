@@ -25,8 +25,9 @@ itself.
 
 An entry's forms are the states in which its `CastRequirement` allows the cast without leaving the form,
 by the rule in [Building an ability](building-an-ability.md#where-a-spell-can-be-cast). An aura takes the
-requirement of the spell that casts it (its `RelatedSelfBuff`, or the spell with its id) when that spell
-states one, else `Aura.FormRequirement`, which `spelldata.AuraConfig` fills with the form fields of the
+requirement of the spell that casts it (its `RelatedSelfBuff`, or the spell with its id) when that
+requirement names forms (`Forms`, `ExcludedForms`, `CasterForm` or `NotShapeshifted`), else
+`Aura.FormRequirement`, which `spelldata.AuraConfig` fills with the form fields of the
 row's `CastRequirement()`: on a passive the mask reads "active in" (Leader of the Pack 0x91: Cat, Bear, Dire
 Bear). An external buff, cooldown or debuff gets no forms, since its mask names its caster's forms.
 
@@ -50,10 +51,10 @@ Set `MenuGroup` on a `core.SpellConfig` (or the `*core.Spell` it returns) or on 
 lowercase_underscore key, and add the label under `rotation_tab.apl.submenus.<key>`. The group wins over
 the category and the form bucket. An aura with no group of its own takes its spell's.
 
-`spelldata.SpellConfig` and `spelldata.AuraConfig` set `MenuGroup` to `forms` on a row that shifts its
-caster (`ShapeshiftForm()` is not 0), so the warrior stances and Shadowform sit in `forms` with their auras.
-By their masks they would land in "Any stance" or "Any form". Class code that wants another group sets
-`MenuGroup` on the returned config:
+`spelldata.SpellConfig` sets `MenuGroup` to `forms` on a row that shifts its caster (`ShapeshiftForm()` is
+not 0), so the warrior stances and Shadowform sit in `forms`, and their auras with them through their
+spells. By their masks they would land in "Any stance" or "Any form". Class code that wants another group
+sets `MenuGroup` on the returned config, and the form's aura follows:
 
 ```go
 config := spelldata.SpellConfig(&warrior.Unit, rank, spelldata.Flags(core.SpellFlagAPL))
