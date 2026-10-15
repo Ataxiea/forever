@@ -150,6 +150,9 @@ func init() {
 		9394: {
 			{BuffId: 22641, BuffName: "Reckless Charge (22641)", Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 1800000}}},
 		},
+		9412: {
+			{BuffId: 29644, BuffName: "Fire Blast (29644)", Effect: &proto.ItemEffect_Proc{Proc: &proto.ProcEffect{}}},
+		},
 		9414: {
 			{BuffId: 1320726, BuffName: "Increased Feral Combat (1320726)"},
 		},
