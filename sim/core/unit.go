@@ -1054,7 +1054,7 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 		category := auraCategory(aura, casters)
 		requirement, group := aura.FormRequirement, aura.MenuGroup
 		if spell := unit.auraSpell(aura); spell != nil {
-			if spell.CastRequirement != (CastRequirement{}) {
+			if spell.CastRequirement.namesForms() {
 				requirement = spell.CastRequirement
 			}
 			if group == "" {

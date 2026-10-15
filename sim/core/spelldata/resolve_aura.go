@@ -25,9 +25,6 @@ func AuraConfig(s *Spell, opts ...AuraOpt) core.Aura {
 
 		FormRequirement: core.CastRequirement{Forms: r.Forms, ExcludedForms: r.ExcludedForms, CasterForm: r.CasterForm, NotShapeshifted: r.NotShapeshifted},
 	}
-	if s.ShapeshiftForm() != 0 {
-		aura.MenuGroup = "forms"
-	}
 
 	for _, opt := range opts {
 		opt(&aura)

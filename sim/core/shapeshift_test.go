@@ -354,8 +354,13 @@ func TestMetadataFormsIncludeNoFormAndAuraRequirement(t *testing.T) {
 	roots := &Spell{ActionID: ActionID{SpellID: 339}, CastRequirement: CastRequirement{NotShapeshifted: true}}
 	leaderOfThePackSpell := &Spell{ActionID: ActionID{SpellID: 24932}}
 	leaderOfThePack := &Aura{ActionID: ActionID{SpellID: 24932}, FormRequirement: CastRequirement{Forms: 0x91}}
+	weaponOnlySpell := &Spell{ActionID: ActionID{SpellID: 6807}, CastRequirement: CastRequirement{Weapon: EquipRequirement{SubclassMask: 1}}}
+	weaponOnlyAura := &Aura{ActionID: ActionID{SpellID: 6807}, FormRequirement: CastRequirement{Forms: 0x80}}
 
-	unit := &Unit{Spellbook: []*Spell{cat, bear, moonkin, wrath, roots, leaderOfThePackSpell}, auraTracker: auraTracker{auras: []*Aura{leaderOfThePack}}}
+	unit := &Unit{
+		Spellbook:   []*Spell{cat, bear, moonkin, wrath, roots, leaderOfThePackSpell, weaponOnlySpell},
+		auraTracker: auraTracker{auras: []*Aura{leaderOfThePack, weaponOnlyAura}},
+	}
 	metadata := unit.GetMetadata()
 
 	forms := map[int32][]int32{}
@@ -370,6 +375,9 @@ func TestMetadataFormsIncludeNoFormAndAuraRequirement(t *testing.T) {
 	}
 	if got := metadata.Auras[0].Forms; !slices.Equal(got, []int32{1, 8}) {
 		t.Errorf("Leader of the Pack forms = %v, want Cat and Dire Bear from its own requirement, its spell stating none", got)
+	}
+	if got := metadata.Auras[1].Forms; !slices.Equal(got, []int32{8}) {
+		t.Errorf("aura forms = %v, want Dire Bear from its own requirement, its spell naming only a weapon", got)
 	}
 }
 

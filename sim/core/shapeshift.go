@@ -36,6 +36,10 @@ func (r CastRequirement) allowsForm(form dbcenums.ShapeshiftForm) bool {
 	return r.Forms == 0 || r.CasterForm
 }
 
+func (r CastRequirement) namesForms() bool {
+	return r.Forms != 0 || r.ExcludedForms != 0 || r.CasterForm || r.NotShapeshifted
+}
+
 func (unit *Unit) aurasBySpellID(spellID int32) []*Aura {
 	if spellID == 0 {
 		return nil
@@ -143,13 +147,7 @@ func allowedForms(r CastRequirement, states []dbcenums.ShapeshiftForm, category 
 	case proto.ActionCategory_ActionCategoryExternalBuff, proto.ActionCategory_ActionCategoryExternalCooldown, proto.ActionCategory_ActionCategoryExternalDebuff:
 		return nil
 	}
-	var forms []int32
-	for _, state := range states {
-		if r.allowsForm(state) {
-			forms = append(forms, int32(state))
-		}
-	}
-	return forms
+	return MapSlice(FilterSlice(states, r.allowsForm), func(state dbcenums.ShapeshiftForm) int32 { return int32(state) })
 }
 
 // Whether the spell casts the aura: it names the aura as its buff or shares its id.

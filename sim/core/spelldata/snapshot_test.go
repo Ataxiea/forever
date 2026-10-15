@@ -369,8 +369,8 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 	}
 }
 
-// Battle Stance's config states the form it shifts to and files it and its aura under forms, as
-// Shadowform's does; Leader of the Pack's aura states the forms it needs and, shifting no one, no group.
+// Battle Stance's config states the form it shifts to and files it under forms, as Shadowform's
+// does; Leader of the Pack, shifting no one, gets no group, and its aura states the forms it needs.
 func TestConfigsCarryTheFormData(t *testing.T) {
 	withGeneratedStore(t)
 
@@ -381,9 +381,6 @@ func TestConfigsCarryTheFormData(t *testing.T) {
 	if battleStance.MenuGroup != "forms" {
 		t.Errorf("Battle Stance MenuGroup = %q, want forms", battleStance.MenuGroup)
 	}
-	if got := AuraConfig(MustFind(2457)).MenuGroup; got != "forms" {
-		t.Errorf("Battle Stance aura MenuGroup = %q, want forms", got)
-	}
 	if got := SpellConfig(&core.Unit{}, MustFind(15473)).MenuGroup; got != "forms" {
 		t.Errorf("Shadowform MenuGroup = %q, want forms", got)
 	}
@@ -393,9 +390,6 @@ func TestConfigsCarryTheFormData(t *testing.T) {
 	leaderOfThePack := AuraConfig(MustFind(24932))
 	if leaderOfThePack.FormRequirement.Forms != 0x91 {
 		t.Errorf("Leader of the Pack aura forms = %#x, want 0x91 (Cat, Bear, Dire Bear)", leaderOfThePack.FormRequirement.Forms)
-	}
-	if leaderOfThePack.MenuGroup != "" {
-		t.Errorf("Leader of the Pack aura MenuGroup = %q, want none", leaderOfThePack.MenuGroup)
 	}
 }
 

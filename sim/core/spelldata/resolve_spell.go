@@ -106,7 +106,7 @@ func SpellConfig(unit *core.Unit, s *Spell, opts ...SpellOpt) core.SpellConfig {
 		config.DamageMultiplier = 1
 		config.ThreatMultiplier = 1
 	}
-	if s.ShapeshiftForm() != 0 {
+	if config.ShiftsTo != 0 {
 		config.MenuGroup = "forms"
 	}
 
