@@ -36,10 +36,6 @@ func (r CastRequirement) allowsForm(form dbcenums.ShapeshiftForm) bool {
 	return r.Forms == 0 || r.CasterForm
 }
 
-func (r CastRequirement) namesForms() bool {
-	return r.Forms != 0 || r.ExcludedForms != 0 || r.CasterForm || r.NotShapeshifted
-}
-
 func (unit *Unit) aurasBySpellID(spellID int32) []*Aura {
 	if spellID == 0 {
 		return nil
@@ -138,16 +134,6 @@ func (unit *Unit) shiftForms() []*Spell {
 	}
 	slices.SortFunc(shifts, func(a, b *Spell) int { return cmp.Compare(a.ShiftsTo, b.ShiftsTo) })
 	return shifts
-}
-
-// The states a requirement allows the cast in, as form ids. An external entry's mask names its
-// caster's forms, so it gets none.
-func allowedForms(r CastRequirement, states []dbcenums.ShapeshiftForm, category proto.ActionCategory) []int32 {
-	switch category {
-	case proto.ActionCategory_ActionCategoryExternalBuff, proto.ActionCategory_ActionCategoryExternalCooldown, proto.ActionCategory_ActionCategoryExternalDebuff:
-		return nil
-	}
-	return MapSlice(FilterSlice(states, r.allowsForm), func(state dbcenums.ShapeshiftForm) int32 { return int32(state) })
 }
 
 // Whether the spell casts the aura: it names the aura as its buff or shares its id.

@@ -581,7 +581,6 @@ message AuraStats {
 	bool has_icd = 3;
 	bool has_exclusive_effect = 4;
 	ActionCategory category = 5;
-	repeated int32 forms = 6; // The unit's forms the aura works in (0 = no form); empty when the unit has no forms or the aura is an external one.
 	string group = 7; // A manual APL menu group, a rotation_tab.apl.submenus key; empty for none.
 	int32 talent = 8; // Spell id of the talent row that grants the aura, its own or its casting spell's; 0 for none.
 }
@@ -603,7 +602,6 @@ message SpellStats {
 	bool is_potion = 14; // Whether this spell is a potion
 	bool is_conjured = 15; // Whether this spell is a conjured item
 	ActionCategory category = 16;
-	repeated int32 forms = 17; // The unit's forms the spell can be cast in without leaving the form (0 = no form); empty when the unit has no forms or the spell is an external one.
 	string group = 18; // A manual APL menu group, a rotation_tab.apl.submenus key; empty for none.
 	bool from_talent = 19; // Registered by a talent; category leaves the talent source out for spells.
 	int32 talent = 20; // Spell id of the talent row that grants the spell; 0 for none.
@@ -639,7 +637,6 @@ message UnitMetadata {
 	repeated SpellStats spells = 1;
 	repeated AuraStats auras = 2;
 	repeated FormStats forms = 4;
-	bool always_in_form = 5; // The unit is never without a form (a warrior's stance), so "no form" is not one of its states.
 	Class class = 6; // The player character's class; unknown for a pet or a target.
 }
 message PetStats {
