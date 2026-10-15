@@ -23,7 +23,6 @@ export const stubMetadata = <T extends object>(overrides: T = {} as T) => ({
 	getName: () => '',
 	getClass: () => Class.ClassUnknown,
 	getForms: () => [],
-	isAlwaysInForm: () => false,
 	...overrides,
 });
 

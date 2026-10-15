@@ -5,7 +5,6 @@ import { AuraStats, SpellStats, UnitMetadata } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
 import { bucket } from '@sim/utils/collections';
 
-import { compareBuckets, formBuckets } from './form_buckets';
 import { talentTrees } from './talent_trees';
 
 export type ACTION_ID_SET =
@@ -85,9 +84,9 @@ const CATEGORY_SUBMENUS: Array<[ActionCategory, string]> = [
 
 /**
  * Sorts `entries` into the unit's shift spells and their auras at the top level, the manual groups
- * the sim names, their category's submenu, their talent tree, and the form buckets of the rest. A
- * category other than Talents wins over the tree; a talent entry with no tree keeps its place. The
- * caller picks the buckets it files under and places the rest.
+ * the sim names, their category's submenu and their talent tree, and hands back the rest for the
+ * caller to place. A category other than Talents wins over the tree; a talent entry with no tree
+ * keeps its place.
  *
  * The categories and trees are emitted in a fixed order because the menu places a submenu where its
  * first option appears, and the metadata arrives sorted by name.
@@ -98,7 +97,6 @@ const categorise = <T extends AuraStats | SpellStats>(
 	toOption: (entry: T, submenu: Array<string | ActionId>) => ActionIdOption,
 	allEntries: Array<T> = entries,
 ) => {
-	const formBucket = formBuckets(metadata.getForms(), metadata.isAlwaysInForm());
 	const talentTree = talentTrees(metadata.getClass());
 	const shiftSpellIds = new Set(metadata.getForms().map(form => form.actionId.spellId));
 	const highest = highestRanks(entries);
@@ -132,22 +130,13 @@ const categorise = <T extends AuraStats | SpellStats>(
 	});
 	inTrees.sort((a, b) => a.tree.index - b.tree.index);
 	const rest = ungrouped.filter(entry => !treeOf(entry));
-	const uncategorised = rest.filter(entry => !isCategorised(entry));
-	const bucketed = uncategorised.flatMap(entry => {
-		const entryBucket = formBucket(highest.get(entry)!.data.forms);
-		return entryBucket ? [{ entry, bucket: entryBucket }] : [];
-	});
-	bucketed.sort((a, b) => compareBuckets(a.bucket, b.bucket));
 
 	return {
 		shifted: entries.filter(isShift).map(entry => option(entry, [])),
-		/** The uncategorised entries that work in some of the unit's states, by bucket. */
-		bucketed: bucketed.map(({ entry, bucket: entryBucket }) => ({ entry, any: entryBucket.any, option: option(entry, [entryBucket.label]) })),
-		singleBucket: new Set(bucketed.map(({ bucket: entryBucket }) => entryBucket.label)).size <= 1,
 		inTrees: inTrees.map(({ entry, tree }) => option(entry, [tree.name])),
 		grouped: Object.entries(bucket(unshifted.filter(groupOf), groupOf)).flatMap(([group, members]) => members.map(entry => option(entry, [group]))),
 		categorised: CATEGORY_SUBMENUS.flatMap(([category, key]) => rest.filter(entry => entry.data.category === category).map(entry => option(entry, [key]))),
-		uncategorised,
+		uncategorised: rest.filter(entry => !isCategorised(entry)),
 	};
 };
 
@@ -155,18 +144,8 @@ const categorise = <T extends AuraStats | SpellStats>(
 const auraOptions = (metadata: UnitMetadata, allAuras: Array<AuraStats>, keep: (aura: AuraStats) => boolean = () => true): Array<ActionIdOption> => {
 	const toOption = (aura: AuraStats, submenu: Array<string | ActionId>) => ({ value: aura.id, submenu });
 	const kept = allAuras.filter(keep);
-	const { shifted, bucketed, singleBucket, inTrees, grouped, categorised, uncategorised } = categorise(metadata, kept, toOption, allAuras);
-	// One bucket alone files nothing, and an aura that works in every state stays at the top level.
-	const filed = singleBucket ? [] : bucketed.filter(({ any }) => !any);
-	const inBucket = new Set(filed.map(({ entry }) => entry));
-	return [
-		...shifted,
-		...filed.map(({ option }) => option),
-		...inTrees,
-		...grouped,
-		...categorised,
-		...uncategorised.filter(aura => !inBucket.has(aura)).map(aura => toOption(aura, createSpellSubmenu(aura.id, allAuras, [], kept))),
-	];
+	const { shifted, inTrees, grouped, categorised, uncategorised } = categorise(metadata, kept, toOption, allAuras);
+	return [...shifted, ...inTrees, ...grouped, ...categorised, ...uncategorised.map(aura => toOption(aura, createSpellSubmenu(aura.id, allAuras, [], kept)))];
 };
 
 /** The one list a spell may be cast from, for the spells the sim only accepts in one of them. */
@@ -174,7 +153,7 @@ export type LIST_SCOPE = 'prepull' | 'priority';
 
 export interface ActionIdOption {
 	value: ActionId;
-	/** The form bucket, talent tree, manual group or category submenu the spell or aura is filed under, none for a shift spell or its aura, then the highest rank its lower ranks sit behind. */
+	/** The talent tree, manual group or category submenu the spell or aura is filed under, none for a shift spell or its aura, then the highest rank its lower ranks sit behind. */
 	submenu?: Array<string | ActionId>;
 	tooltip?: string;
 	/**
@@ -229,10 +208,7 @@ export const actionIdSets: Record<
 		getActionIDs: async metadata => {
 			const castableSpells = metadata.getSpells().filter(spell => spell.data.isCastable);
 			const toOption = (spell: SpellStats, submenu: Array<string | ActionId>) => ({ value: spell.id, submenu, listScope: listScopeOf(spell) });
-			const { shifted, bucketed, singleBucket, inTrees, grouped, categorised, uncategorised } = categorise(metadata, castableSpells, toOption);
-			// One bucket alone would only rename Spell.
-			const filed = singleBucket ? [] : bucketed;
-			const inBucket = new Set(filed.map(({ entry }) => entry));
+			const { shifted, inTrees, grouped, categorised, uncategorised } = categorise(metadata, castableSpells, toOption);
 
 			const placeholders: Array<ActionId> = [
 				OtherAction.OtherActionOffensivePotion,
@@ -242,10 +218,9 @@ export const actionIdSets: Record<
 
 			return [
 				shifted,
-				filed.map(({ option }) => option),
 				inTrees,
 				grouped,
-				uncategorised.filter(spell => !inBucket.has(spell)).map(spell => toOption(spell, createSpellSubmenu(spell.id, castableSpells, ['spell']))),
+				uncategorised.map(spell => toOption(spell, createSpellSubmenu(spell.id, castableSpells, ['spell']))),
 				categorised,
 				placeholders.map(actionId => {
 					return {

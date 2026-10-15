@@ -7,25 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { actionIdSets } from './action_id_sets';
 
-// Form labels in English; every other key gives its default value, else passes through, as the existing cases expect.
-vi.mock('@i18n/config', () => {
-	const strings: Record<string, string> = {
-		'rotation_tab.apl.forms.any_stance': 'Any stance',
-		'rotation_tab.apl.forms.any_form': 'Any form',
-		'rotation_tab.apl.forms.no_form': 'Caster',
-		'rotation_tab.apl.forms.names.5': 'Bear',
-		'rotation_tab.apl.forms.names.8': 'Bear',
-		'rotation_tab.apl.forms.names.17': 'Battle',
-		'rotation_tab.apl.forms.names.18': 'Defensive',
-		'rotation_tab.apl.forms.names.19': 'Berserker',
-	};
-	return {
-		default: {
-			t: (key: string, options?: { form?: string; defaultValue?: string }) =>
-				key === 'rotation_tab.apl.forms.only' ? `${options?.form} only` : (strings[key] ?? options?.defaultValue ?? key),
-		},
-	};
-});
+vi.mock('@i18n/config', () => ({ default: { t: (key: string) => key } }));
 
 const named = (spellId: number, name: string, rank = 0) =>
 	Object.assign(Object.create(ActionId.prototype), ActionId.fromSpellId(spellId), { name, baseName: name.replace(/ \(Rank \d+\)/, ''), rank }) as ActionId;
@@ -40,20 +22,18 @@ const spell = (id: ActionId, category = ActionCategory.ActionCategoryUnknown, ex
 	data: { isCastable: true, prepullOnly: false, encounterOnly: false, category, ...extra },
 });
 
-const form = (id: number, name: string, stance = true) => ({ id, actionId: named(id * 1000, name), stance });
+const form = (id: number, name: string) => ({ id, actionId: named(id * 1000, name), stance: true });
 
 const metadata = (
 	auras: Array<ReturnType<typeof aura>>,
 	spells: Array<ReturnType<typeof spell>> = [],
 	forms: Array<ReturnType<typeof form>> = [],
-	alwaysInForm = false,
 	unitClass = Class.ClassUnknown,
 ) =>
 	stubMetadata({
 		getAuras: () => auras,
 		getSpells: () => spells,
 		getForms: () => forms,
-		isAlwaysInForm: () => alwaysInForm,
 		getClass: () => unitClass,
 	}) as unknown as UnitMetadata;
 
@@ -121,158 +101,50 @@ describe('castable_spells', () => {
 	});
 });
 
-describe('form buckets', () => {
-	const spells = [
-		spell(named(30, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
-		spell(named(31, 'Overpower'), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
-		spell(named(32, 'Rend'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18] }),
-		spell(named(33, 'Revenge'), ActionCategory.ActionCategoryUnknown, { forms: [18] }),
-		spell(named(34, 'Whirlwind'), ActionCategory.ActionCategoryUnknown, { forms: [19] }),
-		spell(named(35, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19] }),
-		spell(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
-	];
-
-	it('files class spells by form: shift spells at the top level, then any, single forms in form order, then pairs', async () => {
-		const options = await actionIdSets.castable_spells.getActionIDs(metadata([], spells, stances, true));
-		expect(menu(options).slice(0, 7)).toEqual([
+describe('shift spells and manual groups', () => {
+	it('lists the shift spells first, then the talent trees, the groups, Spell and the categories', async () => {
+		const warrior = [
+			spell(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+			spell(named(30, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+			spell(named(31, 'Heroic Strike'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
+			spell(named(32, 'Mortal Strike'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+			spell(named(33, 'Overpower')),
+			spell(named(34, 'Recklessness'), ActionCategory.ActionCategoryCooldown),
+		];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], warrior, stances, Class.ClassWarrior))).slice(0, 6)).toEqual([
 			'Battle Stance',
-			'Bloodthirst > Any stance',
-			'Overpower > Battle only',
-			'Revenge > Defensive only',
-			'Whirlwind > Berserker only',
-			'Rend > Battle + Defensive',
+			'Mortal Strike > Arms',
+			'Bloodthirst > Fury',
+			'Heroic Strike > my_group',
+			'Overpower > spell',
 			'Recklessness > cooldowns',
 		]);
 	});
 
-	it('lists the shift auras at the top level ahead of the buckets', async () => {
+	it('lists the shift auras first, whatever their group, then the trees, the groups, the categories and the rest', async () => {
 		const auras = [
-			aura(named(60, 'Battle Shout'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
-			aura(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
-			aura(named(61, 'Charge'), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
-			aura(named(18000, 'Defensive Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'my_group' }),
-			aura(named(63, 'Revenge'), ActionCategory.ActionCategoryUnknown, { forms: [18] }),
+			aura(named(60, 'Battle Shout')),
+			aura(named(17000, 'Battle Stance')),
+			aura(named(61, 'Bloodrage'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
+			aura(named(62, 'Charge')),
+			aura(named(18000, 'Defensive Stance'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
+			aura(named(63, 'Flurry'), ActionCategory.ActionCategoryTalent),
+			aura(named(64, 'Recklessness'), ActionCategory.ActionCategoryCooldown),
 		];
-		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], stances, true)))).toEqual([
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], stances, Class.ClassWarrior)))).toEqual([
 			'Battle Stance',
 			'Defensive Stance',
-			'Charge > Battle only',
-			'Revenge > Defensive only',
+			'Flurry > Fury',
+			'Bloodrage > my_group',
+			'Recklessness > cooldowns',
 			'Battle Shout',
-		]);
-	});
-
-	it('files a talent spell under its tree, after the buckets and ahead of the groups', async () => {
-		const warrior = [
-			spell(named(30, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], fromTalent: true }),
-			spell(named(31, 'Heroic Strike'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'my_group' }),
-			spell(named(32, 'Mortal Strike'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], fromTalent: true }),
-			spell(named(33, 'Overpower'), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
-			spell(named(34, 'Revenge'), ActionCategory.ActionCategoryUnknown, { forms: [18] }),
-			spell(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], fromTalent: true }),
-		];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], warrior, stances, true, Class.ClassWarrior))).slice(0, 6)).toEqual([
-			'Battle Stance',
-			'Overpower > Battle only',
-			'Revenge > Defensive only',
-			'Mortal Strike > Arms',
-			'Bloodthirst > Fury',
-			'Heroic Strike > my_group',
-		]);
-	});
-
-	it('orders buckets that share a first state by the next state', async () => {
-		const pairs = [
-			spell(named(70, 'Alpha'), ActionCategory.ActionCategoryUnknown, { forms: [17, 19] }),
-			spell(named(71, 'Zulu'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18] }),
-		];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], pairs, stances, true))).slice(0, 2)).toEqual([
-			'Zulu > Battle + Defensive',
-			'Alpha > Battle + Berserker',
+			'Charge',
 		]);
 	});
 
 	it('files a cooldown with a group under the group, not cooldowns', async () => {
-		const grouped = [spell(named(72, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19], group: 'my_group' })];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped, stances, true)))[0]).toBe('Recklessness > my_group');
-	});
-
-	it('files an aura with a group under the group', async () => {
-		const grouped = [aura(named(73, 'Bloodrage'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'my_group' })];
-		expect(menu(await actionIdSets.auras.getActionIDs(metadata(grouped, [], stances, true)))).toEqual(['Bloodrage > my_group']);
-	});
-
-	it('keeps Spell when every class spell works in every form', async () => {
-		const anyOnly = [spell(named(40, 'Mind Flay'), ActionCategory.ActionCategoryUnknown, { forms: [0, 28] })];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], anyOnly, [form(28, 'Shadowform')])))[0]).toBe('Mind Flay > spell');
-	});
-
-	it('keeps Spell when every class spell works in the same one form', async () => {
-		const casterOnly = [
-			spell(named(45, 'Starfire'), ActionCategory.ActionCategoryUnknown, { forms: [0] }),
-			spell(named(46, 'Wrath'), ActionCategory.ActionCategoryUnknown, { forms: [0] }),
-		];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], casterOnly, [form(1, 'Cat Form', false)]))).slice(0, 2)).toEqual([
-			'Starfire > spell',
-			'Wrath > spell',
-		]);
-	});
-
-	it('names forms that share a short name by their spells', async () => {
-		const bears = [
-			spell(named(47, 'Maul'), ActionCategory.ActionCategoryUnknown, { forms: [5] }),
-			spell(named(48, 'Swipe'), ActionCategory.ActionCategoryUnknown, { forms: [8] }),
-		];
-		const bearForms = [form(5, 'Bear Form', false), form(8, 'Dire Bear Form', false)];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], bears, bearForms))).slice(0, 2)).toEqual([
-			'Maul > Bear Form only',
-			'Swipe > Dire Bear Form only',
-		]);
-	});
-
-	it('keeps Spell for a spell the unit cannot cast in any of its forms', async () => {
-		const nowhere = [...spells, spell(named(41, 'Gladiator Strike'), ActionCategory.ActionCategoryUnknown, { forms: [] })];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], nowhere, stances, true)))).toContain('Gladiator Strike > spell');
-	});
-
-	it('names a form without a short name by its spell, and the no-form state Caster', async () => {
-		const shadow = [
-			spell(named(42, 'Mind Flay'), ActionCategory.ActionCategoryUnknown, { forms: [0, 28] }),
-			spell(named(43, 'Greater Heal'), ActionCategory.ActionCategoryUnknown, { forms: [0] }),
-			spell(named(44, 'Shadow Word: Death'), ActionCategory.ActionCategoryUnknown, { forms: [28] }),
-		];
-		// Shadowform has no short-name key in the stub, so its label falls back to the spell's name.
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], shadow, [form(28, 'Shadowform')]))).slice(0, 3)).toEqual([
-			'Mind Flay > Any form',
-			'Greater Heal > Caster only',
-			'Shadow Word: Death > Shadowform only',
-		]);
-	});
-
-	it('files every rank under the highest rank in the highest rank’s bucket', async () => {
-		const charge = [
-			spell(named(52, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
-			spell(named(50, 'Charge (Rank 1)', 1), ActionCategory.ActionCategoryUnknown, { forms: [17, 18] }),
-			spell(named(51, 'Charge (Rank 2)', 2), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
-		];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], charge, stances, true))).slice(0, 3)).toEqual([
-			'Bloodthirst > Any stance',
-			'Charge (Rank 1) > Battle only > Charge (Rank 2)',
-			'Charge (Rank 2) > Battle only',
-		]);
-	});
-
-	it('files class auras that work in some forms; the rest stay at the top level', async () => {
-		const auras = [
-			aura(named(60, 'Battle Shout'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
-			aura(named(61, 'Charge'), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
-			aura(named(62, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19] }),
-		];
-		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], stances, true)))).toEqual([
-			'Charge > Battle only',
-			'Recklessness > cooldowns',
-			'Battle Shout',
-		]);
+		const grouped = [spell(named(72, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { group: 'my_group' })];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped)))[0]).toBe('Recklessness > my_group');
 	});
 });
 
@@ -298,7 +170,7 @@ describe('talent trees', () => {
 	];
 
 	it('files talent spells under their trees in the talent calculator’s order, ranks behind the highest', async () => {
-		const options = await actionIdSets.castable_spells.getActionIDs(metadata([], spells, [], false, Class.ClassPaladin));
+		const options = await actionIdSets.castable_spells.getActionIDs(metadata([], spells, [], Class.ClassPaladin));
 		expect(menu(options).slice(0, 8)).toEqual([
 			'Holy Shock (Rank 1) > Holy > Holy Shock (Rank 2)',
 			'Holy Shock (Rank 2) > Holy',
@@ -312,7 +184,7 @@ describe('talent trees', () => {
 	});
 
 	it('files talent auras under their trees and keeps an unmatched one under Talents', async () => {
-		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], [], false, Class.ClassPaladin)))).toEqual([
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], [], Class.ClassPaladin)))).toEqual([
 			'Holy Shield > Protection',
 			'Redoubt > Protection',
 			'Vengeance > Retribution',
@@ -330,9 +202,9 @@ describe('talent trees', () => {
 			aura(named(102, 'Redoubt'), ActionCategory.ActionCategoryTalent, { talent: 999 }),
 		];
 		const linkedSpells = [spell(named(103, 'Echo Strike'), ActionCategory.ActionCategoryUnknown, { fromTalent: true, talent: 1310735 })];
-		const options = await actionIdSets.auras.getActionIDs(metadata(linkedAuras, [], [], false, Class.ClassPaladin));
+		const options = await actionIdSets.auras.getActionIDs(metadata(linkedAuras, [], [], Class.ClassPaladin));
 		expect(menu(options)).toEqual(['Redoubt > Protection', 'Echo of Command > Retribution', 'Echo of Fury > talents']);
-		const spellOptions = await actionIdSets.castable_spells.getActionIDs(metadata([], linkedSpells, [], false, Class.ClassPaladin));
+		const spellOptions = await actionIdSets.castable_spells.getActionIDs(metadata([], linkedSpells, [], Class.ClassPaladin));
 		expect(menu(spellOptions)[0]).toBe('Echo Strike > Retribution');
 	});
 

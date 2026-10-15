@@ -101,7 +101,6 @@ export class UnitMetadata {
 	private auras: Array<AuraStats>;
 	private spells: Array<SpellStats>;
 	private forms: Array<UnitForm>;
-	private alwaysInForm: boolean;
 	private unitClass: Class;
 	private last: UnitMetadataProto;
 
@@ -110,7 +109,6 @@ export class UnitMetadata {
 		this.auras = [];
 		this.spells = [];
 		this.forms = [];
-		this.alwaysInForm = false;
 		this.unitClass = Class.ClassUnknown;
 		this.last = UnitMetadataProto.create();
 	}
@@ -133,10 +131,6 @@ export class UnitMetadata {
 
 	getForms(): Array<UnitForm> {
 		return this.forms.slice();
-	}
-
-	isAlwaysInForm(): boolean {
-		return this.alwaysInForm;
 	}
 
 	// Returns whether any updates were made.
@@ -167,7 +161,6 @@ export class UnitMetadata {
 		this.spells = dropLoneRanks(newSpells).sort((a, b) => stringComparator(a.id.name, b.id.name));
 		this.auras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
 		this.forms = newForms;
-		this.alwaysInForm = metadata.alwaysInForm;
 		this.unitClass = metadata.class;
 		return true;
 	}
