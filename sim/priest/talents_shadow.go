@@ -236,5 +236,5 @@ func (priest *Priest) applyShadowform() {
 	shadowformAura := priest.RegisterAura(auraConfig)
 	spelldata.ParseEffects(&priest.Character, shadowformAura, rank)
 
-	priest.registerSelfBuffSpell(rank, shadowformAura)
+	priest.registerSelfBuffSpell(rank, shadowformAura).MenuGroup = "forms"
 }
