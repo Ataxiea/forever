@@ -1,6 +1,9 @@
 package core
 
 import (
+	"cmp"
+	"slices"
+
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 )
@@ -118,4 +121,43 @@ func (spell *Spell) castRequirementFailure(sim *Simulation, target *Unit) (reaso
 		return "a more powerful spell is active", false
 	}
 	return "", unshift
+}
+
+// The forms the unit can enter, from the spells that shift it, in id order.
+func (unit *Unit) shiftForms() []*Spell {
+	var shifts []*Spell
+	for _, spell := range unit.Spellbook {
+		if spell.ShiftsTo == 0 || slices.ContainsFunc(shifts, func(s *Spell) bool { return s.ShiftsTo == spell.ShiftsTo }) {
+			continue
+		}
+		shifts = append(shifts, spell)
+	}
+	slices.SortFunc(shifts, func(a, b *Spell) int { return cmp.Compare(a.ShiftsTo, b.ShiftsTo) })
+	return shifts
+}
+
+// The forms of states a requirement allows, as the APL pickers file them. An external entry's mask
+// names its caster's forms, so it gets none.
+func allowedForms(r CastRequirement, states []dbcenums.ShapeshiftForm, category proto.ActionCategory) []int32 {
+	switch category {
+	case proto.ActionCategory_ActionCategoryExternalBuff, proto.ActionCategory_ActionCategoryExternalCooldown, proto.ActionCategory_ActionCategoryExternalDebuff:
+		return nil
+	}
+	var forms []int32
+	for _, state := range states {
+		if r.allowsForm(state) {
+			forms = append(forms, int32(state))
+		}
+	}
+	return forms
+}
+
+// The spell of the unit that casts the aura: it names the aura as its buff or shares its id.
+func (unit *Unit) auraSpell(aura *Aura) *Spell {
+	for _, spell := range unit.Spellbook {
+		if spell.RelatedSelfBuff == aura || spell.ActionID == aura.ActionID {
+			return spell
+		}
+	}
+	return nil
 }

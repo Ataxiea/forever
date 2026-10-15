@@ -1,6 +1,7 @@
 package core
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -276,5 +277,97 @@ func TestMajorCooldownKeepsForm(t *testing.T) {
 	mcd.timings = nil
 	if !mcd.shouldActivateHelper(sim, &fw.Character) {
 		t.Error("a major cooldown should activate with no form")
+	}
+}
+
+func TestMetadataFormsFollowTheCastRule(t *testing.T) {
+	battle := &Spell{ActionID: ActionID{SpellID: 2457}, ShiftsTo: dbcenums.FORM_BATTLE_STANCE, MenuGroup: "forms"}
+	defensive := &Spell{ActionID: ActionID{SpellID: 71}, ShiftsTo: dbcenums.FORM_DEFENSIVE_STANCE}
+	berserker := &Spell{ActionID: ActionID{SpellID: 2458}, ShiftsTo: dbcenums.FORM_BERSERKER_STANCE}
+	charge := &Spell{ActionID: ActionID{SpellID: 100}, CastRequirement: chargeRequirement}
+	bloodthirst := &Spell{ActionID: ActionID{SpellID: 23881}}
+	manaTide := &Spell{ActionID: ActionID{SpellID: 16190, Tag: -1}, Source: SourceExternalBuff, Flags: SpellFlagMCD, CastRequirement: chargeRequirement}
+
+	chargeAura := &Aura{ActionID: ActionID{SpellID: 100}}
+	leaderOfThePack := &Aura{ActionID: ActionID{SpellID: 24932}, FormRequirement: CastRequirement{Forms: 0x91}}
+	giftOfTheWild := &Aura{ActionID: ActionID{SpellID: 21850}, Source: SourceExternalBuff, FormRequirement: CastRequirement{Forms: 0x40000002}}
+
+	unit := &Unit{
+		AlwaysInForm: true,
+		Spellbook:    []*Spell{battle, defensive, berserker, charge, bloodthirst, manaTide},
+		auraTracker:  auraTracker{auras: []*Aura{chargeAura, leaderOfThePack, giftOfTheWild}},
+	}
+	metadata := unit.GetMetadata()
+
+	if ids := MapSlice(metadata.Forms, func(f *proto.FormStats) int32 { return f.Id }); !slices.Equal(ids, []int32{17, 18, 19}) {
+		t.Fatalf("unit forms = %v, want the three stances in id order", ids)
+	}
+	if !metadata.Forms[0].Stance || metadata.Forms[0].Spell.GetSpellId() != 2457 || !metadata.AlwaysInForm {
+		t.Errorf("Battle Stance form = %v, always in form = %v", metadata.Forms[0], metadata.AlwaysInForm)
+	}
+
+	spells := map[int32]*proto.SpellStats{}
+	for _, s := range metadata.Spells {
+		spells[s.Id.GetSpellId()] = s
+	}
+	if got := spells[100].Forms; !slices.Equal(got, []int32{17}) {
+		t.Errorf("Charge forms = %v, want Battle Stance only", got)
+	}
+	if got := spells[23881].Forms; !slices.Equal(got, []int32{17, 18, 19}) {
+		t.Errorf("Bloodthirst forms = %v, want every stance and no 0 on a unit always in a stance", got)
+	}
+	if got := spells[16190].Forms; len(got) != 0 {
+		t.Errorf("Mana Tide forms = %v, want none for an external cooldown", got)
+	}
+	if spells[2457].Group != "forms" {
+		t.Errorf("Battle Stance group = %q", spells[2457].Group)
+	}
+
+	auras := map[int32]*proto.AuraStats{}
+	for _, a := range metadata.Auras {
+		auras[a.Id.GetSpellId()] = a
+	}
+	if got := auras[100].Forms; !slices.Equal(got, []int32{17}) {
+		t.Errorf("Charge aura forms = %v, want its spell's Battle Stance", got)
+	}
+	if got := auras[24932].Forms; len(got) != 0 {
+		t.Errorf("Leader of the Pack forms = %v, want none: a cat or bear form is not one of this unit's forms", got)
+	}
+	if got := auras[21850].Forms; len(got) != 0 {
+		t.Errorf("Gift of the Wild forms = %v, want none for an external buff", got)
+	}
+}
+
+func TestMetadataFormsIncludeNoFormAndAuraRequirement(t *testing.T) {
+	cat := &Spell{ActionID: ActionID{SpellID: 768}, ShiftsTo: dbcenums.FORM_CAT_FORM}
+	bear := &Spell{ActionID: ActionID{SpellID: 9634}, ShiftsTo: dbcenums.FORM_DIRE_BEAR_FORM}
+	moonkin := &Spell{ActionID: ActionID{SpellID: 24858}, ShiftsTo: dbcenums.FORM_MOONKIN_FORM}
+	wrath := &Spell{ActionID: ActionID{SpellID: 5176}, CastRequirement: wrathRequirement}
+	roots := &Spell{ActionID: ActionID{SpellID: 339}, CastRequirement: CastRequirement{NotShapeshifted: true}}
+	leaderOfThePack := &Aura{ActionID: ActionID{SpellID: 24932}, FormRequirement: CastRequirement{Forms: 0x91}}
+
+	unit := &Unit{Spellbook: []*Spell{cat, bear, moonkin, wrath, roots}, auraTracker: auraTracker{auras: []*Aura{leaderOfThePack}}}
+	metadata := unit.GetMetadata()
+
+	forms := map[int32][]int32{}
+	for _, s := range metadata.Spells {
+		forms[s.Id.GetSpellId()] = s.Forms
+	}
+	if got := forms[5176]; !slices.Equal(got, []int32{0, 31}) {
+		t.Errorf("Wrath forms = %v, want no form and Moonkin", got)
+	}
+	if got := forms[339]; !slices.Equal(got, []int32{0, 31}) {
+		t.Errorf("mask-0 not-shapeshifted spell forms = %v, want no form and the stance Moonkin, not Cat or Bear", got)
+	}
+	if got := metadata.Auras[0].Forms; !slices.Equal(got, []int32{1, 8}) {
+		t.Errorf("Leader of the Pack forms = %v, want Cat and Dire Bear from its own requirement", got)
+	}
+}
+
+func TestMetadataFormsEmptyWithoutForms(t *testing.T) {
+	unit := &Unit{Spellbook: []*Spell{{ActionID: ActionID{SpellID: 100}, CastRequirement: chargeRequirement}}}
+	metadata := unit.GetMetadata()
+	if len(metadata.Forms) != 0 || len(metadata.Spells[0].Forms) != 0 {
+		t.Errorf("a unit with no forms got forms %v / %v", metadata.Forms, metadata.Spells[0].Forms)
 	}
 }

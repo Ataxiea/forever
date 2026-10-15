@@ -120,7 +120,8 @@ type Unit struct {
 	// The form the unit is in, by the game files' numbering; the class writes it.
 	ShapeshiftForm dbcenums.ShapeshiftForm
 	// Leaves the current form, for a cast the form refuses but no form allows. Nil: none.
-	AutoUnshift func(sim *Simulation)
+	AutoUnshift  func(sim *Simulation)
+	AlwaysInForm bool // Never without a form, as a warrior always holds a stance.
 
 	currentPowerBar PowerBarType
 	healthBar
@@ -1007,10 +1008,22 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 		Name: unit.Label,
 	}
 
+	shifts := unit.shiftForms()
+	var states []dbcenums.ShapeshiftForm
+	if len(shifts) > 0 && !unit.AlwaysInForm {
+		states = append(states, 0)
+	}
+	for _, shift := range shifts {
+		states = append(states, shift.ShiftsTo)
+		metadata.Forms = append(metadata.Forms, &proto.FormStats{Id: int32(shift.ShiftsTo), Spell: shift.ActionID.ToProto(), Stance: shift.ShiftsTo.IsStance()})
+	}
+	metadata.AlwaysInForm = unit.AlwaysInForm
+
 	metadata.Spells = MapSlice(unit.Spellbook, func(spell *Spell) *proto.SpellStats {
 		// The rank rides on the id so the UI names it without a database entry for the spell.
 		id := spell.ActionID.ToProto()
 		id.Rank = spell.Rank
+		category := spell.category()
 		return &proto.SpellStats{
 			Id: id,
 
@@ -1028,7 +1041,9 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 			HasExpectedTick: spell.expectedTickDamageInternal != nil,
 			HasMissileSpeed: spell.MissileSpeed > 0.0 || spell.MissileMinDuration > 0,
 			HasRanks:        spell.Rank > 0,
-			Category:        spell.category(),
+			Category:        category,
+			Forms:           allowedForms(spell.CastRequirement, states, category),
+			Group:           spell.MenuGroup,
 		}
 	})
 
@@ -1036,12 +1051,22 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 		return !aura.ActionID.IsEmptyAction()
 	})
 	metadata.Auras = MapSlice(aplAuras, func(aura *Aura) *proto.AuraStats {
+		category := auraCategory(aura, casters)
+		requirement, group := aura.FormRequirement, aura.MenuGroup
+		if spell := unit.auraSpell(aura); spell != nil {
+			requirement = spell.CastRequirement
+			if group == "" {
+				group = spell.MenuGroup
+			}
+		}
 		return &proto.AuraStats{
 			Id:                 aura.ActionID.ToProto(),
 			MaxStacks:          aura.MaxStacks,
 			HasIcd:             aura.Icd != nil,
 			HasExclusiveEffect: len(aura.ExclusiveEffects) > 0,
-			Category:           auraCategory(aura, casters),
+			Category:           category,
+			Forms:              allowedForms(requirement, states, category),
+			Group:              group,
 		}
 	})
 
