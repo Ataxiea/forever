@@ -146,15 +146,17 @@ export class UnitMetadata {
 			};
 		});
 
-		await Promise.all([...newSpells, ...newAuras].map(newSpell => newSpell.id.fill().then(newId => (newSpell.id = newId))));
+		const newForms: Array<UnitForm> = metadata.forms.map(form => ({ id: form.id, actionId: ActionId.fromProto(form.spell!), stance: form.stance }));
+
+		await Promise.all([
+			...[...newSpells, ...newAuras].map(newSpell => newSpell.id.fill().then(newId => (newSpell.id = newId))),
+			...newForms.map(form => form.actionId.fill().then(newId => (form.actionId = newId))),
+		]);
 
 		newSpells = dropLoneRanks(newSpells).sort((a, b) => stringComparator(a.id.name, b.id.name));
 		newAuras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
 
 		let anyUpdates = false;
-		const newForms: Array<UnitForm> = await Promise.all(
-			metadata.forms.map(async form => ({ id: form.id, actionId: await ActionId.fromProto(form.spell!).fill(), stance: form.stance })),
-		);
 		if (
 			metadata.alwaysInForm !== this.alwaysInForm ||
 			newForms.length !== this.forms.length ||
