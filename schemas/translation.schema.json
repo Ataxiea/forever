@@ -7218,9 +7218,6 @@
 								},
 								"groups": {
 									"type": "string"
-								},
-								"forms": {
-									"type": "string"
 								}
 							},
 							"additionalProperties": false,
@@ -7266,8 +7263,7 @@
 								"external_cooldowns",
 								"external_debuffs",
 								"variables",
-								"groups",
-								"forms"
+								"groups"
 							]
 						},
 						"forms": {

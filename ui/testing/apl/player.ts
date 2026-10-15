@@ -1,4 +1,5 @@
 import { APLRotation } from '@generated/proto/apl';
+import { Class } from '@generated/proto/common';
 import { createSimStore } from '@sim/state/sim_store';
 
 /**
@@ -15,11 +16,12 @@ export interface AplTestPlayer {
 	[key: string]: any;
 }
 
-/** A unit's metadata with no name, spells, auras or forms, with `overrides` in place of any of its getters. */
+/** A unit's metadata with no name, class, spells, auras or forms, with `overrides` in place of any of its getters. */
 export const stubMetadata = <T extends object>(overrides: T = {} as T) => ({
 	getSpells: () => [],
 	getAuras: () => [],
 	getName: () => '',
+	getClass: () => Class.ClassUnknown,
 	getForms: () => [],
 	isAlwaysInForm: () => false,
 	...overrides,

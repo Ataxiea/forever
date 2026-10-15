@@ -1,4 +1,5 @@
 import { ActionCategory } from '@generated/proto/api';
+import { Class } from '@generated/proto/common';
 import type { UnitMetadata } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
 import { stubMetadata } from '@testing/apl/player';
@@ -46,7 +47,15 @@ const metadata = (
 	spells: Array<ReturnType<typeof spell>> = [],
 	forms: Array<ReturnType<typeof form>> = [],
 	alwaysInForm = false,
-) => stubMetadata({ getAuras: () => auras, getSpells: () => spells, getForms: () => forms, isAlwaysInForm: () => alwaysInForm }) as unknown as UnitMetadata;
+	unitClass = Class.ClassUnknown,
+) =>
+	stubMetadata({
+		getAuras: () => auras,
+		getSpells: () => spells,
+		getForms: () => forms,
+		isAlwaysInForm: () => alwaysInForm,
+		getClass: () => unitClass,
+	}) as unknown as UnitMetadata;
 
 const stances = [form(17, 'Battle Stance'), form(18, 'Defensive Stance'), form(19, 'Berserker Stance')];
 
@@ -120,19 +129,55 @@ describe('form buckets', () => {
 		spell(named(33, 'Revenge'), ActionCategory.ActionCategoryUnknown, { forms: [18] }),
 		spell(named(34, 'Whirlwind'), ActionCategory.ActionCategoryUnknown, { forms: [19] }),
 		spell(named(35, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19] }),
-		spell(named(36, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'forms' }),
+		spell(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
 	];
 
-	it('files class spells by form: any first, single forms in form order, then pairs; groups before categories', async () => {
+	it('files class spells by form: shift spells at the top level, then any, single forms in form order, then pairs', async () => {
 		const options = await actionIdSets.castable_spells.getActionIDs(metadata([], spells, stances, true));
 		expect(menu(options).slice(0, 7)).toEqual([
+			'Battle Stance',
 			'Bloodthirst > Any stance',
 			'Overpower > Battle only',
 			'Revenge > Defensive only',
 			'Whirlwind > Berserker only',
 			'Rend > Battle + Defensive',
-			'Battle Stance > forms',
 			'Recklessness > cooldowns',
+		]);
+	});
+
+	it('lists the shift auras at the top level ahead of the buckets', async () => {
+		const auras = [
+			aura(named(60, 'Battle Shout'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
+			aura(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
+			aura(named(61, 'Charge'), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
+			aura(named(18000, 'Defensive Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'my_group' }),
+			aura(named(63, 'Revenge'), ActionCategory.ActionCategoryUnknown, { forms: [18] }),
+		];
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], stances, true)))).toEqual([
+			'Battle Stance',
+			'Defensive Stance',
+			'Charge > Battle only',
+			'Revenge > Defensive only',
+			'Battle Shout',
+		]);
+	});
+
+	it('files a talent spell under its tree, after the buckets and ahead of the groups', async () => {
+		const warrior = [
+			spell(named(30, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], fromTalent: true }),
+			spell(named(31, 'Heroic Strike'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'my_group' }),
+			spell(named(32, 'Mortal Strike'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], fromTalent: true }),
+			spell(named(33, 'Overpower'), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
+			spell(named(34, 'Revenge'), ActionCategory.ActionCategoryUnknown, { forms: [18] }),
+			spell(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], fromTalent: true }),
+		];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], warrior, stances, true, Class.ClassWarrior))).slice(0, 6)).toEqual([
+			'Battle Stance',
+			'Overpower > Battle only',
+			'Revenge > Defensive only',
+			'Mortal Strike > Arms',
+			'Bloodthirst > Fury',
+			'Heroic Strike > my_group',
 		]);
 	});
 
@@ -148,13 +193,13 @@ describe('form buckets', () => {
 	});
 
 	it('files a cooldown with a group under the group, not cooldowns', async () => {
-		const grouped = [spell(named(72, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19], group: 'forms' })];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped, stances, true)))[0]).toBe('Recklessness > forms');
+		const grouped = [spell(named(72, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19], group: 'my_group' })];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped, stances, true)))[0]).toBe('Recklessness > my_group');
 	});
 
 	it('files an aura with a group under the group', async () => {
-		const grouped = [aura(named(73, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'forms' })];
-		expect(menu(await actionIdSets.auras.getActionIDs(metadata(grouped, [], stances, true)))).toEqual(['Battle Stance > forms']);
+		const grouped = [aura(named(73, 'Bloodrage'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'my_group' })];
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(grouped, [], stances, true)))).toEqual(['Bloodrage > my_group']);
 	});
 
 	it('keeps Spell when every class spell works in every form', async () => {
@@ -227,6 +272,73 @@ describe('form buckets', () => {
 			'Charge > Battle only',
 			'Recklessness > cooldowns',
 			'Battle Shout',
+		]);
+	});
+});
+
+describe('talent trees', () => {
+	// Sorted by name, as the metadata arrives.
+	const spells = [
+		spell(named(80, 'Blessing of Kings'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+		spell(named(81, 'Divine Favor'), ActionCategory.ActionCategoryCooldown, { fromTalent: true }),
+		spell(named(82, 'Flash of Light')),
+		spell(named(83, 'Holy Shield'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+		spell(named(84, 'Holy Shock (Rank 1)', 1), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+		spell(named(85, 'Holy Shock (Rank 2)', 2), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+		spell(named(86, 'Repentance'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+		spell(named(87, 'Seal of Command'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+	];
+	const auras = [
+		aura(named(90, 'Divine Favor'), ActionCategory.ActionCategoryCooldown),
+		aura(named(91, 'Holy Might'), ActionCategory.ActionCategoryTalent),
+		aura(named(92, 'Holy Shield'), ActionCategory.ActionCategoryTalent),
+		aura(named(93, 'Redoubt'), ActionCategory.ActionCategoryTalent),
+		aura(named(94, 'Righteous Fury')),
+		aura(named(95, 'Vengeance'), ActionCategory.ActionCategoryTalent),
+	];
+
+	it('files talent spells under their trees in the talent calculator’s order, ranks behind the highest', async () => {
+		const options = await actionIdSets.castable_spells.getActionIDs(metadata([], spells, [], false, Class.ClassPaladin));
+		expect(menu(options).slice(0, 8)).toEqual([
+			'Holy Shock (Rank 1) > Holy > Holy Shock (Rank 2)',
+			'Holy Shock (Rank 2) > Holy',
+			'Holy Shield > Protection',
+			'Repentance > Retribution',
+			'Seal of Command > Retribution',
+			'Blessing of Kings > spell',
+			'Flash of Light > spell',
+			'Divine Favor > cooldowns',
+		]);
+	});
+
+	it('files talent auras under their trees and keeps an unmatched one under Talents', async () => {
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], [], false, Class.ClassPaladin)))).toEqual([
+			'Holy Shield > Protection',
+			'Redoubt > Protection',
+			'Vengeance > Retribution',
+			'Divine Favor > cooldowns',
+			'Holy Might > talents',
+			'Righteous Fury',
+		]);
+	});
+
+	it('keeps the filing of a unit with no class, such as a pet', async () => {
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], spells))).slice(0, 7)).toEqual([
+			'Blessing of Kings > spell',
+			'Flash of Light > spell',
+			'Holy Shield > spell',
+			'Holy Shock (Rank 1) > spell > Holy Shock (Rank 2)',
+			'Holy Shock (Rank 2) > spell',
+			'Repentance > spell',
+			'Seal of Command > spell',
+		]);
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras)))).toEqual([
+			'Divine Favor > cooldowns',
+			'Holy Might > talents',
+			'Holy Shield > talents',
+			'Redoubt > talents',
+			'Vengeance > talents',
+			'Righteous Fury',
 		]);
 	});
 });

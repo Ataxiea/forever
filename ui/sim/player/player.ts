@@ -102,6 +102,7 @@ export class UnitMetadata {
 	private spells: Array<SpellStats>;
 	private forms: Array<UnitForm>;
 	private alwaysInForm: boolean;
+	private unitClass: Class;
 	private last: UnitMetadataProto;
 
 	constructor() {
@@ -110,11 +111,16 @@ export class UnitMetadata {
 		this.spells = [];
 		this.forms = [];
 		this.alwaysInForm = false;
+		this.unitClass = Class.ClassUnknown;
 		this.last = UnitMetadataProto.create();
 	}
 
 	getName(): string {
 		return this.name;
+	}
+
+	getClass(): Class {
+		return this.unitClass;
 	}
 
 	getAuras(): Array<AuraStats> {
@@ -162,6 +168,7 @@ export class UnitMetadata {
 		this.auras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
 		this.forms = newForms;
 		this.alwaysInForm = metadata.alwaysInForm;
+		this.unitClass = metadata.class;
 		return true;
 	}
 }
