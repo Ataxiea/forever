@@ -61,7 +61,8 @@ func (e *Effect) HitsAnArea() bool {
 
 // What the game files state about a spell, as the fields core registers it through. The caller adds
 // the proc mask, ApplyEffects and anything the game files do not carry to the returned value before
-// handing it to RegisterSpell: the resolver fills the row's own fields and nothing else.
+// handing it to RegisterSpell: the resolver fills the row's own fields, and MenuGroup "forms" on a row
+// that shifts its caster, and nothing else.
 //
 // The unit is needed for the cooldown timers, so a config is built where the sim has a character,
 // not at package init. MaxTargets has no SpellConfig field; a caller that needs the row's cap reads

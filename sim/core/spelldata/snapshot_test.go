@@ -369,8 +369,8 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 	}
 }
 
-// Battle Stance's config states the form it shifts to and files it and its aura under forms; Leader
-// of the Pack's aura states the forms it needs and, shifting no one, no group.
+// Battle Stance's config states the form it shifts to and files it and its aura under forms, as
+// Shadowform's does; Leader of the Pack's aura states the forms it needs and, shifting no one, no group.
 func TestConfigsCarryTheFormData(t *testing.T) {
 	withGeneratedStore(t)
 
@@ -383,6 +383,9 @@ func TestConfigsCarryTheFormData(t *testing.T) {
 	}
 	if got := AuraConfig(MustFind(2457)).MenuGroup; got != "forms" {
 		t.Errorf("Battle Stance aura MenuGroup = %q, want forms", got)
+	}
+	if got := SpellConfig(&core.Unit{}, MustFind(15473)).MenuGroup; got != "forms" {
+		t.Errorf("Shadowform MenuGroup = %q, want forms", got)
 	}
 	if got := SpellConfig(&core.Unit{}, MustFind(24932)).MenuGroup; got != "" {
 		t.Errorf("Leader of the Pack MenuGroup = %q, want none", got)
