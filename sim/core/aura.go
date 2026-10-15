@@ -50,7 +50,7 @@ type Aura struct {
 	Source          ActionSource // Left unset, registration fills in the phase it runs in.
 
 	MenuGroup string // A manual APL menu group, a rotation_tab.apl.submenus key.
-	Talent    int32  // Spell id of the talent row that grants the aura, which files it under the talent's tree in the APL pickers when its name differs; zero takes its casting spell's.
+	Talent    int32  // Spell id of the talent row that grants the aura; zero takes its casting spell's. For an aura in the Talent category, it picks the talent's tree in the APL pickers when the names differ.
 
 	Icd *Cooldown           // The internal cooldown if any
 	Dpm *DynamicProcManager // Dynamic Proc manager for proc trigger auras if any

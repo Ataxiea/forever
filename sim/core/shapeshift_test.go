@@ -280,7 +280,7 @@ func TestMajorCooldownKeepsForm(t *testing.T) {
 	}
 }
 
-func TestMetadataListsTheShiftFormsAndGroups(t *testing.T) {
+func TestMetadataListsTheShiftSpellsAndGroups(t *testing.T) {
 	battle := &Spell{ActionID: ActionID{SpellID: 2457}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BATTLE_STANCE, MenuGroup: "stances"}
 	defensive := &Spell{ActionID: ActionID{SpellID: 71}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_DEFENSIVE_STANCE}
 	berserker := &Spell{ActionID: ActionID{SpellID: 2458}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BERSERKER_STANCE}
@@ -288,18 +288,15 @@ func TestMetadataListsTheShiftFormsAndGroups(t *testing.T) {
 	ownGroup := &Aura{ActionID: ActionID{SpellID: 2458}, MenuGroup: "own"}
 
 	unit := &Unit{
-		Spellbook:   []*Spell{battle, defensive, berserker},
+		Spellbook:   []*Spell{berserker, battle, defensive},
 		auraTracker: auraTracker{auras: []*Aura{battleStance, ownGroup}},
 	}
 	metadata := unit.GetMetadata()
 
-	if ids := MapSlice(metadata.Forms, func(f *proto.FormStats) int32 { return f.Id }); !slices.Equal(ids, []int32{17, 18, 19}) {
-		t.Fatalf("unit forms = %v, want the three stances in id order", ids)
+	if ids := MapSlice(metadata.ShiftSpells, (*proto.ActionID).GetSpellId); !slices.Equal(ids, []int32{2457, 71, 2458}) {
+		t.Errorf("shift spells = %v, want Battle, Defensive, Berserker in form id order", ids)
 	}
-	if !metadata.Forms[0].Stance || metadata.Forms[0].Spell.GetSpellId() != 2457 {
-		t.Errorf("Battle Stance form = %v", metadata.Forms[0])
-	}
-	if got := metadata.Spells[0].Group; got != "stances" {
+	if got := metadata.Spells[1].Group; got != "stances" {
 		t.Errorf("Battle Stance group = %q", got)
 	}
 
@@ -315,13 +312,13 @@ func TestMetadataListsTheShiftFormsAndGroups(t *testing.T) {
 	}
 }
 
-func TestMetadataFormsSkipShiftsTheAPLCannotCast(t *testing.T) {
+func TestMetadataShiftSpellsSkipShiftsTheAPLCannotCast(t *testing.T) {
 	cat := &Spell{ActionID: ActionID{SpellID: 768}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_CAT_FORM}
 	bear := &Spell{ActionID: ActionID{SpellID: 9634}, ShiftsTo: dbcenums.FORM_DIRE_BEAR_FORM}
 
 	metadata := (&Unit{Spellbook: []*Spell{cat, bear}}).GetMetadata()
-	if ids := MapSlice(metadata.Forms, func(f *proto.FormStats) int32 { return f.Id }); !slices.Equal(ids, []int32{1}) {
-		t.Errorf("unit forms = %v, want Cat only", ids)
+	if ids := MapSlice(metadata.ShiftSpells, (*proto.ActionID).GetSpellId); !slices.Equal(ids, []int32{768}) {
+		t.Errorf("shift spells = %v, want Cat Form only", ids)
 	}
 }
 
@@ -344,6 +341,9 @@ func TestMetadataMarksTalentSpellsAndThePlayersClass(t *testing.T) {
 	if got := pet.GetMetadata().Class; got != proto.Class_ClassUnknown {
 		t.Errorf("pet class = %v, want unknown", got)
 	}
+	if got := NewTarget(&proto.Target{}, 0).GetMetadata().Class; got != proto.Class_ClassUnknown {
+		t.Errorf("target class = %v, want unknown", got)
+	}
 }
 
 func TestMetadataCarriesTheTalentLink(t *testing.T) {
@@ -361,10 +361,10 @@ func TestMetadataCarriesTheTalentLink(t *testing.T) {
 	}
 }
 
-func TestMetadataFormsEmptyWithoutForms(t *testing.T) {
+func TestMetadataShiftSpellsEmptyWithoutForms(t *testing.T) {
 	unit := &Unit{Spellbook: []*Spell{{ActionID: ActionID{SpellID: 100}, CastRequirement: chargeRequirement}}}
 	metadata := unit.GetMetadata()
-	if len(metadata.Forms) != 0 {
-		t.Errorf("a unit with no forms got forms %v", metadata.Forms)
+	if len(metadata.ShiftSpells) != 0 {
+		t.Errorf("a unit with no forms got shift spells %v", metadata.ShiftSpells)
 	}
 }

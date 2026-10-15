@@ -1004,11 +1004,8 @@ func (unit *Unit) GetMetadata() *proto.UnitMetadata {
 // casters are the units whose spells can cast this unit's auras, which decides an aura's category.
 func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 	metadata := &proto.UnitMetadata{
-		Name: unit.Label,
-	}
-
-	for _, shift := range unit.shiftForms() {
-		metadata.Forms = append(metadata.Forms, &proto.FormStats{Id: int32(shift.ShiftsTo), Spell: shift.ActionID.ToProto(), Stance: shift.ShiftsTo.IsStance()})
+		Name:        unit.Label,
+		ShiftSpells: MapSlice(unit.shiftForms(), func(shift *Spell) *proto.ActionID { return shift.ActionID.ToProto() }),
 	}
 
 	metadata.Spells = MapSlice(unit.Spellbook, func(spell *Spell) *proto.SpellStats {
