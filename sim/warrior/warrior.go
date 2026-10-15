@@ -149,6 +149,7 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 		WarriorInputs: inputs,
 	}
 	core.FillTalentsProto(warrior.Talents.ProtoReflect(), talents, TalentTreeSizes)
+	warrior.AlwaysInForm = true
 
 	warrior.EnableRageBar(core.RageBarOptions{
 		MaxRage:            100,
