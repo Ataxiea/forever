@@ -157,6 +157,25 @@ describe('UnitMetadata ranks', () => {
 		expect(metadata.getAuras()[0].data.group).toBe('b');
 	});
 
+	it('states the class and reports an update when only the class changes', async () => {
+		const send = (unitClass: Class) => UnitMetadataProto.create({ spells: [SpellStatsProto.create({ id: actionId(25304, 0) })], class: unitClass });
+		const metadata = new UnitMetadata();
+
+		await metadata.update(send(Class.ClassMage));
+		expect(metadata.getClass()).toBe(Class.ClassMage);
+		expect(await metadata.update(send(Class.ClassPriest))).toBe(true);
+		expect(metadata.getClass()).toBe(Class.ClassPriest);
+	});
+
+	it('keeps the shift spells in the order the sim lists them', async () => {
+		const metadata = new UnitMetadata();
+		await metadata.update(UnitMetadataProto.create({ shiftSpells: [actionId(25304, 0), actionId(2120, 0)] }));
+		expect(metadata.getShiftSpells().map(id => [id.spellId, id.baseName])).toEqual([
+			[25304, 'Frostbolt'],
+			[2120, 'Flamestrike'],
+		]);
+	});
+
 	// A spell and its DoT, registered as a second spell under another tag, count apart.
 	it('counts one spell under two tags as two', async () => {
 		const ranks = { '25304|0': 0, '25304|1': 0 };

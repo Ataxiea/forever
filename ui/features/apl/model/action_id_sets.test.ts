@@ -22,22 +22,21 @@ const spell = (id: ActionId, category = ActionCategory.ActionCategoryUnknown, ex
 	data: { isCastable: true, prepullOnly: false, encounterOnly: false, category, ...extra },
 });
 
-const form = (id: number, name: string) => ({ id, actionId: named(id * 1000, name), stance: true });
-
 const metadata = (
 	auras: Array<ReturnType<typeof aura>>,
 	spells: Array<ReturnType<typeof spell>> = [],
-	forms: Array<ReturnType<typeof form>> = [],
+	shiftSpells: Array<ActionId> = [],
 	unitClass = Class.ClassUnknown,
 ) =>
 	stubMetadata({
 		getAuras: () => auras,
 		getSpells: () => spells,
-		getForms: () => forms,
+		getShiftSpells: () => shiftSpells,
 		getClass: () => unitClass,
 	}) as unknown as UnitMetadata;
 
-const stances = [form(17, 'Battle Stance'), form(18, 'Defensive Stance'), form(19, 'Berserker Stance')];
+// In form id order, as the sim lists them.
+const stances = [named(2457, 'Battle Stance'), named(71, 'Defensive Stance'), named(2458, 'Berserker Stance')];
 
 const menu = (options: Array<{ value: ActionId; submenu?: Array<unknown> }>) =>
 	options.map(option => [option.value.name, ...(option.submenu ?? []).map(segment => (segment instanceof ActionId ? segment.name : segment))].join(' > '));
@@ -104,7 +103,7 @@ describe('castable_spells', () => {
 describe('shift spells and manual groups', () => {
 	it('lists the shift spells first, then the talent trees, the groups, Spell and the categories', async () => {
 		const warrior = [
-			spell(named(17000, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
+			spell(named(2457, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
 			spell(named(30, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
 			spell(named(31, 'Heroic Strike'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
 			spell(named(32, 'Mortal Strike'), ActionCategory.ActionCategoryUnknown, { fromTalent: true }),
@@ -124,10 +123,10 @@ describe('shift spells and manual groups', () => {
 	it('lists the shift auras first, whatever their group, then the trees, the groups, the categories and the rest', async () => {
 		const auras = [
 			aura(named(60, 'Battle Shout')),
-			aura(named(17000, 'Battle Stance')),
+			aura(named(2457, 'Battle Stance')),
 			aura(named(61, 'Bloodrage'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
 			aura(named(62, 'Charge')),
-			aura(named(18000, 'Defensive Stance'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
+			aura(named(71, 'Defensive Stance'), ActionCategory.ActionCategoryUnknown, { group: 'my_group' }),
 			aura(named(63, 'Flurry'), ActionCategory.ActionCategoryTalent),
 			aura(named(64, 'Recklessness'), ActionCategory.ActionCategoryCooldown),
 		];
@@ -145,6 +144,32 @@ describe('shift spells and manual groups', () => {
 	it('files a cooldown with a group under the group, not cooldowns', async () => {
 		const grouped = [spell(named(72, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { group: 'my_group' })];
 		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped)))[0]).toBe('Recklessness > my_group');
+	});
+
+	it('files a talent spell with a group under the group, not its tree', async () => {
+		const grouped = [spell(named(73, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { fromTalent: true, group: 'my_group' })];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped, [], Class.ClassWarrior)))[0]).toBe('Bloodthirst > my_group');
+	});
+
+	it('lists the shift spells in the sim’s form order, not by name', async () => {
+		// Sorted by name, as the metadata arrives.
+		const shifts = [spell(named(2457, 'Battle Stance')), spell(named(2458, 'Berserker Stance')), spell(named(71, 'Defensive Stance'))];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], shifts, stances))).slice(0, 3)).toEqual([
+			'Battle Stance',
+			'Defensive Stance',
+			'Berserker Stance',
+		]);
+	});
+
+	it('lists every rank of a shift spell at the top level, behind its highest rank', async () => {
+		const ranked = [spell(named(74, 'Cat Form (Rank 1)', 1)), spell(named(75, 'Cat Form (Rank 2)', 2)), spell(named(76, 'Claw'))];
+		const options = await actionIdSets.castable_spells.getActionIDs(metadata([], ranked, [named(74, 'Cat Form (Rank 1)', 1)]));
+		expect(menu(options).slice(0, 3)).toEqual(['Cat Form (Rank 1) > Cat Form (Rank 2)', 'Cat Form (Rank 2)', 'Claw > spell']);
+	});
+
+	it('keeps a talent aura that is a shift aura at the top level, not under its tree', async () => {
+		const auras = [aura(named(15473, 'Shadowform'), ActionCategory.ActionCategoryTalent)];
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(auras, [], [named(15473, 'Shadowform')], Class.ClassPriest)))).toEqual(['Shadowform']);
 	});
 });
 

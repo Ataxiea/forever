@@ -83,10 +83,10 @@ const CATEGORY_SUBMENUS: Array<[ActionCategory, string]> = [
 ];
 
 /**
- * Sorts `entries` into the unit's shift spells and their auras at the top level, the manual groups
- * the sim names, their category's submenu and their talent tree, and hands back the rest for the
- * caller to place. A category other than Talents wins over the tree; a talent entry with no tree
- * keeps its place.
+ * Sorts `entries` into the unit's shift spells, their ranks and their auras at the top level, the
+ * manual groups the sim names, their category's submenu and their talent tree, and hands back the
+ * rest for the caller to place. A category other than Talents wins over the tree; a talent entry
+ * with no tree keeps its place.
  *
  * The categories and trees are emitted in a fixed order because the menu places a submenu where its
  * first option appears, and the metadata arrives sorted by name.
@@ -98,7 +98,9 @@ const categorise = <T extends AuraStats | SpellStats>(
 	allEntries: Array<T> = entries,
 ) => {
 	const talentTree = talentTrees(metadata.getClass());
-	const shiftSpellIds = new Set(metadata.getForms().map(form => form.actionId.spellId));
+	// Every rank of a shift spell goes with it, so an entry matches by base name and tag.
+	const shiftKeys = metadata.getShiftSpells().map(rankKey);
+	const shiftPlace = (entry: T) => (entry.id.itemId ? -1 : shiftKeys.indexOf(rankKey(entry.id)));
 	const highest = highestRanks(entries);
 	const ranked = bucket(
 		allEntries.filter(entry => entry.id.hasRank),
@@ -109,7 +111,7 @@ const categorise = <T extends AuraStats | SpellStats>(
 		const top = highest.get(entry)!;
 		return toOption(entry, top !== entry && ranked[rankKey(entry.id)].length > 1 ? [...path, top.id] : path);
 	};
-	const isShift = (entry: T) => !entry.id.itemId && shiftSpellIds.has(entry.id.spellId);
+	const isShift = (entry: T) => shiftPlace(entry) >= 0;
 	const groupOf = (entry: T) => highest.get(entry)!.data.group;
 	const isCategorised = (entry: T) => CATEGORY_SUBMENUS.some(([category]) => entry.data.category === category);
 	// The sim marks a talent's spells; a talent's auras carry the Talent category.
@@ -132,7 +134,11 @@ const categorise = <T extends AuraStats | SpellStats>(
 	const rest = ungrouped.filter(entry => !treeOf(entry));
 
 	return {
-		shifted: entries.filter(isShift).map(entry => option(entry, [])),
+		// In the sim's form order, which is the order of the stance bar in game.
+		shifted: entries
+			.filter(isShift)
+			.sort((a, b) => shiftPlace(a) - shiftPlace(b))
+			.map(entry => option(entry, [])),
 		inTrees: inTrees.map(({ entry, tree }) => option(entry, [tree.name])),
 		grouped: Object.entries(bucket(unshifted.filter(groupOf), groupOf)).flatMap(([group, members]) => members.map(entry => option(entry, [group]))),
 		categorised: CATEGORY_SUBMENUS.flatMap(([category, key]) => rest.filter(entry => entry.data.category === category).map(entry => option(entry, [key]))),

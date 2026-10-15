@@ -89,18 +89,11 @@ const dropLoneRanks = <T extends { id: ActionId }>(entries: Array<T>): Array<T> 
 	return entries.map(entry => (entry.id.hasRank && ranks.get(keyOf(entry.id))!.size < 2 ? { ...entry, id: entry.id.withoutRank() } : entry));
 };
 
-/** A form the unit can enter and the spell that enters it. */
-export interface UnitForm {
-	id: number;
-	actionId: ActionId;
-	stance: boolean;
-}
-
 export class UnitMetadata {
 	private name: string;
 	private auras: Array<AuraStats>;
 	private spells: Array<SpellStats>;
-	private forms: Array<UnitForm>;
+	private shiftSpells: Array<ActionId>;
 	private unitClass: Class;
 	private last: UnitMetadataProto;
 
@@ -108,7 +101,7 @@ export class UnitMetadata {
 		this.name = '';
 		this.auras = [];
 		this.spells = [];
-		this.forms = [];
+		this.shiftSpells = [];
 		this.unitClass = Class.ClassUnknown;
 		this.last = UnitMetadataProto.create();
 	}
@@ -129,8 +122,9 @@ export class UnitMetadata {
 		return this.spells.slice();
 	}
 
-	getForms(): Array<UnitForm> {
-		return this.forms.slice();
+	/** The spells the APL can cast that shift the unit into a form, in form id order. */
+	getShiftSpells(): Array<ActionId> {
+		return this.shiftSpells.slice();
 	}
 
 	// Returns whether any updates were made.
@@ -149,18 +143,16 @@ export class UnitMetadata {
 			};
 		});
 
-		const newForms: Array<UnitForm> = metadata.forms.map(form => ({ id: form.id, actionId: ActionId.fromProto(form.spell!), stance: form.stance }));
-
-		await Promise.all([
+		const [newShiftSpells] = await Promise.all([
+			Promise.all(metadata.shiftSpells.map(id => ActionId.fromProto(id).fill())),
 			...[...newSpells, ...newAuras].map(newSpell => newSpell.id.fill().then(newId => (newSpell.id = newId))),
-			...newForms.map(form => form.actionId.fill().then(newId => (form.actionId = newId))),
 		]);
 
 		this.last = metadata;
 		this.name = metadata.name;
 		this.spells = dropLoneRanks(newSpells).sort((a, b) => stringComparator(a.id.name, b.id.name));
 		this.auras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
-		this.forms = newForms;
+		this.shiftSpells = newShiftSpells;
 		this.unitClass = metadata.class;
 		return true;
 	}
