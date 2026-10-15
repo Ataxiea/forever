@@ -2,17 +2,36 @@
 
 The APL cast-spell and aura pickers file each entry under one submenu. They try, in order:
 
-1. a manual group the sim names (`MenuGroup`);
-2. its category (`Cooldowns`, `Talents`, `External Buffs`, ...);
-3. its form bucket;
-4. `Spell` (cast-spell picker) or the top level (aura picker).
+1. the top level, for a shift spell of the unit (one listed in its forms) and the aura with its id;
+2. a manual group the sim names (`MenuGroup`);
+3. its category (`Cooldowns`, `Consumables`, `Items`, `Racials`, `Professions`, `External Buffs`, ...),
+   except `Talents`;
+4. its talent tree (`Holy`, `Arms`, ...);
+5. the `Talents` category, for a talent aura with no tree;
+6. its form bucket;
+7. `Spell` (cast-spell picker) or the top level (aura picker).
 
-An entry with a category is never form-bucketed, so the buckets only sort the entries left over after the
-groups and categories.
+An entry with a category or a tree is never form-bucketed, so the buckets only sort the entries left over
+after the groups, categories and trees.
 
-The cast-spell picker lists the form buckets first, then the manual groups, then `Spell`, then the
-categories, then the placeholders. The aura picker lists the form buckets, the manual groups and the
-categories, then the remaining auras at the top level.
+The cast-spell picker lists the shift spells first, then the form buckets, the talent trees, the manual
+groups, `Spell`, the categories and the placeholders. The aura picker lists the shift auras, the form
+buckets, the talent trees, the manual groups and the categories, then the remaining auras at the top level.
+The trees follow the talent calculator's order. The ranks of a spell sit behind its highest rank wherever
+it is filed.
+
+## Talent trees
+
+A spell a talent grants is registered with `SourceTalent` (`Character.WithSource`), and the metadata marks
+it `from_talent`; its category leaves the talent source out, so `from_talent` is the only sign of it. A
+talent's aura carries the `Talents` category. Every entry so marked is looked up by its name, without the
+rank, among the talents of the unit's class (`fancyName` in `ui/sim/talents/trees/<class>.json`), and files
+under the `name` of the tree that talent sits in, as the JSON writes it. The metadata states the class
+(`UnitMetadata.class`) for a player character only, so a pet's or a target's entries find no tree.
+
+A talent spell with no matching talent stays where it would file without one: its form bucket or `Spell`.
+A talent aura with no matching talent stays under `Talents`. A talent entry with another category, such as
+a talent's major cooldown under `Cooldowns`, keeps that category.
 
 ## Form buckets
 
@@ -49,12 +68,11 @@ the highest rank, in the highest rank's bucket.
 
 Set `MenuGroup` on a `core.SpellConfig` (or the `*core.Spell` it returns) or on a `core.Aura` to a
 lowercase_underscore key, and add the label under `rotation_tab.apl.submenus.<key>`. The group wins over
-the category and the form bucket. An aura with no group of its own takes its spell's.
+the category, the talent tree and the form bucket; a shift spell and its aura stay at the top level
+whatever their group. An aura with no group of its own takes its spell's.
 
-`spelldata.SpellConfig` sets `MenuGroup` to `forms` on a row that shifts its caster (`ShapeshiftForm()` is
-not 0), so the warrior stances and Shadowform sit in `forms`, and their auras with them through their
-spells. By their masks they would land in "Any stance" or "Any form". Class code that wants another group
-sets `MenuGroup` on the returned config, and the form's aura follows:
+`spelldata.SpellConfig` sets no group. Class code that wants one sets `MenuGroup` on the returned config,
+and the spell's aura follows:
 
 ```go
 config := spelldata.SpellConfig(&warrior.Unit, rank, spelldata.Flags(core.SpellFlagAPL))
