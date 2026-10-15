@@ -12,40 +12,50 @@ The APL cast-spell and aura pickers file each entry under one submenu. They try,
 
 The cast-spell picker lists the shift spells first, then the talent trees, the manual groups, `Spell`, the
 categories and the placeholders. The aura picker lists the shift auras, the talent trees, the manual groups
-and the categories, then the remaining auras at the top level. The trees follow the talent calculator's
-order. The ranks of a spell sit behind its highest rank wherever it is filed.
+and the categories, then the remaining auras at the top level. The shift entries follow the sim's form
+order and the trees the talent calculator's. The ranks of a spell sit behind its highest rank wherever it
+is filed.
 
 ## Shift spells
 
-A unit's forms are the forms its spells with `SpellFlagAPL` shift it into; a shift spell the APL cannot cast
-adds no form. A spell config built by `spelldata.SpellConfig` carries the row's `ShapeshiftForm()` as
-`ShiftsTo`, and a hand-built `core.SpellConfig` sets `ShiftsTo` itself. The metadata lists each form once, in
-id order, with the spell that enters it and whether the form is a stance (`UnitMetadata.forms`).
+The metadata's `shift_spells` are the unit's spells with `SpellFlagAPL` that shift it into a form, one per
+form, in form id order: Battle, Defensive, Berserker for a warrior, the order of the stance bar in game. A
+shift spell the APL cannot cast is left out. A spell config built by `spelldata.SpellConfig` carries the
+row's `ShapeshiftForm()` as `ShiftsTo`, and a hand-built `core.SpellConfig` sets `ShiftsTo` itself.
 
-The pickers list those spells, and the auras with the same ids, at the top level ahead of every other
-entry, whatever their group or category.
+The pickers list those spells at the top level ahead of every other entry, in that order, whatever their
+group or category. An entry matches a shift spell by its name without the rank and its tag, so every rank
+of a ranked shift spell sits there behind its highest rank, and so does the aura of the same name.
 
 ## Talent trees
 
-A spell a talent grants is registered with `SourceTalent` (`Character.WithSource`), and the metadata marks
-it `from_talent`; its category leaves the talent source out, so `from_talent` is the only sign of it. A
-talent's aura carries the `Talents` category. Every entry so marked is looked up by its name, without the
-rank, among the talents of the unit's class (`fancyName` in `ui/sim/talents/trees/<class>.json`), and files
-under the `name` of the tree that talent sits in, as the JSON writes it. The metadata states the class
-(`UnitMetadata.class`) for a player character only, so a pet's or a target's entries find no tree.
+An entry that is a talent's files under the tree of its talent, found by its talent link, else by its
+name. A spell is a talent's when it is registered with `SourceTalent` (`Character.WithSource`): the
+metadata marks it `from_talent`, and since its category leaves the talent source out, `from_talent` is the
+only sign of it. An aura is a talent's when it carries the `Talents` category. The pickers look the talent
+up among the talents of the unit's class in `ui/sim/talents/trees/<class>.json`: by the link against
+`spellId`, else by the entry's name without the rank against `fancyName`. The entry files under the `name`
+of the tree that talent sits in, as the JSON writes it. The metadata states the class (`UnitMetadata.class`)
+for a player character only, so a pet's or a target's entries find no tree.
 
 A talent spell with no matching talent stays under `Spell`. A talent aura with no matching talent stays
 under `Talents`. A talent entry with another category, such as a talent's major cooldown under `Cooldowns`,
 keeps that category.
 
 When an entry's name differs from its talent's, set `Talent` on the `core.SpellConfig` (or `*core.Spell`)
-or `core.Aura` to the spell id of the talent row, the talent JSON's `spellId`. The pickers look the link up
-before the name, and an aura with no link of its own takes its casting spell's. A link to a talent the
-class's JSON does not list falls back to the name. Twist of Light's Echo auras link the talent this way:
+or `core.Aura` to the spell id of the talent row. An aura with no link of its own takes its casting spell's.
+The link only picks the tree of an entry that is already a talent's; on any other entry it files nothing. A
+link to a talent the class's JSON does not list falls back to the name. Twist of Light's Echo auras link the
+talent this way:
 
 ```go
 talent := spellData.TwistOfLight.Rank(1)
-paladin.RegisterAura(core.Aura{ActionID: core.ActionID{SpellID: id}, Talent: talent.ID})
+echo.aura = paladin.RegisterAura(core.Aura{
+	Label:    fmt.Sprintf("Echo (%d)%s", id, paladin.Label),
+	ActionID: core.ActionID{SpellID: id},
+	Duration: core.NeverExpires,
+	Talent:   talent.ID,
+})
 ```
 
 ## Manual groups
