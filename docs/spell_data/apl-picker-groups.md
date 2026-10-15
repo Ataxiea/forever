@@ -19,7 +19,8 @@ categories, then the remaining auras at the top level.
 A unit's forms are the forms its spells shift it into: a spell config built by `spelldata.SpellConfig`
 carries the row's `ShapeshiftForm()` as `ShiftsTo`, and the metadata lists each form once, in id order.
 A unit that sets `Unit.AlwaysInForm` (the warrior) never has the no-form state; any other unit with forms
-has it as `Caster`.
+has it as `Caster`. The unit's states are its forms plus the no-form state, unless it has `AlwaysInForm`.
+A hand-built `core.SpellConfig` sets `ShiftsTo` itself.
 
 An entry's forms are the states in which its `CastRequirement` allows the cast without leaving the form,
 by the rule in [Building an ability](building-an-ability.md#where-a-spell-can-be-cast). An aura takes the
@@ -28,13 +29,15 @@ requirement of the spell that casts it (its `RelatedSelfBuff`, or the spell with
 "active in" (Leader of the Pack 0x91: Cat, Bear, Dire Bear). An external buff, cooldown or debuff gets no
 forms, since its mask names its caster's forms.
 
-Labels: `Battle only` for one form, `Battle + Defensive` for several, `Any stance` when the entry works in
-every state of a unit whose forms are all stances and which is never without one, else `Any form`. The
-short names are `rotation_tab.apl.forms.names.<form id>`; a form without one shows its spell's name.
-The no-form state is `rotation_tab.apl.forms.no_form`. The buckets are ordered `Any` first, then by the
-number of forms they name, then by the first form's place in the state list.
+Labels: `Battle only` for one state (`rotation_tab.apl.forms.only`, "{{form}} only"), `Battle + Defensive`
+for several, `Any stance` (`rotation_tab.apl.forms.any_stance`) when the entry works in every state of a
+unit whose forms are all stances and which is never without one, else `Any form`
+(`rotation_tab.apl.forms.any_form`). The short names are `rotation_tab.apl.forms.names.<form id>`; a form
+without one shows its spell's name. The no-form state is `rotation_tab.apl.forms.no_form`. The buckets
+are ordered `Any` first, then by the number of states they name, then by the first state's place in the
+state list.
 
-`Spell` stays when the unit has no forms, for an entry that works in none of the unit's forms, and when
+`Spell` stays when the unit has no forms, for an entry that works in none of the unit's states, and when
 every entry left over works in every state or in none, where one bucket would only rename `Spell`. In the
 aura picker an aura that works in every state stays at the top level. All ranks of a spell file under the
 highest rank, in the highest rank's bucket.
