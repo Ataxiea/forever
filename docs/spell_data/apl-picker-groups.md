@@ -33,6 +33,16 @@ A talent spell with no matching talent stays where it would file without one: it
 A talent aura with no matching talent stays under `Talents`. A talent entry with another category, such as
 a talent's major cooldown under `Cooldowns`, keeps that category.
 
+When an entry's name differs from its talent's, set `Talent` on the `core.SpellConfig` (or `*core.Spell`)
+or `core.Aura` to the spell id of the talent row, the talent JSON's `spellId`. The pickers look the link up
+before the name, and an aura with no link of its own takes its casting spell's. A link to a talent the
+class's JSON does not list falls back to the name. Twist of Light's Echo auras link the talent this way:
+
+```go
+talent := spellData.TwistOfLight.Rank(1)
+paladin.RegisterAura(core.Aura{ActionID: core.ActionID{SpellID: id}, Talent: talent.ID})
+```
+
 ## Form buckets
 
 A unit's forms are the forms its spells with `SpellFlagAPL` shift it into; a shift spell the APL cannot cast
