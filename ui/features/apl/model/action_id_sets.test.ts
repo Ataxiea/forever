@@ -322,6 +322,20 @@ describe('talent trees', () => {
 		]);
 	});
 
+	it('files an entry by its talent link first, and by its name when the link names no talent of the class', async () => {
+		// 1310735 is Twist of Light in the Retribution tree.
+		const linkedAuras = [
+			aura(named(100, 'Echo of Command'), ActionCategory.ActionCategoryTalent, { talent: 1310735 }),
+			aura(named(101, 'Echo of Fury'), ActionCategory.ActionCategoryTalent, { talent: 999 }),
+			aura(named(102, 'Redoubt'), ActionCategory.ActionCategoryTalent, { talent: 999 }),
+		];
+		const linkedSpells = [spell(named(103, 'Echo Strike'), ActionCategory.ActionCategoryUnknown, { fromTalent: true, talent: 1310735 })];
+		const options = await actionIdSets.auras.getActionIDs(metadata(linkedAuras, [], [], false, Class.ClassPaladin));
+		expect(menu(options)).toEqual(['Redoubt > Protection', 'Echo of Command > Retribution', 'Echo of Fury > talents']);
+		const spellOptions = await actionIdSets.castable_spells.getActionIDs(metadata([], linkedSpells, [], false, Class.ClassPaladin));
+		expect(menu(spellOptions)[0]).toBe('Echo Strike > Retribution');
+	});
+
 	it('keeps the filing of a unit with no class, such as a pet', async () => {
 		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], spells))).slice(0, 7)).toEqual([
 			'Blessing of Kings > spell',

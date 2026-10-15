@@ -99,7 +99,7 @@ const categorise = <T extends AuraStats | SpellStats>(
 	allEntries: Array<T> = entries,
 ) => {
 	const formBucket = formBuckets(metadata.getForms(), metadata.isAlwaysInForm());
-	const trees = talentTrees(metadata.getClass());
+	const talentTree = talentTrees(metadata.getClass());
 	const shiftSpellIds = new Set(metadata.getForms().map(form => form.actionId.spellId));
 	const highest = highestRanks(entries);
 	const ranked = bucket(
@@ -120,7 +120,9 @@ const categorise = <T extends AuraStats | SpellStats>(
 		return data.category === ActionCategory.ActionCategoryTalent || ('fromTalent' in data && data.fromTalent);
 	};
 	const treeOf = (entry: T) =>
-		fromTalent(entry) && (entry.data.category === ActionCategory.ActionCategoryTalent || !isCategorised(entry)) ? trees.get(entry.id.baseName) : undefined;
+		fromTalent(entry) && (entry.data.category === ActionCategory.ActionCategoryTalent || !isCategorised(entry))
+			? talentTree(entry.id.baseName, highest.get(entry)!.data.talent)
+			: undefined;
 
 	const unshifted = entries.filter(entry => !isShift(entry));
 	const ungrouped = unshifted.filter(entry => !groupOf(entry));
