@@ -102,6 +102,7 @@ export class UnitMetadata {
 	private spells: Array<SpellStats>;
 	private forms: Array<UnitForm>;
 	private alwaysInForm: boolean;
+	private last: UnitMetadataProto;
 
 	constructor() {
 		this.name = '';
@@ -109,6 +110,7 @@ export class UnitMetadata {
 		this.spells = [];
 		this.forms = [];
 		this.alwaysInForm = false;
+		this.last = UnitMetadataProto.create();
 	}
 
 	getName(): string {
@@ -133,13 +135,14 @@ export class UnitMetadata {
 
 	// Returns whether any updates were made.
 	async update(metadata: UnitMetadataProto): Promise<boolean> {
-		let newSpells = metadata!.spells.map(spell => {
+		if (UnitMetadataProto.equals(metadata, this.last)) return false;
+		const newSpells = metadata!.spells.map(spell => {
 			return {
 				data: spell,
 				id: ActionId.fromProto(spell.id!),
 			};
 		});
-		let newAuras = metadata!.auras.map(aura => {
+		const newAuras = metadata!.auras.map(aura => {
 			return {
 				data: aura,
 				id: ActionId.fromProto(aura.id!),
@@ -153,39 +156,13 @@ export class UnitMetadata {
 			...newForms.map(form => form.actionId.fill().then(newId => (form.actionId = newId))),
 		]);
 
-		newSpells = dropLoneRanks(newSpells).sort((a, b) => stringComparator(a.id.name, b.id.name));
-		newAuras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
-
-		let anyUpdates = false;
-		if (
-			metadata.alwaysInForm !== this.alwaysInForm ||
-			newForms.length !== this.forms.length ||
-			newForms.some((form, i) => form.id !== this.forms[i].id || !form.actionId.equals(this.forms[i].actionId))
-		) {
-			this.forms = newForms;
-			this.alwaysInForm = metadata.alwaysInForm;
-			anyUpdates = true;
-		}
-		if (metadata.name != this.name) {
-			this.name = metadata.name;
-			anyUpdates = true;
-		}
-		if (
-			newSpells.length != this.spells.length ||
-			newSpells.some((newSpell, i) => !newSpell.id.equals(this.spells[i].id) || !SpellStatsProto.equals(newSpell.data, this.spells[i].data))
-		) {
-			this.spells = newSpells;
-			anyUpdates = true;
-		}
-		if (
-			newAuras.length != this.auras.length ||
-			newAuras.some((newAura, i) => !newAura.id.equals(this.auras[i].id) || !AuraStatsProto.equals(newAura.data, this.auras[i].data))
-		) {
-			this.auras = newAuras;
-			anyUpdates = true;
-		}
-
-		return anyUpdates;
+		this.last = metadata;
+		this.name = metadata.name;
+		this.spells = dropLoneRanks(newSpells).sort((a, b) => stringComparator(a.id.name, b.id.name));
+		this.auras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
+		this.forms = newForms;
+		this.alwaysInForm = metadata.alwaysInForm;
+		return true;
 	}
 }
 
