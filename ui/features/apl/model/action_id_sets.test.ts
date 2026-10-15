@@ -11,6 +11,8 @@ vi.mock('@i18n/config', () => {
 		'rotation_tab.apl.forms.any_stance': 'Any stance',
 		'rotation_tab.apl.forms.any_form': 'Any form',
 		'rotation_tab.apl.forms.no_form': 'Caster',
+		'rotation_tab.apl.forms.names.5': 'Bear',
+		'rotation_tab.apl.forms.names.8': 'Bear',
 		'rotation_tab.apl.forms.names.17': 'Battle',
 		'rotation_tab.apl.forms.names.18': 'Defensive',
 		'rotation_tab.apl.forms.names.19': 'Berserker',
@@ -165,6 +167,29 @@ describe('form buckets', () => {
 		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], anyOnly, [form(28, 'Shadowform')])))[0]).toBe('Mind Flay > spell');
 	});
 
+	it('keeps Spell when every class spell works in the same one form', async () => {
+		const casterOnly = [
+			spell(named(45, 'Starfire'), ActionCategory.ActionCategoryUnknown, { forms: [0] }),
+			spell(named(46, 'Wrath'), ActionCategory.ActionCategoryUnknown, { forms: [0] }),
+		];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], casterOnly, [form(1, 'Cat Form', false)]))).slice(0, 2)).toEqual([
+			'Starfire > spell',
+			'Wrath > spell',
+		]);
+	});
+
+	it('names forms that share a short name by their spells', async () => {
+		const bears = [
+			spell(named(47, 'Maul'), ActionCategory.ActionCategoryUnknown, { forms: [5] }),
+			spell(named(48, 'Swipe'), ActionCategory.ActionCategoryUnknown, { forms: [8] }),
+		];
+		const bearForms = [form(5, 'Bear Form', false), form(8, 'Dire Bear Form', false)];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], bears, bearForms))).slice(0, 2)).toEqual([
+			'Maul > Bear Form only',
+			'Swipe > Dire Bear Form only',
+		]);
+	});
+
 	it('keeps Spell for a spell the unit cannot cast in any of its forms', async () => {
 		const nowhere = [...spells, spell(named(41, 'Gladiator Strike'), ActionCategory.ActionCategoryUnknown, { forms: [] })];
 		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], nowhere, stances, true)))).toContain('Gladiator Strike > spell');
@@ -186,10 +211,12 @@ describe('form buckets', () => {
 
 	it('files every rank under the highest rank in the highest rank’s bucket', async () => {
 		const charge = [
+			spell(named(52, 'Bloodthirst'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19] }),
 			spell(named(50, 'Charge (Rank 1)', 1), ActionCategory.ActionCategoryUnknown, { forms: [17, 18] }),
 			spell(named(51, 'Charge (Rank 2)', 2), ActionCategory.ActionCategoryUnknown, { forms: [17] }),
 		];
-		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], charge, stances, true))).slice(0, 2)).toEqual([
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], charge, stances, true))).slice(0, 3)).toEqual([
+			'Bloodthirst > Any stance',
 			'Charge (Rank 1) > Battle only > Charge (Rank 2)',
 			'Charge (Rank 2) > Battle only',
 		]);

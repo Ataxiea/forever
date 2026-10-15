@@ -7294,9 +7294,6 @@
 										"2": {
 											"type": "string"
 										},
-										"5": {
-											"type": "string"
-										},
 										"8": {
 											"type": "string"
 										},
@@ -7317,7 +7314,7 @@
 										}
 									},
 									"additionalProperties": false,
-									"required": ["1", "2", "5", "8", "17", "18", "19", "28", "31"]
+									"required": ["1", "2", "8", "17", "18", "19", "28", "31"]
 								}
 							},
 							"additionalProperties": false,

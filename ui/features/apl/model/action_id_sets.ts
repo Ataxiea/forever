@@ -28,6 +28,12 @@ export type ACTION_ID_SET =
 const spellHasRanks = (actionId: ActionId, spells: Array<AuraStats | SpellStats>) =>
 	spells.filter(spell => actionId.baseName === spell.id.baseName && actionId.tag === spell.id.tag && spell.id.hasRank).length > 1;
 
+/** The highest rank `offered` of `actionId`'s spell, when one ranks above `actionId`. */
+const higherRank = <T extends AuraStats | SpellStats>(actionId: ActionId, offered: Array<T>): T | undefined =>
+	offered
+		.filter(spell => actionId.baseName === spell.id.baseName && actionId.tag === spell.id.tag && spell.id.hasRank)
+		.reduce<T | undefined>((top, spell) => (spell.id.rank > (top?.id.rank ?? actionId.rank) ? spell : top), undefined);
+
 /**
  * The menu path `actionId` is filed under. The ranks of a spell are filed under the highest rank
  * `offered`, which makes that rank the submenu's own row: picking the row picks the highest rank,
@@ -40,10 +46,8 @@ const createSpellSubmenu = (
 	offered: Array<AuraStats | SpellStats> = spells,
 ): Array<string | ActionId> => {
 	if (!spellHasRanks(actionId, spells)) return baseMenuEntry;
-	const highest = offered
-		.filter(spell => actionId.baseName === spell.id.baseName && actionId.tag === spell.id.tag && spell.id.hasRank)
-		.reduce((top, spell) => (spell.id.rank > top.rank ? spell.id : top), actionId);
-	return highest === actionId ? baseMenuEntry : [...baseMenuEntry, highest];
+	const highest = higherRank(actionId, offered);
+	return highest ? [...baseMenuEntry, highest.id] : baseMenuEntry;
 };
 
 /** The submenus the sim's categories are filed under, in the order they are listed. */
@@ -58,12 +62,6 @@ const CATEGORY_SUBMENUS: Array<[ActionCategory, string]> = [
 	[ActionCategory.ActionCategoryExternalCooldown, 'external_cooldowns'],
 	[ActionCategory.ActionCategoryExternalDebuff, 'external_debuffs'],
 ];
-
-/** The highest rank `offered` of `entry`'s spell, or the entry itself when it has no ranks. */
-const highestEntry = <T extends AuraStats | SpellStats>(entry: T, offered: Array<T>): T =>
-	offered
-		.filter(other => other.id.baseName === entry.id.baseName && other.id.tag === entry.id.tag && other.id.hasRank)
-		.reduce((top, other) => (other.id.rank > top.id.rank ? other : top), entry);
 
 /**
  * Files `entries` under, in this order, the form buckets of the uncategorised ones, the manual
@@ -80,28 +78,35 @@ const categorise = <T extends AuraStats | SpellStats>(
 	allEntries: Array<T> = entries,
 	bucketAll = true,
 ) => {
-	const buckets = formBuckets(metadata.getForms(), metadata.isAlwaysInForm());
+	const bucket = formBuckets(metadata.getForms(), metadata.isAlwaysInForm());
 	const path = (entry: T, segment: string) => createSpellSubmenu(entry.id, allEntries, [segment], entries);
-	const grouped = entries.filter(entry => highestEntry(entry, entries).data.group);
-	const rest = entries.filter(entry => !grouped.includes(entry));
+	const highest = new Map(entries.map(entry => [entry, higherRank(entry.id, entries) ?? entry]));
+	const groupOf = (entry: T) => highest.get(entry)!.data.group;
+	const grouped = entries.filter(entry => groupOf(entry));
+	const groupedSet = new Set(grouped);
+	const rest = entries.filter(entry => !groupedSet.has(entry));
 	const uncategorised = rest.filter(entry => !CATEGORY_SUBMENUS.some(([category]) => entry.data.category === category));
-	const bucketOf = new Map(uncategorised.map(entry => [entry, buckets.segment(highestEntry(entry, entries).data.forms)]));
-	// One "Any" bucket alone only renames Spell; an aura that works everywhere stays at the top level.
-	const onlyAny = [...bucketOf.values()].every(segment => segment === undefined || segment === buckets.anyLabel);
-	const bucketed = onlyAny ? [] : uncategorised.filter(entry => bucketOf.get(entry) !== undefined && (bucketAll || bucketOf.get(entry) !== buckets.anyLabel));
-	const groups = [...new Set(grouped.map(entry => highestEntry(entry, entries).data.group))];
+	const bucketOf = new Map(uncategorised.map(entry => [entry, bucket(highest.get(entry)!.data.forms)]));
+	// One bucket alone only renames Spell; an aura that works everywhere stays at the top level.
+	const oneBucket = new Set([...bucketOf.values()].filter(entryBucket => entryBucket !== undefined)).size <= 1;
+	const bucketed = oneBucket
+		? []
+		: uncategorised.filter(entry => {
+				const entryBucket = bucketOf.get(entry);
+				return entryBucket !== undefined && (bucketAll || !entryBucket.any);
+			});
+	const bucketedSet = new Set(bucketed);
+	const groups = [...new Set(grouped.map(groupOf))];
 
 	return {
 		bucketed: [...bucketed]
-			.sort((a, b) => buckets.order(bucketOf.get(a)!) - buckets.order(bucketOf.get(b)!))
-			.map(entry => toOption(entry, path(entry, bucketOf.get(entry)!))),
-		grouped: groups.flatMap(group =>
-			grouped.filter(entry => highestEntry(entry, entries).data.group === group).map(entry => toOption(entry, path(entry, group))),
-		),
+			.sort((a, b) => bucketOf.get(a)!.order - bucketOf.get(b)!.order)
+			.map(entry => toOption(entry, path(entry, bucketOf.get(entry)!.label))),
+		grouped: groups.flatMap(group => grouped.filter(entry => groupOf(entry) === group).map(entry => toOption(entry, path(entry, group)))),
 		categorised: CATEGORY_SUBMENUS.flatMap(([category, key]) =>
 			rest.filter(entry => entry.data.category === category).map(entry => toOption(entry, path(entry, key))),
 		),
-		uncategorised: uncategorised.filter(entry => !bucketed.includes(entry)),
+		uncategorised: uncategorised.filter(entry => !bucketedSet.has(entry)),
 	};
 };
 
