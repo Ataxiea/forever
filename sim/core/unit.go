@@ -1044,6 +1044,7 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 			Category:        category,
 			Forms:           allowedForms(spell.CastRequirement, states, category),
 			Group:           spell.MenuGroup,
+			FromTalent:      spell.Source == SourceTalent,
 		}
 	})
 

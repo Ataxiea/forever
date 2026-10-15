@@ -281,7 +281,7 @@ func TestMajorCooldownKeepsForm(t *testing.T) {
 }
 
 func TestMetadataFormsFollowTheCastRule(t *testing.T) {
-	battle := &Spell{ActionID: ActionID{SpellID: 2457}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BATTLE_STANCE, MenuGroup: "forms"}
+	battle := &Spell{ActionID: ActionID{SpellID: 2457}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BATTLE_STANCE, MenuGroup: "stances"}
 	defensive := &Spell{ActionID: ActionID{SpellID: 71}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_DEFENSIVE_STANCE}
 	berserker := &Spell{ActionID: ActionID{SpellID: 2458}, Flags: SpellFlagAPL, ShiftsTo: dbcenums.FORM_BERSERKER_STANCE}
 	charge := &Spell{ActionID: ActionID{SpellID: 100}, CastRequirement: chargeRequirement}
@@ -321,7 +321,7 @@ func TestMetadataFormsFollowTheCastRule(t *testing.T) {
 	if got := spells[16190].Forms; len(got) != 0 {
 		t.Errorf("Mana Tide forms = %v, want none for an external cooldown", got)
 	}
-	if spells[2457].Group != "forms" {
+	if spells[2457].Group != "stances" {
 		t.Errorf("Battle Stance group = %q", spells[2457].Group)
 	}
 
@@ -329,8 +329,8 @@ func TestMetadataFormsFollowTheCastRule(t *testing.T) {
 	for _, a := range metadata.Auras {
 		auras[a.Id.GetSpellId()] = a
 	}
-	if got := auras[2457].Group; got != "forms" {
-		t.Errorf("Battle Stance aura group = %q, want its spell's forms", got)
+	if got := auras[2457].Group; got != "stances" {
+		t.Errorf("Battle Stance aura group = %q, want its spell's stances", got)
 	}
 	if got := auras[2458].Group; got != "own" {
 		t.Errorf("aura with its own group = %q, want own", got)
@@ -388,6 +388,27 @@ func TestMetadataFormsSkipShiftsTheAPLCannotCast(t *testing.T) {
 	metadata := (&Unit{Spellbook: []*Spell{cat, bear}}).GetMetadata()
 	if ids := MapSlice(metadata.Forms, func(f *proto.FormStats) int32 { return f.Id }); !slices.Equal(ids, []int32{1}) {
 		t.Errorf("unit forms = %v, want Cat only", ids)
+	}
+}
+
+func TestMetadataMarksTalentSpellsAndThePlayersClass(t *testing.T) {
+	talent := &Spell{ActionID: ActionID{SpellID: 20375}, Source: SourceTalent}
+	trained := &Spell{ActionID: ActionID{SpellID: 20271}}
+	paladin := &Character{Unit: Unit{Spellbook: []*Spell{talent, trained}}, Class: proto.Class_ClassPaladin}
+
+	metadata := paladin.GetMetadata()
+	if !metadata.Spells[0].FromTalent || metadata.Spells[1].FromTalent {
+		t.Errorf("from talent = %v / %v, want true for the talent's spell only", metadata.Spells[0].FromTalent, metadata.Spells[1].FromTalent)
+	}
+	if metadata.Class != proto.Class_ClassPaladin {
+		t.Errorf("player class = %v, want Paladin", metadata.Class)
+	}
+	if got := (&Unit{}).GetMetadata().Class; got != proto.Class_ClassUnknown {
+		t.Errorf("bare unit class = %v, want unknown", got)
+	}
+	pet := &Pet{Character: Character{Class: proto.Class_ClassPaladin}, Owner: paladin}
+	if got := pet.GetMetadata().Class; got != proto.Class_ClassUnknown {
+		t.Errorf("pet class = %v, want unknown", got)
 	}
 }
 

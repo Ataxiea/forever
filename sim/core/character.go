@@ -488,6 +488,14 @@ func (character *Character) Finalize() {
 	character.majorCooldownManager.finalize()
 }
 
+// The unit's metadata with the character's class. A pet's comes from Pet's own method, which leaves
+// the class unknown.
+func (character *Character) GetMetadata() *proto.UnitMetadata {
+	metadata := character.Unit.GetMetadata()
+	metadata.Class = character.Class
+	return metadata
+}
+
 func (character *Character) FillPlayerStats(playerStats *proto.PlayerStats) {
 	if playerStats == nil {
 		return
