@@ -39,6 +39,7 @@ type SpellConfig struct {
 	CastRequirement    CastRequirement
 	ShiftsTo           dbcenums.ShapeshiftForm // The form the spell puts its caster in; zero for none.
 	MenuGroup          string                  // A manual APL menu group, a rotation_tab.apl.submenus key.
+	Talent             int32                   // Spell id of the talent row that grants the spell, which files it under the talent's tree in the APL pickers when its name differs; zero for none.
 
 	// Optional range constraints. If supplied, these are used to modify the ExtraCastCondition above to additionally check for DistanceFromTarget.
 	MinRange     float64
@@ -132,6 +133,7 @@ type Spell struct {
 	CastRequirement    CastRequirement
 	ShiftsTo           dbcenums.ShapeshiftForm // The form the spell puts its caster in; zero for none.
 	MenuGroup          string                  // A manual APL menu group, a rotation_tab.apl.submenus key.
+	Talent             int32                   // Spell id of the talent row that grants the spell; zero for none.
 	hasCastRequirement bool
 	casterAuras        []*Aura
 	excludeCasterAuras []*Aura
@@ -284,6 +286,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		CastRequirement:    config.CastRequirement,
 		ShiftsTo:           config.ShiftsTo,
 		MenuGroup:          config.MenuGroup,
+		Talent:             config.Talent,
 		hasCastRequirement: config.CastRequirement != CastRequirement{},
 
 		castTimeFn: config.Cast.CastTime,

@@ -412,6 +412,21 @@ func TestMetadataMarksTalentSpellsAndThePlayersClass(t *testing.T) {
 	}
 }
 
+func TestMetadataCarriesTheTalentLink(t *testing.T) {
+	linked := &Spell{ActionID: ActionID{SpellID: 100}, Talent: 1310735}
+	inherits := &Aura{ActionID: ActionID{SpellID: 100}}
+	own := &Aura{ActionID: ActionID{SpellID: 101}, Talent: 1310736}
+	none := &Aura{ActionID: ActionID{SpellID: 102}}
+
+	metadata := (&Unit{Spellbook: []*Spell{linked}, auraTracker: auraTracker{auras: []*Aura{inherits, own, none}}}).GetMetadata()
+	if got := metadata.Spells[0].Talent; got != 1310735 {
+		t.Errorf("spell talent = %d, want 1310735", got)
+	}
+	if got := MapSlice(metadata.Auras, func(a *proto.AuraStats) int32 { return a.Talent }); !slices.Equal(got, []int32{1310735, 1310736, 0}) {
+		t.Errorf("aura talents = %v, want its spell's, its own, none", got)
+	}
+}
+
 func TestMetadataFormsEmptyWithoutForms(t *testing.T) {
 	unit := &Unit{Spellbook: []*Spell{{ActionID: ActionID{SpellID: 100}, CastRequirement: chargeRequirement}}}
 	metadata := unit.GetMetadata()

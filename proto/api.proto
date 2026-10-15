@@ -583,6 +583,7 @@ message AuraStats {
 	ActionCategory category = 5;
 	repeated int32 forms = 6; // The unit's forms the aura works in (0 = no form); empty when the unit has no forms or the aura is an external one.
 	string group = 7; // A manual APL menu group, a rotation_tab.apl.submenus key; empty for none.
+	int32 talent = 8; // Spell id of the talent row that grants the aura, its own or its casting spell's; 0 for none.
 }
 message SpellStats {
 	ActionID id = 1;
@@ -605,6 +606,7 @@ message SpellStats {
 	repeated int32 forms = 17; // The unit's forms the spell can be cast in without leaving the form (0 = no form); empty when the unit has no forms or the spell is an external one.
 	string group = 18; // A manual APL menu group, a rotation_tab.apl.submenus key; empty for none.
 	bool from_talent = 19; // Registered by a talent; category leaves the talent source out for spells.
+	int32 talent = 20; // Spell id of the talent row that grants the spell; 0 for none.
 }
 message APLValidation {
 	LogLevel log_level = 1;

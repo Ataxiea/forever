@@ -1045,6 +1045,7 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 			Forms:           allowedForms(spell.CastRequirement, states, category),
 			Group:           spell.MenuGroup,
 			FromTalent:      spell.Source == SourceTalent,
+			Talent:          spell.Talent,
 		}
 	})
 
@@ -1053,13 +1054,16 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 	})
 	metadata.Auras = MapSlice(aplAuras, func(aura *Aura) *proto.AuraStats {
 		category := auraCategory(aura, casters)
-		requirement, group := aura.FormRequirement, aura.MenuGroup
+		requirement, group, talent := aura.FormRequirement, aura.MenuGroup, aura.Talent
 		if spell := unit.auraSpell(aura); spell != nil {
 			if spell.CastRequirement.namesForms() {
 				requirement = spell.CastRequirement
 			}
 			if group == "" {
 				group = spell.MenuGroup
+			}
+			if talent == 0 {
+				talent = spell.Talent
 			}
 		}
 		return &proto.AuraStats{
@@ -1070,6 +1074,7 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 			Category:           category,
 			Forms:              allowedForms(requirement, states, category),
 			Group:              group,
+			Talent:             talent,
 		}
 	})
 

@@ -51,6 +51,7 @@ type Aura struct {
 
 	FormRequirement CastRequirement // The forms the aura works in when no spell of its unit casts it; a passive's mask reads "active in".
 	MenuGroup       string          // A manual APL menu group, a rotation_tab.apl.submenus key.
+	Talent          int32           // Spell id of the talent row that grants the aura, which files it under the talent's tree in the APL pickers when its name differs; zero takes its casting spell's.
 
 	Icd *Cooldown           // The internal cooldown if any
 	Dpm *DynamicProcManager // Dynamic Proc manager for proc trigger auras if any
