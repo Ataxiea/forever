@@ -139,6 +139,27 @@ describe('form buckets', () => {
 		]);
 	});
 
+	it('orders buckets that share a first state by the next state', async () => {
+		const pairs = [
+			spell(named(70, 'Alpha'), ActionCategory.ActionCategoryUnknown, { forms: [17, 19] }),
+			spell(named(71, 'Zulu'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18] }),
+		];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], pairs, stances, true))).slice(0, 2)).toEqual([
+			'Zulu > Battle + Defensive',
+			'Alpha > Battle + Berserker',
+		]);
+	});
+
+	it('files a cooldown with a group under the group, not cooldowns', async () => {
+		const grouped = [spell(named(72, 'Recklessness'), ActionCategory.ActionCategoryCooldown, { forms: [19], group: 'forms' })];
+		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], grouped, stances, true)))[0]).toBe('Recklessness > forms');
+	});
+
+	it('files an aura with a group under the group', async () => {
+		const grouped = [aura(named(73, 'Battle Stance'), ActionCategory.ActionCategoryUnknown, { forms: [17, 18, 19], group: 'forms' })];
+		expect(menu(await actionIdSets.auras.getActionIDs(metadata(grouped, [], stances, true)))).toEqual(['Battle Stance > forms']);
+	});
+
 	it('keeps Spell when every class spell works in every form', async () => {
 		const anyOnly = [spell(named(40, 'Mind Flay'), ActionCategory.ActionCategoryUnknown, { forms: [0, 28] })];
 		expect(menu(await actionIdSets.castable_spells.getActionIDs(metadata([], anyOnly, [form(28, 'Shadowform')])))[0]).toBe('Mind Flay > spell');

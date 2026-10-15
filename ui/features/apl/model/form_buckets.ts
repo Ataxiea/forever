@@ -42,8 +42,8 @@ export const formBuckets = (forms: Array<UnitForm>, alwaysInForm: boolean) => {
 								),
 							)
 							.join(' + ');
-		// Any first, then by size, then by the states it names in form order.
-		const rank = allowed.length === states.length ? 0 : allowed.length * 1000 + Math.min(...allowed.map(id => states.indexOf(id)));
+		// Any first, then by size, then by the places of the states it names, one after the other.
+		const rank = allowed.length === states.length ? 0 : allowed.reduce((rank, id) => rank * 100 + states.indexOf(id), allowed.length);
 		if (!keys.has(label)) keys.set(label, rank);
 		return label;
 	};

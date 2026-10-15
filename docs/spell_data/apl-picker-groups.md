@@ -35,7 +35,7 @@ unit whose forms are all stances and which is never without one, else `Any form`
 (`rotation_tab.apl.forms.any_form`). The short names are `rotation_tab.apl.forms.names.<form id>`; a form
 without one shows its spell's name. The no-form state is `rotation_tab.apl.forms.no_form`. The buckets
 are ordered `Any` first, then by the number of states they name, then by the first state's place in the
-state list.
+state list, with ties going by the next state's place.
 
 `Spell` stays when the unit has no forms, for an entry that works in none of the unit's states, and when
 every entry left over works in every state or in none, where one bucket would only rename `Spell`. In the

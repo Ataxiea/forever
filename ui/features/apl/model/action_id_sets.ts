@@ -118,7 +118,7 @@ export type LIST_SCOPE = 'prepull' | 'priority';
 
 export interface ActionIdOption {
 	value: ActionId;
-	/** The category submenus the spell or aura is filed under, then the highest rank its lower ranks sit behind. */
+	/** The form bucket, manual group or category submenu the spell or aura is filed under, then the highest rank its lower ranks sit behind. */
 	submenu?: Array<string | ActionId>;
 	tooltip?: string;
 	/**
