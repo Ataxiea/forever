@@ -105,6 +105,9 @@ func SpellConfig(unit *core.Unit, s *Spell, opts ...SpellOpt) core.SpellConfig {
 		config.DamageMultiplier = 1
 		config.ThreatMultiplier = 1
 	}
+	if s.ShapeshiftForm() != 0 {
+		config.MenuGroup = "forms"
+	}
 
 	// The row first, the caller's options on top, so an option sees what the row filled.
 	for _, opt := range opts {

@@ -16,13 +16,17 @@ type AuraOpt func(*core.Aura)
 // A row that states no duration resolves to one of 0, which core refuses to activate: such an aura
 // needs Permanent() or a duration of the caller's.
 func AuraConfig(s *Spell, opts ...AuraOpt) core.Aura {
+	r := s.CastRequirement()
 	aura := core.Aura{
 		Label:     s.Name,
 		ActionID:  core.ActionID{SpellID: s.ID},
 		Duration:  s.Duration(),
 		MaxStacks: maxStacks(s),
 
-		FormRequirement: core.CastRequirement{Forms: s.StanceMask, ExcludedForms: s.StanceExclude, CasterForm: s.CastableInCasterForm(), NotShapeshifted: s.NotShapeshifted()},
+		FormRequirement: core.CastRequirement{Forms: r.Forms, ExcludedForms: r.ExcludedForms, CasterForm: r.CasterForm, NotShapeshifted: r.NotShapeshifted},
+	}
+	if s.ShapeshiftForm() != 0 {
+		aura.MenuGroup = "forms"
 	}
 
 	for _, opt := range opts {
