@@ -21,6 +21,8 @@ func AuraConfig(s *Spell, opts ...AuraOpt) core.Aura {
 		ActionID:  core.ActionID{SpellID: s.ID},
 		Duration:  s.Duration(),
 		MaxStacks: maxStacks(s),
+
+		FormRequirement: core.CastRequirement{Forms: s.StanceMask, ExcludedForms: s.StanceExclude, CasterForm: s.CastableInCasterForm(), NotShapeshifted: s.NotShapeshifted()},
 	}
 
 	for _, opt := range opts {

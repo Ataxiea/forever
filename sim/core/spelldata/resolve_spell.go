@@ -82,6 +82,7 @@ func SpellConfig(unit *core.Unit, s *Spell, opts ...SpellOpt) core.SpellConfig {
 		MissileMinDuration: s.MissileMinDuration(),
 
 		CastRequirement: s.CastRequirement(),
+		ShiftsTo:        s.ShapeshiftForm(),
 	}
 	applyCost(&config, s)
 	// Forever moves the minimum range of a bow, gun or crossbow shot from the 8 yd the row states to

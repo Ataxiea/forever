@@ -5,6 +5,7 @@ package spelldata
 // the links, masks and effect kinds of a handful of rows; no amount is pinned.
 
 import (
+	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"slices"
 	"strings"
@@ -365,6 +366,18 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 		if got := MustFind(id).ShapeshiftForm(); got != want {
 			t.Errorf("spell %d puts the caster in form %d, want %d", id, got, want)
 		}
+	}
+}
+
+// Battle Stance's config states the form it shifts to, Leader of the Pack's aura the forms it needs.
+func TestConfigsCarryTheFormData(t *testing.T) {
+	withGeneratedStore(t)
+
+	if got := SpellConfig(&core.Unit{}, MustFind(2457)).ShiftsTo; got != dbcenums.FORM_BATTLE_STANCE {
+		t.Errorf("Battle Stance ShiftsTo = %d, want %d", got, dbcenums.FORM_BATTLE_STANCE)
+	}
+	if got := AuraConfig(MustFind(24932)).FormRequirement; got.Forms != 0x91 {
+		t.Errorf("Leader of the Pack aura forms = %#x, want 0x91 (Cat, Bear, Dire Bear)", got.Forms)
 	}
 }
 
