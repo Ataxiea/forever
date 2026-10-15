@@ -338,7 +338,8 @@ func (paladin *Paladin) applyTwistOfLight() {
 		return
 	}
 
-	spelldata.ParseStatic(&paladin.Character, spellData.TwistOfLight.Rank(1))
+	talent := spellData.TwistOfLight.Rank(1)
+	spelldata.ParseStatic(&paladin.Character, talent)
 
 	paladin.echoes = map[int32]*sealEcho{}
 	for _, id := range []int32{echoOfCommandID, echoOfFuryID, echoOfRighteousnessID, echoOfJusticeID} {
@@ -347,6 +348,7 @@ func (paladin *Paladin) applyTwistOfLight() {
 			Label:    fmt.Sprintf("Echo (%d)%s", id, paladin.Label),
 			ActionID: core.ActionID{SpellID: id},
 			Duration: core.NeverExpires,
+			Talent:   talent.ID,
 		})
 		echo.aura.NewExclusiveEffect(EchoCategory, true, core.ExclusiveEffect{})
 		echo.aura.AttachProcTrigger(core.ProcTrigger{
