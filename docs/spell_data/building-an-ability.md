@@ -106,6 +106,8 @@ leave the form.
 - A form spell (subtext "Shapeshift") is a single-rank ladder like a warrior stance, so
   `spellData.CatForm` exists.
 
+The APL pickers file a spell by the forms this rule allows it in: [Groups in the APL picker](apl-picker-groups.md).
+
 ## The three shapes a registration takes
 
 1. **The row, plus what no row states.** `sim/warrior/pummel.go` and `sim/warrior/slam.go`: the
