@@ -21,6 +21,8 @@ import { EncounterSlice, SimStore } from '../state/sim_store';
 
 const clampProportion = (value: number) => Math.round(Math.min(Math.max(value, 0), 1) * 10000) / 10000;
 
+const EXECUTE_KEYS = ['executeProportion20', 'executeProportion25', 'executeProportion35', 'executeProportion45', 'executeProportion90'] as const;
+
 // Manages all the settings for an Encounter. State lives in the Zustand
 // store's `encounter` slice.
 export class Encounter {
@@ -98,135 +100,51 @@ export class Encounter {
 		this.set({ duration: newDuration });
 	}
 
+	private setExecuteProportionAt(index: number, value: number) {
+		const enc = this.enc;
+		const next = EXECUTE_KEYS.map(k => enc[k]);
+		next[index] = clampProportion(value);
+		for (let i = index - 1; i >= 0; i--) next[i] = Math.min(next[i], next[i + 1]);
+		for (let i = index + 1; i < next.length; i++) next[i] = Math.max(next[i], next[i - 1]);
+		if (EXECUTE_KEYS.every((k, i) => next[i] === enc[k])) return;
+		this.set({
+			executeProportion20: next[0],
+			executeProportion25: next[1],
+			executeProportion35: next[2],
+			executeProportion45: next[3],
+			executeProportion90: next[4],
+		});
+	}
+
 	getExecuteProportion20(): number {
 		return this.enc.executeProportion20;
 	}
 	setExecuteProportion20(value: number) {
-		const p20 = clampProportion(value);
-		const p25 = Math.max(this.enc.executeProportion25, p20);
-		const p35 = Math.max(this.enc.executeProportion35, p25);
-		const p45 = Math.max(this.enc.executeProportion45, p35);
-		const p90 = Math.max(this.enc.executeProportion90, p45);
-		if (
-			p20 === this.enc.executeProportion20 &&
-			p25 === this.enc.executeProportion25 &&
-			p35 === this.enc.executeProportion35 &&
-			p45 === this.enc.executeProportion45 &&
-			p90 === this.enc.executeProportion90
-		) {
-			return;
-		}
-		this.set({
-			executeProportion20: p20,
-			executeProportion25: p25,
-			executeProportion35: p35,
-			executeProportion45: p45,
-			executeProportion90: p90,
-		});
+		this.setExecuteProportionAt(0, value);
 	}
 	getExecuteProportion25(): number {
 		return this.enc.executeProportion25;
 	}
 	setExecuteProportion25(value: number) {
-		const p25 = clampProportion(value);
-		const p20 = Math.min(this.enc.executeProportion20, p25);
-		const p35 = Math.max(this.enc.executeProportion35, p25);
-		const p45 = Math.max(this.enc.executeProportion45, p35);
-		const p90 = Math.max(this.enc.executeProportion90, p45);
-		if (
-			p20 === this.enc.executeProportion20 &&
-			p25 === this.enc.executeProportion25 &&
-			p35 === this.enc.executeProportion35 &&
-			p45 === this.enc.executeProportion45 &&
-			p90 === this.enc.executeProportion90
-		) {
-			return;
-		}
-		this.set({
-			executeProportion20: p20,
-			executeProportion25: p25,
-			executeProportion35: p35,
-			executeProportion45: p45,
-			executeProportion90: p90,
-		});
+		this.setExecuteProportionAt(1, value);
 	}
 	getExecuteProportion35(): number {
 		return this.enc.executeProportion35;
 	}
 	setExecuteProportion35(value: number) {
-		const p35 = clampProportion(value);
-		const p25 = Math.min(this.enc.executeProportion25, p35);
-		const p20 = Math.min(this.enc.executeProportion20, p25);
-		const p45 = Math.max(this.enc.executeProportion45, p35);
-		const p90 = Math.max(this.enc.executeProportion90, p45);
-		if (
-			p20 === this.enc.executeProportion20 &&
-			p25 === this.enc.executeProportion25 &&
-			p35 === this.enc.executeProportion35 &&
-			p45 === this.enc.executeProportion45 &&
-			p90 === this.enc.executeProportion90
-		) {
-			return;
-		}
-		this.set({
-			executeProportion20: p20,
-			executeProportion25: p25,
-			executeProportion35: p35,
-			executeProportion45: p45,
-			executeProportion90: p90,
-		});
+		this.setExecuteProportionAt(2, value);
 	}
 	getExecuteProportion45(): number {
 		return this.enc.executeProportion45;
 	}
 	setExecuteProportion45(value: number) {
-		const p45 = clampProportion(value);
-		const p35 = Math.min(this.enc.executeProportion35, p45);
-		const p25 = Math.min(this.enc.executeProportion25, p35);
-		const p20 = Math.min(this.enc.executeProportion20, p25);
-		const p90 = Math.max(this.enc.executeProportion90, p45);
-		if (
-			p20 === this.enc.executeProportion20 &&
-			p25 === this.enc.executeProportion25 &&
-			p35 === this.enc.executeProportion35 &&
-			p45 === this.enc.executeProportion45 &&
-			p90 === this.enc.executeProportion90
-		) {
-			return;
-		}
-		this.set({
-			executeProportion20: p20,
-			executeProportion25: p25,
-			executeProportion35: p35,
-			executeProportion45: p45,
-			executeProportion90: p90,
-		});
+		this.setExecuteProportionAt(3, value);
 	}
 	getExecuteProportion90(): number {
 		return this.enc.executeProportion90;
 	}
 	setExecuteProportion90(value: number) {
-		const p90 = clampProportion(value);
-		const p45 = Math.min(this.enc.executeProportion45, p90);
-		const p35 = Math.min(this.enc.executeProportion35, p45);
-		const p25 = Math.min(this.enc.executeProportion25, p35);
-		const p20 = Math.min(this.enc.executeProportion20, p25);
-		if (
-			p20 === this.enc.executeProportion20 &&
-			p25 === this.enc.executeProportion25 &&
-			p35 === this.enc.executeProportion35 &&
-			p45 === this.enc.executeProportion45 &&
-			p90 === this.enc.executeProportion90
-		) {
-			return;
-		}
-		this.set({
-			executeProportion20: p20,
-			executeProportion25: p25,
-			executeProportion35: p35,
-			executeProportion45: p45,
-			executeProportion90: p90,
-		});
+		this.setExecuteProportionAt(4, value);
 	}
 	getUseHealth(): boolean {
 		return this.enc.useHealth;
