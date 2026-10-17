@@ -9,8 +9,6 @@ import (
 type APLAction struct {
 	condition APLValue
 	impl      APLActionImpl
-	Path      string // The row's JSON path in the APL ("priorityList/3", "groups/1/actions/0"); empty below the row.
-	unit      *Unit  // The rotation's unit, set with Path.
 }
 
 func (action *APLAction) Finalize(rot *APLRotation) {
@@ -30,8 +28,8 @@ func (action *APLAction) IsReady(sim *Simulation) bool {
 }
 
 func (action *APLAction) Execute(sim *Simulation) {
-	if sim.aplActionExecuted != nil && action.Path != "" {
-		sim.aplActionExecuted(sim, action.unit, action)
+	if sim.aplActionExecuted != nil {
+		sim.aplActionExecuted(sim, action)
 	}
 	action.impl.Execute(sim)
 }

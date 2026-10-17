@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -255,34 +256,38 @@ func listRows(rotation *proto.APLRotation) map[string]rowStats {
 	return rows
 }
 
-// Counts the player's executed rows, and while record is set writes the first iteration's timeline: an iteration
-// starts over at its prepull time, so the first row earlier than the last ends the recording.
+// Counts the player's executed rows, and while record is set writes the first iteration's timeline. The rows and
+// their paths come from the player's rotation on the first action the sim executes, and the player's next reset,
+// the start of the second iteration, ends the recording.
 type recorder struct {
 	counts   map[string]int
 	timeline []timelineEvent
 	limit    int
 	record   bool
+	rows     map[*core.APLAction]string // Nil until the first action.
 }
 
-func (r *recorder) executed(sim *core.Simulation, unit *core.Unit, action *core.APLAction) {
-	if unit.Type != core.PlayerUnit || action.Path == "" {
+func (r *recorder) executed(sim *core.Simulation, action *core.APLAction) {
+	if r.rows == nil {
+		r.rows = map[*core.APLAction]string{}
+		for _, unit := range sim.Raid.AllUnits {
+			if unit.Type == core.PlayerUnit && unit.Rotation != nil {
+				maps.Copy(r.rows, unit.Rotation.RowPaths())
+				unit.RegisterResetEffect(func(*core.Simulation) { r.record = false })
+			}
+		}
+	}
+	path, ok := r.rows[action]
+	if !ok {
 		return
 	}
-	r.counts[action.Path]++
-	if !r.record {
+	r.counts[path]++
+	if !r.record || len(r.timeline) >= r.limit {
 		return
 	}
-	event := timelineEvent{TimeMs: sim.CurrentTime.Milliseconds(), Path: action.Path, Label: label(action)}
-	n := len(r.timeline)
-	if n > 0 && event.TimeMs < r.timeline[n-1].TimeMs {
-		r.record = false
-		return
-	}
-	if n >= r.limit {
-		return
-	}
+	event := timelineEvent{TimeMs: sim.CurrentTime.Milliseconds(), Path: path, Label: label(action)}
 	// A group's row runs only from a reference, which is recorded just before it.
-	if n > 0 && strings.HasPrefix(event.Path, "groups/") {
+	if n := len(r.timeline); n > 0 && strings.HasPrefix(path, "groups/") {
 		event.Via = r.timeline[n-1].Path
 	}
 	r.timeline = append(r.timeline, event)
