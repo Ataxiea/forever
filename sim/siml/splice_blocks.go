@@ -106,7 +106,7 @@ func (m *rotationModel) readValue(text []byte, path []any) (*proto.APLValue, str
 // Gives a slot the row item, which it is printed from.
 func (m *rotationModel) setItem(s *spliceSlot, item *proto.APLListItem) {
 	s.msg = item.ProtoReflect()
-	s.json, _ = decodeJSON([]byte(m.ix.jsonText(s.msg)))
+	s.json = m.ix.jsonValue(s.msg)
 	s.dirty = true
 }
 
@@ -288,13 +288,7 @@ func (m *rotationModel) setHide(w *whenStmt, hide bool) string {
 	st.hide, st.changed = hide, true
 	for _, s := range m.rowsIn(w) {
 		item := googleProto.Clone(s.msg.Interface()).(*proto.APLListItem)
-		own := false
-		if s.unit != nil {
-			if r, ok := s.unit.statement.(*rowStmt); ok {
-				own = r.hide
-			}
-		}
-		item.Hide = hide || own || m.hidden(s.blocks)
+		item.Hide = hide || s.ownHide() || m.hidden(s.blocks)
 		m.setItem(s, item)
 	}
 	return ""
@@ -307,7 +301,7 @@ func (m *rotationModel) editCondition(w *whenStmt, e AplEdit, path []any) string
 	if problem != "" {
 		return problem
 	}
-	v, _ := decodeJSON([]byte(m.ix.jsonText(st.value.ProtoReflect())))
+	v := m.ix.jsonValue(st.value.ProtoReflect())
 	at := slices.Concat([]any{"condition"}, path)
 	root := any(map[string]any{"condition": v})
 	var value any
@@ -431,13 +425,10 @@ func (m *rotationModel) wrap(e AplEdit) string {
 	}
 	list.opens[w] = &spliceSlot{when: w}
 	added := st.conjuncts()
-	same := func(a, b *proto.APLValue) bool {
-		return m.ix.comparedJSON(a.ProtoReflect()) == m.ix.comparedJSON(b.ProtoReflect())
-	}
 	for _, s := range rows {
 		own := owns[s]
 		keep := len(own.vals)
-		if !st.adopt && keep >= len(added) && slices.EqualFunc(own.vals[:len(added)], added, same) {
+		if !st.adopt && keep >= len(added) && slices.EqualFunc(own.vals[:len(added)], added, m.ix.sameValue) {
 			keep -= len(added)
 		}
 		s.blocks = append(slices.Clone(outer), w)
@@ -723,7 +714,7 @@ func (m *rotationModel) adopt(back *typedFile, got *proto.APLRotation) bool {
 				continue
 			}
 			s.msg, s.adopt, took = read[k], false, true
-			s.json, _ = decodeJSON([]byte(m.ix.jsonText(s.msg)))
+			s.json = m.ix.jsonValue(s.msg)
 		}
 	}
 	return took
@@ -840,10 +831,8 @@ func (d *Doc) editDef(e AplEdit) ([]TextEdit, error) {
 	}
 	line := defText(e.Name, e.Params, e.Text)
 	back := readFile(d.ix, d.names, d.src[:def.start]+line+d.src[def.end:], f.kind, nil)
-	for _, diag := range back.tree.lines.diagnostics("", back.diags) {
-		if diag.Severity == Error {
-			return nil, errors.New("the def has an error: " + diag.Message)
-		}
+	if problem := firstError(back); problem != "" {
+		return nil, errors.New("the def has an error: " + problem)
 	}
 	return []TextEdit{{Range: d.rangeOf(def.span), NewText: line}}, nil
 }

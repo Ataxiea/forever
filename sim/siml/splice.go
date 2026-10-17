@@ -104,10 +104,8 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 		back := readFile(d.ix, d.names, out.result(), f.kind, nil)
 		// The forms the printer writes read back, so an error is the edited rotation's own: a cycle, or a name written
 		// twice.
-		for _, diag := range back.tree.lines.diagnostics("", back.diags) {
-			if diag.Severity == Error {
-				return nil, errors.New("the edited rotation has an error: " + diag.Message)
-			}
+		if problem := firstError(back); problem != "" {
+			return nil, errors.New("the edited rotation has an error: " + problem)
 		}
 		got := back.settings.GetPlayer().GetRotation()
 		// A def call an edit writes reads as what the new text gives it, which the statements around it then hold.
@@ -601,7 +599,7 @@ func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
 	fill := func(list *spliceList, holder protoreflect.Message, path ...any) {
 		for i, msg := range elements(holder, list.key) {
 			s := statements[pathKey(slices.Concat(path, []any{list.key, i}))]
-			v, _ := decodeJSON([]byte(ix.jsonText(msg)))
+			v := ix.jsonValue(msg)
 			list.old = append(list.old, &spliceSlot{json: v, msg: msg, unit: unitOf(s, headers[s], lines), blocks: blocksOf(s), calls: m.callsIn(msg)})
 		}
 		list.slots = slices.Clone(list.old)
@@ -769,14 +767,11 @@ func (m *rotationModel) fits(msg protoreflect.Message, blocks []*whenStmt) ([]*p
 		return nil, false
 	}
 	joined := m.conjunctsOf(blocks)
-	same := func(a, b *proto.APLValue) bool {
-		return m.ix.comparedJSON(a.ProtoReflect()) == m.ix.comparedJSON(b.ProtoReflect())
-	}
-	if len(joined) == 1 && same(condition, joined[0]) || len(joined) > 1 && same(condition, andOf(joined)) {
+	if m.ix.sameValue(condition, conditionOf(joined)) {
 		return nil, true
 	}
 	vals := condition.GetAnd().GetVals()
-	if len(vals) <= len(joined) || !slices.EqualFunc(vals[:len(joined)], joined, same) {
+	if len(vals) <= len(joined) || !slices.EqualFunc(vals[:len(joined)], joined, m.ix.sameValue) {
 		return nil, false
 	}
 	return vals[len(joined):], true
@@ -1620,12 +1615,7 @@ func (w *spliceWriter) inBlocks(s *spliceSlot, p *printer, sc scope, indent int)
 	item := s.msg.Interface().(*proto.APLListItem)
 	own, _ := w.model.fits(s.msg, s.blocks)
 	// A row hidden by its own line as well as by a block keeps its #.
-	ownHide := false
-	if s.unit != nil {
-		if r, ok := s.unit.statement.(*rowStmt); ok {
-			ownHide = r.hide
-		}
-	}
+	ownHide := s.ownHide()
 	hidden := w.model.hidden(s.blocks)
 	row := &proto.APLListItem{Hide: item.Hide && (!hidden || ownHide), Notes: item.Notes, Action: &proto.APLAction{Action: item.GetAction().GetAction()}}
 	switch len(own) {
@@ -1699,4 +1689,34 @@ func (w *spliceWriter) render(s *spliceSlot, list *spliceList, p *printer, sc sc
 		out = append(out, spliceLine{text: t, from: -1})
 	}
 	return out
+}
+
+// Whether a and b are the same value, as the splice compares them.
+func (ix *schemaIndex) sameValue(a, b *proto.APLValue) bool {
+	return ix.comparedJSON(a.ProtoReflect()) == ix.comparedJSON(b.ProtoReflect())
+}
+
+// m's JSON, decoded.
+func (ix *schemaIndex) jsonValue(m protoreflect.Message) any {
+	v, _ := decodeJSON([]byte(ix.jsonText(m)))
+	return v
+}
+
+// Whether the slot's own line writes #.
+func (s *spliceSlot) ownHide() bool {
+	if s.unit == nil {
+		return false
+	}
+	r, ok := s.unit.statement.(*rowStmt)
+	return ok && r.hide
+}
+
+// The message of f's first error in SPEC.md §13 order, "" for none.
+func firstError(f *typedFile) string {
+	for _, d := range f.tree.lines.diagnostics("", f.diags) {
+		if d.Severity == Error {
+			return d.Message
+		}
+	}
+	return ""
 }
