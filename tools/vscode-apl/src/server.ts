@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import * as vscode from 'vscode';
 import { LanguageClient, RevealOutputChannelOn } from 'vscode-languageclient/node';
 
-import { findGo } from './go';
+import { findGo } from '../../vscode-common/go';
 
 // The SIML language server, `wowsimcli siml lsp`, built from the repository each file sits in and started there: one
 // per repository, which serves its *.siml files and answers the panel's requests about them.

@@ -2,7 +2,7 @@ import { statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 
-// The go binary the `wowsims-apl.goBinary` setting names: `go` searches for an install, anything else is the binary.
+// The go binary an extension's goBinary setting names: `go` searches for an install, anything else is the binary.
 // VS Code started from a desktop launcher or a WSL/remote server does not read the shell profile, so a Go install the
 // terminal finds is often missing from its PATH.
 export function findGo(configured: string): string | undefined {
