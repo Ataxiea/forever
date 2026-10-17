@@ -1,6 +1,7 @@
 package siml
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -119,21 +120,12 @@ func (f *typedFile) format() string {
 		leading(b.leading, indent, startsBlock, startsSection)
 		// One comment on a statement's last line stays at the end of its last line; any other inner comment is
 		// written above it.
-		var comments []trivia
-		for _, t := range b.inner {
-			if t.kind == triviaComment {
-				comments = append(comments, t)
-			}
+		trailing, above := innerComments(b.inner, tree.lines.line(b.end))
+		for _, c := range above {
+			items = append(items, commentLine(c, indent))
 		}
-		onLastLine := len(comments) == 1 && comments[0].line == tree.lines.line(b.end)
-		if !onLastLine {
-			for _, c := range comments {
-				items = append(items, commentLine(c, indent))
-			}
-		}
-		trailing := carried
-		if onLastLine {
-			trailing = trailingText(comments[0])
+		if trailing == "" {
+			trailing = carried
 		}
 		carried = ""
 		if isHeader && s.(*headerStmt).body != nil {
@@ -178,15 +170,9 @@ func (f *typedFile) format() string {
 				add(p.row(item, section.name == sectionPrepull, sc, indent))
 				break
 			}
-			// A row of a when block writes its own condition, and reads back as the row it is joined into.
 			row := item.Interface().(*proto.APLListItem)
 			own := &proto.APLListItem{Hide: s.hide, Notes: row.Notes, Action: &proto.APLAction{Action: row.Action.Action, Condition: ownCondition(s, row.Action.Condition)}}
-			st := p.row(own.ProtoReflect(), false, sc, indent)
-			if c := own.Action.Condition; c != nil && len(conjuncts(s.action.condition)) == 1 && len(st.parts) > 1 {
-				st.parts = append(st.parts[:1], p.conjunctParts(c.ProtoReflect(), sc)...)
-			}
-			st.expect = p.row(item, false, sc, indent).expect
-			add(st)
+			add(p.blockRow(own, item, len(conjuncts(s.action.condition)) == 1, sc, indent))
 		case *whenStmt:
 			add(p.whenLine(f.whens[s].ProtoReflect(), len(conjuncts(s.condition)) > 1, s.hide, sc, indent))
 		case *defStmt:
@@ -313,4 +299,34 @@ func isJSSpace(r rune) bool {
 		return true
 	}
 	return unicode.Is(unicode.Zs, r)
+}
+
+// A row of when blocks: own writes the conjuncts it adds to theirs (SPEC.md §6.9), and reads back as full, the row
+// it is joined into. oneConjunct says own's condition is a single conjunct, written without brackets.
+func (p *printer) blockRow(own *proto.APLListItem, full protoreflect.Message, oneConjunct bool, sc scope, indent int) *printedStmt {
+	st := p.row(own.ProtoReflect(), false, sc, indent)
+	if c := own.GetAction().GetCondition(); c != nil && oneConjunct && len(st.parts) > 1 {
+		st.parts = append(st.parts[:1], p.conjunctParts(c.ProtoReflect(), sc)...)
+	}
+	st.expect = p.row(full, false, sc, indent).expect
+	return st
+}
+
+// A statement's inner comments (SPEC.md §10): the one on its last line, when it is the only one, as trailing text;
+// else all of them, to go above it.
+func innerComments(inner []trivia, last int) (trailing string, above []trivia) {
+	comments := slices.DeleteFunc(slices.Clone(inner), func(t trivia) bool { return t.kind != triviaComment })
+	if len(comments) == 1 && comments[0].line == last {
+		return trailingText(comments[0]), nil
+	}
+	return "", comments
+}
+
+// Printed lines as splice lines, from no line of the text.
+func newSpliceLines(texts []string) []spliceLine {
+	out := make([]spliceLine, len(texts))
+	for i, t := range texts {
+		out[i] = spliceLine{text: t, from: -1}
+	}
+	return out
 }

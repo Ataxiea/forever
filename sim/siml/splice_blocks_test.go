@@ -71,6 +71,14 @@ func TestSpliceBlockEdits(t *testing.T) {
 			"    move near",
 		),
 	}, {
+		name:  "a block's new condition keeps a comment inside its old one",
+		text:  strings.Replace(spliceBlocks, "  when $a:", "  when ($a // the opener\n    or $b):", 1),
+		edits: `[{"op": "set", "path": ["whens", 0, "condition"], "value": {"variableRef": {"name": "b"}}}]`,
+		want: textLines(
+			"  // the opener",
+			"  when $b:",
+		),
+	}, {
 		name:  "show a block again",
 		text:  strings.Replace(spliceBlocks, "  when $a:", "  # when $a:", 1),
 		edits: `[{"op": "set", "path": ["whens", 0, "hide"]}]`,

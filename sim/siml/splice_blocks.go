@@ -1,6 +1,7 @@
 package siml
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -774,16 +775,13 @@ func (w *spliceWriter) whenLines(s *spliceSlot, list *spliceList) []spliceLine {
 		for _, c := range s.unit.comments {
 			above = append(above, w.out.lines.text(c.line))
 		}
-		inner := slices.DeleteFunc(slices.Clone(s.when.inner), func(t trivia) bool { return t.kind != triviaComment })
-		if len(inner) == 1 && inner[0].line == w.lines.line(s.when.end) {
-			ps.trailing = trailingText(inner[0])
+		trailing, inner := innerComments(s.when.inner, w.lines.line(s.when.end))
+		ps.trailing = cmp.Or(trailing, ps.trailing)
+		for _, c := range inner {
+			above = append(above, commentLine(c, w.lineIndent(list, s.when)).line)
 		}
 	}
-	var out []spliceLine
-	for _, t := range append(above, statementLines(ps)...) {
-		out = append(out, spliceLine{text: t, from: -1})
-	}
-	return out
+	return newSpliceLines(append(above, statementLines(ps)...))
 }
 
 // The column of a when line: its own in the text, or that of the body it goes in for a block an edit adds.

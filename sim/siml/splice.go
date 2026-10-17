@@ -1617,20 +1617,8 @@ func (w *spliceWriter) inBlocks(s *spliceSlot, p *printer, sc scope, indent int)
 	// A row hidden by its own line as well as by a block keeps its #.
 	ownHide := s.ownHide()
 	hidden := w.model.hidden(s.blocks)
-	row := &proto.APLListItem{Hide: item.Hide && (!hidden || ownHide), Notes: item.Notes, Action: &proto.APLAction{Action: item.GetAction().GetAction()}}
-	switch len(own) {
-	case 0:
-	case 1:
-		row.Action.Condition = own[0]
-	default:
-		row.Action.Condition = andOf(own)
-	}
-	ps := p.row(row.ProtoReflect(), false, sc, indent)
-	if len(own) == 1 && len(ps.parts) > 1 {
-		ps.parts = append(ps.parts[:1], p.conjunctParts(own[0].ProtoReflect(), sc)...)
-	}
-	ps.expect = p.row(s.msg, false, sc, indent).expect
-	return ps
+	row := &proto.APLListItem{Hide: item.Hide && (!hidden || ownHide), Notes: item.Notes, Action: &proto.APLAction{Action: item.GetAction().GetAction(), Condition: conditionOf(own)}}
+	return p.blockRow(row, s.msg, len(own) == 1, sc, indent)
 }
 
 // A slot printed from its JSON, with the comment lines directly above its statement, and the comments in it: one at
@@ -1675,20 +1663,13 @@ func (w *spliceWriter) render(s *spliceSlot, list *spliceList, p *printer, sc sc
 		if u.header != nil {
 			host = u.header.base()
 		}
-		inner := slices.DeleteFunc(slices.Clone(host.inner), func(t trivia) bool { return t.kind != triviaComment })
-		if len(inner) == 1 && inner[0].line == w.lines.line(host.end) {
-			ps.trailing = trailingText(inner[0])
-		} else {
-			for _, c := range inner {
-				above = append(above, commentLine(c, indent).line)
-			}
+		trailing, inner := innerComments(host.inner, w.lines.line(host.end))
+		ps.trailing = cmp.Or(trailing, ps.trailing)
+		for _, c := range inner {
+			above = append(above, commentLine(c, indent).line)
 		}
 	}
-	var out []spliceLine
-	for _, t := range append(above, statementLines(ps)...) {
-		out = append(out, spliceLine{text: t, from: -1})
-	}
-	return out
+	return newSpliceLines(append(above, statementLines(ps)...))
 }
 
 // Whether a and b are the same value, as the splice compares them.
