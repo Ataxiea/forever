@@ -17,23 +17,6 @@ import (
 // whenever it changes on disk; the schema is the one the server is built with.
 var tableFile = filepath.Join("sim", "siml", "names.json")
 
-// The repository root above a file: the first folder up that holds the name table.
-func repositoryRoot(file string) (string, bool) {
-	for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
-		if isFile(filepath.Join(dir, tableFile)) {
-			return dir, true
-		}
-		if filepath.Dir(dir) == dir {
-			return "", false
-		}
-	}
-}
-
-func isFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular()
-}
-
 // A file's size and time, which say it changed.
 type stamp struct {
 	size int64

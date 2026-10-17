@@ -20,7 +20,7 @@ var lintSeverity = map[string]Severity{"error": Error, "warning": Warning, "info
 
 // The parser's diagnostics and the checks, as the editor shows them: under ui/specs the parser's warnings are errors.
 func (d *Doc) EditorDiagnostics(c *DatabaseCatalog) Diagnostics {
-	strict := d.repository()
+	strict := UnderSpecs(d.path)
 	var out Diagnostics
 	for _, x := range d.Diagnostics() {
 		if strict && x.Severity == Warning {
@@ -28,14 +28,13 @@ func (d *Doc) EditorDiagnostics(c *DatabaseCatalog) Diagnostics {
 		}
 		out = append(out, x)
 	}
-	return append(out, d.checks(c)...)
+	return append(out, d.checks(c, strict)...)
 }
 
-func (d *Doc) checks(c *DatabaseCatalog) Diagnostics {
+func (d *Doc) checks(c *DatabaseCatalog, strict bool) Diagnostics {
 	if d.typed == nil {
 		return nil
 	}
-	strict := d.repository()
 	var out Diagnostics
 	if strict && d.file != nil {
 		out = append(out, d.file.RawRefs...)

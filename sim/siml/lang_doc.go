@@ -44,26 +44,35 @@ func (d *Doc) class() proto.Class {
 	return proto.Class_ClassUnknown
 }
 
-// Whether the file lies under ui/specs of the repository it sits in (the first folder up that holds
-// sim/siml/names.json), where warnings are errors and raw refs are reported (SPEC.md §7.3, §13).
-func (d *Doc) repository() bool {
-	if d.path == "" {
+// The repository root above a file: the first folder up that holds sim/siml/names.json.
+func RepositoryRoot(file string) (string, bool) {
+	for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
+		if info, err := os.Stat(filepath.Join(dir, "sim", "siml", "names.json")); err == nil && info.Mode().IsRegular() {
+			return dir, true
+		}
+		if filepath.Dir(dir) == dir {
+			return "", false
+		}
+	}
+}
+
+// Whether the file lies under ui/specs of the repository it sits in, where warnings are errors and raw refs are
+// reported (SPEC.md §7.3, §13).
+func UnderSpecs(path string) bool {
+	if path == "" {
 		return false
 	}
-	file, err := filepath.Abs(d.path)
+	file, err := filepath.Abs(path)
 	if err != nil {
 		return false
 	}
-	for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
-		if info, err := os.Stat(filepath.Join(dir, "sim", "siml", "names.json")); err == nil && info.Mode().IsRegular() {
-			rel, err := filepath.Rel(dir, file)
-			parts := strings.Split(filepath.ToSlash(rel), "/")
-			return err == nil && len(parts) > 2 && parts[0] == "ui" && parts[1] == "specs"
-		}
-		if filepath.Dir(dir) == dir {
-			return false
-		}
+	root, ok := RepositoryRoot(file)
+	if !ok {
+		return false
 	}
+	rel, err := filepath.Rel(root, file)
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	return err == nil && len(parts) > 2 && parts[0] == "ui" && parts[1] == "specs"
 }
 
 // Another file's text, read as Analyze reads this one, with the same names and opener.

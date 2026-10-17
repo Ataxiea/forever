@@ -467,10 +467,10 @@ func (s *server) docByPathLocked(path string) *document {
 // is in one.
 func (s *server) rootLocked(path string) (string, bool) {
 	if path != "" {
-		return repositoryRoot(path)
+		return siml.RepositoryRoot(path)
 	}
 	for _, folder := range s.folders {
-		if root, ok := repositoryRoot(filepath.Join(folder, "x")); ok {
+		if root, ok := siml.RepositoryRoot(filepath.Join(folder, "x")); ok {
 			return root, true
 		}
 	}
