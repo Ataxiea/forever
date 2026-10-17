@@ -355,3 +355,16 @@ func TestInsertPatternRequest(t *testing.T) {
 		t.Errorf("a stale version = %+v", r.Error)
 	}
 }
+
+func TestPrepullSecondsRefusesNaNAndInfinity(t *testing.T) {
+	for _, val := range []string{"NaN", "Inf", "-inf"} {
+		row := map[string]any{"doAtValue": map[string]any{"const": map[string]any{"val": val}}}
+		if _, ok := prepullSeconds(row); ok {
+			t.Errorf("prepullSeconds(%q) reads as a time", val)
+		}
+	}
+	row := map[string]any{"doAtValue": map[string]any{"const": map[string]any{"val": "-1.5s"}}}
+	if s, ok := prepullSeconds(row); !ok || s != -1.5 {
+		t.Errorf("prepullSeconds(-1.5s) = %v, %v", s, ok)
+	}
+}

@@ -492,7 +492,9 @@ func prepullSeconds(r any) (float64, bool) {
 	if !ok {
 		return 0, false
 	}
-	return siml.ConstSeconds(strings.TrimSpace(val))
+	seconds, ok := siml.ConstSeconds(strings.TrimSpace(val))
+	// NaN or an infinity orders against nothing, so such a row keeps no place in time.
+	return seconds, ok && !math.IsNaN(seconds) && !math.IsInf(seconds, 0)
 }
 
 // The edits that put a built pattern into the rotation. Prepull rows go where their time keeps the prepull list in
