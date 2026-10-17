@@ -63,6 +63,7 @@ jobs:
             # marks it current, so the build regenerates nothing and names only what a commit named.
             - name: Build 🔧
               run: |
+                  make sim/core/proto/api.pb.go
                   touch sim/siml/.names.stamp
                   make dist/forever/.dirstamp
 

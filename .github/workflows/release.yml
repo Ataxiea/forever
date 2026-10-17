@@ -61,6 +61,7 @@ jobs:
             - name: Build 🔧
               run: |
                   make clean
+                  make sim/core/proto/api.pb.go
                   touch sim/siml/.names.stamp
                   VERSION=${{ github.event.inputs.tag }} make release
 
