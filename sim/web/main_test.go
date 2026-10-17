@@ -172,9 +172,4 @@ func TestSimlRoutes(t *testing.T) {
 		t.Errorf("/simlPrint gave %v, want %q", printed, text)
 	}
 
-	formatted := &proto.SimlFormatResult{}
-	post("/simlFormat", &proto.SimlFormatRequest{Path: "rotation.apl.siml", Text: text}, formatted)
-	if formatted.Text != text {
-		t.Errorf("/simlFormat gave %v, want %q", formatted, text)
-	}
 }

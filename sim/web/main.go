@@ -135,8 +135,6 @@ var handlers = map[string]apiHandler{
 		func(e string) *proto.SimlParseResult { return &proto.SimlParseResult{Error: e} }),
 	"/simlPrint": simlHandler(func() *proto.SimlPrintRequest { return &proto.SimlPrintRequest{} }, siml.PrintRequest,
 		func(e string) *proto.SimlPrintResult { return &proto.SimlPrintResult{Error: e} }),
-	"/simlFormat": simlHandler(func() *proto.SimlFormatRequest { return &proto.SimlFormatRequest{} }, siml.FormatRequest,
-		func(e string) *proto.SimlFormatResult { return &proto.SimlFormatResult{Error: e} }),
 }
 
 // The site the server serves, which holds the name table SIML requests read with.

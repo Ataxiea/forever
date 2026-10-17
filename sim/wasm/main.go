@@ -52,9 +52,6 @@ func main() {
 	js.Global().Set("simlPrint", js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
 		return simlCall(args, &proto.SimlPrintRequest{}, siml.PrintRequest, func(e string) *proto.SimlPrintResult { return &proto.SimlPrintResult{Error: e} })
 	}))
-	js.Global().Set("simlFormat", js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-		return simlCall(args, &proto.SimlFormatRequest{}, siml.FormatRequest, func(e string) *proto.SimlFormatResult { return &proto.SimlFormatResult{Error: e} })
-	}))
 	js.Global().Call("wasmready")
 	<-c
 }
