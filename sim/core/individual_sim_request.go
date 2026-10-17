@@ -32,18 +32,15 @@ func IndividualSimRequest(s *proto.IndividualSimSettings, options *proto.SimOpti
 	encounter := s.Encounter
 	switch {
 	case encounter == nil:
-		encounter = MakeSingleTargetEncounter(siteDurationVariation)
+		encounter = SiteDefaultEncounter()
 		warnings = append(warnings, "the settings hold no encounter; simmed against one default target")
 	case len(encounter.Targets) == 0:
 		encounter = googleProto.Clone(encounter).(*proto.Encounter)
-		encounter.Targets = []*proto.Target{NewDefaultTarget()}
+		encounter.Targets = []*proto.Target{SiteDefaultTarget()}
 		warnings = append(warnings, "the encounter has no target; simmed against one default target")
 	}
 	return &proto.RaidSimRequest{Raid: raid, Encounter: encounter, SimOptions: options, Type: proto.SimType_SimTypeIndividual}, warnings
 }
-
-// The seconds the site's default encounter varies the fight by (ENCOUNTER_DEFAULTS in ui/sim/constants/encounter.ts).
-const siteDurationVariation = 5
 
 // m, or an empty message of its type when it is nil.
 func orEmpty[M googleProto.Message](m M) M {
