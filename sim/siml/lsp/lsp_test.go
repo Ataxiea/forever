@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/siml"
+	"github.com/wowsims/forever/tools/spelldata/printer"
 )
 
 // The server driven over the protocol, the way any editor's client drives it.
@@ -20,7 +21,7 @@ import (
 var smokeURI = pathURI(filepath.Join(repository, "ui", "specs", "hunter", "dps", "apls", "smoke.apl.siml"))
 
 func started(t *testing.T) *client {
-	c := connect(t, Options{})
+	c := connect(t, Options{Row: printer.Row})
 	c.initialize(repository, map[string]any{})
 	return c
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/wowsims/forever/sim/siml/lsp"
+	"github.com/wowsims/forever/tools/spelldata/printer"
 )
 
 // The SIML language server on stdin and stdout, which the VS Code extension starts:
@@ -29,7 +30,7 @@ func simlLSP(out, errOut io.Writer, args []string) error {
 	if out == os.Stdout {
 		os.Stdout = os.Stderr
 	}
-	shutdown, err := lsp.Serve(os.Stdin, out, lsp.Options{Sim: simlSimJSON})
+	shutdown, err := lsp.Serve(os.Stdin, out, lsp.Options{Sim: simlSimJSON, Row: printer.Row})
 	if err != nil {
 		return err
 	}

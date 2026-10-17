@@ -35,6 +35,8 @@ type Options struct {
 	// Sims a request of `wowsimcli siml sim` in the repository at root and gives its result; it stops when ctx is
 	// done. Nil answers siml/sim with an error.
 	Sim func(ctx context.Context, root string, req json.RawMessage) (json.RawMessage, error)
+	// The game files' row of a spell, as `go run ./tools/spelldata <id>` prints it. Nil shows no row on a hover.
+	Row func(spellID int32) (string, bool)
 }
 
 // An open document.
@@ -90,7 +92,7 @@ func Serve(in io.Reader, out io.Writer, opts Options) (shutdownRequested bool, e
 		analyses: map[string]*analysis{},
 		timers:   map[string]*time.Timer{},
 		pending:  map[string]context.CancelFunc{},
-		cards:    newCards(),
+		cards:    newCards(opts.Row),
 	}
 	defer s.stop()
 	reader := newFrameReader(in)
