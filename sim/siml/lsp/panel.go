@@ -303,7 +303,8 @@ func (s *server) panelDatabase(uri string) (any, *ResponseError) {
 	if !ok {
 		return panelDatabase{Spells: map[int32][2]string{}, Items: map[int32][2]string{}}, nil
 	}
-	return s.ws.database(root).panel(), nil
+	c := siml.CatalogAt(root)
+	return panelDatabase{Spells: c.SpellIcons(), Items: c.ItemIcons()}, nil
 }
 
 // The edits that insert a pattern at a rotation path, with the values the reader gave.

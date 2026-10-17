@@ -36,6 +36,8 @@ type DatabaseCatalog struct {
 	consumables []CatalogConsumable
 	names       map[int32]string // Item names: gear, then consumables, then item icons.
 	spells      map[int32]string
+	spellIcons  map[int32][2]string // [name, icon], for the rotation panel.
+	itemIcons   map[int32][2]string // [name, icon]: a gear item's own over its item icon's.
 	enchants    []CatalogEnchant
 	rows        map[int32][]CatalogEnchant
 	suffixes    map[int32]CatalogSuffix
@@ -47,6 +49,7 @@ func ReadCatalog(root string) *DatabaseCatalog {
 	c := &DatabaseCatalog{
 		items: map[int32]CatalogItem{}, names: map[int32]string{}, spells: map[int32]string{},
 		rows: map[int32][]CatalogEnchant{}, suffixes: map[int32]CatalogSuffix{}, itemSuffix: map[int32][]int32{},
+		spellIcons: map[int32][2]string{}, itemIcons: map[int32][2]string{},
 	}
 	consumables := map[int32]bool{}
 	var iconNames []*proto.IconData
@@ -86,7 +89,7 @@ func ReadCatalog(root string) *DatabaseCatalog {
 		iconNames = append(iconNames, db.ItemIcons...)
 		for _, icon := range db.SpellIcons {
 			if _, ok := c.spells[icon.Id]; !ok && icon.Name != "" {
-				c.spells[icon.Id] = icon.Name
+				c.spells[icon.Id], c.spellIcons[icon.Id] = icon.Name, [2]string{icon.Name, icon.Icon}
 			}
 		}
 		for _, e := range db.Enchants {
@@ -117,6 +120,14 @@ func ReadCatalog(root string) *DatabaseCatalog {
 		if _, ok := c.names[icon.Id]; !ok && icon.Name != "" {
 			c.names[icon.Id] = icon.Name
 		}
+		if _, ok := c.itemIcons[icon.Id]; !ok && icon.Name != "" {
+			c.itemIcons[icon.Id] = [2]string{icon.Name, icon.Icon}
+		}
+	}
+	for _, item := range c.itemList {
+		if item.Name != "" {
+			c.itemIcons[item.ID] = [2]string{item.Name, item.Icon}
+		}
 	}
 	return c
 }
@@ -131,6 +142,12 @@ func (c *DatabaseCatalog) Item(id int32) (CatalogItem, bool) {
 }
 
 func (c *DatabaseCatalog) Items() []CatalogItem { return c.itemList }
+
+// Spell names and icons by id, [name, icon], from the database's spell icons.
+func (c *DatabaseCatalog) SpellIcons() map[int32][2]string { return c.spellIcons }
+
+// Item names and icons by id, [name, icon]: a gear item's own, else its item icon's.
+func (c *DatabaseCatalog) ItemIcons() map[int32][2]string { return c.itemIcons }
 
 func (c *DatabaseCatalog) Enchants() []CatalogEnchant { return c.enchants }
 

@@ -58,11 +58,10 @@ type table struct {
 type workspaces struct {
 	mu     sync.Mutex
 	tables map[string]*table
-	dbs    map[string]*database
 }
 
 func newWorkspaces() *workspaces {
-	return &workspaces{tables: map[string]*table{}, dbs: map[string]*database{}}
+	return &workspaces{tables: map[string]*table{}}
 }
 
 // The name table of the repository at root, read again when the file changed since the last read.
@@ -82,20 +81,6 @@ func (w *workspaces) names(root string) (*siml.Names, error) {
 	}
 	w.tables[root] = t
 	return t.names, t.err
-}
-
-// The panel's names and icons of the repository at root, read on first use and again when either database file
-// changes.
-func (w *workspaces) database(root string) *database {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	now := databaseStamp(root)
-	if db := w.dbs[root]; db != nil && db.stamp == now {
-		return db
-	}
-	db := &database{root: root, stamp: now}
-	w.dbs[root] = db
-	return db
 }
 
 // The path of a file: URI; false for any other scheme.
