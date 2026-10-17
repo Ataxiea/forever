@@ -22,7 +22,7 @@ served by the nested repository's server only: the outer server is never told th
 about it.
 
 The server reads each file with `sim/siml`, the name table (`sim/siml/names.json`) and the item database
-(`assets/database/db.json`), all from the repository the file sits in. A fresh `make sim/siml/names.json` or `make db`
+(`assets/database/db.json`), all from the repository the file sits in. A fresh `make siml-names` or `make db`
 needs no restart: the open files are checked again when the editor reports the change, and the panel reads the
 rotation again with them.
 

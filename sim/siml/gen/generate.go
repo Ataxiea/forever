@@ -18,7 +18,7 @@ import (
 const TablePath = "sim/siml/names.json"
 
 // The command that regenerates the committed table.
-const MakeCommand = "make sim/siml/names.json"
+const MakeCommand = "make siml-names"
 
 // Reads the table under root, collects what the sim and the database hold, and returns the table the one under
 // root grows into, with pin handed back to the new-name rules when it is not nil. In a git checkout, the entries

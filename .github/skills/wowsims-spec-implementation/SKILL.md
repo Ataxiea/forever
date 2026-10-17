@@ -77,7 +77,7 @@ A spec's presets are SIML files under `ui/specs/<class>/<spec>/`. `sim/siml/SPEC
 
 Every spell, aura, item and enchant is written by its name in the name table, `sim/siml/names.json`:
 `cast mortal_strike`, `target.aura(sunder_armor).num_stacks`, `cast item.goblin_sapper_charge`. A spell or aura has
-a name once the sim registers it, so register the spells first, then run `make sim/siml/names.json` and commit
+a name once the sim registers it, so register the spells first, then run `make siml-names` and commit
 the table with them. A `qualified:` line in its report needs a repin; `wowsims-spells`, "Names in SIML files", has
 how the table, repins and the repin record work. The site's Rotation tab writes a rotation with
 **Export SIML**. `make vscode-apl` builds the editor extension, which completes the names the file's spec registers

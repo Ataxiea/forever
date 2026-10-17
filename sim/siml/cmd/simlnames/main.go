@@ -1,7 +1,7 @@
 // Generates the SIML name table (sim/siml/SPEC.md §7.4) from what the sim registers and the database, keeping
 // every name the committed table holds, and reports what it added on standard error.
 //
-//	go run --tags=with_db ./sim/siml/cmd/simlnames -w (or make sim/siml/names.json)
+//	go run --tags=with_db ./sim/siml/cmd/simlnames -w (or make siml-names)
 //	go run --tags=with_db ./sim/siml/cmd/simlnames -w -repin warrior.aura.overpower
 //	go run ./sim/siml/cmd/simlnames -base origin/master
 //

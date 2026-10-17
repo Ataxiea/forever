@@ -105,12 +105,8 @@ jobs:
             - name: Build Storybook 📚
               run: npm run storybook:build
 
-            # The site is built from the committed name table, as deploy and release build it: the stamp marks it
-            # current, and the test job checks the committed one keeps its entries.
             - name: Build 🔧
-              run: |
-                  touch sim/siml/.names.stamp
-                  make dist/forever/.dirstamp
+              run: make dist/forever/.dirstamp
 
             # Each pull request from this repository gets its build hosted at
             # https://<hash>.wowsims-forever.pages.dev/forever/ as a Cloudflare Pages preview; fork

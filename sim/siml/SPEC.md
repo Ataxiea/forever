@@ -917,14 +917,12 @@ those that read. An editor's `Doc` (`Analyze`) gives the names the file writes w
 mean nothing included (`Refs`). A ref's path leads into the loader's message (§1); a name outside it, in a section
 the file kind does not hold, has none.
 
-**Generating it.** `go run --tags=with_db ./sim/siml/cmd/simlnames -w`, or `make sim/siml/names.json`, reads the
+**Generating it.** `go run --tags=with_db ./sim/siml/cmd/simlnames -w`, or `make siml-names`, reads the
 committed table, the sim and the database, and, when an entry changed, writes the table back, whole, renamed into
-place. The make rule runs when a Go file under `sim/` other than a test, a file of `assets/database/`, or a talent
-tree of `ui/sim/talents/trees` changes, and a stamp (`sim/siml/.names.stamp`) records the run, so a change that adds
-no name rebuilds nothing that reads the table. `make devserver`, `make vscode-apl` and the site bundle, whose Vite
-plugin reads the table, depend on it, so a build after adding a spell adds its name, and the developer commits the
-table with the change. `make wasm` and `make go-to-ts` do not read it. CI's up-to-date check (below) is what catches
-a table not committed. The generator:
+place. Builds read the committed table and never regenerate it: `make devserver`, `make vscode-apl` and the site
+bundle, whose Vite plugin reads the table, depend on the file alone, so after adding a spell the developer runs
+`make siml-names` (or `make siml`, which also checks `ui/specs`) and commits the table with the change. CI's
+up-to-date check (below) is what catches a table not committed. The generator:
 
 1. **Builds every spec the sim can build**, with no gear, for every playable race and every talents string that
    puts each talent at rank 1, 2, … up to the highest rank any talent has, each capped at its own. Each runs with
@@ -1022,9 +1020,9 @@ The record is committed with the table, and its lines are kept.
 
 - **The table keeps its entries.** A `with_db` test in `sim/siml/gen` regenerates the table in memory and fails
   when the committed file is not in the generator's form, or when an entry of it comes back with another meaning
-  or registered-by list, listing each with the command `make sim/siml/names.json`. The names the sim and the
+  or registered-by list, listing each with the command `make siml-names`. The names the sim and the
   database give beyond the committed table are logged, not failed: a database update or a class change adds names
-  without changing what is committed, and `make` adds them before anything reads the table.
+  without changing what is committed, and `make siml-names` adds them.
 - **Names keep their meaning.** The test above regenerates from the table it is given, so it passes two names
   that swapped their ids. `go run ./sim/siml/cmd/simlnames -base <commit>` reads the table and the repin record at
   `<commit>`, and fails, listing each, when a name of that table means another id, tag, rank or slots, or nothing, in

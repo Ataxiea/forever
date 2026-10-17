@@ -63,14 +63,12 @@ ui/generated/proto/api.ts: proto/*.proto node_modules
 	npx protoc --ts_out ui/generated/proto --proto_path proto proto/test.proto
 	npx protoc --ts_out ui/generated/proto --proto_path proto proto/ui.proto
 
-# The SIML name table, generated from what the sim registers and the database. The generator keeps every name the
-# committed table holds and adds the new ones, so commit the table with the change that adds them. It writes the
-# table only when an entry changes, and the stamp records the run, so a Go change that adds no name rebuilds nothing
-# that reads the table.
-sim/siml/names.json: sim/siml/.names.stamp ;
-sim/siml/.names.stamp: sim/core/proto/api.pb.go $(filter-out %_test.go,$(call rwildcard,sim,*.go)) $(wildcard assets/database/*.json assets/database/*.bin) $(wildcard ui/sim/talents/trees/*.json)
+# The SIML name table, generated from what the sim registers and the database. The build reads the committed table;
+# make siml-names regenerates it. The generator keeps every name the committed table holds and adds the new ones, so
+# commit the table with the change that adds them.
+.PHONY: siml-names
+siml-names: sim/core/proto/api.pb.go
 	go run --tags=with_db ./sim/siml/cmd/simlnames -w
-	touch $@
 
 .PHONY: package.json
 
@@ -104,7 +102,7 @@ bin/wowsimcli$(BIN_EXT): sim/core/proto/api.pb.go sim/siml/forms.json $(filter-o
 
 # Run before committing: refresh the SIML name table, then check the files under ui/specs read and are canonical.
 .PHONY: siml
-siml: sim/siml/names.json
+siml: siml-names
 	go run --tags=with_db ./cmd/wowsimcli siml fmt -check ui/specs
 
 # Generic rule for hosting any class directory

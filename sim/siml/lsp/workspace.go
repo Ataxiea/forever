@@ -12,7 +12,7 @@ import (
 	"github.com/wowsims/forever/sim/siml"
 )
 
-// The name table every check reads, from the repository the file sits in (`make sim/siml/names.json`), read again
+// The name table every check reads, from the repository the file sits in (`make siml-names`), read again
 // whenever it changes on disk; the schema is the one the server is built with.
 var tableFile = filepath.Join("sim", "siml", "names.json")
 

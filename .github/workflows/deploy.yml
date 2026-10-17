@@ -59,12 +59,8 @@ jobs:
             - name: Install binaryen
               run: sudo apt-get update && sudo apt-get install -y binaryen
 
-            # The site is built from the committed name table, the one CI checks and the pin record guards: the stamp
-            # marks it current, so the build regenerates nothing and names only what a commit named.
             - name: Build 🔧
               run: |
-                  make sim/core/proto/api.pb.go
-                  touch sim/siml/.names.stamp
                   make dist/forever/.dirstamp
 
             - name: Update proto version file

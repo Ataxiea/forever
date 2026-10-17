@@ -86,7 +86,7 @@ func (d *Doc) read() (*File, error) {
 	}
 	var raw []diag
 	for _, at := range typed.typer.rawRefs {
-		raw = append(raw, errorAt("raw-ref", "a file under ui/specs writes ids by name: format writes the names the table holds, and make sim/siml/names.json names what the sim registers", at))
+		raw = append(raw, errorAt("raw-ref", "a file under ui/specs writes ids by name: format writes the names the table holds, and make siml-names names what the sim registers", at))
 	}
 	f.RawRefs = d.lines.diagnostics(d.path, raw)
 	diags := d.lines.diagnostics(d.path, typed.diags)

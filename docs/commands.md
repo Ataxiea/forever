@@ -141,7 +141,7 @@ go run --tags=with_db ./cmd/wowsimcli siml lsp
 go run ./cmd/wowsimcli siml grammar -o .vscode/extensions/wowsims-apl/syntaxes/siml.tmLanguage.json
 
 # Add names for newly registered spells and new database rows to the SIML name table; commit it with the change
-make sim/siml/names.json
+make siml-names
 # Before committing: the name table as above, then siml fmt -check over ui/specs
 make siml
 # The wowsimcli vite reads .siml imports with (tools/vite/siml.mts); make builds it, and rebuilds it after a Go change

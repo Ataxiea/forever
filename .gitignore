@@ -6,7 +6,6 @@ ui/**/*_auto_gen.ts
 !ui/features/settings/model/buffs_debuffs_auto_gen.ts
 !ui/features/settings/model/consumables_auto_gen.ts
 .dirstamp
-sim/siml/.names.stamp
 # What a simlnames run killed before it renames its output into place leaves behind.
 sim/siml/names-*.json
 sim/siml/gen/repinned-*.txt

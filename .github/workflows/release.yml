@@ -56,13 +56,9 @@ jobs:
             - name: Install npm dependencies
               run: npm ci
 
-            # The release is built from the committed name table, as the site is (deploy.yml): the stamp marks it
-            # current, so the build regenerates nothing.
             - name: Build 🔧
               run: |
                   make clean
-                  make sim/core/proto/api.pb.go
-                  touch sim/siml/.names.stamp
                   VERSION=${{ github.event.inputs.tag }} make release
 
             - name: Release

@@ -38,7 +38,7 @@ go build --tags=with_db -o wowsimcli ./cmd/wowsimcli   # in the repository root
 
 `with_db` builds the item database in, which hover and the slot-row checks read; without it the server still starts
 and checks files, as `siml parse` does. Rebuild after pulling Go changes. The server reads the name table
-(`sim/siml/names.json`) and the database from the repository the file is in, so `make sim/siml/names.json` or
+(`sim/siml/names.json`) and the database from the repository the file is in, so `make siml-names` or
 `make db` needs no restart.
 
 ## What the server provides
@@ -204,7 +204,7 @@ server for `*.siml` with the command above.
   shows at once on stderr.
 - A file is served by the wrong repository: a repository nested inside another (a worktree under
   `.claude/worktrees`) is served by its own server only; open it as its own root.
-- Names are missing: `make sim/siml/names.json`, then save a file so the server reads the table again.
+- Names are missing: `make siml-names`, then save a file so the server reads the table again.
 - An untitled buffer reads the first workspace folder's repository.
 - Extend the server, not the client: a feature that goes in `sim/siml/lsp` or `sim/siml/lang_*.go` reaches every
   editor above. A change to what the server advertises changes the table in this document.
