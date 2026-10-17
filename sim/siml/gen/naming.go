@@ -300,6 +300,7 @@ func (u *updater) registeredBy() {
 		for ns, entries := range names {
 			for name, e := range entries {
 				e.RegisteredBy = u.specs(class, ns, Identity{e.SpellID, e.Tag})
+				e.ICDOnly = u.c.Registered[ns][Identity{e.SpellID, e.Tag}].ICDOnly
 				entries[name] = e
 			}
 		}
@@ -307,6 +308,7 @@ func (u *updater) registeredBy() {
 	for ns, entries := range u.t.Shared {
 		for name, e := range entries {
 			e.RegisteredBy = u.specs(proto.Class_ClassUnknown, ns, Identity{e.SpellID, e.Tag})
+			e.ICDOnly = u.c.Registered[ns][Identity{e.SpellID, e.Tag}].ICDOnly
 			entries[name] = e
 		}
 	}

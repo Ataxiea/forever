@@ -1042,6 +1042,9 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 		if !ok {
 			return nil
 		}
+		if e, _ := t.names.spellEntry(t.class, ns, n.name.text); e.ICDOnly && !t.kind.readsICD() {
+			t.report("icd-trigger", fmt.Sprintf("%s is an internal cooldown trigger, which only icd_is_ready and trigger_icd find", n.name.text), n.name.span)
+		}
 		t.refs = append(t.refs, r)
 		t.mark(n.span)
 		return r.actionID

@@ -187,7 +187,8 @@ func (c *Collection) add(b *build) {
 			c.Registered[ns] = map[Identity]Registration{}
 		}
 		for id, r := range ids {
-			reg := c.Registered[ns][id]
+			reg, seen := c.Registered[ns][id]
+			reg.ICDOnly = r.ICDOnly && (!seen || reg.ICDOnly)
 			reg.Rank = max(reg.Rank, r.Rank)
 			reg.Castable = reg.Castable || r.Castable
 			if !slices.Contains(reg.Specs, spec) {
@@ -486,9 +487,19 @@ func registrations(result *proto.ComputeStatsResult) map[siml.Namespace]map[Iden
 	for _, spell := range player.Metadata.Spells {
 		add(siml.NamespaceSpell, spell.Id, spell.IsCastable)
 	}
-	// icd_is_ready reads an aura name too, so the internal cooldown triggers it finds are aura names.
-	for _, aura := range slices.Concat(player.Metadata.Auras, player.Metadata.IcdAuras) {
+	for _, aura := range player.Metadata.Auras {
 		add(siml.NamespaceAura, aura.Id, false)
+	}
+	// icd_is_ready and trigger_icd read an aura name too, so the internal cooldown triggers they find are aura names,
+	// marked as triggers when the build lists them as nothing else.
+	for _, aura := range player.Metadata.IcdAuras {
+		key := Identity{aura.Id.GetSpellId(), aura.Id.GetTag()}
+		_, listed := found[siml.NamespaceAura][key]
+		add(siml.NamespaceAura, aura.Id, false)
+		if r, ok := found[siml.NamespaceAura][key]; ok && !listed {
+			r.ICDOnly = true
+			found[siml.NamespaceAura][key] = r
+		}
 	}
 	for _, pet := range player.Pets {
 		for _, aura := range pet.Metadata.Auras {

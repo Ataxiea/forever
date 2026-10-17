@@ -834,7 +834,7 @@ meaning among the shared entries.
   "classes": {
     "<class>": {
       "<namespace>": {
-        "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …]},
+        "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …], "icdOnly": true},
         …
       },
       …
@@ -851,7 +851,7 @@ meaning among the shared entries.
   },
   "shared": {
     "<namespace>": {
-      "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …]},
+      "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …], "icdOnly": true},
       …
     },
     …
@@ -871,6 +871,9 @@ meaning among the shared entries.
   for a class's entry, only that class's specs. It is empty when no build registers it, for a name kept for files
   written before. Parsing never reads it: editors offer the names the file's spec registers, and the registration
   check reads it.
+- `icdOnly`, only on an `aura` entry and only when true, marks an internal cooldown trigger that every build which
+  registers it lists only as a trigger: the sim finds it in `icd_is_ready` and `trigger_icd` and in no other aura
+  position, where a name of it is `icd-trigger` (§13).
 - `slots` lists, in `ItemSlot` order, the slots of the item types that the entry's enchant rows fit.
 - **Layout.** The keys of every object are in byte order, each entry is on a line of its own, and each level is
   indented two spaces. Empty objects are left out, lines end in LF, and the file ends in one newline. So a
@@ -882,7 +885,7 @@ meaning among the shared entries.
   It refuses a table that breaks any of these:
     - the table, each of its sections, each class and namespace, and each spell-like or enchant entry is an
       object; the table and the entries hold only the keys the form shows; `registeredBy` and `slots` are lists of
-      strings;
+      strings; `icdOnly` is a bool on an `aura` entry;
     - every spell id, tag and rank, item id, effect id and random suffix id is a whole number in the range of
       `int32`;
     - every name matches `[a-z_][a-z0-9_]*` and is no reserved word (§4 note 6), which a file would never read as
@@ -1511,6 +1514,7 @@ are errors.
 | `wrong-type`, `unknown-enum`, `bad-literal`, `bad-raw`                                                        | error    | a value that does not fit its field                               |
 | `unknown-slot`, `duplicate-slot`                                                                              | error    | §5.3                                                              |
 | `unknown-name`                                                                                                | error    | §7.2; the message names where the name is, or a did-you-mean      |
+| `icd-trigger`                                                                                                 | error    | §7.4; an `icdOnly` aura outside `icd_is_ready` and `trigger_icd`  |
 | `ambiguous-variable`                                                                                          | error    | §7.5                                                              |
 | `duplicate-group`, `duplicate-variable`, `reference-cycle`                                                    | error    | §6.1, §7.5, §6.10                                                 |
 | `undefined-variable`, `undefined-group`, `undefined-placeholder`, `undefined-sequence`                        | warning  | §7.5                                                              |

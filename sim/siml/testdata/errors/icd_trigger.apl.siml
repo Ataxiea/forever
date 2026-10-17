@@ -1,0 +1,7 @@
+siml 1
+spec hunter
+
+// An icdOnly aura reads in icd_is_ready and trigger_icd, and nowhere else.
+priority:
+  cast aimed_shot if aura(icd_trigger).icd_is_ready
+  cast aimed_shot if aura(icd_trigger).is_active

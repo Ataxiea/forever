@@ -52,6 +52,7 @@ func (ns Namespace) SpellLike() bool {
 type SpellName struct {
 	SpellID, Tag, Rank int32
 	RegisteredBy       []string // The specs that register it, by Player spec field name in byte order; empty when no build does.
+	ICDOnly            bool     // An aura name the sim knows only as an internal cooldown trigger, which only the ICD kinds find.
 }
 
 // An enchant entry: an effect id, and the slots of the item types its rows fit.
@@ -398,7 +399,7 @@ func spellNames(scope string, v any) (SpellNames, error) {
 		named := map[spellKey]string{}
 		for name, v := range entries {
 			where := scope + "." + space + "." + name
-			e, err := object(where, v, "spellId", "tag", "rank", "registeredBy")
+			e, err := object(where, v, "spellId", "tag", "rank", "registeredBy", "icdOnly")
 			if err != nil {
 				return nil, err
 			}
@@ -423,7 +424,11 @@ func spellNames(scope string, v any) (SpellNames, error) {
 					return nil, fmt.Errorf("names: %s is registered by %q, which is no spec", where, spec)
 				}
 			}
-			entry := SpellName{SpellID: id, Tag: tag, Rank: rank, RegisteredBy: specs}
+			icdOnly, icdOK := e["icdOnly"].(bool)
+			if e["icdOnly"] != nil && (!icdOK || ns != NamespaceAura) {
+				return nil, fmt.Errorf("names: %s.icdOnly is no bool on an aura", where)
+			}
+			entry := SpellName{SpellID: id, Tag: tag, Rank: rank, RegisteredBy: specs, ICDOnly: icdOnly}
 			key := spellKey{id, tag}
 			if other, ok := named[key]; ok {
 				return nil, fmt.Errorf("names: %s.%s names %s twice, as %s and %s", scope, ns, spellText(entry), min(name, other), max(name, other))
@@ -638,7 +643,11 @@ func writeSpellNames(b *bytes.Buffer, names SpellNames, indent string) {
 			for k, s := range specs {
 				specs[k] = quote(s)
 			}
-			fmt.Fprintf(b, ", \"registeredBy\": [%s]}%s", strings.Join(specs, ", "), comma(j, len(keys)))
+			fmt.Fprintf(b, ", \"registeredBy\": [%s]", strings.Join(specs, ", "))
+			if e.ICDOnly {
+				b.WriteString(", \"icdOnly\": true")
+			}
+			fmt.Fprintf(b, "}%s", comma(j, len(keys)))
 		}
 		fmt.Fprintf(b, "%s}%s", indent, comma(i, len(spaces)))
 	}

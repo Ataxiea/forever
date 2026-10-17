@@ -7,6 +7,7 @@
 		},
 		"hunter": {
 			"aura": {
+				"icd_trigger": { "spellId": 990210, "registeredBy": ["hunter"], "icdOnly": true },
 				"rapid_fire": { "spellId": 3045, "registeredBy": ["hunter"] },
 				"steady_shot": { "spellId": 900001, "registeredBy": [] },
 				"target_spell": { "spellId": 990205, "registeredBy": ["hunter"] },

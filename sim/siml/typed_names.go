@@ -102,6 +102,23 @@ func (s kindScope) namespace(f *field) Namespace {
 	return NamespaceSpell
 }
 
+// Whether the kind finds an aura by its internal cooldown trigger too, as the sim's GetIcdAuraByID does.
+func (s kindScope) readsICD() bool {
+	if s.kind == nil {
+		return false
+	}
+	switch s.kind.message.desc.FullName() {
+	case icdIsReadyMessage.FullName(), triggerICDMessage.FullName():
+		return true
+	}
+	return false
+}
+
+var (
+	icdIsReadyMessage = (&proto.APLValueAuraICDIsReady{}).ProtoReflect().Descriptor()
+	triggerICDMessage = (&proto.APLActionTriggerICD{}).ProtoReflect().Descriptor()
+)
+
 // The namespace of the auras on a unit of type typ: a pet's, a target's, or else the player's.
 func auraNamespace(typ proto.UnitReference_Type) Namespace {
 	switch typ {
