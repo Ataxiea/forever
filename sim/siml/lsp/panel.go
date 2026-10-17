@@ -168,21 +168,13 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 	if hasSpec {
 		out.ClassName = siml.ClassName(info.Class)
 	}
-	var paths *spanIndex
 	if d.Kind().Section == "apl" {
-		spans := d.Spans()
-		paths = newSpanIndex(d, spans)
-		for _, span := range spans {
+		for _, span := range d.Spans() {
 			out.Spans = append(out.Spans, panelSpan{Path: span.Path, Range: toRange(span.Range)})
 		}
 	}
 	for _, diag := range s.diagnosticsLocked(a) {
-		var path []any
-		if paths != nil {
-			path = paths.pathAt(diag.Range.Start)
-		} else {
-			path = d.PathAt(fromPosition(diag.Range.Start))
-		}
+		path := d.PathAt(fromPosition(diag.Range.Start))
 		out.Findings = append(out.Findings, panelFinding{Path: nonNil(path), Severity: severityNames[diag.Severity], Code: diag.Code, Message: diag.Message})
 	}
 	if !hasSpec {
@@ -191,46 +183,6 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 		out.Registered = s.registeredFor(a, info)
 	}
 	return out, nil
-}
-
-// The spans of an x.apl.siml by the lines they cover, which find the rotation path at a position as Doc.PathAt does,
-// for many positions at once: the path of the shortest span around it, the deeper one of two the same length.
-type spanIndex struct {
-	d      *siml.Doc
-	spans  []siml.PathSpan
-	starts []int // Byte offsets of each span's ends.
-	ends   []int
-	lines  map[int][]int // The spans each line lies in.
-}
-
-func newSpanIndex(d *siml.Doc, spans []siml.PathSpan) *spanIndex {
-	ix := &spanIndex{d: d, spans: spans, starts: make([]int, len(spans)), ends: make([]int, len(spans)), lines: map[int][]int{}}
-	for i, s := range spans {
-		ix.starts[i], ix.ends[i] = d.Offset(s.Range.Start), d.Offset(s.Range.End)
-		for line := s.Range.Start.Line; line <= s.Range.End.Line; line++ {
-			ix.lines[line] = append(ix.lines[line], i)
-		}
-	}
-	return ix
-}
-
-func (ix *spanIndex) pathAt(at Position) []any {
-	p := fromPosition(at)
-	offset := ix.d.Offset(p)
-	best := -1
-	for _, i := range ix.lines[p.Line] {
-		if ix.starts[i] > offset || offset > ix.ends[i] {
-			continue
-		}
-		size := ix.ends[i] - ix.starts[i]
-		if best < 0 || size < ix.ends[best]-ix.starts[best] || size == ix.ends[best]-ix.starts[best] && len(ix.spans[i].Path) > len(ix.spans[best].Path) {
-			best = i
-		}
-	}
-	if best < 0 {
-		return []any{}
-	}
-	return ix.spans[best].Path
 }
 
 // Why the panel cannot edit the rotation: the text has an error, or the rotation is put together with another file,
