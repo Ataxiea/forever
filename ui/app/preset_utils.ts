@@ -374,6 +374,18 @@ export const specDefaultsFromSettings = <SpecType extends Spec>(spec: SpecType, 
 	if (!player?.spec.oneofKind || getPlayerSpecFromPlayer(player).specID !== spec) {
 		throw new Error(`The defaults are not ${Spec[spec]} settings.`);
 	}
+	// The site reads only what the return below holds, so a section it would drop is refused here: the editor's
+	// sim reads the whole file and would sim a different character.
+	const unread = [
+		settings.encounter && 'encounter',
+		player.enableItemSwap && 'item_swap',
+		player.itemSwap && 'item_swap',
+		player.cooldowns && 'cooldowns',
+		player.bonusStats && 'bonus_stats',
+	].filter(Boolean);
+	if (unread.length) {
+		throw new Error(`The ${Spec[spec]} defaults hold ${[...new Set(unread)].join(', ')}, which the site does not read from defaults.`);
+	}
 	const functions = specTypeFunctions[spec] as SpecTypeFunctions<SpecType>;
 	const rotation = player.rotation;
 
