@@ -100,7 +100,9 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 
 		host.reforger?.applyDefaults();
 
-		sim.raid.setTargetDummies(config.defaults.encounter?.targetDummies || (healingSpec ? 9 : 0));
+		// A fight from defaults.siml brings its own count, where 0 is left out of the file.
+		const encounter = config.defaults.encounter;
+		sim.raid.setTargetDummies(encounter ? (encounter.targetDummies ?? 0) : healingSpec ? 9 : 0);
 		if (config.defaults.encounter?.encounter) {
 			sim.encounter.fromProto(config.defaults.encounter.encounter);
 		} else {
