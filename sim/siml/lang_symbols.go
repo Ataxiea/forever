@@ -216,7 +216,10 @@ func (d *Doc) readOccurrences() []occurrence {
 			}
 		}
 		if u, ok := statement.(*useStmt); ok {
-			found := d.declaredThrough(resolveUse(d.path, u.path.value), []string{d.path})
+			var found []declaredVariable
+			if used := d.typed.used[u]; used != nil {
+				found = declaredByFile(used, resolveUse(d.path, u.path.value))
+			}
 			used = append(used, found...)
 			out = append(out, d.withBinds(u, found)...)
 			continue
@@ -409,6 +412,29 @@ func (d *Doc) declaredThrough(path string, chain []string) []declaredVariable {
 			}
 		case *useStmt:
 			out = append(out, used.declaredThrough(resolveUse(path, x.path.value), append(slices.Clone(chain), path))...)
+		}
+	}
+	return out
+}
+
+// The variables and groups a typed used file at path declares, through the files it uses in turn.
+func declaredByFile(t *typedFile, path string) []declaredVariable {
+	sections := sectionsByStatement(t.tree)
+	var out []declaredVariable
+	for _, s := range t.tree.statements {
+		switch x := s.(type) {
+		case *varStmt:
+			if sections[s] == nil || sections[s].group == nil {
+				out = append(out, declaredVariable{name: x.variable.name, file: path})
+			}
+		case *headerStmt:
+			if x.group != nil && sections[s] != nil && sections[s].name == sectionGroup {
+				out = append(out, declaredVariable{name: x.group.value, file: path, group: true})
+			}
+		case *useStmt:
+			if used := t.used[x]; used != nil {
+				out = append(out, declaredByFile(used, resolveUse(path, x.path.value))...)
+			}
 		}
 	}
 	return out

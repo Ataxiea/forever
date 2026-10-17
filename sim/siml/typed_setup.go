@@ -37,6 +37,7 @@ type typedFile struct {
 	paths        map[stmt][]any                // Each row's and var line's JSON path within the rotation, as if every statement read.
 	entries      map[stmt][]entryWrite         // What each entry line and slot row writes.
 	withs        map[stmt][]*proto.APLValue    // The values each use line's with list gives, nil where one does not read.
+	used         map[stmt]*typedFile           // The file each use line reads, typed, where one was read.
 	whens        map[*whenStmt]*proto.APLValue // Each when line's condition, read on its own.
 	declarations []*variableDecl
 	explicitType bool // Whether an apl: entry of the file, or of a file it uses, sets the rotation type.
@@ -88,6 +89,7 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 		paths:    map[stmt][]any{},
 		entries:  map[stmt][]entryWrite{},
 		withs:    map[stmt][]*proto.APLValue{},
+		used:     map[stmt]*typedFile{},
 		whens:    map[*whenStmt]*proto.APLValue{},
 	}
 	f.spec = typeSpec(t, tree, kind)
@@ -512,6 +514,7 @@ func (f *typedFile) readUses(u *uses) usedFiles {
 			continue
 		}
 		file := readFile(ix, t.names, sourceText(text), kindOf(path), &uses{path: path, open: u.open, chain: append(slices.Clone(u.chain), path)})
+		f.used[use] = file
 		// The used file's first error stands for all of them; the file itself shows the rest.
 		diags := file.tree.lines.diagnostics(path, file.diags)
 		if i := slices.IndexFunc(diags, func(d Diagnostic) bool { return d.Severity == Error }); i >= 0 {
