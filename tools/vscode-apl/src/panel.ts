@@ -71,9 +71,10 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	const uses = (file: vscode.Uri) => file.scheme === 'file' && used.some(path => samePath(path, file.fsPath));
 
 	const postRegistered = async () => {
-		const registered = await request<Registered>(uri, 'siml/registered', { uri: key }).catch(
-			(e: Error): Registered => ({ status: 'unavailable', reason: e.message }),
-		);
+		const registered = await request<Registered>(uri, 'siml/registered', { uri: key }).catch((e: Error): Registered => ({
+			status: 'unavailable',
+			reason: e.message,
+		}));
 		post({ type: 'registered', registered });
 	};
 	const postRotation = async (document: vscode.TextDocument) => {
