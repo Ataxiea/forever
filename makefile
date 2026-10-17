@@ -10,7 +10,7 @@ ASSETS := $(patsubst assets/%,$(OUT_DIR)/assets/%,$(ASSETS_INPUT))
 # Recursive wildcard function. Needs to be '=' instead of ':=' because of recursion.
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 GOROOT := $(shell go env GOROOT)
-UI_SRC := $(shell find ui -name '*.ts' -o -name '*.tsx' -o -name '*.css' -o -name '*.html' -o -name '*.siml')
+UI_SRC := $(shell find ui -name '*.ts' -o -name '*.tsx' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.siml')
 AUTO_GEN_FILES_TS := ui/sim/player/classes/capabilities_auto_gen.ts ui/sim/bulk/constants_auto_gen.ts ui/sim/wasm/bulk_sim/constants_auto_gen.ts ui/sim/proto/sim_tables_auto_gen.ts ui/sim/wasm/stat_weights_constants_auto_gen.ts
 AUTO_GEN_FILES_TS_DEPS := sim/core/base_stats.go sim/core/bulk/candidates.go sim/core/bulk/statistics.go sim/core/consumes_imbues.go sim/core/database.go sim/core/statweight.go tools/database/gen_character_constants_ts.go tools/database/gen_bulksim_constants.ts.go tools/database/gen_sim_tables_ts.go tools/database/gen_stat_weight_constants_ts.go sim/core/proto/api.pb.go
 
@@ -23,7 +23,6 @@ $(OUT_DIR)/.dirstamp: \
 	touch $@
 
 $(OUT_DIR)/bundle/.dirstamp: \
-  bin/wowsimcli$(BIN_EXT) \
   $(UI_SRC) \
   $(AUTO_GEN_FILES_TS) \
   vite.config.mts \
@@ -35,7 +34,8 @@ $(OUT_DIR)/bundle/.dirstamp: \
   ui/generated/proto/api.ts \
   sim/siml/names.json \
   sim/siml/forms.json \
-  $(filter-out %_test.go,$(wildcard sim/siml/*.go))
+  $(filter-out %_test.go,$(wildcard sim/siml/*.go)) \
+  | bin/wowsimcli$(BIN_EXT)
 	node_modules/typescript/bin/tsc --noEmit
 	npx tsx vite.build-workers.mts
 	npx vite build
@@ -99,7 +99,7 @@ node_modules: package-lock.json
 
 # What tools/vite/siml.mts reads .siml imports with when $WOWSIMCLI is unset. It stays out of dist: the pull request
 # preview uploads all of dist to Cloudflare Pages, which refuses a file over 25 MiB.
-bin/wowsimcli$(BIN_EXT): sim/core/proto/api.pb.go $(filter-out %_test.go,$(call rwildcard,sim,*.go) $(call rwildcard,cmd/wowsimcli,*.go))
+bin/wowsimcli$(BIN_EXT): sim/core/proto/api.pb.go sim/siml/forms.json $(filter-out %_test.go,$(call rwildcard,sim,*.go) $(call rwildcard,cmd/wowsimcli,*.go))
 	go build -o $@ ./cmd/wowsimcli
 
 # Run before committing: refresh the SIML name table, then check the files under ui/specs read and are canonical.
