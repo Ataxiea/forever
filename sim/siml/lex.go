@@ -127,21 +127,22 @@ func (m *lineMap) line(offset int) int {
 	return sort.Search(len(m.starts), func(i int) bool { return m.starts[i] > offset }) - 1
 }
 
+// The byte column of offset in its line, from 0.
+func (m *lineMap) column(offset int) int { return offset - m.starts[m.line(offset)] }
+
+// Line i as written, without its line break.
+func (m *lineMap) text(i int) string {
+	end := len(m.src)
+	if i+1 < len(m.starts) {
+		end = m.starts[i+1] - 1
+	}
+	return strings.TrimSuffix(m.src[m.starts[i]:end], "\r")
+}
+
 // The 1-based line and UTF-16 column of offset.
 func (m *lineMap) position(offset int) Position {
 	line := m.line(offset)
-	col := 0
-	for _, r := range m.src[m.starts[line]:offset] {
-		col += utf16Len(r)
-	}
-	return Position{Line: line + 1, Col: col + 1}
-}
-
-func utf16Len(r rune) int {
-	if r >= 0x10000 {
-		return 2
-	}
-	return 1
+	return Position{Line: line + 1, Col: textWidth(m.src[m.starts[line]:offset]) + 1}
 }
 
 var (
@@ -425,6 +426,13 @@ func scanNumber(src string, pos int) token {
 	}
 	message := fmt.Sprintf("'%s' is no number: a number may end in one of %% ns us µs ms s m h, or be a duration such as 1m30s", src[pos:end])
 	return token{kind: tokNumber, text: src[pos:end], start: pos, end: end, err: &tokenError{"bad-literal", message, span{pos, end}}}
+}
+
+// Whether s is one literal as the lexer reads it (SPEC.md §2), a leading minus allowed.
+func isLiteral(s string) bool {
+	s = strings.TrimPrefix(s, "-")
+	end, ok := literalEnd(s, 0)
+	return ok && end == len(s)
 }
 
 // Where the literal at pos ends (SPEC.md §2): a number, then %, a unit, or a compound duration such as 1h2m3.5s,

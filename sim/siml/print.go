@@ -38,11 +38,10 @@ const (
 )
 
 var (
-	literalPattern = regexp.MustCompile(`^-?[0-9]+(\.[0-9]+)?(%|(ns|us|µs|ms|s|m|h)([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)?$`)
-	identPattern   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
-	unprintable    = regexp.MustCompile(`[\x00-\x09\x0b-\x1f\x7f]| (\n|$)`)
-	logicPrec      = map[string]int{"and": precAnd, "or": precOr}
-	mathPrec       = map[proto.APLValueMath_MathOperator]int{
+	identPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+	unprintable  = regexp.MustCompile(`[\x00-\x09\x0b-\x1f\x7f]| (\n|$)`)
+	logicPrec    = map[string]int{"and": precAnd, "or": precOr}
+	mathPrec     = map[proto.APLValueMath_MathOperator]int{
 		proto.APLValueMath_OpAdd: precAdd, proto.APLValueMath_OpSub: precAdd, proto.APLValueMath_OpMul: precMul, proto.APLValueMath_OpDiv: precMul,
 	}
 	// Words that never read as the name of a kind: the stop words, and true, false and none.
@@ -265,7 +264,7 @@ func (p *printer) shortValue(k *aplKind, body protoreflect.Message, prec int, sc
 			return nil
 		}
 		val := body.Get(p.fieldOf(body, "val").desc).String()
-		if literalPattern.MatchString(val) || val == "true" || val == "false" {
+		if isLiteral(val) || val == "true" || val == "false" {
 			return word(val)
 		}
 		return word(jsonString(val))

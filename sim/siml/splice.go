@@ -179,8 +179,7 @@ type offsetEdit struct {
 // Changes to a text by whole lines: lines dropped, lines put in front of a line, and blocks moved elsewhere with what
 // changed inside them.
 type lineEdits struct {
-	src     string
-	starts  []int
+	lines   *lineMap
 	eol     string
 	ended   bool // Whether the text ends with a line break.
 	count   int  // The text's lines; putting lines in front of line count puts them at its end.
@@ -192,13 +191,12 @@ type lineEdits struct {
 }
 
 func newLineEdits(src string, tree *syntaxTree) *lineEdits {
-	_, triv, lines := lex(src)
+	lines := tree.lines
 	e := &lineEdits{
-		src:     src,
-		starts:  lines.starts,
+		lines:   lines,
 		eol:     "\n",
 		ended:   src == "" || strings.HasSuffix(src, "\n"),
-		blanks:  map[int]bool{},
+		blanks:  tree.blanks,
 		headers: map[int]bool{},
 		dropped: map[int]bool{},
 		inserts: map[int][]lineInsert{},
@@ -207,14 +205,9 @@ func newLineEdits(src string, tree *syntaxTree) *lineEdits {
 	if strings.Contains(src, "\r\n") {
 		e.eol = "\r\n"
 	}
-	e.count = len(e.starts)
+	e.count = len(e.lines.starts)
 	if e.ended {
 		e.count--
-	}
-	for _, t := range triv {
-		if t.kind == triviaBlank {
-			e.blanks[t.line] = true
-		}
 	}
 	for _, s := range tree.statements {
 		if h, ok := s.(*headerStmt); ok && h.body == nil {
@@ -224,20 +217,11 @@ func newLineEdits(src string, tree *syntaxTree) *lineEdits {
 	return e
 }
 
-// Line i as written, without its line break.
-func (e *lineEdits) line(i int) string {
-	end := len(e.src)
-	if i+1 < len(e.starts) {
-		end = e.starts[i+1] - 1
-	}
-	return strings.TrimSuffix(e.src[e.starts[i]:end], "\r")
-}
-
 // Lines first to last as written.
 func (e *lineEdits) written(first, last int) []spliceLine {
 	var out []spliceLine
 	for i := first; i <= last; i++ {
-		out = append(out, spliceLine{text: e.line(i), from: -1, header: e.headers[i]})
+		out = append(out, spliceLine{text: e.lines.text(i), from: -1, header: e.headers[i]})
 	}
 	return out
 }
@@ -309,7 +293,7 @@ func (e *lineEdits) edits() []offsetEdit {
 
 // The new text.
 func (e *lineEdits) result() string {
-	text := e.src
+	text := e.lines.src
 	for _, x := range slices.Backward(e.edits()) {
 		text = text[:x.start] + x.text + text[x.end:]
 	}
@@ -325,7 +309,7 @@ func (e *lineEdits) sequence() []spliceLine {
 			}
 		}
 		if i < e.count && !e.dropped[i] {
-			out = append(out, spliceLine{text: e.line(i), from: i, header: e.headers[i]})
+			out = append(out, spliceLine{text: e.lines.text(i), from: i, header: e.headers[i]})
 		}
 	}
 	return e.tidy(out)
@@ -405,10 +389,10 @@ type lineChange struct {
 // start and end with are left out first. When what remains would need a table of more than maxDiffCells, it is
 // replaced whole.
 func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
-	for from < to && len(lines) > 0 && e.line(from) == lines[0] {
+	for from < to && len(lines) > 0 && e.lines.text(from) == lines[0] {
 		from, lines = from+1, lines[1:]
 	}
-	for from < to && len(lines) > 0 && e.line(to-1) == lines[len(lines)-1] {
+	for from < to && len(lines) > 0 && e.lines.text(to-1) == lines[len(lines)-1] {
 		to, lines = to-1, lines[:len(lines)-1]
 	}
 	if from == to && len(lines) == 0 {
@@ -419,7 +403,7 @@ func (e *lineEdits) changes(from, to int, lines []string) []lineChange {
 	}
 	old := make([]string, to-from)
 	for k := range old {
-		old[k] = e.line(from + k)
+		old[k] = e.lines.text(from + k)
 	}
 	width := len(lines) + 1
 	common := make([]int32, (len(old)+1)*width) // The longest common run of old[i:] and lines[j:], at i*width+j.
@@ -460,10 +444,10 @@ const maxDiffCells = 1 << 20
 // The edit that puts lines in place of the text's lines from to to (exclusive).
 func (e *lineEdits) edit(from, to int, lines []string) offsetEdit {
 	offset := func(i int) int {
-		if i < len(e.starts) {
-			return e.starts[i]
+		if i < len(e.lines.starts) {
+			return e.lines.starts[i]
 		}
-		return len(e.src)
+		return len(e.lines.src)
 	}
 	var text string
 	// At the end of a text with no final line break, the lines are joined, and follow a line break of their own.
@@ -585,7 +569,7 @@ func lastLine(s *section, lines *lineMap) int {
 // The column a statement starts at.
 func columnOf(s stmt, lines *lineMap) int {
 	start := s.base().start
-	return start - lines.starts[lines.line(start)]
+	return lines.column(start)
 }
 
 func newRotationModel(ix *schemaIndex, f *typedFile) *rotationModel {
@@ -1679,7 +1663,7 @@ func (w *spliceWriter) render(s *spliceSlot, list *spliceList, p *printer, sc sc
 			if moved && u.header == nil {
 				above = append(above, commentLine(c, indent).line)
 			} else {
-				above = append(above, w.out.line(c.line))
+				above = append(above, w.out.lines.text(c.line))
 			}
 		}
 		host := u.statement.base()

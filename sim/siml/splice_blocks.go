@@ -796,7 +796,7 @@ func (w *spliceWriter) whenLines(s *spliceSlot, list *spliceList) []spliceLine {
 	var above []string
 	if s.unit != nil {
 		for _, c := range s.unit.comments {
-			above = append(above, w.out.line(c.line))
+			above = append(above, w.out.lines.text(c.line))
 		}
 		inner := slices.DeleteFunc(slices.Clone(s.when.inner), func(t trivia) bool { return t.kind != triviaComment })
 		if len(inner) == 1 && inner[0].line == w.lines.line(s.when.end) {

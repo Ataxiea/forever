@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sync"
+	"unicode/utf16"
 	"unicode/utf8"
 )
 
@@ -41,6 +42,9 @@ type Doc struct {
 	occ       []occurrence // What occurrences reads, once: a Doc does not change after Analyze.
 	wordsOnce sync.Once
 	words     []wordRole // What classify reads, once.
+
+	pathOnce  sync.Once
+	pathLines map[int][]int // The typer's spans by each line they cover, from 0, for PathAt.
 }
 
 // Reads src as the file at path, as Parse does; the result holds the diagnostics, and an error only when the schema
@@ -185,7 +189,7 @@ func (d *Doc) Offset(p Position) int {
 	for at < end && col < p.Col {
 		r, size := utf8.DecodeRuneInString(d.src[at:])
 		at += size
-		col += utf16Len(r)
+		col += utf16.RuneLen(r)
 	}
 	return at
 }
@@ -218,8 +222,18 @@ func (d *Doc) PathAt(p Position) []any {
 	}
 	offset := d.Offset(p)
 	base := d.rotationBase()
+	spans := d.typed.typer.spans
+	d.pathOnce.Do(func() {
+		d.pathLines = map[int][]int{}
+		for i, s := range spans {
+			for line := d.lines.line(s.start); line <= d.lines.line(s.end); line++ {
+				d.pathLines[line] = append(d.pathLines[line], i)
+			}
+		}
+	})
 	var best *pathSpan
-	for _, s := range d.typed.typer.spans {
+	for _, i := range d.pathLines[d.lines.line(offset)] {
+		s := spans[i]
 		path, ok := d.within(s.path)
 		if !ok || s.start > offset || offset > s.end || !hasPrefix(path, base) {
 			continue

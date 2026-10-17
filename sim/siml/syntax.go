@@ -318,6 +318,7 @@ type syntaxTree struct {
 	sections   []*section // In file order.
 	trailing   []trivia   // The trivia after the last statement.
 	lines      *lineMap
+	blanks     map[int]bool // The 0-based lines that are blank.
 }
 
 // Every statement in file order, a header's body line right after its header.
@@ -373,9 +374,10 @@ func isInt(s string) bool {
 
 func parseSyntax(src string, ix *schemaIndex, kind Kind) (*syntaxTree, []diag) {
 	tokens, triv, lines := lex(src)
+	blanks := blankLines(triv)
 	f := &fileParser{
 		ix: ix, kind: kind, tokens: tokens, trivia: triv, lines: lines,
-		allowed: fileSections(ix, kind), tree: &syntaxTree{lines: lines}, present: map[string]bool{},
+		allowed: fileSections(ix, kind), tree: &syntaxTree{lines: lines, blanks: blanks}, present: map[string]bool{},
 	}
 	return f.run()
 }
@@ -390,17 +392,11 @@ type failure struct {
 // The tokens of each statement (SPEC.md §3.1). A statement continues while a bracket is open, and, unless it is a
 // header, onto a later line indented deeper than its first, with no blank line between, that does not itself start
 // with a header; comment lines never decide. A when line ends at the first : that ends a line.
-func statementsOf(tokens []token, triv []trivia, lines *lineMap) [][]token {
-	blank := map[int]bool{}
-	for _, t := range triv {
-		if t.kind == triviaBlank {
-			blank[t.line] = true
-		}
-	}
+func statementsOf(tokens []token, blank map[int]bool, lines *lineMap) [][]token {
 	var out [][]token
 	i := 0
 	for i < len(tokens) {
-		indent := tokens[i].start - lines.starts[lines.line(tokens[i].start)]
+		indent := lines.column(tokens[i].start)
 		header, when := headerShape(tokens, i, lines), whenShape(tokens, i)
 		var open []int
 		j := i
@@ -437,6 +433,17 @@ func statementsOf(tokens []token, triv []trivia, lines *lineMap) [][]token {
 		}
 		out = append(out, tokens[i:j+1])
 		i = j + 1
+	}
+	return out
+}
+
+// The lines of the blank trivia.
+func blankLines(triv []trivia) map[int]bool {
+	out := map[int]bool{}
+	for _, t := range triv {
+		if t.kind == triviaBlank {
+			out[t.line] = true
+		}
 	}
 	return out
 }
@@ -540,7 +547,7 @@ type openBlock struct {
 
 func (f *fileParser) run() (*syntaxTree, []diag) {
 	f.openImplied()
-	for n, toks := range statementsOf(f.tokens, f.trivia, f.lines) {
+	for n, toks := range statementsOf(f.tokens, f.tree.blanks, f.lines) {
 		f.physical(toks, n == 0)
 	}
 	if !f.versionFirst {
@@ -588,7 +595,7 @@ func (f *fileParser) physical(toks []token, first bool) {
 	if isHeader {
 		f.closeBlocks(-1)
 	} else {
-		f.closeBlocks(start - f.lines.starts[f.lines.line(start)])
+		f.closeBlocks(f.lines.column(start))
 	}
 	block := f.block()
 	var statement stmt
@@ -671,7 +678,7 @@ func (f *fileParser) header(p *parser, end int) *headerStmt {
 		h.group = p.take().stringNode()
 	}
 	p.take()
-	if nameTok.start != f.lines.starts[f.lines.line(nameTok.start)] {
+	if f.lines.column(nameTok.start) != 0 {
 		p.report("indented-header", "a section header starts at column 1", h.name.span)
 	}
 	f.open(p, h)
@@ -827,7 +834,7 @@ func (f *fileParser) line(p *parser, first bool) lineRead {
 // neither it nor its body is read.
 func (f *fileParser) when(p *parser, here func(stmt, bool) lineRead) lineRead {
 	t := p.peek(0)
-	block := openBlock{indent: t.start - f.lines.starts[f.lines.line(t.start)]}
+	block := openBlock{indent: f.lines.column(t.start)}
 	if f.def == nil || !slices.Contains(f.def.Body, "rows") || f.def.Name == sectionPrepull {
 		p.report("misplaced-when", "a when block goes under priority: or a group", t.at())
 		block.skip = true
