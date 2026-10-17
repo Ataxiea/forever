@@ -131,10 +131,7 @@ func reverseIDs(names map[string]int32) map[int32]string {
 // The spell-like entry name means in ns for a file of class: the class's own entry, else the shared one. A file
 // with no spec line passes ClassUnknown and reads the shared entries only.
 func (t *Names) Spell(class proto.Class, ns Namespace, name string) (*proto.ActionID, bool) {
-	e, ok := t.Classes[class][ns][name]
-	if !ok {
-		e, ok = t.Shared[ns][name]
-	}
+	e, ok := t.spellEntry(class, ns, name)
 	if !ok {
 		return nil, false
 	}
