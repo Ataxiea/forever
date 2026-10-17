@@ -95,7 +95,7 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 		player.setDistanceFromTarget(config.defaults.other?.distanceFromTarget || 0);
 		player.setChannelClipDelay(config.defaults.other?.channelClipDelay || 0);
 		player.setReactionTime(config.defaults.other?.reactionTime || 100);
-		player.setInFrontOfTarget(config.defaults.other?.inFrontOfTarget ?? tankSpec);
+		player.setInFrontOfTarget(!!config.defaults.other?.inFrontOfTarget);
 
 		host.reforger?.applyDefaults();
 
@@ -116,7 +116,7 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 			sim.setIterations(config.defaults.other!.iterationCount!);
 		}
 
-		sim.raid.setTanks(config.defaults.other?.tanks ?? (tankSpec ? [player.makeUnitReference()] : []));
+		sim.raid.setTanks(config.defaults.other?.tanks ?? []);
 
 		host.statWeightActionSettings.applyDefaults();
 		host.statSweepSettings.applyDefaults();

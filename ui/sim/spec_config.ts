@@ -83,7 +83,6 @@ export interface OtherDefaults {
 	race?: Race;
 	// Applied by applyIndividualDefaults after the encounter defaults.
 	healingModel?: HealingModel;
-	// Unset, a tank spec stands in front of the target and tanks it, and any other spec does neither.
 	inFrontOfTarget?: boolean;
 	tanks?: Array<UnitReference>;
 }
