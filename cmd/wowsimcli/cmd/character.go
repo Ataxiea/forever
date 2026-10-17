@@ -65,7 +65,7 @@ func specDefaults(root string, spec proto.Spec) (string, *siml.File, error) {
 // or none, is simmed on the defaults.
 func characterFromRepo(root, folder string, defaults *siml.File, path string) (*character, error) {
 	c := &character{
-		settings: googleProto.Clone(defaults.Settings).(*proto.IndividualSimSettings),
+		settings: cloneProto(defaults.Settings),
 		info:     characterInfo{Source: defaults.Path},
 	}
 	build, err := buildOf(root, folder, path)
@@ -219,7 +219,7 @@ func readSetup(root, path string) (*character, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s is a preset build, and %w", path, err)
 	}
-	c.settings = googleProto.Clone(defaults.Settings).(*proto.IndividualSimSettings)
+	c.settings = cloneProto(defaults.Settings)
 	loadBuild(c.settings, f.Settings)
 	c.info.Source = path + " over " + defaults.Path
 	c.info.Warnings = append(c.info.Warnings, fmt.Sprintf("%s is a preset build: simmed over %s", path, defaults.Path))

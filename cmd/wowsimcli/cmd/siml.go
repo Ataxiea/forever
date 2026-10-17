@@ -329,9 +329,8 @@ func isSet(flags *flag.FlagSet, name string) bool {
 
 // The spec whose message the settings' player holds, SpecUnknown for none.
 func heldSpec(s *proto.IndividualSimSettings) proto.Spec {
-	player := s.GetPlayer().ProtoReflect()
-	for _, info := range siml.Specs() {
-		if player.IsValid() && player.Has(info.Field) {
+	if fd := specField(s.GetPlayer()); fd != nil {
+		if info, ok := siml.SpecNamed(string(fd.Name())); ok {
 			return info.Spec
 		}
 	}
