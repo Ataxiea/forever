@@ -1,12 +1,10 @@
 package printer
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/textproto"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +14,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/siml/lsp/jsonrpc"
 )
 
 const executeGo = `package warrior
@@ -655,10 +654,10 @@ func frame(t *testing.T, msg map[string]any) string {
 
 func readFrames(t *testing.T, out io.Reader) []rpcMessage {
 	t.Helper()
-	reader := textproto.NewReader(bufio.NewReader(out))
+	reader := jsonrpc.NewFrameReader(out)
 	var msgs []rpcMessage
 	for {
-		body, err := readFrame(reader)
+		body, err := reader.Read()
 		if err == io.EOF {
 			return msgs
 		}

@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"go/types"
 	"maps"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"github.com/wowsims/forever/sim/siml/lsp/jsonrpc"
 )
 
 // Each pattern captures the id in group 1.
@@ -1280,24 +1281,15 @@ func byteOffsetOfUTF16Column(lineText string, units int) int {
 
 // A Windows URI states the drive after the path's leading slash, file:///c:/x.
 func uriPath(uri string) string {
-	if u, err := url.Parse(uri); err == nil && u.Scheme == "file" {
-		path := u.Path
-		if filepath.VolumeName(strings.TrimPrefix(path, "/")) != "" {
-			path = strings.TrimPrefix(path, "/")
-		}
-		return filepath.Clean(filepath.FromSlash(path))
+	if path, ok := jsonrpc.URIPath(uri); ok {
+		return filepath.Clean(path)
 	}
 	return filepath.Clean(uri)
 }
 
 func pathURI(path string) string {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		abs = path
+	if abs, err := filepath.Abs(path); err == nil {
+		path = abs
 	}
-	abs = filepath.ToSlash(abs)
-	if !strings.HasPrefix(abs, "/") {
-		abs = "/" + abs
-	}
-	return (&url.URL{Scheme: "file", Path: abs}).String()
+	return jsonrpc.PathURI(path)
 }

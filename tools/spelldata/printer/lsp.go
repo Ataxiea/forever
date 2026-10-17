@@ -1,21 +1,20 @@
 package printer
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/textproto"
-	"strconv"
 	"strings"
+
+	"github.com/wowsims/forever/sim/siml/lsp/jsonrpc"
 )
 
 const (
-	codeParseError     = -32700
-	codeMethodNotFound = -32601
-	codeInvalidParams  = -32602
-	codeInternalError  = -32603
+	codeParseError     = jsonrpc.CodeParseError
+	codeMethodNotFound = jsonrpc.CodeMethodNotFound
+	codeInvalidParams  = jsonrpc.CodeInvalidParams
+	codeInternalError  = jsonrpc.CodeInternalError
 
 	messageTypeLog = 4
 
@@ -23,19 +22,9 @@ const (
 	setRankCommand = "wowsims-spelldata.setRank"
 )
 
-type rpcMessage struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method,omitempty"`
-	Params  json.RawMessage `json:"params,omitempty"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *rpcError       `json:"error,omitempty"`
-}
+type rpcMessage = jsonrpc.Message
 
-type rpcError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
+type rpcError = jsonrpc.ResponseError
 
 // The params of every textDocument method the server reads.
 type documentParams struct {
@@ -74,7 +63,7 @@ type position struct {
 }
 
 type lspServer struct {
-	out      io.Writer
+	w        *jsonrpc.FrameWriter
 	ws       *workspace
 	trace    bool
 	shutdown bool
@@ -82,11 +71,11 @@ type lspServer struct {
 }
 
 func serveLSP(in io.Reader, out io.Writer) (shutdownRequested bool, err error) {
-	server := &lspServer{out: out, ws: newWorkspace(), trace: true, picks: &rankPicks{ranks: map[string]int32{}}}
-	reader := textproto.NewReader(bufio.NewReader(in))
+	server := &lspServer{w: jsonrpc.NewFrameWriter(out), ws: newWorkspace(), trace: true, picks: &rankPicks{ranks: map[string]int32{}}}
+	reader := jsonrpc.NewFrameReader(in)
 
 	for {
-		body, err := readFrame(reader)
+		body, err := reader.Read()
 		if errors.Is(err, io.EOF) {
 			return server.shutdown, nil
 		}
@@ -104,22 +93,6 @@ func serveLSP(in io.Reader, out io.Writer) (shutdownRequested bool, err error) {
 		}
 		server.handle(msg)
 	}
-}
-
-func readFrame(reader *textproto.Reader) ([]byte, error) {
-	header, err := reader.ReadMIMEHeader()
-	if err != nil {
-		return nil, err
-	}
-	length, err := strconv.Atoi(header.Get("Content-Length"))
-	if err != nil || length < 0 {
-		return nil, fmt.Errorf("a frame without a Content-Length: %v", header)
-	}
-	body := make([]byte, length)
-	if _, err := io.ReadFull(reader.R, body); err != nil {
-		return nil, err
-	}
-	return body, nil
 }
 
 func (s *lspServer) handle(msg rpcMessage) {
@@ -269,30 +242,7 @@ func (s *lspServer) log(message string) {
 }
 
 func (s *lspServer) respond(id json.RawMessage, result any, rpcErr *rpcError) {
-	msg := rpcMessage{JSONRPC: "2.0", ID: id, Error: rpcErr}
-	if rpcErr == nil {
-		encoded, err := json.Marshal(result)
-		if err != nil {
-			msg.Error = &rpcError{Code: codeInternalError, Message: err.Error()}
-		} else {
-			msg.Result = encoded
-		}
-	}
-	s.write(msg)
+	s.w.Respond(id, result, rpcErr)
 }
 
-func (s *lspServer) notify(method string, params any) {
-	encoded, err := json.Marshal(params)
-	if err != nil {
-		return
-	}
-	s.write(rpcMessage{JSONRPC: "2.0", Method: method, Params: encoded})
-}
-
-func (s *lspServer) write(msg rpcMessage) {
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
-	fmt.Fprintf(s.out, "Content-Length: %d\r\n\r\n%s", len(body), body)
-}
+func (s *lspServer) notify(method string, params any) { s.w.Notify(method, params) }

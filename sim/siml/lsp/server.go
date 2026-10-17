@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/siml"
+	"github.com/wowsims/forever/sim/siml/lsp/jsonrpc"
 )
 
 // How long the server waits for typing to pause before it checks a changed file, and before it checks the open files
@@ -65,7 +66,7 @@ type analysis struct {
 
 type server struct {
 	opts Options
-	w    *frameWriter
+	w    *jsonrpc.FrameWriter
 	ws   *workspaces
 
 	mu        sync.Mutex // Holds everything below and every Doc: one analysis runs at a time.
@@ -86,7 +87,7 @@ type server struct {
 func Serve(in io.Reader, out io.Writer, opts Options) (shutdownRequested bool, err error) {
 	s := &server{
 		opts:     opts,
-		w:        &frameWriter{out: out},
+		w:        jsonrpc.NewFrameWriter(out),
 		ws:       newWorkspaces(),
 		docs:     map[string]*document{},
 		analyses: map[string]*analysis{},
@@ -95,9 +96,9 @@ func Serve(in io.Reader, out io.Writer, opts Options) (shutdownRequested bool, e
 		cards:    newCards(opts.Row),
 	}
 	defer s.stop()
-	reader := newFrameReader(in)
+	reader := jsonrpc.NewFrameReader(in)
 	for {
-		body, err := reader.read()
+		body, err := reader.Read()
 		if errors.Is(err, io.EOF) {
 			return s.isShutdown(), nil
 		}
@@ -106,7 +107,7 @@ func Serve(in io.Reader, out io.Writer, opts Options) (shutdownRequested bool, e
 		}
 		var msg message
 		if err := json.Unmarshal(body, &msg); err != nil {
-			s.w.respond(json.RawMessage("null"), nil, &ResponseError{Code: codeParseError, Message: err.Error()})
+			s.w.Respond(json.RawMessage("null"), nil, &ResponseError{Code: codeParseError, Message: err.Error()})
 			continue
 		}
 		if msg.Method == "exit" {
@@ -147,7 +148,7 @@ func (s *server) dispatch(msg message) {
 		var result any
 		var rpcErr *ResponseError
 		s.guard(msg.Method, func() { result, rpcErr = s.lifecycle(msg.Method, msg.Params) })
-		s.w.respond(msg.ID, result, rpcErr)
+		s.w.Respond(msg.ID, result, rpcErr)
 		return
 	}
 	// Every other request runs on its own, so a slow one (a hover that reads the game files, a sim) does not hold up
@@ -173,7 +174,7 @@ func (s *server) dispatch(msg message) {
 		if ctx.Err() != nil && rpcErr == nil {
 			rpcErr = &ResponseError{Code: codeRequestCancelled, Message: "the request was cancelled"}
 		}
-		s.w.respond(msg.ID, result, rpcErr)
+		s.w.Respond(msg.ID, result, rpcErr)
 	}()
 }
 
@@ -190,7 +191,7 @@ func (s *server) guard(method string, f func()) (ran bool) {
 }
 
 func (s *server) log(message string) {
-	s.w.notify("window/logMessage", map[string]any{"type": 4, "message": message})
+	s.w.Notify("window/logMessage", map[string]any{"type": 4, "message": message})
 }
 
 func (s *server) lifecycle(method string, params json.RawMessage) (any, *ResponseError) {
@@ -275,7 +276,7 @@ func (s *server) notification(method string, params json.RawMessage) {
 		for i, glob := range watchedGlobs {
 			watchers[i] = map[string]string{"globPattern": glob}
 		}
-		s.w.request(id, "client/registerCapability", map[string]any{"registrations": []any{map[string]any{
+		s.w.Request(id, "client/registerCapability", map[string]any{"registrations": []any{map[string]any{
 			"id":              "siml-watched-files",
 			"method":          "workspace/didChangeWatchedFiles",
 			"registerOptions": map[string]any{"watchers": watchers},
@@ -370,7 +371,7 @@ func (s *server) documentChanged(method string, p *textDocumentParams) {
 			t.Stop()
 			delete(s.timers, uri)
 		}
-		s.w.notify("textDocument/publishDiagnostics", map[string]any{"uri": uri, "diagnostics": []Diagnostic{}})
+		s.w.Notify("textDocument/publishDiagnostics", map[string]any{"uri": uri, "diagnostics": []Diagnostic{}})
 		// A file closed unsaved is read from disk again by the open files that use it.
 		s.changedLocked(d.path, "")
 	}
@@ -409,7 +410,7 @@ func (s *server) publish(uri string) {
 		return
 	}
 	params := map[string]any{"uri": uri, "version": a.version, "diagnostics": s.diagnosticsLocked(a, catalog.of(a))}
-	s.w.notify("textDocument/publishDiagnostics", params)
+	s.w.Notify("textDocument/publishDiagnostics", params)
 }
 
 // The open document at uri read, from the last read while its text, the files it uses and the name table hold. Nil

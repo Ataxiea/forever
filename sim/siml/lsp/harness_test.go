@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wowsims/forever/sim/siml/lsp/jsonrpc"
 )
 
 // A client of the server over in-memory pipes, driving it as an editor's client does.
@@ -30,7 +32,7 @@ type response struct {
 type client struct {
 	t       *testing.T
 	in      *io.PipeWriter
-	w       *frameWriter
+	w       *jsonrpc.FrameWriter
 	done    chan error
 	mu      sync.Mutex
 	nextID  int
@@ -47,7 +49,7 @@ func connect(t *testing.T, opts Options) *client {
 	c := &client{
 		t:       t,
 		in:      fromClient,
-		w:       &frameWriter{out: fromClient},
+		w:       jsonrpc.NewFrameWriter(fromClient),
 		done:    make(chan error, 1),
 		pending: map[string]chan response{},
 		wake:    make(chan struct{}, 1),
@@ -60,7 +62,7 @@ func connect(t *testing.T, opts Options) *client {
 	go c.read(toClient)
 	t.Cleanup(func() {
 		c.request("shutdown", nil)
-		c.w.notify("exit", nil)
+		c.w.Notify("exit", nil)
 		select {
 		case err := <-c.done:
 			if err != nil {
@@ -75,9 +77,9 @@ func connect(t *testing.T, opts Options) *client {
 }
 
 func (c *client) read(from io.Reader) {
-	reader := newFrameReader(from)
+	reader := jsonrpc.NewFrameReader(from)
 	for {
-		body, err := reader.read()
+		body, err := reader.Read()
 		if err != nil {
 			return
 		}
@@ -97,7 +99,7 @@ func (c *client) read(from io.Reader) {
 		}
 		// A request from the server, such as client/registerCapability, is answered as a client answers it.
 		if len(msg.ID) > 0 {
-			c.w.respond(msg.ID, nil, nil)
+			c.w.Respond(msg.ID, nil, nil)
 		}
 		c.mu.Lock()
 		c.notes = append(c.notes, msg)
@@ -116,7 +118,7 @@ func (c *client) send(method string, params any) response {
 	ch := make(chan response, 1)
 	c.pending[fmt.Sprint(n)] = ch
 	c.mu.Unlock()
-	c.w.request(n, method, params)
+	c.w.Request(n, method, params)
 	select {
 	case r := <-ch:
 		return r
@@ -141,7 +143,7 @@ func (c *client) request(method string, params any, out ...any) response {
 	return r
 }
 
-func (c *client) notify(method string, params any) { c.w.notify(method, params) }
+func (c *client) notify(method string, params any) { c.w.Notify(method, params) }
 
 // The first notification of method whose params match, waiting up to 10 s for it.
 func (c *client) notification(method string, matches func(json.RawMessage) bool) json.RawMessage {
