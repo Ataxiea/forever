@@ -11,7 +11,6 @@ import (
 	googleProto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/siml"
 )
@@ -76,9 +75,6 @@ func characterFromRepo(root, folder string, defaults *siml.File, path string) (*
 	if build != nil {
 		loadBuild(c.settings, build.Settings)
 		c.info.Source = build.Path + " over " + c.info.Source
-	}
-	if c.settings.Encounter == nil {
-		c.settings.Encounter = core.MakeSingleTargetEncounter(0)
 	}
 	c.info.Gear = gearSetOf(root, folder, c.settings.GetPlayer().GetEquipment())
 	return c, nil
@@ -215,16 +211,17 @@ func readSetup(root, path string) (*character, error) {
 	for _, w := range f.Warnings {
 		c.info.Warnings = append(c.info.Warnings, diagnosticLine(w))
 	}
-	if f.Settings.GetPlayer().GetRace() != proto.Race_RaceUnknown {
+	// A preset build sits in a builds folder, and may set its race; any other file is a build only when it names none.
+	if filepath.Base(filepath.Dir(path)) != "builds" && f.Settings.GetPlayer().GetRace() != proto.Race_RaceUnknown {
 		return c, nil
 	}
 	_, defaults, err := specDefaults(root, f.Spec)
 	if err != nil {
-		return nil, fmt.Errorf("%s names no race, so it is a preset build, and %w", path, err)
+		return nil, fmt.Errorf("%s is a preset build, and %w", path, err)
 	}
 	c.settings = googleProto.Clone(defaults.Settings).(*proto.IndividualSimSettings)
 	loadBuild(c.settings, f.Settings)
 	c.info.Source = path + " over " + defaults.Path
-	c.info.Warnings = append(c.info.Warnings, fmt.Sprintf("%s names no race, so it is a preset build: simmed over %s", path, defaults.Path))
+	c.info.Warnings = append(c.info.Warnings, fmt.Sprintf("%s is a preset build: simmed over %s", path, defaults.Path))
 	return c, nil
 }

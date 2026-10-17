@@ -79,8 +79,9 @@ func TestCharacterFromRepoReadsTheSpecDefaults(t *testing.T) {
 	if !c.settings.RaidBuffs.GetGiftOfTheWild() || !c.settings.Debuffs.GetSunderArmor() || !p.Buffs.GetGreaterBlessingOfKings() {
 		t.Errorf("buffs not read: raid %v, debuffs %v, individual %v", c.settings.RaidBuffs, c.settings.Debuffs, p.Buffs)
 	}
-	if len(c.settings.Encounter.GetTargets()) != 1 {
-		t.Errorf("encounter %v, want the default target", c.settings.Encounter)
+	// The defaults set no encounter, so the request takes the default target and says so.
+	if c.settings.Encounter != nil {
+		t.Errorf("encounter %v, want none, for the request to fill in", c.settings.Encounter)
 	}
 }
 
@@ -265,7 +266,7 @@ func TestSettingsFileSuppliesTheCharacter(t *testing.T) {
 	build := filepath.Join(root, "ui/specs/hunter/dps/builds/sv.siml")
 	fromBuild := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: build})
 	if want := build + " over " + defaults; fromBuild.Error != "" || fromBuild.Character.Source != want || fromBuild.Character.Race != "RaceOrc" ||
-		fromBuild.Character.Talents != "1-00531500114-52225303000021005" || !slices.Contains(fromBuild.Character.Warnings, build+" names no race, so it is a preset build: simmed over "+defaults) {
+		fromBuild.Character.Talents != "1-00531500114-52225303000021005" || !slices.Contains(fromBuild.Character.Warnings, build+" is a preset build: simmed over "+defaults) {
 		t.Errorf("from a preset build: %s, character %+v", fromBuild.Error, fromBuild.Character)
 	}
 	_, warrior := printedAPL(t, "warrior/dps", "arms", proto.Spec_SpecDpsWarrior)
