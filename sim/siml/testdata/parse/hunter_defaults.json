@@ -94,14 +94,8 @@
 			"foodId": 250072,
 			"conjuredId": 12662,
 			"explosiveId": 18588,
-			"extraIds": [
-				10646,
-				10310
-			],
-			"elixirIds": [
-				13452,
-				250341
-			]
+			"extraIds": [10646, 10310],
+			"elixirIds": [13452, 250341]
 		},
 		"buffs": {
 			"greaterBlessingOfKings": true
