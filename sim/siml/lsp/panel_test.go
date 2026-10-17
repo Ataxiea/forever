@@ -19,6 +19,8 @@ type rotationAnswer struct {
 	Spans     []panelSpan    `json:"spans"`
 	Used      []string       `json:"used"`
 	Spec      string         `json:"spec"`
+	Names     string         `json:"names"`
+	Database  string         `json:"database"`
 	Structure *struct {
 		Whens      []map[string]any `json:"whens"`
 		Calls      []map[string]any `json:"calls"`

@@ -119,6 +119,8 @@ type rotationResult struct {
 	Spans     []panelSpan     `json:"spans"`
 	Used      []string        `json:"used"`                // The files the use lines read, and the files those use.
 	Spec      string          `json:"spec,omitempty"`      // The field of Player's spec oneof; siml/registered answers for it.
+	Names     string          `json:"names"`               // Which name table the file is read with; siml/registered answers again when it changes.
+	Database  string          `json:"database"`            // Which database read the answer holds; siml/database answers again when it changes.
 	Structure *panelStructure `json:"structure,omitempty"` // Left out while the text has errors.
 }
 
@@ -154,6 +156,7 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 		return nil, failed("%s is not open", uri)
 	}
 	out := rotationResult{Version: a.version, Findings: []panelFinding{}, Spans: []panelSpan{}, Used: []string{}}
+	out.Names, out.Database = fmt.Sprintf("%p", a.names), fmt.Sprintf("%p", catalog.of(a))
 	if a.err != nil {
 		out.ReadOnly = a.err.Error()
 		return out, nil
@@ -186,7 +189,7 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 }
 
 // The names the panel's pickers offer for an open file's spec. They depend on the spec line and the name table only,
-// so the panel asks again when the spec changes or a server starts, not on each edit.
+// so the panel asks again when the spec or rotationResult.Names changes, not on each edit.
 func (s *server) registered(uri string) (any, *ResponseError) {
 	catalog := s.readCatalog(uri)
 	s.mu.Lock()

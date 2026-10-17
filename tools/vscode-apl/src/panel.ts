@@ -64,8 +64,11 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	// The last of the panel's edits made or refused, and the document versions its own edits made.
 	let handled = 0;
 	const own = new Set<number>();
-	// The spec whose names the pickers hold, read again when the spec line changes; undefined before the first read.
+	// The spec and name table whose names the pickers hold, and the database read the page holds; read again when
+	// one changes, undefined before the first read.
 	let spec: string | null | undefined;
+	let names: string | undefined;
+	let database: string | undefined;
 	// The files the rotation's `use` lines read, whose text it is read with.
 	let used: string[] = [];
 	const uses = (file: vscode.Uri) => file.scheme === 'file' && used.some(path => samePath(path, file.fsPath));
@@ -87,10 +90,16 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		used = read.used;
 		const { rotation, readOnly, className, findings, structure } = read;
 		post({ type: 'rotation', version: read.version, handled, rotation, readOnly, className, findings, structure });
-		if ((read.spec ?? null) !== spec) {
+		if ((read.spec ?? null) !== spec || read.names !== names) {
 			spec = read.spec ?? null;
+			names = read.names;
 			await postRegistered();
 		}
+		if (database !== undefined && read.database !== database) {
+			database = read.database;
+			await postInit();
+		}
+		database = read.database;
 	};
 	const postSim = (version: number, record: SimRecord | undefined = simRecord(key), running = false) =>
 		post({ type: 'sim', running, sim: record && { result: record.result, stale: record.version !== version } });
@@ -154,7 +163,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	// The database, posted when the page loads and again when a server starts; a failed read posts it empty.
 	let loaded = false;
 	const postInit = async () => {
-		const db = await databaseFor(uri).catch((): AplDatabase => ({ spells: {}, items: {} }));
+		const db = await databaseFor(uri, database).catch((): AplDatabase => ({ spells: {}, items: {} }));
 		post({ type: 'init', db, fileName: basename(uri.fsPath), uri: key });
 	};
 
@@ -166,6 +175,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 					const document = await documentFor(uri);
 					handled = 0;
 					spec = undefined;
+					names = undefined;
 					loaded = true;
 					await postInit();
 					await postRotation(document);
@@ -209,6 +219,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 			if (event.uris.some(changedUri => changedUri.toString() === key)) changed();
 		}),
 		onServerStarted(() => {
+			database = undefined;
 			if (loaded) void postInit();
 			spec = undefined;
 			changed();

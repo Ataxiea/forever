@@ -157,17 +157,19 @@ export async function request<R>(uri: vscode.Uri, method: string, params: object
 	return token ? client.sendRequest<R>(method, params, token) : client.sendRequest<R>(method, params);
 }
 
-// The database's names and icons, read once from each server: they change only when it restarts, which starts a new
-// client. A failed read is asked again next time.
-const databases = new WeakMap<LanguageClient, Promise<AplDatabase>>();
-export async function databaseFor(uri: vscode.Uri): Promise<AplDatabase> {
+// The database's names and icons, read once from each server for each database read it holds (`database` of
+// siml/rotation); without one, the read held last. A failed read is asked again next time.
+const databases = new WeakMap<LanguageClient, { read?: string; db: Promise<AplDatabase> }>();
+export async function databaseFor(uri: vscode.Uri, read?: string): Promise<AplDatabase> {
 	const client = await serverFor(uri);
-	let db = databases.get(client);
-	if (!db) {
-		db = client.sendRequest<AplDatabase>('siml/database', { uri: uri.toString() });
-		databases.set(client, db);
-		db.catch(() => databases.delete(client));
+	const held = databases.get(client);
+	if (held && (read === undefined || held.read === undefined || held.read === read)) {
+		held.read ??= read;
+		return held.db;
 	}
+	const db = client.sendRequest<AplDatabase>('siml/database', { uri: uri.toString() });
+	databases.set(client, { read, db });
+	db.catch(() => databases.delete(client));
 	return db;
 }
 

@@ -252,6 +252,8 @@ func TestRegeneratedTableIsRead(t *testing.T) {
 	if diags := c.diagnostics(uri, nil); !reflect.DeepEqual(codes(diags), []string{"unknown-name"}) {
 		t.Errorf("diagnostics = %v, want unknown-name", codes(diags))
 	}
+	var before rotationAnswer
+	c.request("siml/rotation", map[string]any{"uri": uri}, &before)
 	if err := os.WriteFile(tablePath, table, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -260,6 +262,11 @@ func TestRegeneratedTableIsRead(t *testing.T) {
 	}
 	c.notify("workspace/didChangeWatchedFiles", map[string]any{"changes": []any{map[string]any{"uri": pathURI(tablePath), "type": 2}}})
 	c.diagnostics(uri, func(d []Diagnostic) bool { return len(d) == 0 })
+	var after rotationAnswer
+	c.request("siml/rotation", map[string]any{"uri": uri}, &after)
+	if before.Names == "" || after.Names == before.Names {
+		t.Errorf("the panel's names = %q, then %q; want a new value for the new table", before.Names, after.Names)
+	}
 }
 
 func TestCancelledRequestAnswersCancelled(t *testing.T) {

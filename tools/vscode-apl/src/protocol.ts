@@ -109,6 +109,8 @@ export interface RotationResult {
 	spans: { path: JsonPath; range: Range }[];
 	used: string[];
 	spec?: string; // The field of Player's spec oneof, which siml/registered answers for.
+	names: string; // Which name table the file is read with; siml/registered answers again when it changes.
+	database: string; // Which database read the server holds; siml/database answers again when it changes.
 	structure?: AplStructure; // Left out while the text has errors.
 }
 
