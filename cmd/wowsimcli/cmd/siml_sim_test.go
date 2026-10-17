@@ -133,13 +133,13 @@ func TestSpecDefaultsSkipsAnotherSpecsBrokenDefaults(t *testing.T) {
 func TestLoadBuildKeepsTheRotationOverAnAutoOne(t *testing.T) {
 	apl := &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{{}}}
 	s := &proto.IndividualSimSettings{Player: &proto.Player{Rotation: apl}}
-	loadBuild(s, &proto.IndividualSimSettings{Player: &proto.Player{Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAuto}}})
+	siml.LoadBuild(s, &proto.IndividualSimSettings{Player: &proto.Player{Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAuto}}})
 	if s.Player.Rotation != apl {
 		t.Errorf("rotation %v, want the defaults' APL kept under an Auto build", s.Player.Rotation)
 	}
 
 	simple := &proto.APLRotation{Type: proto.APLRotation_TypeSimple}
-	loadBuild(s, &proto.IndividualSimSettings{Player: &proto.Player{Rotation: simple}})
+	siml.LoadBuild(s, &proto.IndividualSimSettings{Player: &proto.Player{Rotation: simple}})
 	if s.Player.Rotation != simple {
 		t.Errorf("rotation %v, want the build's own", s.Player.Rotation)
 	}
