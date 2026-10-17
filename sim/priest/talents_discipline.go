@@ -265,6 +265,47 @@ func (priest *Priest) applyDivineAegis() {
 			ShieldStrengthCalculator: func(_ *core.Unit) float64 { return 0 },
 		})
 	})
+	aegisSpells := make(map[*core.Spell]func(*core.Simulation, *core.Unit, float64))
+	priest.OnSpellRegistered(func(sourceSpell *core.Spell) {
+		if !sourceSpell.ProcMask.Matches(core.ProcMaskSpellHealing) {
+			return
+		}
+
+		var shieldStrength float64
+		config := spelldata.SpellConfig(
+			&priest.Unit,
+			spellData.DivineAegisTriggered.Highest(),
+			spelldata.Magic(core.ProcMaskEmpty),
+			spelldata.RemoveFlags(core.SpellFlagAPL),
+			spelldata.Flags(core.SpellFlagNoOnCastComplete),
+		)
+		sourceTag := sourceSpell.ActionID.SpellID
+		if sourceTag == 0 && sourceSpell.ActionID.ItemID != 0 {
+			sourceTag = -sourceSpell.ActionID.ItemID
+		}
+		config.ActionID.Tag = sourceTag
+		config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			shield := shields.Get(target)
+			if shield.IsActive() {
+				shield.Aura.Activate(sim)
+			} else {
+				shield.Activate(sim)
+			}
+			previousStrength := shield.ShieldStrength
+			shield.ShieldStrength = min(previousStrength+shieldStrength, maxShield)
+			gained := shield.ShieldStrength - previousStrength
+			shield.SetStacks(sim, max(1, int32(shield.ShieldStrength)))
+			if gained > 0 {
+				spell.RecordShielding(target, gained)
+				sourceSpell.RecordCustomMetric(target, "divine_aegis", gained)
+			}
+		}
+		aegisSpell := priest.RegisterSpell(config)
+		aegisSpells[sourceSpell] = func(sim *core.Simulation, target *core.Unit, amount float64) {
+			shieldStrength = amount
+			aegisSpell.Proc(sim, target)
+		}
+	})
 	priest.MakeProcTriggerAura(core.ProcTrigger{
 		Name:             "Divine Aegis",
 		Callback:         core.CallbackOnHealDealt,
@@ -273,19 +314,11 @@ func (priest *Priest) applyDivineAegis() {
 			if !result.DidCrit() {
 				return
 			}
-			shield := shields.Get(result.Target)
-			strength := result.Damage * shieldFraction
-			if shield.IsActive() {
-				shield.Aura.Activate(sim)
-			} else {
-				shield.Activate(sim)
+			proc := aegisSpells[spell]
+			if proc == nil {
+				return
 			}
-			before := shield.ShieldStrength
-			shield.ShieldStrength = min(before+strength, maxShield)
-			if gained := shield.ShieldStrength - before; gained > 0 {
-				spell.RecordCustomMetric(result.Target, "divine_aegis", gained)
-			}
-			shield.SetStacks(sim, max(1, int32(shield.ShieldStrength)))
+			proc(sim, result.Target, result.Damage*shieldFraction)
 		},
 	})
 }
