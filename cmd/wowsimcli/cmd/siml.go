@@ -355,6 +355,19 @@ func readBackDifferences(want googleProto.Message, f *siml.File, names *siml.Nam
 	return lines
 }
 
+// The database catalog of the repository the command runs in, which the checks of files under ui/specs read.
+func repositoryCatalog() (*siml.DatabaseCatalog, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	root, ok := siml.RepositoryRoot(filepath.Join(wd, "x"))
+	if !ok {
+		return nil, errors.New("the check of files under ui/specs runs inside the repository, which holds the database")
+	}
+	return siml.CatalogAt(root), nil
+}
+
 func simlFmt(out, errOut io.Writer, args []string) error {
 	flags := newFlags("fmt [-check | -w] <files or folders>", errOut)
 	check := flags.Bool("check", false, "print each file that is not in canonical form or has an error, a file under ui/specs a warning, a raw ref or a name that no longer holds too, with what it has, and fail if there is one")
@@ -373,7 +386,7 @@ func simlFmt(out, errOut io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	var game *gameData // Loaded for the first file under ui/specs.
+	var catalog *siml.DatabaseCatalog // Read for the first file under ui/specs.
 	failed := 0
 	for _, path := range files {
 		src, err := siml.ReadSource(path)
@@ -387,10 +400,12 @@ func simlFmt(out, errOut io.Writer, args []string) error {
 		}
 		var problems []string
 		if len(fail) == 0 && underSpecs(path) {
-			if game == nil {
-				game = loadGameData()
+			if catalog == nil {
+				if catalog, err = repositoryCatalog(); err != nil {
+					return err
+				}
 			}
-			problems = repositoryProblems(names, game, path, f)
+			problems = repositoryProblems(siml.Analyze(path, src, names, siml.ReadSource), catalog, path, f)
 		}
 		// A file that Format finds an error in has that error in its parse too, so it fails.
 		formatted, err := siml.Format(path, src, names)

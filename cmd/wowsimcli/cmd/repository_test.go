@@ -37,7 +37,10 @@ func TestRepositoryCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	names.Items["ghost_blade"] = 999999
-	game := loadGameData()
+	catalog, err := repositoryCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
 	const rotation = "siml 1\nspec hunter\n\npriority:\n  cast multi_shot if not target.aura(hunters_mark).is_active\n"
 	const foreign = "siml 1\nspec hunter\n\npriority:\n  cast multi_shot if aura(cheat_death).is_active\n"
 	cases := []struct {
@@ -47,15 +50,15 @@ func TestRepositoryCheck(t *testing.T) {
 		{"ui/specs/hunter/dps/apls/valid.apl.siml", rotation, nil},
 		{"ui/specs/hunter/dps/gear_sets/valid.gear.siml", "siml 1\n\nhead       lieutenant_commanders_chain_helmet + falcons_call\nmain_hand  notched_shortsword of_the_monkey + weapon_crusader\n", nil},
 		{"ui/specs/hunter/dps/apls/foreign.apl.siml", foreign, []string{
-			"%s:5:27: spec hunter does not register the aura cheat_death; dps_warrior and protection_warrior register it",
+			"%s:5:27: cheat_death is an aura no hunter build registers",
 		}},
 		{"ui/specs/hunter/dps/gear_sets/wrong.gear.siml", "siml 1\n\nhead       lieutenant_commanders_chain_helmet + cloak_agility\nmain_hand  notched_shortsword of_agility_13019 + weapon_crusader\nranged     ghost_blade\n", []string{
-			"%s:3:49: cloak_agility does not fit the head slot",
-			"%s:4:31: of_agility_13019 is no random suffix of notched_shortsword",
-			"%s:5:12: the database holds no item 999999, which ghost_blade names",
+			"%s:3:49: cloak_agility fits back, not head",
+			"%s:4:31: Notched Shortsword rolls no of_agility_13019",
+			"%s:5:12: the database has no item 999999",
 		}},
 		{"ui/specs/hunter/dps/gear_sets/one_hand.gear.siml", "siml 1\n\nmain_hand  thunderfury_blessed_blade_of_the_windseeker + enchant_2h_weapon_agility\n", []string{
-			"%s:3:58: enchant_2h_weapon_agility does not fit thunderfury_blessed_blade_of_the_windseeker",
+			"%s:3:58: enchant_2h_weapon_agility does not fit Thunderfury, Blessed Blade of the Windseeker",
 		}},
 		{"ui/specs/hunter/dps/apls/arms.apl.siml", "siml 1\nspec dps_warrior\n\npriority:\n  cast heroic_strike\n", []string{
 			"%s: spec dps_warrior is a warrior spec, and the file is not under ui/specs/warrior",
@@ -82,7 +85,7 @@ func TestRepositoryCheck(t *testing.T) {
 			want[i] = fmt.Sprintf(w, path)
 		}
 		slices.Sort(want)
-		got := repositoryProblems(names, game, path, f)
+		got := repositoryProblems(siml.Analyze(path, src, names, os.ReadFile), catalog, path, f)
 		slices.Sort(got)
 		if !slices.Equal(got, want) {
 			t.Errorf("%s gives the problems\n%s\nwant\n%s", c.name, strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -94,7 +97,7 @@ func TestRepositoryCheck(t *testing.T) {
 	if err == nil || err.Error() != "2 of 3 .siml files are not in canonical form or fail the check" || out != "" {
 		t.Errorf("-check: %v\n%s", err, out)
 	}
-	if want := filepath.Join(dir, "ui/specs/hunter/dps/apls/foreign.apl.siml") + ":5:27: spec hunter does not register the aura cheat_death"; !strings.Contains(notes, want) {
+	if want := filepath.Join(dir, "ui/specs/hunter/dps/apls/foreign.apl.siml") + ":5:27: cheat_death is an aura no hunter build registers"; !strings.Contains(notes, want) {
 		t.Errorf("-check does not say %q:\n%s", want, notes)
 	}
 }
