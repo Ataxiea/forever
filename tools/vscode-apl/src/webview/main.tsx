@@ -15,7 +15,7 @@ import { isObject, type Json, type JsonObject, type JsonPath, newKindJson, setCl
 import { KindPicker } from './pickers';
 import { idKey, RegisteredContext } from './registered';
 import { blocksAt, blocksIn, conditionOf, emptyStructure, joinedBy, key, ownConjuncts, rowAt, StructureContext, useStructure } from './structure';
-import { ActionText, ValueText } from './summary';
+import { ActionText, joined, ValueText } from './summary';
 
 type SimState = Extract<ToPanel, { type: 'sim' }>;
 
@@ -520,21 +520,19 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 										own.length > 0 ? (
 											<div className="summary-cond">
 												<span className="op">if</span>{' '}
-												{own.map((c, k) => (
-													<Fragment key={k}>
-														{k > 0 ? (
-															<>
-																{' '}
-																<span className="op">and</span>{' '}
-															</>
-														) : null}
+												{joined(
+													own.map((c, k) => (
 														<ValueText
 															json={c}
 															parent={2}
 															path={[...rowPath, 'action', 'condition', 'and', 'vals', info!.inherited + k]}
 														/>
-													</Fragment>
-												))}
+													)),
+													<>
+														{' '}
+														<span className="op">and</span>{' '}
+													</>,
+												)}
 											</div>
 										) : null
 									) : condition !== undefined ? (

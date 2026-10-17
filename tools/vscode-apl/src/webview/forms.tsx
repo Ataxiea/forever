@@ -19,8 +19,8 @@ import {
 	resolve,
 } from './model';
 import { ActionIdPicker, EnumSelect, KindPicker, SearchPicker, UnitPicker } from './pickers';
-import { callAt, callText, conditionOf, type DefCall, useStructure } from './structure';
-import { ActionText, ValueText } from './summary';
+import { callAt, callText, conditionOf, type DefCall, ownConjuncts, useStructure } from './structure';
+import { ActionText, joined, ValueText } from './summary';
 
 // The JSON itself, for a field or kind the forms do not cover.
 function RawJson({ json, onCommit }: { json: Json | undefined; onCommit: (value: Json | undefined) => void }) {
@@ -504,14 +504,16 @@ export function ValueEditor({ json, path, ctx, optional = false }: { json: Json 
 // the condition's and. Adding or removing one writes the condition again, as the blocks and the rest give it.
 function BlockCondition({ condition, inherited, path, ctx }: { condition: Json | undefined; inherited: Json[]; path: JsonPath; ctx: ListContext }) {
 	const { edit } = useEditor();
-	const vals = isObject(condition) && isObject(condition.and) && Array.isArray(condition.and.vals) ? condition.and.vals : [];
-	const own = vals.length > inherited.length ? vals.slice(inherited.length) : [];
+	const own = ownConjuncts(condition, inherited.length);
 	const write = (conjuncts: Json[]) => edit({ op: 'set', path, value: conditionOf([...inherited, ...conjuncts]) });
 	return (
 		<div className="list">
 			<div className="from-when">
 				<span className="op">when</span>{' '}
-				{inherited.map((c, i) => <ValueText key={i} json={c} />).reduce<ReactNode[]>((a, n, i) => (i ? [...a, ' and ', n] : [n]), [])}
+				{joined(
+					inherited.map(c => <ValueText json={c} />),
+					' and ',
+				)}
 			</div>
 			{own.map((value, i) => (
 				<div className="list-item" key={i}>

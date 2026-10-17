@@ -1,4 +1,5 @@
 import type { AplFieldSpec } from '@features/apl/model/field_specs';
+import i18n from '@i18n/config';
 import { Fragment, type ReactNode } from 'react';
 
 import { IdChip } from './db';
@@ -21,6 +22,9 @@ import { callAt, callText, useStructure } from './structure';
 const COMPARE: Record<string, string> = { OpEq: '=', OpNe: '≠', OpGe: '≥', OpGt: '>', OpLe: '≤', OpLt: '<' };
 const MATH: Record<string, string> = { OpAdd: '+', OpSub: '−', OpMul: '×', OpDiv: '÷' };
 
+// The site's unit labels (ui/features/apl/model/unit_values.ts).
+const unitLabel = (key: string) => i18n.t(`rotation_tab.apl.helpers.unit_labels.${key}`);
+
 // The short name a unit reference reads as; the kind's default unit has no reference and reads as nothing.
 export function unitText(json: Json | undefined): string | undefined {
 	if (!isObject(json) || typeof json.type !== 'string') {
@@ -29,19 +33,19 @@ export function unitText(json: Json | undefined): string | undefined {
 	const index = typeof json.index === 'number' ? json.index : 0;
 	switch (json.type) {
 		case 'Self':
-			return 'self';
+			return unitLabel('self');
 		case 'CurrentTarget':
-			return 'target';
+			return unitLabel('current_target');
 		case 'PreviousTarget':
-			return 'previous target';
+			return unitLabel('previous_target');
 		case 'NextTarget':
-			return 'next target';
+			return unitLabel('next_target');
 		case 'Target':
-			return `target ${index + 1}`;
+			return `${unitLabel('target')} ${index + 1}`;
 		case 'Pet':
-			return `pet ${index + 1}`;
+			return `${unitLabel('pet')} ${index + 1}`;
 		case 'Player':
-			return `player ${index + 1}`;
+			return `${unitLabel('player')} ${index + 1}`;
 		default:
 			return json.type;
 	}
@@ -66,7 +70,7 @@ function needsBrackets(child: number, parent: number): boolean {
 
 const op = (text: string) => <span className="op">{text}</span>;
 
-function joined(items: ReactNode[], separator: ReactNode): ReactNode {
+export function joined(items: ReactNode[], separator: ReactNode): ReactNode {
 	return items.map((item, i) => (
 		<Fragment key={i}>
 			{i > 0 ? separator : null}
