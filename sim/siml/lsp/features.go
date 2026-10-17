@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"slices"
 	"strings"
-	"unicode/utf16"
 	"unicode/utf8"
 
 	"github.com/wowsims/forever/sim/siml"
@@ -180,73 +179,32 @@ func (s *server) hover(uri string, at Position) (any, *ResponseError) {
 	return out, nil
 }
 
+var tokenTypes, tokenModifiers = siml.TokenTypes(), siml.TokenModifiers()
+
 // The tokens as the protocol encodes them: each one's line and start relative to the one before, its length, its
-// type and its modifiers as bits of the legend. A token over several lines is sent a line at a time.
+// type and its modifiers as bits of the legend. Doc.Tokens gives each on one line, in file order.
 func semanticTokens(d *siml.Doc) SemanticTokens {
-	types, modifiers := map[string]uint32{}, map[string]uint32{}
-	for i, t := range siml.TokenTypes() {
-		types[t] = uint32(i)
-	}
-	for i, m := range siml.TokenModifiers() {
-		modifiers[m] = 1 << i
-	}
-	lines := strings.Split(d.Text(), "\n")
-	lineLength := func(line int) int {
-		if line < 0 || line >= len(lines) {
-			return 0
-		}
-		return utf16Len(strings.TrimSuffix(lines[line], "\r"))
-	}
-	tokens := slices.Clone(d.Tokens())
-	slices.SortStableFunc(tokens, func(a, b siml.Token) int {
-		if a.Range.Start.Line != b.Range.Start.Line {
-			return a.Range.Start.Line - b.Range.Start.Line
-		}
-		return a.Range.Start.Col - b.Range.Start.Col
-	})
 	data := []uint32{}
 	prevLine, prevChar := 0, 0
-	emit := func(line, char, length int, kind, mods uint32) {
-		if length <= 0 {
-			return
-		}
-		deltaChar := char
-		if line == prevLine {
-			deltaChar = char - prevChar
-		}
-		data = append(data, uint32(line-prevLine), uint32(deltaChar), uint32(length), kind, mods)
-		prevLine, prevChar = line, char
-	}
-	for _, t := range tokens {
-		kind, ok := types[t.Type]
-		if !ok {
+	for _, t := range d.Tokens() {
+		kind := slices.Index(tokenTypes, t.Type)
+		if kind < 0 {
 			continue
 		}
 		var mods uint32
 		for _, m := range t.Modifiers {
-			mods |= modifiers[m]
+			if i := slices.Index(tokenModifiers, m); i >= 0 {
+				mods |= 1 << i
+			}
 		}
 		r := toRange(t.Range)
-		for line := r.Start.Line; line <= r.End.Line; line++ {
-			start, end := 0, lineLength(line)
-			if line == r.Start.Line {
-				start = r.Start.Character
-			}
-			if line == r.End.Line {
-				end = r.End.Character
-			}
-			emit(line, start, end-start, kind, mods)
+		if r.Start.Line != prevLine {
+			prevChar = 0
 		}
+		data = append(data, uint32(r.Start.Line-prevLine), uint32(r.Start.Character-prevChar), uint32(r.End.Character-r.Start.Character), uint32(kind), mods)
+		prevLine, prevChar = r.Start.Line, r.Start.Character
 	}
 	return SemanticTokens{Data: data}
-}
-
-func utf16Len(s string) int {
-	n := 0
-	for _, r := range s {
-		n += len(utf16.Encode([]rune{r}))
-	}
-	return n
 }
 
 // The file as format writes it (SPEC.md §12.1), as the one smallest edit that turns the text into it, so the editor
