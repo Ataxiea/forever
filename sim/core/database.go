@@ -504,10 +504,11 @@ func enchantRowAppliesToItem(enchant Enchant, item Item) bool {
 	} else if item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeUnknown && item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeWand {
 		return false
 	}
-	return CheckSliceOverlap(eligibleEnchantSlots(enchant), EligibleSlotsForItem(&item))
+	return CheckSliceOverlap(EligibleEnchantSlots(enchant), EligibleSlotsForItem(&item))
 }
 
-func eligibleEnchantSlots(enchant Enchant) []proto.ItemSlot {
+// The slots an enchant's item types reach; a weapon enchant reaches both hands.
+func EligibleEnchantSlots(enchant Enchant) []proto.ItemSlot {
 	types := append([]proto.ItemType{enchant.Type}, enchant.ExtraTypes...)
 	slots := make([]proto.ItemSlot, 0, len(types)*2)
 	for _, itemType := range types {

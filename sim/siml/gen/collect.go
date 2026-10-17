@@ -786,14 +786,7 @@ func databaseEntries(db *proto.UIDatabase) ([]Item, []EnchantRow, []Suffix) {
 // The slots of the item types an enchant row fits: those of its type and extra types, a weapon's main and off
 // hand, narrowed to the main hand for a two-hander or staff enchant and to the off hand for a shield or off-hand one.
 func enchantSlots(e *proto.UIEnchant) []proto.ItemSlot {
-	var slots []proto.ItemSlot
-	for _, t := range append([]proto.ItemType{e.Type}, e.ExtraTypes...) {
-		if s, ok := core.ItemTypeToSlotsMap[t]; ok {
-			slots = append(slots, s...)
-		} else if t == proto.ItemType_ItemTypeWeapon {
-			slots = append(slots, proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand)
-		}
-	}
+	slots := core.EligibleEnchantSlots(core.Enchant{Type: e.Type, ExtraTypes: e.ExtraTypes})
 	switch e.EnchantType {
 	case proto.EnchantType_EnchantTypeTwoHand, proto.EnchantType_EnchantTypeStaff:
 		slots = slices.DeleteFunc(slots, func(s proto.ItemSlot) bool { return s == proto.ItemSlot_ItemSlotOffHand })
