@@ -242,12 +242,13 @@ func (d *Doc) PathAt(p Position) []any {
 		}
 	})
 	var best *pathSpan
-	for i, s := range d.pathLines[d.lines.line(offset)] {
+	line := d.pathLines[d.lines.line(offset)]
+	for i, s := range line {
 		if s.start > offset || offset > s.end {
 			continue
 		}
 		if best == nil || s.end-s.start < best.end-best.start || s.end-s.start == best.end-best.start && len(s.path) > len(best.path) {
-			best = &d.pathLines[d.lines.line(offset)][i]
+			best = &line[i]
 		}
 	}
 	if best == nil {
