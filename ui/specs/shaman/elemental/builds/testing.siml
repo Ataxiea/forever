@@ -93,13 +93,13 @@ priority:
   cast other.resource_potion if current_mana_percent < 80%
   cast item.demonic_rune if current_mana_percent < 70%
   autocast_other_cooldowns
-  cast mana_tide_totem_rank4 if current_mana_percent < 50%
+  cast mana_tide_totem if current_mana_percent < 50%
   cast searing_totem if number_targets == 1 and totem_down(fire)
   when number_targets > 1:
     cast magma_totem if totem_down(fire)
     cast fire_nova
     cast chain_lightning
-  cast lava_burst_rank4 if dot(flame_shock_rank5).is_active
+  cast lava_burst if dot(flame_shock_rank5).is_active
   multidot(flame_shock_rank5, max_dots=3, max_overlap=0ms)
   cast elemental_mastery
   cast lightning_bolt_10392_tag0 if current_mana_percent < 20%
