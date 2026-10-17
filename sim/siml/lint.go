@@ -243,11 +243,6 @@ type collected struct {
 }
 
 var (
-	// The fields of an action body that hold values.
-	actionValueFields = map[string]bool{"interruptIf": true, "maxOverlap": true, "duration": true, "condition": true, "rangeFromTarget": true}
-	// The fields of a value body that hold values.
-	valueValueFields = map[string]bool{"val": true, "lhs": true, "rhs": true, "targetEnergy": true, "maxOverlap": true, "offset": true}
-	sequenceValues   = map[string]bool{"sequenceIsComplete": true, "sequenceIsReady": true, "sequenceTimeToReady": true}
 	// The action kinds whose value the sim reads with no check, and fails without: the move's range and duration.
 	requiredValues = map[string]struct{ field, what string }{
 		"move":         {"rangeFromTarget", "range"},
@@ -276,7 +271,55 @@ func nameOf(v any) string {
 
 func at(path []any, keys ...any) []any { return slices.Concat(path, keys) }
 
+// The JSON names apl.proto gives the lint's walk: the value fields of action and value bodies, and the value kinds
+// that name a sequence.
+type lintFields struct {
+	actionValues, valueValues, sequenceValues map[string]bool
+}
+
+var lintFieldsOnce lazy[*lintFields]
+
+func lintFieldsOf() *lintFields {
+	f, err := lintFieldsOnce.get(func() (*lintFields, error) {
+		ix, err := loadIndex()
+		if err != nil {
+			return nil, err
+		}
+		f := &lintFields{
+			actionValues:   valueFields(actionMessage.Oneofs().ByName("action")),
+			valueValues:    valueFields(valueMessage.Oneofs().ByName("value")),
+			sequenceValues: map[string]bool{},
+		}
+		for _, k := range ix.valueKindList {
+			if k.Accessor != nil && k.Accessor.Head == "sequence" {
+				f.sequenceValues[k.JSON] = true
+			}
+		}
+		return f, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+// The JSON names of the single APLValue fields of oneof's kinds.
+func valueFields(oneof protoreflect.OneofDescriptor) map[string]bool {
+	out := map[string]bool{}
+	kinds := oneof.Fields()
+	for i := range kinds.Len() {
+		fields := kinds.Get(i).Message().Fields()
+		for j := range fields.Len() {
+			if fd := fields.Get(j); !fd.IsList() && fd.Message() != nil && fd.Message().FullName() == valueMessage.FullName() {
+				out[fd.JSONName()] = true
+			}
+		}
+	}
+	return out
+}
+
 func collect(apl lintObject) *collected {
+	fields := lintFieldsOf()
 	out := &collected{}
 	var visitValue func(value any, path []any, scope lintScope, condition bool)
 	visitValue = func(value any, path []any, scope lintScope, condition bool) {
@@ -296,11 +339,11 @@ func collect(apl lintObject) *collected {
 			out.groupUsed = append(out.groupUsed, name)
 		case kind == "variablePlaceholder" && name.name != "":
 			out.placeholders = append(out.placeholders, name)
-		case sequenceValues[kind]:
+		case fields.sequenceValues[kind]:
 			out.sequenceRefs = append(out.sequenceRefs, nameSite{at(here, "sequenceName"), nameOf(body.value("sequenceName")), scope})
 		}
 		for _, f := range body {
-			if valueValueFields[f.key] {
+			if fields.valueValues[f.key] {
 				visitValue(f.value, at(here, f.key), scope, false)
 			}
 		}
@@ -340,7 +383,7 @@ func collect(apl lintObject) *collected {
 		}
 		for _, f := range body {
 			switch {
-			case actionValueFields[f.key]:
+			case fields.actionValues[f.key]:
 				visitValue(f.value, at(here, f.key), scope, false)
 			case f.key == "innerAction":
 				visitAction(body.object(f.key), at(here, f.key), scope, true)
