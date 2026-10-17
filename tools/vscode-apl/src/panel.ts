@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, samePath, spanFor, spansOf, vscodeRange } from './host';
 import { insertPattern } from './insert_pattern';
 import type { AplDatabase, FromPanel, PanelState, Range, Registered, TextEdit, ToPanel } from './protocol';
-import { onServerStarted, request } from './server';
+import { databaseFor, onServerStarted, request } from './server';
 import { onSimRecord, simDocument, type SimRecord, simRecord } from './simulate';
 
 const VIEW_TYPE = 'wowsims-apl.editor';
@@ -154,7 +154,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	// The database, posted when the page loads and again when a server starts; a failed read posts it empty.
 	let loaded = false;
 	const postInit = async () => {
-		const db = await request<AplDatabase>(uri, 'siml/database', { uri: key }).catch(() => ({ spells: {}, items: {} }));
+		const db = await databaseFor(uri).catch((): AplDatabase => ({ spells: {}, items: {} }));
 		post({ type: 'init', db, fileName: basename(uri.fsPath), uri: key });
 	};
 

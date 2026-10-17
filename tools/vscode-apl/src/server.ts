@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, RevealOutputChannelOn } from 'vscode-languageclient/node';
 
 import { findGo } from '../../vscode-common/go';
+import type { AplDatabase } from './protocol';
 
 // The SIML language server, `wowsimcli siml lsp`, built from the repository each file sits in and started there: one
 // per repository, which serves its *.siml files and answers the panel's requests about them.
@@ -26,12 +27,25 @@ let output: vscode.LogOutputChannel;
 // Cleared when the extension deactivates, after which nothing starts a server again.
 let active = true;
 
+// The repository each folder is in, found once: every change of a document asks. WoWSims: Restart SIML Server
+// looks again.
+const roots = new Map<string, string | undefined>();
+
 // The repository a file is in: the nearest folder above it with sim/siml/names.json.
 function repositoryRoot(file: string): string | undefined {
-	for (let dir = dirname(file); ; dir = dirname(dir)) {
-		if (existsSync(join(dir, 'sim', 'siml', 'names.json'))) return dir;
-		if (dirname(dir) === dir) return undefined;
+	const start = dirname(file);
+	if (!roots.has(start)) {
+		let found: string | undefined;
+		for (let dir = start; ; dir = dirname(dir)) {
+			if (existsSync(join(dir, 'sim', 'siml', 'names.json'))) {
+				found = dir;
+				break;
+			}
+			if (dirname(dir) === dir) break;
+		}
+		roots.set(start, found);
 	}
+	return roots.get(start);
 }
 
 // The repository a document is read in; for an untitled one, the first workspace folder's.
@@ -143,6 +157,20 @@ export async function request<R>(uri: vscode.Uri, method: string, params: object
 	return token ? client.sendRequest<R>(method, params, token) : client.sendRequest<R>(method, params);
 }
 
+// The database's names and icons, read once from each server: they change only when it restarts, which starts a new
+// client. A failed read is asked again next time.
+const databases = new WeakMap<LanguageClient, Promise<AplDatabase>>();
+export async function databaseFor(uri: vscode.Uri): Promise<AplDatabase> {
+	const client = await serverFor(uri);
+	let db = databases.get(client);
+	if (!db) {
+		db = client.sendRequest<AplDatabase>('siml/database', { uri: uri.toString() });
+		databases.set(client, db);
+		db.catch(() => databases.delete(client));
+	}
+	return db;
+}
+
 // Stops every server, which ends the sims they run; with `last`, for good.
 export async function stopServers(last = false): Promise<void> {
 	active &&= !last;
@@ -165,10 +193,11 @@ export function registerServer(extensionContext: vscode.ExtensionContext): void 
 		started,
 		vscode.workspace.onDidOpenTextDocument(served),
 		vscode.commands.registerCommand('wowsims-apl.restartServer', async () => {
-			const roots = [...clients.keys()];
+			const running = [...clients.keys()];
 			await stopServers();
+			roots.clear();
 			for (const document of vscode.workspace.textDocuments) served(document);
-			await Promise.all(roots.map(root => serverFor(vscode.Uri.file(join(root, 'x'))).catch(() => undefined)));
+			await Promise.all(running.map(root => serverFor(vscode.Uri.file(join(root, 'x'))).catch(() => undefined)));
 		}),
 	);
 	vscode.workspace.textDocuments.forEach(served);

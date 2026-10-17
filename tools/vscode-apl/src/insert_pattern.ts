@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, spansOf } from './host';
 import type { AplDatabase, AplPattern, AplPlaceholder, JsonObject, JsonPath, Registered, RegisteredName, TextEdit } from './protocol';
-import { request } from './server';
+import { databaseFor, request } from './server';
 
 const SECONDS = /^-?\d+(\.\d+)?(ms|s)?$/;
 
@@ -120,7 +120,7 @@ export async function insertPattern(uri: vscode.Uri, path: JsonPath): Promise<vo
 		const rotation: JsonObject = read.rotation ?? {};
 		const names = (list: unknown) => (Array.isArray(list) ? list.map(item => String((item as JsonObject)?.name ?? '')) : []);
 		const taken = { groups: names(rotation.groups), variables: names(rotation.valueVariables) };
-		const db = await request<AplDatabase>(uri, 'siml/database', { uri: uri.toString() });
+		const db = await databaseFor(uri);
 		const registered = await request<Registered>(uri, 'siml/registered', { uri: uri.toString() });
 		const values = await askAll(pattern, namePicks(registered, db), taken);
 		if (!values) return;
