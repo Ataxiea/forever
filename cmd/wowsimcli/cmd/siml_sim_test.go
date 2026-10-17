@@ -64,10 +64,10 @@ func hunterCharacter(t *testing.T, path string) *character {
 }
 
 func TestCharacterFromRepoReadsTheSpecDefaults(t *testing.T) {
-	// Two builds have the default rotation, so it is simmed on the defaults.
+	// Two builds use the default rotation, so it is simmed on the defaults, which the warning says.
 	c := hunterCharacter(t, "ui/specs/hunter/dps/apls/default.apl.siml")
 	p := c.settings.Player
-	if c.info.Source != filepath.Join(root, "ui/specs/hunter/dps/defaults.siml") || len(c.info.Warnings) != 0 {
+	if c.info.Source != filepath.Join(root, "ui/specs/hunter/dps/defaults.siml") || !slices.Equal(c.info.Warnings, []string{"builds mm_weave.siml, sv_weave.siml all use this file; simmed on the defaults"}) {
 		t.Errorf("source %q, warnings %q", c.info.Source, c.info.Warnings)
 	}
 	if p.TalentsString != "-00530501114-550200030050220151" || p.Race != proto.Race_RaceOrc || c.info.Gear != "p1" {

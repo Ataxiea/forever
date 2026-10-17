@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	googleProto "google.golang.org/protobuf/proto"
@@ -60,63 +62,100 @@ func specDefaults(root string, spec proto.Spec) (string, *siml.File, error) {
 	return "", nil, errors.Join(append([]error{fmt.Errorf("ui/specs holds no defaults.siml for %s", spec)}, skipped...)...)
 }
 
-// The character the site sims a rotation with: the spec's defaults, with the build loaded over them whose rotation
-// is the rotation of the file at path, when exactly one of the spec's builds has it. A rotation several builds share,
-// or none, is simmed on the defaults.
+// The character the site sims a rotation with: the spec's defaults, with the build loaded over them that uses the
+// file at path, when exactly one of the spec's builds does. A rotation several builds use, or none, is simmed on the
+// defaults, which the warnings say for several.
 func characterFromRepo(root, folder string, defaults *siml.File, path string) (*character, error) {
 	c := &character{
 		settings: cloneProto(defaults.Settings),
 		info:     characterInfo{Source: defaults.Path},
 	}
-	build, err := buildOf(root, folder, path)
+	builds, err := buildsUsing(root, folder, path)
 	if err != nil {
 		return nil, err
 	}
-	if build != nil {
-		siml.LoadBuild(c.settings, build.Settings)
-		c.info.Source = build.Path + " over " + c.info.Source
+	switch len(builds) {
+	case 1:
+		siml.LoadBuild(c.settings, builds[0].Settings)
+		c.info.Source = builds[0].Path + " over " + c.info.Source
+	case 0:
+	default:
+		names := make([]string, len(builds))
+		for i, b := range builds {
+			names[i] = filepath.Base(b.Path)
+		}
+		c.info.Warnings = append(c.info.Warnings, fmt.Sprintf("builds %s all use this file; simmed on the defaults", strings.Join(names, ", ")))
 	}
 	c.info.Gear = gearSetOf(root, folder, c.settings.GetPlayer().GetEquipment())
 	return c, nil
 }
 
-// The build of the spec in folder whose rotation is the rotation of the file at path, or nil when no build or several
-// have it. The file is read as saved, so a build's character stays while the file's text is being edited; a file not
-// saved yet, or saved with an error, is no build's.
-func buildOf(root, folder, path string) (*siml.File, error) {
-	file, err := siml.ReadFile(path)
-	if err != nil {
-		return nil, nil
-	}
+// The builds of the spec in folder whose use lines name the file at path.
+func buildsUsing(root, folder, path string) ([]*siml.File, error) {
 	paths, err := filepath.Glob(filepath.Join(root, "ui/specs", folder, "builds", "*.siml"))
 	if err != nil {
 		return nil, err
 	}
+	target := filepath.Clean(path)
 	var found []*siml.File
 	for _, p := range paths {
-		build, err := siml.ReadFile(p)
+		build, err := repoFiles.read(p)
 		if err != nil {
 			return nil, err
 		}
-		if googleProto.Equal(build.Rotation(), file.Rotation()) {
+		if slices.ContainsFunc(build.Uses, func(u string) bool { return filepath.Clean(filepath.FromSlash(u)) == target }) {
 			found = append(found, build)
 		}
 	}
-	if len(found) != 1 {
-		return nil, nil
-	}
-	return found[0], nil
+	return found, nil
 }
 
 // The name of the spec's gear set e is, or "".
 func gearSetOf(root, folder string, e *proto.EquipmentSpec) string {
 	paths, _ := filepath.Glob(filepath.Join(root, "ui/specs", folder, "gear_sets", "*.gear.siml"))
 	for _, path := range paths {
-		if f, err := siml.ReadFile(path); err == nil && googleProto.Equal(f.Equipment(), e) {
+		if f, err := repoFiles.read(path); err == nil && googleProto.Equal(f.Equipment(), e) {
 			return strings.TrimSuffix(filepath.Base(path), ".gear.siml")
 		}
 	}
 	return ""
+}
+
+// The builds and gear sets under ui/specs as last read, read again when the file or a file it uses changed. A file
+// that does not read is read again each time.
+var repoFiles = &fileCache{files: map[string]cachedFile{}}
+
+type fileCache struct {
+	mu    sync.Mutex
+	files map[string]cachedFile
+}
+
+type cachedFile struct {
+	stamps []siml.FileStamp // The file's, then each used file's.
+	file   *siml.File
+}
+
+func (c *fileCache) read(path string) (*siml.File, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if held, ok := c.files[path]; ok && slices.Equal(held.stamps, stampsOf(path, held.file)) {
+		return held.file, nil
+	}
+	f, err := siml.ReadFile(path)
+	if err == nil {
+		c.files[path] = cachedFile{stampsOf(path, f), f}
+	}
+	return f, err
+}
+
+func stampsOf(path string, f *siml.File) []siml.FileStamp {
+	stamps := []siml.FileStamp{siml.StampOf(path)}
+	if f != nil {
+		for _, u := range f.Uses {
+			stamps = append(stamps, siml.StampOf(filepath.FromSlash(u)))
+		}
+	}
+	return stamps
 }
 
 // The character a settings file describes: an IndividualSimSettings the site exports, in protojson or as an x.siml.

@@ -79,6 +79,11 @@ func (d *Doc) read() (*File, error) {
 	if typed.spec != nil {
 		f.Spec = typed.spec.Spec
 	}
+	for _, st := range typed.tree.top {
+		if use, ok := st.(*useStmt); ok {
+			f.Uses = append(f.Uses, resolveUse(d.path, use.path.value))
+		}
+	}
 	for _, r := range d.Refs() {
 		if r.Known {
 			f.Names = append(f.Names, r)

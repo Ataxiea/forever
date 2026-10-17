@@ -80,6 +80,7 @@ type File struct {
 	Settings   *proto.IndividualSimSettings // What the file and the files it uses set (SPEC.md §5.1).
 	Categories []string                     // The import categories the file holds, in the site's order (SPEC.md §5.1).
 	Names      []NameRef                    // The names the file itself writes, in file order.
+	Uses       []string                     // The paths its use lines name, read against its own path, in file order.
 	RawRefs    Diagnostics                  // raw-ref at each raw token that holds an id a name could write, which no file under ui/specs holds (SPEC.md §7.3).
 	Warnings   Diagnostics
 }
