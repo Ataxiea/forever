@@ -625,6 +625,9 @@ message UnitMetadata {
 	string name = 3;
 	repeated SpellStats spells = 1;
 	repeated AuraStats auras = 2;
+	// Proc triggers with an internal cooldown and no action of their own, by the action they proc from:
+	// the id icd_is_ready finds them by, which no other aura value does.
+	repeated AuraStats icd_auras = 4;
 }
 message PetStats {
 	UnitMetadata metadata = 1;

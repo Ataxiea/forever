@@ -1054,16 +1054,7 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 		}
 	})
 
-	// A proc trigger with an internal cooldown and no action of its own is listed by the action it procs
-	// from, the id the rotation's icd_is_ready finds it by (GetIcdAuraByID).
-	aplAuras := FilterSlice(unit.auras, func(aura *Aura) bool {
-		return !aura.ActionID.IsEmptyAction() || aura.Icd != nil && !aura.ActionIDForProc.IsEmptyAction()
-	})
-	metadata.Auras = MapSlice(aplAuras, func(aura *Aura) *proto.AuraStats {
-		id := aura.ActionID
-		if id.IsEmptyAction() {
-			id = aura.ActionIDForProc
-		}
+	auraStats := func(aura *Aura, id ActionID) *proto.AuraStats {
 		return &proto.AuraStats{
 			Id:                 rankedID(id),
 			MaxStacks:          aura.MaxStacks,
@@ -1071,6 +1062,18 @@ func (unit *Unit) metadata(casters ...*Unit) *proto.UnitMetadata {
 			HasExclusiveEffect: len(aura.ExclusiveEffects) > 0,
 			Category:           auraCategory(aura, casters),
 		}
+	}
+	aplAuras := FilterSlice(unit.auras, func(aura *Aura) bool {
+		return !aura.ActionID.IsEmptyAction()
+	})
+	metadata.Auras = MapSlice(aplAuras, func(aura *Aura) *proto.AuraStats {
+		return auraStats(aura, aura.ActionID)
+	})
+	icdAuras := FilterSlice(unit.auras, func(aura *Aura) bool {
+		return aura.ActionID.IsEmptyAction() && aura.Icd != nil && !aura.ActionIDForProc.IsEmptyAction()
+	})
+	metadata.IcdAuras = MapSlice(icdAuras, func(aura *Aura) *proto.AuraStats {
+		return auraStats(aura, aura.ActionIDForProc)
 	})
 
 	return metadata

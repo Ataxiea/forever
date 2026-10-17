@@ -119,7 +119,7 @@ export const actionIdSets: Record<
 	},
 	icd_auras: {
 		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.icd_auras'),
-		getActionIDs: async metadata => auraOptions(metadata.getAuras(), aura => aura.data.hasIcd),
+		getActionIDs: async metadata => auraOptions([...metadata.getAuras(), ...metadata.getIcdAuras()], aura => aura.data.hasIcd),
 	},
 	exclusive_effect_auras: {
 		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.exclusive_effect_auras'),

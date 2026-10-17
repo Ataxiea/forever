@@ -486,7 +486,8 @@ func registrations(result *proto.ComputeStatsResult) map[siml.Namespace]map[Iden
 	for _, spell := range player.Metadata.Spells {
 		add(siml.NamespaceSpell, spell.Id, spell.IsCastable)
 	}
-	for _, aura := range player.Metadata.Auras {
+	// icd_is_ready reads an aura name too, so the internal cooldown triggers it finds are aura names.
+	for _, aura := range slices.Concat(player.Metadata.Auras, player.Metadata.IcdAuras) {
 		add(siml.NamespaceAura, aura.Id, false)
 	}
 	for _, pet := range player.Pets {
