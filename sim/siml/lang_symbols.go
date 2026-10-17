@@ -168,6 +168,11 @@ func isNilNode(n node) bool {
 
 // Every occurrence of a variable, group, sequence or placeholder in the file, in file order.
 func (d *Doc) occurrences() []occurrence {
+	d.occOnce.Do(func() { d.occ = d.readOccurrences() })
+	return d.occ
+}
+
+func (d *Doc) readOccurrences() []occurrence {
 	tree := d.tree()
 	if tree == nil {
 		return nil

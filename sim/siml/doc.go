@@ -36,6 +36,11 @@ type Doc struct {
 
 	spansOnce sync.Once
 	spanIndex map[string]Range // The first span of each path within the loader's message, for SpanFor.
+
+	occOnce   sync.Once
+	occ       []occurrence // What occurrences reads, once: a Doc does not change after Analyze.
+	wordsOnce sync.Once
+	words     []wordRole // What classify reads, once.
 }
 
 // Reads src as the file at path, as Parse does; the result holds the diagnostics, and an error only when the schema

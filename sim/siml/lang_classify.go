@@ -24,6 +24,11 @@ type wordRole struct {
 }
 
 func (d *Doc) classify() []wordRole {
+	d.wordsOnce.Do(func() { d.words = d.readWords() })
+	return d.words
+}
+
+func (d *Doc) readWords() []wordRole {
 	tree := d.tree()
 	if tree == nil {
 		return nil
