@@ -52,8 +52,12 @@ export const UnitField = ({ player, config, unitSet }: UnitFieldProps) => {
 	const targetDummyCount = useStore(player.sim.store, state => state.raid.targetDummies);
 	const activeParties = useStore(player.sim.store, state => state.raid.numActiveParties);
 	const composition = useStore(player.sim.store, state => state.raid.composition);
+	const healingSettings = useStore(player.sim.store, state => state.raid.healingSettings);
 	// eslint-disable-next-line react-hooks/exhaustive-deps -- the metadata version is what moves when the units do.
-	const models = useMemo(() => unitOptionModels(unitSet, player), [unitSet, player, metadataVersion, targetDummyCount, activeParties, composition]);
+	const models = useMemo(
+		() => unitOptionModels(unitSet, player),
+		[unitSet, player, metadataVersion, targetDummyCount, activeParties, composition, healingSettings],
+	);
 	const icons = useActionIds(models.map(({ unit }) => (typeof unit.iconUrl === 'string' ? undefined : unit.iconUrl)));
 	const choices = useMemo(() => {
 		const built = pathChoices(

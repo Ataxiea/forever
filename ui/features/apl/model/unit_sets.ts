@@ -25,6 +25,9 @@ export const healingTargetsAreGrouped = (player: Player<any>): boolean => {
 	return settings.groupSize !== 5 && settings.assignment === HealingAssignment.RaidHealing;
 };
 
+export const healingRandomTargetEnabled = (player: Player<any>): boolean =>
+	player.getPlayerSpec().isHealingSpec && player.sim.raid.getHealingSettings().assignment === HealingAssignment.RaidHealing;
+
 export const unitSets: Record<
 	UNIT_SET,
 	{

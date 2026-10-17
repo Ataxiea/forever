@@ -6,7 +6,7 @@ import { MAX_PARTY_SIZE } from '@sim/raid/party';
 import type { ResolvedIcon } from '@ui-kit/Field/types';
 import type { IconName } from '@ui-kit/Icon';
 
-import { healingTargetIndices, healingTargetsAreGrouped, type UNIT_SET, unitSets } from './unit_sets';
+import { healingRandomTargetEnabled, healingTargetIndices, healingTargetsAreGrouped, type UNIT_SET, unitSets } from './unit_sets';
 
 const label = (key: string) => i18n.t(`rotation_tab.apl.helpers.unit_labels.${key}`);
 
@@ -100,7 +100,7 @@ export const unitOptionModels = (unitSet: UNIT_SET, player: Player<any>): Array<
 		if (ref?.type != UnitType.Pet) return { unit };
 		return { unit, submenu: [refToValue(set.targetUI ? ref.owner! : undefined, player, set.targetUI)] };
 	});
-	if (healingTargets.length) {
+	if (healingTargets.length && healingRandomTargetEnabled(player)) {
 		models.push({
 			unit: refToValue(UnitReference.create({ type: UnitType.RandomHealTarget }), player, set.targetUI),
 			submenu: ['heal_target'],
