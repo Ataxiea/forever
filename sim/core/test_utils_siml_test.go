@@ -86,7 +86,7 @@ func TestAJSONPresetPanics(t *testing.T) {
 		read          func()
 		command, json string
 	}{
-		"GetAplRotation":     {func() { GetAplRotation(dir, "x") }, "siml print -kind apl -spec SPEC_FIELD %[1]s/x.apl.json > %[1]s/x.apl.siml", "x.apl.json"},
+		"GetAplRotation":     {func() { GetAplRotation(dir, "x") }, "siml print -kind apl -spec <the spec's field, such as hunter or dps_warrior> %[1]s/x.apl.json > %[1]s/x.apl.siml", "x.apl.json"},
 		"GetGearSet":         {func() { GetGearSet(dir, "x") }, "siml print -kind gear %[1]s/x.gear.json > %[1]s/x.gear.siml", "x.gear.json"},
 		"GetItemSwapGearSet": {func() { GetItemSwapGearSet(dir, "x") }, "siml print -kind gear %[1]s/x.gear.json > %[1]s/x.gear.siml", "x.gear.json"},
 		"GetTestBuild": {func() { GetTestBuild(proto.Class_ClassHunter, dir, "x", ItemFilter{}, nil, nil) },

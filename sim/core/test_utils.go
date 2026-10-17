@@ -6,8 +6,6 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/wowsims/forever/sim/core/proto"
@@ -259,12 +257,8 @@ func readPreset(path string, jsonPath string, printFlags string) *siml.File {
 	f, err := siml.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		if _, jsonErr := os.Stat(jsonPath); jsonErr == nil {
-			placeholder := ""
-			if strings.Contains(printFlags, "SPEC_FIELD") {
-				placeholder = ", putting the field its spec line writes (hunter, dps_warrior) for SPEC_FIELD,"
-			}
-			panic(fmt.Sprintf("%s is JSON, and the sim reads presets as SIML: write it as %s%s with go run --tags=with_db ./cmd/wowsimcli siml print %s %s > %s",
-				jsonPath, path, placeholder, printFlags, jsonPath, path))
+			panic(fmt.Sprintf("%s is JSON, and the sim reads presets as SIML: write it as %s with go run --tags=with_db ./cmd/wowsimcli siml print %s %s > %s",
+				jsonPath, path, printFlags, jsonPath, path))
 		}
 		return nil
 	}
@@ -274,23 +268,9 @@ func readPreset(path string, jsonPath string, printFlags string) *siml.File {
 	return f
 }
 
-// The spec field the rotations under dir, ui/specs/<class>/<spec folder>/apls, are for: the class's one spec, or the
-// spec whose field without underscores is the folder and the class (feralcat → feral_cat_druid). SPEC_FIELD when none
-// fits, which the command that writes the file must replace.
-func presetSpec(dir string) string {
-	folder := filepath.Dir(filepath.Clean(dir))
-	class, spec := filepath.Base(filepath.Dir(folder)), filepath.Base(folder)
-	for _, info := range siml.Specs() {
-		if field := string(info.Field.Name()); field == class || strings.ReplaceAll(field, "_", "") == spec+class {
-			return field
-		}
-	}
-	return "SPEC_FIELD"
-}
-
 func GetAplRotation(dir string, file string) RotationCombo {
 	filePath := dir + "/" + file + ".apl.siml"
-	f := readPreset(filePath, dir+"/"+file+".apl.json", "-kind apl -spec "+presetSpec(dir))
+	f := readPreset(filePath, dir+"/"+file+".apl.json", "-kind apl -spec <the spec's field, such as hunter or dps_warrior>")
 	if f == nil {
 		log.Printf("no apl siml file, skipping rotation: %s", filePath)
 		return RotationCombo{Label: file}
