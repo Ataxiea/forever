@@ -52,10 +52,8 @@ const (
 	CompletionClass         CompletionKind = 7
 	CompletionModule        CompletionKind = 9
 	CompletionProperty      CompletionKind = 10
-	CompletionUnit          CompletionKind = 11
 	CompletionValue         CompletionKind = 12
 	CompletionKeyword       CompletionKind = 14
-	CompletionSnippet       CompletionKind = 15
 	CompletionFile          CompletionKind = 17
 	CompletionReference     CompletionKind = 18
 	CompletionEnumMember    CompletionKind = 20
@@ -67,7 +65,6 @@ type Completion struct {
 	Label, Detail, Documentation string
 	Kind                         CompletionKind
 	InsertText                   string
-	Snippet                      bool
 	Replace                      Range
 	SortText, FilterText         string
 	Retrigger                    bool // Completion opens again once it is inserted: after `cast `, `aura(`, `target.`.
@@ -143,4 +140,4 @@ type Fix struct {
 
 // The code actions at a range: a word the parser does not know changed to a candidate its diagnostic names, and the
 // rewrites of conditions that change the proto, which are only made when asked (SPEC.md §16.2).
-func (d *Doc) QuickFixes(r Range, c Catalog) []Fix { return d.quickFixes(r) }
+func (d *Doc) QuickFixes(r Range) []Fix { return d.quickFixes(r) }

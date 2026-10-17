@@ -80,10 +80,9 @@ func (s *server) request(ctx context.Context, method string, params json.RawMess
 	case "textDocument/formatting":
 		return s.withDoc(uri, []TextEdit{}, func(a *analysis) any { return formatting(a) })
 	case "textDocument/codeAction":
-		catalog := s.readCatalog(uri)
 		return s.withDoc(uri, []CodeAction{}, func(a *analysis) any {
 			out := []CodeAction{}
-			for _, fix := range a.doc.QuickFixes(fromRange(p.Range), catalog.of(a)) {
+			for _, fix := range a.doc.QuickFixes(fromRange(p.Range)) {
 				action := CodeAction{
 					Title:       fix.Title,
 					Kind:        fix.Kind,

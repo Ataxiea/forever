@@ -635,7 +635,7 @@ func TestTokens(t *testing.T) {
 func TestQuickFixDidYouMean(t *testing.T) {
 	text := langPreface + "priority:\n  cast mongoos_bite if target.aura(hunters_mrk).is_active\n"
 	d := analyzeText(t, hunterPath, text)
-	fixes := d.QuickFixes(Range{Position{6, 1}, Position{6, 61}}, langCatalog())
+	fixes := d.QuickFixes(Range{Position{6, 1}, Position{6, 61}})
 	type row struct {
 		title, kind string
 		preferred   bool
@@ -672,7 +672,7 @@ func TestServerContentCases(t *testing.T) {
 	if len(diags) != 1 || diags[0].Code != "unknown-name" || diags[0].Start != (Position{5, 8}) {
 		t.Fatalf("diagnostics %v", diags)
 	}
-	fixes := d.QuickFixes(Range{diags[0].Start, diags[0].End}, langCatalog())
+	fixes := d.QuickFixes(Range{diags[0].Start, diags[0].End})
 	if len(fixes) == 0 || fixes[0].Title != "Change to hunters_mark" || fixes[0].Edits[0].Range != (Range{diags[0].Start, diags[0].End}) {
 		t.Errorf("quick fix %v", fixes)
 	}

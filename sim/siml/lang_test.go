@@ -151,7 +151,7 @@ func TestQuickFixRewrites(t *testing.T) {
 	text := langPreface + "priority:\n  cast steady if current_time > 1s and and(gcd_is_ready) or (gcd_is_ready or current_time < 5s)\n"
 	d := Analyze(hunterPath, []byte(text), smallNames(), langOpen)
 	var got []string
-	for _, f := range d.QuickFixes(Range{Position{1, 1}, Position{10, 1}}, nil) {
+	for _, f := range d.QuickFixes(Range{Position{1, 1}, Position{10, 1}}) {
 		if f.Kind == "refactor.rewrite" {
 			got = append(got, f.Edits[0].NewText)
 		}
@@ -164,7 +164,7 @@ func TestQuickFixRewrites(t *testing.T) {
 func TestQuickFixSkipsListOperand(t *testing.T) {
 	text := langPreface + "priority:\n  cast steady if and([gcd_is_ready, true]) and or([gcd_is_ready]) and and([true])\n"
 	d := Analyze(hunterPath, []byte(text), smallNames(), langOpen)
-	for _, f := range d.QuickFixes(Range{Position{1, 1}, Position{10, 1}}, nil) {
+	for _, f := range d.QuickFixes(Range{Position{1, 1}, Position{10, 1}}) {
 		if f.Kind == "refactor.rewrite" {
 			t.Errorf("rewrites a list operand: %q", f.Edits[0].NewText)
 		}

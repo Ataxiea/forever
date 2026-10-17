@@ -170,18 +170,11 @@ func completionItem(c siml.Completion) CompletionItem {
 	if c.Documentation != "" {
 		item.Documentation = &MarkupContent{Kind: "markdown", Value: c.Documentation}
 	}
-	if c.Snippet {
-		item.InsertTextFormat = 2
-	}
 	text := c.InsertText
 	if text == "" {
 		text = c.Label
 	}
-	if c.Replace != (siml.Range{}) {
-		item.TextEdit = &TextEdit{Range: toRange(c.Replace), NewText: text}
-	} else if c.InsertText != "" {
-		item.InsertText = c.InsertText
-	}
+	item.TextEdit = &TextEdit{Range: toRange(c.Replace), NewText: text}
 	return item
 }
 
