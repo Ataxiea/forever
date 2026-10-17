@@ -16,28 +16,7 @@ func ComputeStats(csr *proto.ComputeStatsRequest) *proto.ComputeStatsResult {
 		encounter = &proto.Encounter{}
 	}
 
-	env, raidStats, encounterStats := NewEnvironment(csr.Raid, encounter, !csr.SkipRotation, csr.SkipRotation)
-	var sim *Simulation
-	for partyIndex, party := range env.Raid.Parties {
-		if partyIndex >= len(raidStats.Parties) {
-			continue
-		}
-		for playerIndex, agent := range party.Players {
-			if playerIndex >= len(raidStats.Parties[partyIndex].Players) {
-				continue
-			}
-			if provider, ok := agent.(HealingSpellStatsProvider); ok {
-				if sim == nil {
-					sim = newSimWithEnv(env, &proto.SimOptions{RandomSeed: 1}, simsignals.CreateSignals())
-				}
-				character := agent.GetCharacter()
-				character.applyBuildPhaseAuras(CharacterBuildPhaseAll)
-				healingSpells := provider.HealingSpellStats(sim)
-				character.clearBuildPhaseAuras(CharacterBuildPhaseAll)
-				raidStats.Parties[partyIndex].Players[playerIndex].HealingSpells = healingSpells
-			}
-		}
-	}
+	_, raidStats, encounterStats := NewEnvironment(csr.Raid, encounter, !csr.SkipRotation, csr.SkipRotation)
 
 	return &proto.ComputeStatsResult{
 		RaidStats:      raidStats,

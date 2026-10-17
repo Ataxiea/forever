@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -226,7 +227,7 @@ func (spell *Spell) BonusDamage(attackTable *AttackTable) float64 {
 	if spell.SpellSchool.Matches(SpellSchoolPhysical) {
 		bonusDamage += spell.Unit.stats[stats.PhysicalDamage]
 	} else {
-		bonusDamage += spell.SpellDamage(attackTable.Defender) + attackTable.MobTypeBonusStats[attackTable.Defender.MobType][stats.SpellDamage] + attackTable.Defender.PseudoStats.SchoolBonusSpellDamage[spell.SchoolIndex]
+		bonusDamage += spell.SpellDamage(attackTable.Defender) + attackTable.MobTypeBonusStats[attackTable.Defender.MobType][stats.SpellDamage]
 	}
 
 	return bonusDamage
@@ -456,6 +457,37 @@ func (spell *Spell) CalcAndDealOutcome(sim *Simulation, target *Unit, outcomeApp
 	return result
 }
 
+func hitKind(result *SpellResult, isPeriodic bool) proto.HitKind {
+	resisted := result.DidResist()
+	switch {
+	case result.DidBlockCrit():
+		return proto.HitKind_HitKindBlockedCrit
+	case result.DidCrit():
+		switch {
+		case isPeriodic && resisted:
+			return proto.HitKind_HitKindResistedCritTick
+		case isPeriodic:
+			return proto.HitKind_HitKindCritTick
+		case resisted:
+			return proto.HitKind_HitKindResistedCrit
+		}
+		return proto.HitKind_HitKindCrit
+	case result.DidGlance():
+		return proto.HitKind_HitKindGlance
+	case result.DidBlock():
+		return proto.HitKind_HitKindBlock
+	case result.DidCrush():
+		return proto.HitKind_HitKindCrush
+	case isPeriodic && resisted:
+		return proto.HitKind_HitKindResistedTick
+	case isPeriodic:
+		return proto.HitKind_HitKindTick
+	case resisted:
+		return proto.HitKind_HitKindResistedHit
+	}
+	return proto.HitKind_HitKindHit
+}
+
 // Applies the fully computed spell result to the sim.
 func (spell *Spell) dealDamageInternal(sim *Simulation, isPeriodic bool, result *SpellResult) {
 	if !isPeriodic {
@@ -499,6 +531,10 @@ func (spell *Spell) dealDamageInternal(sim *Simulation, isPeriodic bool, result 
 			spell.SpellMetrics[result.Target.UnitIndex].TotalCrushDamage += result.Damage
 		}
 		spell.SpellMetrics[result.Target.UnitIndex].TotalThreat += result.Threat
+
+		if result.Landed() {
+			spell.recordHit(result.Target, hitKind(result, isPeriodic), result.Damage)
+		}
 	}
 
 	// Mark total damage done in raid so far for health based fights.
@@ -717,68 +753,6 @@ func (spell *Spell) CalcHealing(sim *Simulation, target *Unit, baseHealing float
 	return spell.calcHealingInternal(sim, target, baseHealing, spell.CasterHealingMultiplier(), outcomeApplier)
 }
 
-type HealingRange struct {
-	Min  float64
-	Mean float64
-	Max  float64
-}
-
-// CalculateHealingRange applies a spell's healing modifiers to the supplied base range without
-// rolling its direct variance or healing crit chance.
-func (spell *Spell) CalculateHealingRange(sim *Simulation, target *Unit, baseMin, baseMean, baseMax float64, periodic bool) (HealingRange, HealingRange) {
-	var casterMultiplier float64
-	if periodic {
-		dot := spell.Hot(target)
-		if dot == nil {
-			return HealingRange{}, HealingRange{}
-		}
-		if dot.BonusCoefficient > 0 {
-			bonus := dot.BonusCoefficient * spell.HealingPower(target)
-			baseMin += bonus
-			baseMean += bonus
-			baseMax += bonus
-		}
-		casterMultiplier = dot.CasterPeriodicHealingMultiplier()
-	} else {
-		if spell.BonusCoefficient > 0 {
-			bonus := spell.BonusCoefficient * spell.HealingPower(target)
-			baseMin += bonus
-			baseMean += bonus
-			baseMax += bonus
-		}
-		if spell.DirectVariance > 0 {
-			variance := spell.DirectVariance / 2
-			baseMin *= 1 - variance
-			baseMax *= 1 + variance
-		}
-		casterMultiplier = spell.CasterHealingMultiplier()
-	}
-
-	calculate := func(amount float64, critical bool) float64 {
-		outcome := spell.OutcomeHealing
-		if critical {
-			outcome = func(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
-				result.Outcome = OutcomeCrit
-				result.Damage *= spell.CritDamageMultiplier(attackTable)
-			}
-		}
-		result := spell.calcHealingInternal(sim, target, amount, casterMultiplier, outcome)
-		value := result.Damage
-		spell.DisposeResult(result)
-		return value
-	}
-
-	return HealingRange{
-			Min:  calculate(baseMin, false),
-			Mean: calculate(baseMean, false),
-			Max:  calculate(baseMax, false),
-		}, HealingRange{
-			Min:  calculate(baseMin, true),
-			Mean: calculate(baseMean, true),
-			Max:  calculate(baseMax, true),
-		}
-}
-
 func (spell *Spell) CalcPeriodicHealing(sim *Simulation, target *Unit, baseHealing float64, outcomeApplier OutcomeApplier) *SpellResult {
 	var dot *Dot
 	if spell.aoeDot != nil {
@@ -810,6 +784,16 @@ func (spell *Spell) dealHealingInternal(sim *Simulation, isPeriodic bool, result
 	}
 	spell.SpellMetrics[result.Target.UnitIndex].TotalHealing += result.Damage
 	spell.SpellMetrics[result.Target.UnitIndex].TotalThreat += result.Threat
+	kind := proto.HitKind_HitKindHeal
+	switch {
+	case isPeriodic && result.DidCrit():
+		kind = proto.HitKind_HitKindCritHealTick
+	case isPeriodic:
+		kind = proto.HitKind_HitKindHealTick
+	case result.DidCrit():
+		kind = proto.HitKind_HitKindCritHeal
+	}
+	spell.recordHit(result.Target, kind, result.Damage)
 	if result.Target.HasHealthBar() {
 		result.Target.GainHealth(sim, result.Damage, spell.HealthMetrics(result.Target))
 	}
@@ -917,9 +901,33 @@ func (result *SpellResult) applyTargetModifiers(sim *Simulation, spell *Spell, a
 		}
 	} else if !spell.SpellSchool.Matches(SpellSchoolPhysical) && !spell.SpellSchool.Matches(SpellSchoolNone) {
 		result.Damage += attackTable.Defender.PseudoStats.BonusSpellDamageTaken
+		// The target's flat school bonus, Judgement of the Crusader, lands after the caster's done
+		// multipliers and before the target's and the outcome roll: a crit doubles it and a damage done
+		// talent never scales it.
+		result.Damage += spell.takenBonusCoefficient(attackTable.Defender, isPeriodic) * attackTable.Defender.PseudoStats.SchoolBonusSpellDamage[spell.SchoolIndex]
 	}
 
 	result.Damage *= spell.TargetDamageMultiplier(sim, attackTable, isPeriodic)
+}
+
+// The coefficient the target's flat school bonus is taken at: a tick's dot coefficient, the
+// spell's own, or the one a spell states for it when its spell power goes through a weapon percent
+// and so sets no BonusCoefficient.
+func (spell *Spell) takenBonusCoefficient(target *Unit, isPeriodic bool) float64 {
+	if isPeriodic {
+		dot := spell.aoeDot
+		if dot == nil {
+			dot = spell.Dot(target)
+		}
+		if dot == nil {
+			return 0
+		}
+		return dot.BonusCoefficient
+	}
+	if spell.BonusCoefficient > 0 {
+		return spell.BonusCoefficient
+	}
+	return spell.TakenBonusCoefficient
 }
 func (spell *Spell) TargetDamageMultiplier(sim *Simulation, attackTable *AttackTable, isPeriodic bool) float64 {
 	if spell.Flags.Matches(SpellFlagIgnoreTargetModifiers) {

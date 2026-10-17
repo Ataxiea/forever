@@ -1,31 +1,39 @@
-import { HealingSpellStats } from '@generated/proto/api';
+import { ActionId } from '@sim/proto/action_id';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { HealingSpellTableView } from './HealingSpellTable';
 
 const spells = [
-	HealingSpellStats.create({
-		id: { rawId: { oneofKind: 'spellId', spellId: 2061 }, tag: 0 },
+	{
+		id: ActionId.fromSpellId(2061, 7),
 		name: 'Flash Heal',
 		rank: 7,
-		min: 812,
-		mean: 913.5,
-		max: 1015,
-		critMin: 1218,
-		critMean: 1370.25,
-		critMax: 1522.5,
-	}),
-	HealingSpellStats.create({
-		id: { rawId: { oneofKind: 'spellId', spellId: 9473 }, tag: 0 },
-		name: 'Flash Heal',
-		rank: 6,
-		min: 711,
-		mean: 799,
-		max: 887,
-		critMin: 1066.5,
-		critMean: 1198.5,
-		critMax: 1330.5,
-	}),
+		periodic: false,
+		absorb: false,
+		normal: { min: 812, avg: 913.5, max: 1015 },
+		critical: { min: 1218, avg: 1370.25, max: 1522.5 },
+		critChance: 18.4,
+		divineAegis: { min: 243.6, avg: 274.05, max: 304.5 },
+	},
+	{
+		id: ActionId.fromSpellId(139, 10),
+		name: 'Renew',
+		rank: 10,
+		periodic: true,
+		absorb: false,
+		normal: { min: 345.6, avg: 345.6, max: 345.6 },
+		critical: { min: 518.4, avg: 518.4, max: 518.4 },
+		critChance: 18.4,
+	},
+	{
+		id: ActionId.fromSpellId(17, 14),
+		name: 'Power Word: Shield',
+		rank: 14,
+		periodic: false,
+		absorb: true,
+		normal: { min: 2200, avg: 2200, max: 2200 },
+		critChance: 0,
+	},
 ];
 
 const meta = {

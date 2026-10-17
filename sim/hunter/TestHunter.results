@@ -254,6 +254,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHunter-AllItems-DarkmantleArmor"
+ value: {
+  dps: 842.46098
+  tps: 607.26254
+  dtps: 8.22577
+ }
+}
+dps_results: {
  key: "TestHunter-AllItems-DarkmoonCard:BlueDragon-19288"
  value: {
   dps: 838.96265
@@ -284,6 +292,14 @@ dps_results: {
   dps: 828.18535
   tps: 597.7116
   dtps: 8.88844
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-DeathmistRaiment"
+ value: {
+  dps: 739.26648
+  tps: 535.02639
+  dtps: 8.30293
  }
 }
 dps_results: {
@@ -340,6 +356,14 @@ dps_results: {
   dps: 813.88221
   tps: 587.2574
   dtps: 8.14352
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-DreadmistRaiment"
+ value: {
+  dps: 716.6299
+  tps: 516.68161
+  dtps: 3.84388
  }
 }
 dps_results: {
@@ -512,6 +536,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHunter-AllItems-FeralheartRaiment"
+ value: {
+  dps: 768.17975
+  tps: 552.77602
+  dtps: 3.83358
+ }
+}
+dps_results: {
  key: "TestHunter-AllItems-Ferra'sCollar-18355"
  value: {
   dps: 838.96265
@@ -557,6 +589,14 @@ dps_results: {
   dps: 827.19235
   tps: 597.05076
   dtps: 8.88844
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-FrostfireRegalia"
+ value: {
+  dps: 778.66262
+  tps: 561.70351
+  dtps: 7.23831
  }
 }
 dps_results: {
@@ -769,6 +809,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHunter-AllItems-Magister'sRegalia"
+ value: {
+  dps: 729.25552
+  tps: 525.68078
+  dtps: 4.21074
+ }
+}
+dps_results: {
  key: "TestHunter-AllItems-MajorRecombobulator-18637"
  value: {
   dps: 838.96265
@@ -873,6 +921,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHunter-AllItems-PlagueheartRaiment"
+ value: {
+  dps: 776.94354
+  tps: 561.40033
+  dtps: 8.8035
+ }
+}
+dps_results: {
  key: "TestHunter-AllItems-PremierChainGauntlets-272495"
  value: {
   dps: 841.54268
@@ -945,6 +1001,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHunter-AllItems-ShadowcraftArmor"
+ value: {
+  dps: 800.5975
+  tps: 576.66875
+  dtps: 5.97856
+ }
+}
+dps_results: {
  key: "TestHunter-AllItems-ShardoftheFallenStar-21891"
  value: {
   dps: 842.99373
@@ -974,6 +1038,14 @@ dps_results: {
   dps: 838.96265
   tps: 604.70357
   dtps: 7.7652
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-Sorcerer'sRegalia"
+ value: {
+  dps: 735.88623
+  tps: 530.65212
+  dtps: 5.07682
  }
 }
 dps_results: {
@@ -1121,6 +1193,30 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHunter-AllItems-VestmentsofFaith"
+ value: {
+  dps: 717.63587
+  tps: 517.12125
+  dtps: 3.88884
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-VestmentsoftheDevout"
+ value: {
+  dps: 712.96131
+  tps: 514.07693
+  dtps: 3.83358
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-VestmentsoftheVirtuous"
+ value: {
+  dps: 716.87158
+  tps: 516.7557
+  dtps: 3.83358
+ }
+}
+dps_results: {
  key: "TestHunter-AllItems-WarmthofForgiveness-23027"
  value: {
   dps: 839.88308
@@ -1134,6 +1230,14 @@ dps_results: {
   dps: 839.68988
   tps: 605.21263
   dtps: 7.94485
+ }
+}
+dps_results: {
+ key: "TestHunter-AllItems-WildheartRaiment"
+ value: {
+  dps: 720.64165
+  tps: 519.46003
+  dtps: 3.83358
  }
 }
 dps_results: {

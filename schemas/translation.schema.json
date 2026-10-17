@@ -2161,6 +2161,41 @@
 						"not_yet_implemented": {
 							"type": "string"
 						},
+						"not_fully_supported": {
+							"type": "string"
+						},
+						"partial_set_bonus": {
+							"type": "object",
+							"properties": {
+								"grovekeeper_eclipse_4": {
+									"type": "string"
+								},
+								"wildheart_raiment_5": {
+									"type": "string"
+								},
+								"implements_of_unspoken_names_3": {
+									"type": "string"
+								},
+								"dreadnaughts_battlegear_4": {
+									"type": "string"
+								},
+								"dreadnaughts_battlegear_8": {
+									"type": "string"
+								},
+								"battleplate_of_glory_3": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"grovekeeper_eclipse_4",
+								"wildheart_raiment_5",
+								"implements_of_unspoken_names_3",
+								"dreadnaughts_battlegear_4",
+								"dreadnaughts_battlegear_8",
+								"battleplate_of_glory_3"
+							],
+							"additionalProperties": false
+						},
 						"set_bonus_warnings": {
 							"type": "string"
 						},
@@ -2179,6 +2214,8 @@
 						"will_not_be_implemented",
 						"unvalidated_rate",
 						"not_yet_implemented",
+						"not_fully_supported",
+						"partial_set_bonus",
 						"set_bonus_warnings",
 						"set_bonus_piece",
 						"area_stats"
@@ -7660,6 +7697,26 @@
 						"rogue": {
 							"type": "object",
 							"properties": {
+								"use_backstab": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label"]
+								},
+								"use_expose_armor": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label"]
+								},
 								"apply_poisons_manually": {
 									"type": "object",
 									"properties": {
@@ -7695,7 +7752,7 @@
 								}
 							},
 							"additionalProperties": false,
-							"required": ["apply_poisons_manually", "subtlety"]
+							"required": ["use_backstab", "use_expose_armor", "apply_poisons_manually", "subtlety"]
 						},
 						"shaman": {
 							"type": "object",
@@ -7975,6 +8032,9 @@
 							"type": "string"
 						},
 						"target_number": {
+							"type": "string"
+						},
+						"group_ranks": {
 							"type": "string"
 						},
 						"damage": {
@@ -8812,6 +8872,9 @@
 								},
 								"critical_block": {
 									"type": "string"
+								},
+								"shield": {
+									"type": "string"
 								}
 							},
 							"additionalProperties": false,
@@ -8836,7 +8899,8 @@
 								"crush",
 								"glance",
 								"block",
-								"critical_block"
+								"critical_block",
+								"shield"
 							]
 						},
 						"tooltip_table": {
@@ -8849,6 +8913,12 @@
 									"type": "string"
 								},
 								"average": {
+									"type": "string"
+								},
+								"min": {
+									"type": "string"
+								},
+								"max": {
 									"type": "string"
 								},
 								"amount": {
@@ -8865,7 +8935,19 @@
 								}
 							},
 							"additionalProperties": false,
-							"required": ["type", "count", "average", "amount", "per_cast", "per_hit", "ticks"]
+							"required": ["type", "count", "average", "min", "max", "amount", "per_cast", "per_hit", "ticks"]
+						},
+						"custom_metrics": {
+							"type": "object",
+							"properties": {
+								"group": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": {
+								"type": "string"
+							},
+							"required": ["group"]
 						},
 						"unit": {
 							"type": "string"
@@ -8901,6 +8983,7 @@
 						"sim_1_death",
 						"all_targets",
 						"target_number",
+						"group_ranks",
 						"damage",
 						"timeline",
 						"logs",
@@ -8909,6 +8992,7 @@
 						"tooltips",
 						"attack_types",
 						"tooltip_table",
+						"custom_metrics",
 						"unit",
 						"damage_result"
 					]

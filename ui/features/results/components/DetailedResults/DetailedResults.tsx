@@ -1,19 +1,22 @@
 import { Tabs } from '@base-ui/react/tabs';
 import { SimRun, SimRunData } from '@generated/proto/ui';
 import i18n from '@i18n/config';
+import { LOCAL_STORAGE_PREFIX } from '@sim/constants/other';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { useDisplayMetrics } from '@sim/hooks/useDisplayMetrics';
-import { usePlayerStore } from '@sim/hooks/usePlayerStore';
 import { SimResult } from '@sim/proto/sim_result';
 import { subscribeSimSettingsChange } from '@sim/state/subscriptions';
 import { isDevMode } from '@sim/utils/env';
+import { BooleanPicker } from '@ui-kit/BooleanPicker';
 import { Button } from '@ui-kit/Button';
+import { useLocalStorageState } from '@ui-kit/hooks/useLocalStorageState';
 import { useStickyToolbar } from '@ui-kit/hooks/useStickyToolbar';
 import { TabPanels } from '@ui-kit/TabNav';
 import clsx from 'clsx';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { trackEvent } from '../../../../tracking/utils';
+import { GroupRanksContext } from '../../context/GroupRanksContext';
 import { useSimResult } from '../../hooks/useSimResult';
 import type { SimResultsManager } from '../../model/results_manager';
 import { AuraMetricsTable } from '../AuraMetricsTable';
@@ -32,17 +35,24 @@ import { DetailedResultsPane } from './DetailedResultsPane';
 import { DetailedResultsTabs } from './DetailedResultsTabs';
 import { DEFAULT_DETAILED_RESULTS_TAB, DETAILED_RESULTS_TABS, HEALING_SPELLS_RESULTS_TAB, type DetailedResultsTabConfig } from './utils';
 
+// The viewer's choice, shared by every spec page.
+const GROUP_RANKS_STORAGE_KEY = `${LOCAL_STORAGE_PREFIX}_results-group-ranks.v1`;
+
+const parseFlag = (value: unknown): boolean | undefined => (typeof value === 'boolean' ? value : undefined);
+
 export interface DetailedResultsViewProps {
 	tabs: ReadonlyArray<DetailedResultsTabConfig>;
 	activeId: string;
 	onActiveIdChange: (id: string) => void;
 	hasResults: boolean;
-	hasStaticResults?: boolean;
 	iterationDisabled: boolean;
 	deathDisabled: boolean;
 	onSimulateIteration: () => void;
 	onSimulateDeath: () => void;
 	targetPicker: ReactNode;
+	/** Whether the tables of the tabs marked `groupsRanks` join the ranks of a spell under one row. */
+	groupRanks: boolean;
+	onGroupRanksChange: (groupRanks: boolean) => void;
 	/** One `DetailedResultsPane` per tab, its value the tab's id. */
 	children: ReactNode;
 }
@@ -52,12 +62,13 @@ export const DetailedResultsView = ({
 	activeId,
 	onActiveIdChange,
 	hasResults,
-	hasStaticResults,
 	iterationDisabled,
 	deathDisabled,
 	onSimulateIteration,
 	onSimulateDeath,
 	targetPicker,
+	groupRanks,
+	onGroupRanksChange,
 	children,
 }: DetailedResultsViewProps) => {
 	const { ref: toolbarRef, stuck, className: stickyToolbarClassName } = useStickyToolbar<HTMLDivElement>();
@@ -77,13 +88,23 @@ export const DetailedResultsView = ({
 				<Tabs.Root
 					className="group/dr flex scroll-mt-sim-header flex-col"
 					data-testid="dr-root"
-					data-no-results={!hasResults && !hasStaticResults ? '' : undefined}
+					data-no-results={!hasResults ? '' : undefined}
 					value={activeId}
 					onValueChange={next => onActiveIdChange(String(next))}>
 					<div ref={toolbarRef} data-testid="dr-toolbar" className={clsx(stickyToolbarClassName, 'flex-col')} data-stuck={stuck ? '' : undefined}>
 						<div data-testid="dr-toolbar-row" className="flex min-h-0 w-full items-center">
 							<div data-testid="results-filter" className="flex min-h-0 items-center">
 								{targetPicker}
+								{tabs.find(tab => tab.id === activeId)?.groupsRanks && (
+									<BooleanPicker
+										id="results-group-ranks"
+										className="ml-4 group-data-no-results/dr:hidden"
+										label={i18n.t('results_tab.details.group_ranks')}
+										layout="inline"
+										value={groupRanks}
+										onChange={onGroupRanksChange}
+									/>
+								)}
 							</div>
 							<div className="min-h-0 grow" />
 							<DetailedResultsTabs tabs={tabs} />
@@ -97,7 +118,7 @@ export const DetailedResultsView = ({
 							className="col-start-1 row-start-1 flex items-center justify-center p-6 text-base opacity-100 transition-opacity duration-150 ease-linear group-not-data-no-results/dr:hidden">
 							{i18n.t('results_tab.details.no_results')}
 						</div>
-						{children}
+						<GroupRanksContext.Provider value={groupRanks}>{children}</GroupRanksContext.Provider>
 					</TabPanels>
 				</Tabs.Root>
 			</DrStickySlotContext.Provider>
@@ -116,26 +137,25 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 
 	const settingsSubscribe = subscribeSimSettingsChange(sim);
 	const { damage: showDamage, threat: showThreat, healing: showHealing } = useDisplayMetrics(sim);
-	const currentStats = usePlayerStore('currentStats');
-	const supportsHealingSpellStats = currentStats.healingSpells.length > 0;
+	const isHealingSpec = host.player.getPlayerSpec().isHealingSpec;
 	const hasResults = useSimResult() !== null;
 
 	const visibleTabs = useMemo(
 		() =>
 			DETAILED_RESULTS_TABS.filter(tab => {
-				if (supportsHealingSpellStats && !hasResults) return tab.id === HEALING_SPELLS_RESULTS_TAB;
-				if (tab.id === HEALING_SPELLS_RESULTS_TAB) return supportsHealingSpellStats;
+				if (tab.id === HEALING_SPELLS_RESULTS_TAB) return isHealingSpec && hasResults;
 				if (tab.id === 'damageTab') return showDamage;
 				if (tab.id === 'healingTab') return showHealing;
 				if (tab.id === 'threatTab' || tab.id === 'damageTakenTab') return showThreat;
 				return true;
 			}),
-		[hasResults, showDamage, showThreat, showHealing, supportsHealingSpellStats],
+		[hasResults, isHealingSpec, showDamage, showThreat, showHealing],
 	);
 
-	const [activeId, setActiveId] = useState<string>(supportsHealingSpellStats ? HEALING_SPELLS_RESULTS_TAB : DEFAULT_DETAILED_RESULTS_TAB);
+	const [activeId, setActiveId] = useState<string>(DEFAULT_DETAILED_RESULTS_TAB);
 	const [deathDisabled, setDeathDisabled] = useState(true);
 	const [target, setTarget] = useState(ALL_UNITS);
+	const [groupRanks, setGroupRanks] = useLocalStorageState(GROUP_RANKS_STORAGE_KEY, parseFlag, () => true);
 
 	// `updateResults` is bound to the emitter, not to the filter, so the selection it reads is a ref.
 	const targetRef = useRef(target);
@@ -249,7 +269,6 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 			activeId={activeId}
 			onActiveIdChange={setActiveId}
 			hasResults={hasResults}
-			hasStaticResults={supportsHealingSpellStats}
 			iterationDisabled={host.disabled}
 			deathDisabled={deathDisabled}
 			onSimulateIteration={() => {
@@ -265,7 +284,9 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 						setTarget(next);
 					}}
 				/>
-			}>
+			}
+			groupRanks={groupRanks}
+			onGroupRanksChange={setGroupRanks}>
 			{showDamage && (
 				<DetailedResultsPane id="damageTab" className="[&_.ui-metrics-table]:text-xs" topline histogram>
 					<DamageMetricsTable />
@@ -281,8 +302,8 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 					<HealingMetricsTable />
 				</DetailedResultsPane>
 			)}
-			{supportsHealingSpellStats && (
-				<DetailedResultsPane id={HEALING_SPELLS_RESULTS_TAB} showWithoutResults>
+			{isHealingSpec && hasResults && (
+				<DetailedResultsPane id={HEALING_SPELLS_RESULTS_TAB}>
 					<HealingSpellTable />
 				</DetailedResultsPane>
 			)}

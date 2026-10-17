@@ -590,6 +590,15 @@
 				"chance_unknown": "In-game validation needed. Currently using an estimated proc chance"
 			},
 			"not_yet_implemented": "Not yet implemented",
+			"not_fully_supported": "Not fully supported:",
+			"partial_set_bonus": {
+				"grovekeeper_eclipse_4": "only spell damage against Demons is raised, not the damage of melee attacks.",
+				"wildheart_raiment_5": "only the mana on a spell cast is modelled, not the energy on a melee attack or the rage when struck by one.",
+				"implements_of_unspoken_names_3": "the extra 5% damage on Firebolt and Lash of Pain is not modelled.",
+				"dreadnaughts_battlegear_4": "Taunt and Challenging Shout always hit in the sim, so the bonus changes nothing.",
+				"dreadnaughts_battlegear_8": "only heals a healer casts in the sim take the bonus, not the incoming healing the tank sim models.",
+				"battleplate_of_glory_3": "the sim does not cast Intervene, so the bonus changes nothing."
+			},
 			"set_bonus_warnings": "This item set has the following warnings:",
 			"set_bonus_piece": "{{pieces}}-piece:",
 			"area_stats": "Only while the encounter is in one of these areas:"
@@ -2164,6 +2173,12 @@
 		},
 		"options": {
 			"rogue": {
+				"use_backstab": {
+					"label": "Use Backstab"
+				},
+				"use_expose_armor": {
+					"label": "Use Expose Armor"
+				},
 				"apply_poisons_manually": {
 					"label": "Configure poisons manually",
 					"tooltip": "Prevent automatic poison configuration that is based on equipped weapons."
@@ -2260,6 +2275,7 @@
 			"sim_1_death": "Simulate a Death",
 			"all_targets": "All Targets",
 			"target_number": "Target {{number}}",
+			"group_ranks": "Group ranks",
 			"damage": {
 				"dps_histogram": "DPS Histogram"
 			},
@@ -2407,8 +2423,6 @@
 				"normal": "Normal",
 				"critical": "Crit",
 				"crit_chance": "Crit chance",
-				"renewed_hope_crit_chance": "With Renewed Hope",
-				"renewed_hope_note": "Renewed Hope crit chance assumes Weakened Soul is active on the healed target.",
 				"absorb": "Absorb",
 				"divine_aegis": "Divine Aegis absorb on crit",
 				"proc_uptimes": "Healing proc uptimes",
@@ -2423,12 +2437,8 @@
 				"per_tick": "Per tick",
 				"normal_tick": "Normal tick",
 				"crit_tick": "Crit tick",
-				"full_duration": "Full duration",
-				"normal_total": "All normal ticks",
-				"expected_total": "Expected total",
-				"all_crit_total": "All ticks crit",
-				"periodic_tooltip": "Periodic healing shows normal and crit values per tick, plus totals over the spell's full duration. Expected total includes crit chance.",
-				"no_spells": "No healing spells are available for this character."
+				"periodic_tooltip": "Periodic healing values are shown per tick for spells cast during this simulation.",
+				"no_spells": "No healing spells were cast on the selected target in this simulation."
 			},
 			"columns": {
 				"damage_done": "Damage done",
@@ -2519,16 +2529,23 @@
 				"crush": "Crush",
 				"glance": "Glance",
 				"block": "Block",
-				"critical_block": "Critical Block"
+				"critical_block": "Critical Block",
+				"shield": "Shield"
 			},
 			"tooltip_table": {
 				"type": "Type",
 				"count": "Count",
 				"average": "Average",
+				"min": "Min",
+				"max": "Max",
 				"amount": "Amount",
 				"per_cast": "Per Cast",
 				"per_hit": "Per Hit",
 				"ticks": "Ticks"
+			},
+			"custom_metrics": {
+				"group": "Spec metrics",
+				"divine_aegis": "Divine Aegis shield"
 			},
 			"unit": "Unit",
 			"damage_result": {

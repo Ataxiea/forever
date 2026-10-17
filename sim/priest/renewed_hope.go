@@ -37,11 +37,6 @@ func (priest *Priest) renewedHopeCritBonus(spell *core.Spell) float64 {
 	return spellData.RenewedHope.Rank(priest.Talents.RenewedHope).EffectN(1).Percent()
 }
 
-// Reports the Renewed Hope critical chance bonus for the supplied spell.
-func (priest *Priest) RenewedHopeCritBonus(spell *core.Spell) float64 {
-	return priest.renewedHopeCritBonus(spell)
-}
-
 func (priest *Priest) renewedHopeTargetAura(target *core.Unit, spell *core.Spell) *core.Aura {
 	if priest.Talents.RenewedHope == 0 || target == nil || target.Type == core.EnemyUnit ||
 		spell.ClassSpellMask&priestRenewedHopeSpells == 0 {

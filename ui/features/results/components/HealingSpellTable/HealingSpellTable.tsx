@@ -1,9 +1,9 @@
-import { HealingSpellStats } from '@generated/proto/api';
+import { HitKind } from '@generated/proto/api';
 import i18n from '@i18n/config';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { useActionId } from '@sim/hooks/useActionId';
-import { usePlayerStore } from '@sim/hooks/usePlayerStore';
 import { ActionId } from '@sim/proto/action_id';
+import { ActionMetrics } from '@sim/proto/sim_result';
 import { formatToNumber } from '@sim/utils/format';
 import { Accordion, AccordionItem } from '@ui-kit/Accordion';
 import { Table, TableCell, TableHeaderCell, TableRow } from '@ui-kit/Table';
@@ -14,17 +14,35 @@ import { useMemo, useState } from 'react';
 import { useSimResult } from '../../hooks/useSimResult';
 
 export interface HealingSpellTableViewProps {
-	spells: ReadonlyArray<HealingSpellStats>;
+	spells: ReadonlyArray<HealingSpellRow>;
 	procUptimes?: ReadonlyArray<{ name: string; target: string; uptime: number }>;
 	spellOrder?: ReadonlyArray<string>;
 }
 
-const displayAmount = (value: number) => formatToNumber(value, { maximumFractionDigits: 1 });
-const displayPercent = (value: number) => `${displayAmount(value * 100)}%`;
+export interface HealingSpellRow {
+	id: ActionId;
+	name: string;
+	rank: number;
+	periodic: boolean;
+	absorb: boolean;
+	normal?: HealingSpellRange;
+	critical?: HealingSpellRange;
+	critChance: number;
+	divineAegis?: HealingSpellRange;
+}
 
-const HealingSpellRankCell = ({ spell }: { spell: HealingSpellStats }) => {
-	const { iconUrl, href } = useActionId(ActionId.fromProto(spell.id!));
-	const rankLabel = i18n.t('results_tab.details.healing_spells.rank_label', { rank: spell.rank });
+export interface HealingSpellRange {
+	min: number;
+	avg: number;
+	max: number;
+}
+
+const displayAmount = (value: number | undefined) => formatToNumber(value ?? 0, { maximumFractionDigits: 1 });
+const HealingSpellRankCell = ({ spell }: { spell: HealingSpellRow }) => {
+	const { iconUrl, href } = useActionId(spell.id);
+	const rankLabel = spell.rank
+		? i18n.t('results_tab.details.healing_spells.rank_label', { rank: spell.rank })
+		: i18n.t('results_tab.details.healing_spells.rank');
 
 	return (
 		<TableCell>
@@ -36,13 +54,12 @@ const HealingSpellRankCell = ({ spell }: { spell: HealingSpellStats }) => {
 	);
 };
 
-const HealingSpellGroupTitle = ({ name, id }: { name: string; id?: HealingSpellStats['id'] }) => {
-	const { iconUrl } = useActionId(id ? ActionId.fromProto(id) : undefined);
-
+const HealingSpellGroupTitle = ({ spell }: { spell: HealingSpellRow }) => {
+	const { iconUrl } = useActionId(spell.id);
 	return (
 		<span className="inline-flex items-center gap-2">
-			{iconUrl && <WowheadIcon as="div" iconUrl={iconUrl} label={name} className="rounded h-6 w-6 shrink-0" />}
-			<span>{name}</span>
+			{iconUrl && <WowheadIcon as="div" iconUrl={iconUrl} label={spell.name} className="rounded h-6 w-6 shrink-0" />}
+			<span>{spell.name}</span>
 		</span>
 	);
 };
@@ -50,23 +67,24 @@ const HealingSpellGroupTitle = ({ name, id }: { name: string; id?: HealingSpellS
 export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [] }: HealingSpellTableViewProps) => {
 	const [expanded, setExpanded] = useState<Array<string>>([]);
 	const groups = useMemo(() => {
-		const byName = new Map<string, Array<HealingSpellStats>>();
+		const byName = new Map<string, Array<HealingSpellRow>>();
 		for (const spell of spells) {
 			const group = byName.get(spell.name) ?? [];
 			group.push(spell);
 			byName.set(spell.name, group);
 		}
 		const order = new Map(spellOrder.map((name, index) => [name, index]));
-		return [...byName.entries()].sort(([nameA], [nameB]) => {
-			const orderA = order.get(nameA);
-			const orderB = order.get(nameB);
-			if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
-			if (orderA !== undefined) return -1;
-			if (orderB !== undefined) return 1;
-			return nameA.localeCompare(nameB);
-		});
+		return [...byName.entries()]
+			.map(([name, ranks]) => [name, ranks.sort((a, b) => a.rank - b.rank)] as const)
+			.sort(([nameA], [nameB]) => {
+				const orderA = order.get(nameA);
+				const orderB = order.get(nameB);
+				if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+				if (orderA !== undefined) return -1;
+				if (orderB !== undefined) return 1;
+				return nameA.localeCompare(nameB);
+			});
 	}, [spells, spellOrder]);
-	const metricNotes = [...new Set(spells.flatMap(spell => spell.additionalMetrics.map(metric => metric.noteKey).filter(Boolean)))];
 
 	if (!groups.length) return <p className="p-4 text-sm opacity-70">{i18n.t('results_tab.details.healing_spells.no_spells')}</p>;
 
@@ -74,182 +92,95 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 		<div className="p-2">
 			<Accordion value={expanded} onValueChange={setExpanded} variant="boxed" testId="healing-spell-accordion">
 				{groups.map(([name, ranks]) => {
-					const highestRank = ranks.reduce((highest, spell) => (spell.rank > highest.rank ? spell : highest), ranks[0]);
-					const metricsByGroup = new Map<string, Array<string>>();
-					for (const spell of ranks) {
-						for (const metric of spell.additionalMetrics) {
-							const labels = metricsByGroup.get(metric.groupKey) ?? [];
-							if (!labels.includes(metric.labelKey)) labels.push(metric.labelKey);
-							metricsByGroup.set(metric.groupKey, labels);
-						}
-					}
-					const periodic = ranks[0].periodic;
-					const criticalMetrics = ranks[0].absorb ? [] : (metricsByGroup.get('critical') ?? []);
-					const periodicTotalMetrics = ['normal_total', 'expected_total', 'all_crit_total'];
-					const extraMetricGroups = [...metricsByGroup.entries()].filter(
-						([groupKey]) => (ranks[0].absorb || groupKey !== 'critical') && (!periodic || groupKey !== 'periodic_total'),
-					);
-					const metricColumnCount =
-						(ranks[0].absorb ? 3 : periodic ? 6 + criticalMetrics.length : 7 + criticalMetrics.length) +
-						extraMetricGroups.reduce((total, [, labels]) => total + labels.length, 0);
-					const metricColumnWidth = `${84 / metricColumnCount}%`;
+					const first = ranks[0];
+					const isAbsorb = first.absorb;
+					const isPeriodic = first.periodic;
 					return (
 						<AccordionItem
 							key={name}
 							value={name}
-							title={<HealingSpellGroupTitle name={name} id={highestRank.id} />}
+							title={<HealingSpellGroupTitle spell={first} />}
 							testId={`healing-spell-${name}`}
 							panelClassName="overflow-x-auto p-2">
 							<Table dense striped className="w-full table-fixed text-center" testId={`healing-spell-table-${name}`}>
-								<colgroup>
-									<col style={{ width: '16%' }} />
-									{Array.from({ length: metricColumnCount }, (_, index) => (
-										<col key={index} style={{ width: metricColumnWidth }} />
-									))}
-								</colgroup>
 								<thead>
 									<TableRow>
-										<TableHeaderCell rowSpan={2} wrap>
+										<TableHeaderCell rowSpan={2}>
 											<span className="inline-flex items-center justify-center">
 												{i18n.t('results_tab.details.healing_spells.rank')}
 												<TooltipButton tooltip={i18n.t('results_tab.details.healing_spells.periodic_tooltip')} className="ml-1" />
 											</span>
 										</TableHeaderCell>
-										{ranks[0].absorb ? (
-											<TableHeaderCell colSpan={3} wrap>
-												{i18n.t('results_tab.details.healing_spells.absorb')}
-											</TableHeaderCell>
-										) : periodic ? (
-											<>
-												<TableHeaderCell colSpan={2} wrap>
-													{i18n.t('results_tab.details.healing_spells.per_tick')}
-												</TableHeaderCell>
-												<TableHeaderCell colSpan={periodicTotalMetrics.length} wrap>
-													{i18n.t('results_tab.details.healing_spells.full_duration')}
-												</TableHeaderCell>
-												<TableHeaderCell colSpan={1 + criticalMetrics.length} wrap>
-													{i18n.t('results_tab.details.healing_spells.critical')}
-												</TableHeaderCell>
-											</>
+										{isAbsorb ? (
+											<TableHeaderCell colSpan={3}>{i18n.t('results_tab.details.healing_spells.absorb')}</TableHeaderCell>
+										) : isPeriodic ? (
+											<TableHeaderCell colSpan={2}>{i18n.t('results_tab.details.healing_spells.per_tick')}</TableHeaderCell>
 										) : (
 											<>
-												<TableHeaderCell colSpan={3} wrap>
-													{i18n.t('results_tab.details.healing_spells.normal')}
-												</TableHeaderCell>
-												<TableHeaderCell colSpan={4 + criticalMetrics.length} wrap>
-													{i18n.t('results_tab.details.healing_spells.critical')}
-												</TableHeaderCell>
+												<TableHeaderCell colSpan={3}>{i18n.t('results_tab.details.healing_spells.normal')}</TableHeaderCell>
+												<TableHeaderCell colSpan={3}>{i18n.t('results_tab.details.healing_spells.critical')}</TableHeaderCell>
 											</>
 										)}
-										{extraMetricGroups.map(([groupKey, labels]) => (
-											<TableHeaderCell key={groupKey} colSpan={labels.length} wrap>
-												{i18n.t(`results_tab.details.healing_spells.${groupKey}`)}
-											</TableHeaderCell>
-										))}
+										{!isAbsorb && <TableHeaderCell rowSpan={2}>{i18n.t('results_tab.details.healing_spells.crit_chance')}</TableHeaderCell>}
+										{ranks.some(spell => spell.divineAegis) && (
+											<TableHeaderCell colSpan={3}>{i18n.t('results_tab.details.healing_spells.divine_aegis')}</TableHeaderCell>
+										)}
 									</TableRow>
 									<TableRow>
-										{(ranks[0].absorb
-											? ['min', 'mean', 'max']
-											: periodic
-												? ['normal_tick', 'crit_tick', ...periodicTotalMetrics, 'crit_chance', ...criticalMetrics]
-												: ['min', 'mean', 'max', 'crit_chance', ...criticalMetrics, 'min', 'mean', 'max']
-										).map((column, index) => (
-											<TableHeaderCell key={`${index}-${column}`} wrap>
-												{i18n.t(`results_tab.details.healing_spells.${column}`)}
-											</TableHeaderCell>
-										))}
-										{extraMetricGroups.flatMap(([groupKey, labels]) =>
-											labels.map(labelKey => (
-												<TableHeaderCell key={`${groupKey}-${labelKey}`} wrap>
-													{i18n.t(`results_tab.details.healing_spells.${labelKey}`)}
+										{!isAbsorb &&
+											(isPeriodic ? ['normal_tick', 'crit_tick'] : ['min', 'mean', 'max']).map(column => (
+												<TableHeaderCell key={`normal-${column}`}>
+													{i18n.t(`results_tab.details.healing_spells.${column}`)}
 												</TableHeaderCell>
-											)),
+											))}
+										{!isAbsorb &&
+											!isPeriodic &&
+											['min', 'mean', 'max'].map(column => (
+												<TableHeaderCell key={`crit-${column}`}>
+													{i18n.t(`results_tab.details.healing_spells.${column}`)}
+												</TableHeaderCell>
+											))}
+										{isAbsorb &&
+											['min', 'mean', 'max'].map(column => (
+												<TableHeaderCell key={`absorb-${column}`}>
+													{i18n.t(`results_tab.details.healing_spells.${column}`)}
+												</TableHeaderCell>
+											))}
+										{ranks.some(spell => spell.divineAegis) && (
+											<>
+												{['min', 'mean', 'max'].map(column => (
+													<TableHeaderCell key={`da-${column}`}>
+														{i18n.t(`results_tab.details.healing_spells.${column}`)}
+													</TableHeaderCell>
+												))}
+											</>
 										)}
 									</TableRow>
 								</thead>
 								<tbody>
-									{ranks.map((spell, index) => (
-										<TableRow key={`${spell.name}-${spell.rank}-${index}`}>
-											<HealingSpellRankCell spell={spell} />
-											{spell.absorb ? (
-												<>
-													<TableCell>{displayAmount(spell.absorbMin)}</TableCell>
-													<TableCell>{displayAmount(spell.absorbMean)}</TableCell>
-													<TableCell>{displayAmount(spell.absorbMax)}</TableCell>
-													{extraMetricGroups.flatMap(([groupKey, labels]) =>
-														labels.map(labelKey => {
-															const metric = spell.additionalMetrics.find(
-																candidate => candidate.groupKey === groupKey && candidate.labelKey === labelKey,
-															);
-															return (
-																<TableCell key={`${groupKey}-${labelKey}`}>
-																	{metric ? displayAmount(metric.value) : ''}
-																</TableCell>
-															);
-														}),
-													)}
-												</>
-											) : periodic ? (
-												<>
-													<TableCell>{displayAmount(spell.mean)}</TableCell>
-													<TableCell>{displayAmount(spell.critMean)}</TableCell>
-													{periodicTotalMetrics.map(labelKey => {
-														const metric = spell.additionalMetrics.find(
-															candidate => candidate.groupKey === 'periodic_total' && candidate.labelKey === labelKey,
-														);
-														return <TableCell key={labelKey}>{metric ? displayAmount(metric.value) : ''}</TableCell>;
-													})}
-													<TableCell>{displayPercent(spell.critChance)}</TableCell>
-													{criticalMetrics.map(labelKey => {
-														const metric = spell.additionalMetrics.find(
-															candidate => candidate.groupKey === 'critical' && candidate.labelKey === labelKey,
-														);
-														return <TableCell key={labelKey}>{metric ? displayPercent(metric.value) : ''}</TableCell>;
-													})}
-													{extraMetricGroups.flatMap(([groupKey, labels]) =>
-														labels.map(labelKey => {
-															const metric = spell.additionalMetrics.find(
-																candidate => candidate.groupKey === groupKey && candidate.labelKey === labelKey,
-															);
-															return (
-																<TableCell key={`${groupKey}-${labelKey}`}>
-																	{metric ? displayAmount(metric.value) : ''}
-																</TableCell>
-															);
-														}),
-													)}
-												</>
-											) : (
-												<>
-													<TableCell>{displayAmount(spell.min)}</TableCell>
-													<TableCell>{displayAmount(spell.mean)}</TableCell>
-													<TableCell>{displayAmount(spell.max)}</TableCell>
-													<TableCell>{displayPercent(spell.critChance)}</TableCell>
-													{criticalMetrics.map(labelKey => {
-														const metric = spell.additionalMetrics.find(
-															candidate => candidate.groupKey === 'critical' && candidate.labelKey === labelKey,
-														);
-														return <TableCell key={labelKey}>{metric ? displayPercent(metric.value) : ''}</TableCell>;
-													})}
-													<TableCell>{displayAmount(spell.critMin)}</TableCell>
-													<TableCell>{displayAmount(spell.critMean)}</TableCell>
-													<TableCell>{displayAmount(spell.critMax)}</TableCell>
-													{extraMetricGroups.flatMap(([groupKey, labels]) =>
-														labels.map(labelKey => {
-															const metric = spell.additionalMetrics.find(
-																candidate => candidate.groupKey === groupKey && candidate.labelKey === labelKey,
-															);
-															return (
-																<TableCell key={`${groupKey}-${labelKey}`}>
-																	{metric ? displayAmount(metric.value) : ''}
-																</TableCell>
-															);
-														}),
-													)}
-												</>
-											)}
-										</TableRow>
-									))}
+									{ranks.map(spell => {
+										return (
+											<TableRow key={spell.id.toString()}>
+												<HealingSpellRankCell spell={spell} />
+												{(isAbsorb || !isPeriodic
+													? [spell.normal?.min, spell.normal?.avg, spell.normal?.max]
+													: [spell.normal?.avg, spell.critical?.avg]
+												).map((value, index) => (
+													<TableCell key={`normal-${index}`}>{displayAmount(value)}</TableCell>
+												))}
+												{!isAbsorb &&
+													!isPeriodic &&
+													[spell.critical?.min, spell.critical?.avg, spell.critical?.max].map((value, index) => (
+														<TableCell key={`crit-${index}`}>{displayAmount(value)}</TableCell>
+													))}
+												{!isAbsorb && <TableCell>{displayAmount(spell.critChance)}%</TableCell>}
+												{ranks.some(candidate => candidate.divineAegis) &&
+													[spell.divineAegis?.min, spell.divineAegis?.avg, spell.divineAegis?.max].map((value, index) => (
+														<TableCell key={`da-${index}`}>{displayAmount(value)}</TableCell>
+													))}
+											</TableRow>
+										);
+									})}
 								</tbody>
 							</Table>
 						</AccordionItem>
@@ -279,42 +210,66 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 					</Table>
 				</div>
 			)}
-			<p className="pt-2 text-xs opacity-70">
-				{i18n.t('results_tab.details.healing_spells.uptime_note')}
-				{metricNotes.map(noteKey => ` ${i18n.t(`results_tab.details.healing_spells.${noteKey}`)}`)}
-			</p>
+			<p className="pt-2 text-xs opacity-70">{i18n.t('results_tab.details.healing_spells.uptime_note')}</p>
 		</div>
 	);
 };
 
 export const HealingSpellTable = () => {
 	const host = useSimHost();
-	const currentStats = usePlayerStore('currentStats');
-	const simResult = useSimResult();
+	const resultData = useSimResult();
 	const procAuraConfigs = host.individualConfig.healingProcAuras ?? [];
 	const procUptimes = useMemo(() => {
-		if (!simResult) return [];
-		const duration = simResult.result.result.avgIterationDuration || 1;
+		if (!resultData) return [];
+		const duration = resultData.result.result.avgIterationDuration || 1;
 		const procAurasById = new Map(procAuraConfigs.map(config => [config.spellId, config]));
-		return (simResult.result.result.raidMetrics?.parties ?? [])
+		return (resultData.result.result.raidMetrics?.parties ?? [])
 			.flatMap(party => party.players)
 			.filter(player => player.name.startsWith('Target Dummy'))
 			.flatMap(player =>
 				player.auras.flatMap(aura => {
 					if (!aura.id) return [];
-					const spellId = ActionId.fromProto(aura.id).spellId;
-					const config = procAurasById.get(spellId);
-					if (!config) return [];
-					return [
-						{
-							name: i18n.t(config.labelKey),
-							target: player.name,
-							uptime: ((aura.uptimeSecondsAvg || 0) / duration) * 100,
-						},
-					];
+					const config = procAurasById.get(ActionId.fromProto(aura.id).spellId);
+					return config ? [{ name: i18n.t(config.labelKey), target: player.name, uptime: ((aura.uptimeSecondsAvg || 0) / duration) * 100 }] : [];
 				}),
 			)
 			.sort((a, b) => a.name.localeCompare(b.name) || a.target.localeCompare(b.target));
-	}, [procAuraConfigs, simResult]);
-	return <HealingSpellTableView spells={currentStats?.healingSpells ?? []} procUptimes={procUptimes} spellOrder={host.individualConfig.healingSpellOrder} />;
+	}, [procAuraConfigs, resultData]);
+	const actions = useMemo(() => {
+		if (!resultData) return [];
+		const players = resultData.result.getRaidIndexedPlayers(resultData.filter);
+		const player = players.find(candidate => candidate.spec?.isHealingSpec) ?? players[0];
+		if (!player) return [];
+		return player
+			.getHealingActions()
+			.map(action => action.forTarget(resultData.filter))
+			.filter(action => action.healing > 0 || action.shielding > 0)
+			.map(action => {
+				const periodic = action.targets.some(target => target.ticks > 0);
+				const absorb = action.healing === 0 && action.shielding > 0;
+				const { critical, landed } = action.targets.reduce(
+					(total, target) => ({
+						critical: total.critical + target.crits + target.critTicks,
+						landed: total.landed + target.hits + target.crits + target.ticks + target.critTicks,
+					}),
+					{ critical: 0, landed: 0 },
+				);
+				const aegis = action.customMetrics.find(metric => metric.key === 'divine_aegis');
+				const customRange: HealingSpellRange | undefined = aegis ? { avg: aegis.average, min: aegis.min ?? 0, max: aegis.max ?? 0 } : undefined;
+				const normal = action.range(periodic ? HitKind.HitKindHealTick : absorb ? HitKind.HitKindShield : HitKind.HitKindHeal);
+				const criticalRange = action.range(periodic ? HitKind.HitKindCritHealTick : HitKind.HitKindCritHeal);
+				return {
+					id: action.actionId,
+					name: action.name,
+					rank: action.actionId.rank,
+					periodic,
+					absorb,
+					normal: normal ? { min: normal.min, avg: normal.avg, max: normal.max } : undefined,
+					critical: criticalRange ? { min: criticalRange.min, avg: criticalRange.avg, max: criticalRange.max } : undefined,
+					critChance: landed > 0 ? (critical / landed) * 100 : 0,
+					divineAegis: customRange,
+				};
+			});
+	}, [resultData]);
+	return <HealingSpellTableView spells={actions} procUptimes={procUptimes} spellOrder={host.individualConfig.healingSpellOrder} />;
 };

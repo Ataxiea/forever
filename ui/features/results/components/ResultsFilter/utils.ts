@@ -8,15 +8,31 @@ export const ALL_UNITS = -1;
 
 export const simResultFilter = (target: number): SimResultFilter => ({ target: target === ALL_UNITS ? null : target });
 
+const healingTargetIndexes = (result: SimResult): Array<number> => {
+	const healingPlayers = result.getRaidIndexedPlayers().filter(player => player.spec?.isHealingSpec);
+	const targetIndexes = new Set<number>();
+	for (const player of healingPlayers) {
+		for (const action of player.getHealingActions()) {
+			for (const target of action.targets) {
+				if (target.healing > 0 || target.shielding > 0) targetIndexes.add(target.data.unitIndex);
+			}
+		}
+	}
+	return [...targetIndexes].sort((a, b) => a - b);
+};
+
 /** False once a run has fewer targets than the one the filter is pointing at. */
 export const hasTarget = (result: SimResult, target: number): boolean =>
-	target === ALL_UNITS || result.getTargets().some(unit => unit.index === target) || (result.getHealingTargets?.() ?? []).some(unit => unit.index === target);
+	target === ALL_UNITS || result.getTargets().some(unit => unit.index === target) || healingTargetIndexes(result).includes(target);
 
 /** Shows only healed targets in a healing sim; otherwise, all targets in encounter order. */
 export const targetOptions = (result: SimResult): Array<ChoiceOption<number>> => {
-	const healingTargets = result.getHealingTargets?.() ?? [];
-	const targets = result.isHealingSimulation?.()
-		? healingTargets.map((unit): ChoiceOption<number> => ({ value: unit.index, label: unit.label }))
+	const healingSimulation = result.getRaidIndexedPlayers().some(player => player.spec?.isHealingSpec);
+	const targets = healingSimulation
+		? healingTargetIndexes(result).map((index): ChoiceOption<number> => ({
+				value: index,
+				label: i18n.t('results_tab.details.target_number', { number: index + 1 }),
+			}))
 		: result.getTargets().map((unit): ChoiceOption<number> => ({
 				value: unit.index,
 				label: i18n.t('results_tab.details.target_number', { number: unit.index + 1 }),

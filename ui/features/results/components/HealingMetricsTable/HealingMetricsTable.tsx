@@ -1,24 +1,20 @@
 import i18n from '@i18n/config';
-import { useSim, useSimHost } from '@sim/context/SimHostContext';
+import { useSim } from '@sim/context/SimHostContext';
 import { useDisplayMetrics } from '@sim/hooks/useDisplayMetrics';
-import type { ActionId } from '@sim/proto/action_id';
 import { ActionMetrics } from '@sim/proto/sim_result';
 import { formatToNumber } from '@sim/utils/format';
 import { percentOf } from '@sim/utils/math';
 import { Tooltip } from '@ui-kit/Tooltip';
 import { useMemo } from 'react';
 
-import { useSimResult } from '../../hooks/useSimResult';
-import { buildMetricRows, filterMetricRows, indexMetricRows, type MetricGrouping, type MetricRow } from '../../model/grouping';
+import { useActionRows } from '../../hooks/useActionRows';
+import { filterMetricRows, indexMetricRows } from '../../model/grouping';
 import type { SimResultData } from '../../model/result_data';
-import { attackFormat, attackMetricsColumns, threatTooltip, useMetricMax } from '../AttackMetricsColumns';
+import { amountHeader, attackFormat, attackMetricsColumns, customMetricsGroups, threatTooltip, useMetricMax } from '../AttackMetricsColumns';
 import { MetricsCombinedTooltip, type MetricsCombinedTooltipGroup } from '../MetricsCombinedTooltip';
-import { createMetricsColumnHelper, metricForAnchor, MetricsActionCell, MetricsTable, MetricTooltip } from '../MetricsTable';
+import { createMetricsColumnHelper, metricForAnchor, MetricsTable, MetricTooltip } from '../MetricsTable';
 
 const helper = createMetricsColumnHelper<ActionMetrics>();
-
-const NO_ROWS: Array<MetricRow<ActionMetrics>> = [];
-const sourceActionTag = (actionId: ActionId) => (actionId.itemId ? -actionId.itemId : actionId.spellId);
 
 const TOOLTIP = {
 	healing: 'healing-metrics-healing',
@@ -31,62 +27,27 @@ const TOOLTIP = {
 	hps: 'healing-metrics-hps',
 };
 
-const healingPlayer = (resultData: SimResultData) => {
-	const players = resultData.result.getRaidIndexedPlayers(resultData.filter);
-	return players.find(player => player.spec?.isHealingSpec) ?? players[0];
-};
-
 const healingGroups = (resultData: SimResultData): Array<Array<ActionMetrics>> => {
-	const player = healingPlayer(resultData);
-	if (!player) return [];
+	const players = resultData.result.getRaidIndexedPlayers(resultData.filter);
+	if (!players.length) return [];
 
-	const targetIndex = resultData.filter.target;
-	return ActionMetrics.groupById(player.getHealingActions()).flatMap(group => {
-		const actions =
-			targetIndex == null || targetIndex === -1
-				? group
-				: group.flatMap(action => {
-						if (
-							!action.targets.some(
-								target => target.data.unitIndex === targetIndex && (target.healing > 0 || target.shielding > 0),
-							)
-						)
-							return [];
-						return [action.forTarget(resultData.filter)];
-					});
-		if (!actions.length) return [];
-
-		const merged = ActionMetrics.merge(actions);
-		if (merged.hps <= 0) return [];
-
-		const hasCastAndEffectMetrics = actions.some(action => !action.isPassiveAction) && actions.some(action => action.isPassiveAction);
-		return [hasCastAndEffectMetrics ? [merged] : actions];
-	});
+	return ActionMetrics.groupById(players[0].getHealingActions().filter(action => action.hps > 0));
 };
 
-const grouping = (sourceActionSpellIds: ReadonlySet<number>): MetricGrouping<ActionMetrics> => ({
-	merge: metrics => ActionMetrics.merge(metrics, { removeTag: true, actionIdOverride: metrics[0]?.unit?.petActionId || undefined }),
-	shouldCollapse: metric => !metric.unit?.isPet && !sourceActionSpellIds.has(metric.actionId.spellId),
-});
-
-const healingGroup = (metric: ActionMetrics): MetricsCombinedTooltipGroup => ({
-	spellSchool: metric.spellSchool,
-	totalPercentage: 100,
-	data: [
-		{
-			name: i18n.t('results_tab.details.attack_types.hit'),
-			value: metric.avgHealing - metric.avgCritHealing,
-			percentage: metric.healingPercent,
-			average: (metric.avgHealing - metric.avgCritHealing) / (metric.hits || metric.ticks),
-		},
-		{
-			name: i18n.t('results_tab.details.attack_types.critical_hit'),
-			value: metric.avgCritHealing,
-			percentage: metric.healingCritPercent,
-			average: metric.avgCritHealing / (metric.crits || metric.critTicks),
-		},
-	],
-});
+const healingGroup = (metric: ActionMetrics): MetricsCombinedTooltipGroup => {
+	const done = metric.healingDone;
+	return {
+		spellSchool: metric.spellSchool,
+		totalPercentage: 100,
+		data: [
+			{ name: i18n.t('results_tab.details.attack_types.hit'), ...done.heal },
+			{ name: i18n.t('results_tab.details.attack_types.critical_hit'), ...done.critHeal },
+			{ name: i18n.t('results_tab.details.attack_types.tick'), ...done.tick },
+			{ name: i18n.t('results_tab.details.attack_types.critical_tick'), ...done.critTick },
+			{ name: i18n.t('results_tab.details.attack_types.shield'), ...done.shield },
+		],
+	};
+};
 
 const healingHitGroups = (metric: ActionMetrics): Array<MetricsCombinedTooltipGroup> => [
 	{
@@ -123,60 +84,18 @@ const healingHitGroups = (metric: ActionMetrics): Array<MetricsCombinedTooltipGr
 const isThreatOnly = (metric: ActionMetrics) => metric.hitAttempts == 0 && metric.hps == 0;
 
 export const HealingMetricsTable = () => {
-	const resultData = useSimResult();
-	const host = useSimHost();
 	const sim = useSim();
-	const sourceActionConfigs = host.individualConfig.healingMetricsSourceActions ?? [];
 	const { threat: showThreatMetrics } = useDisplayMetrics(sim);
+	const { resultData, rows: built } = useActionRows(healingGroups);
 
-	const rows = useMemo(() => {
-		const sourceActionSpellIds = new Set(sourceActionConfigs.map(config => config.spellId));
-		const built = resultData ? buildMetricRows(healingGroups(resultData), grouping(sourceActionSpellIds)) : NO_ROWS;
-		return showThreatMetrics ? built : filterMetricRows(built, isThreatOnly);
-	}, [resultData, showThreatMetrics, sourceActionConfigs]);
+	const rows = useMemo(() => (showThreatMetrics ? built : filterMetricRows(built, isThreatOnly)), [built, showThreatMetrics]);
 	const metricsByRowId = useMemo(() => indexMetricRows(rows), [rows]);
-	const damageActionsBySpellId = useMemo(() => {
-		const player = resultData ? healingPlayer(resultData) : undefined;
-		return new Map<number, ActionId>(player?.getDamageActions().map(action => [action.actionId.spellId, action.actionId] as const) ?? []);
-	}, [resultData]);
-	const healingActionsBySpellId = useMemo(() => {
-		const player = resultData ? healingPlayer(resultData) : undefined;
-		return new Map<number, ActionId>(
-			player
-				?.getHealingActions()
-				.map(action => [sourceActionTag(action.actionId), action.actionId] as const)
-				.filter(([sourceId]) => sourceId !== 0) ?? [],
-		);
-	}, [resultData]);
 	const maxHealing = useMetricMax(rows, metric => metric.healing);
-	const sourceActionBySpellId = useMemo(() => new Map(sourceActionConfigs.map(config => [config.spellId, config.source] as const)), [sourceActionConfigs]);
 
 	const columns = useMemo(
 		() =>
 			helper.columns([
-				helper.accessor(row => row.metric.name, {
-					id: 'name',
-					header: i18n.t('results_tab.details.columns.name'),
-					cell: info => {
-						const metric = info.row.original.metric;
-						const sourceType = sourceActionBySpellId.get(metric.actionId.spellId);
-						const sourceActionId =
-							sourceType === 'damage'
-								? damageActionsBySpellId.get(metric.actionId.tag)
-								: sourceType === 'healing'
-									? healingActionsBySpellId.get(metric.actionId.tag)
-									: undefined;
-						return (
-							<MetricsActionCell
-								name={sourceActionId?.name ?? metric.name}
-								actionId={sourceActionId ?? metric.actionId}
-								expandable={info.row.getCanExpand()}
-								expanded={info.row.getIsExpanded()}
-								onToggle={info.row.getToggleExpandedHandler()}
-							/>
-						);
-					},
-				}),
+				attackMetricsColumns.name(),
 				attackMetricsColumns.primary({
 					id: 'healing-done',
 					header: i18n.t('results_tab.details.columns.healing_done'),
@@ -258,7 +177,7 @@ export const HealingMetricsTable = () => {
 					tooltipId: TOOLTIP.hps,
 				}),
 			]),
-		[damageActionsBySpellId, healingActionsBySpellId, maxHealing, sourceActionBySpellId],
+		[maxHealing],
 	);
 
 	const forAnchor = metricForAnchor(metricsByRowId);
@@ -276,7 +195,11 @@ export const HealingMetricsTable = () => {
 			<Tooltip id={TOOLTIP.avgCastHeader} />
 			<Tooltip id={TOOLTIP.hitsHeader} />
 			<Tooltip id={TOOLTIP.avgHitHeader} />
-			<MetricTooltip id={TOOLTIP.healing} forAnchor={forAnchor} body={metric => <MetricsCombinedTooltip groups={[healingGroup(metric)]} />} />
+			<MetricTooltip
+				id={TOOLTIP.healing}
+				forAnchor={forAnchor}
+				body={metric => <MetricsCombinedTooltip headerValues={amountHeader()} groups={[healingGroup(metric), ...customMetricsGroups(metric)]} />}
+			/>
 			<MetricTooltip
 				id={TOOLTIP.avgCast}
 				forAnchor={forAnchor}
