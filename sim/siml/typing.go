@@ -959,11 +959,7 @@ func (t *typer) indexed(f *field, n node) (protoreflect.Value, bool) {
 		return t.wrongType(f, f.Siml+"(<name>=<number>, …)", n)
 	}
 	e := t.ix.enums[f.Index]
-	length := 0
-	for _, v := range e.values {
-		length = max(length, int(v.Number)+1)
-	}
-	out := make([]protoreflect.Value, length)
+	out := make([]protoreflect.Value, t.ix.enumLength(f.Index))
 	for i := range out {
 		out[i] = intValue(f.desc, 0)
 	}
@@ -1476,25 +1472,13 @@ func writeParsed(b *strings.Builder, v any, fd protoreflect.FieldDescriptor) err
 // Clears each -0, which protojson keeps from a string such as "-0", in a field with no presence: a JSON number has
 // no negative zero, so -0 is the default value, which the JSON leaves out.
 func dropNegativeZeros(m protoreflect.Message) {
-	m.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		switch {
-		case fd.IsMap():
-			if fd.MapValue().Message() != nil {
-				v.Map().Range(func(_ protoreflect.MapKey, x protoreflect.Value) bool {
-					dropNegativeZeros(x.Message())
-					return true
-				})
+	walkMessages(m, func(x protoreflect.Message) {
+		x.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+			if fd.Message() == nil && !fd.IsList() && !fd.IsMap() && isDefault(fd, v) {
+				x.Clear(fd)
 			}
-		case fd.IsList():
-			for i := 0; fd.Message() != nil && i < v.List().Len(); i++ {
-				dropNegativeZeros(v.List().Get(i).Message())
-			}
-		case fd.Message() != nil:
-			dropNegativeZeros(v.Message())
-		case isDefault(fd, v):
-			m.Clear(fd)
-		}
-		return true
+			return true
+		})
 	})
 }
 
@@ -1502,33 +1486,16 @@ func dropNegativeZeros(m protoreflect.Message) {
 // it.
 func (ix *schemaIndex) unread(m protoreflect.Message) string {
 	problem := ""
-	msg := ix.messages[string(m.Descriptor().FullName())]
-	m.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		switch {
-		case msg == nil || msg.byProto[string(fd.Name())] == nil:
-			problem = fmt.Sprintf("%s has no field %s", typeName(m.Descriptor().FullName()), fd.JSONName())
-		case fd.IsMap():
-			v.Map().Range(func(_ protoreflect.MapKey, x protoreflect.Value) bool {
-				problem = ix.unreadValue(fd.MapValue(), x)
-				return problem == ""
-			})
-		case fd.IsList():
-			for i := 0; i < v.List().Len() && problem == ""; i++ {
-				problem = ix.unreadValue(fd, v.List().Get(i))
+	walkMessages(m, func(x protoreflect.Message) {
+		msg := ix.messages[string(x.Descriptor().FullName())]
+		x.Range(func(fd protoreflect.FieldDescriptor, _ protoreflect.Value) bool {
+			if problem == "" && (msg == nil || msg.byProto[string(fd.Name())] == nil) {
+				problem = fmt.Sprintf("%s has no field %s", typeName(x.Descriptor().FullName()), fd.JSONName())
 			}
-		default:
-			problem = ix.unreadValue(fd, v)
-		}
-		return problem == ""
+			return problem == ""
+		})
 	})
 	return problem
-}
-
-func (ix *schemaIndex) unreadValue(fd protoreflect.FieldDescriptor, v protoreflect.Value) string {
-	if fd.Message() != nil {
-		return ix.unread(v.Message())
-	}
-	return ""
 }
 
 // --- Entries (SPEC.md §5.2): a section's lines that set the fields of its message.

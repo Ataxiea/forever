@@ -431,7 +431,7 @@ func (f *typedFile) setPresent(key string) {
 	}
 	if slots := slotField(ix.sectionFields(def, f.spec)); slots != nil {
 		items := mutableAt(settings, slots.at).Mutable(slots.desc).List()
-		for items.Len() < ix.enumLength(slotEnum) {
+		for n := ix.enumLength(slotEnum); items.Len() < n; {
 			items.Append(items.NewElement())
 		}
 	}
