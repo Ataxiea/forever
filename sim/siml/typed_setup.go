@@ -95,6 +95,7 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 	f.spec = typeSpec(t, tree, kind)
 	if f.spec != nil {
 		t.class = f.spec.Class
+		t.spec = string(f.spec.Field.Name())
 		player := f.player()
 		player.Class = f.spec.Class
 		player.ProtoReflect().Mutable(f.spec.Field)

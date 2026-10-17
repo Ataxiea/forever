@@ -834,7 +834,7 @@ meaning among the shared entries.
   "classes": {
     "<class>": {
       "<namespace>": {
-        "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …], "icdOnly": true},
+        "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …], "icdOnlyBy": ["<spec>", …]},
         …
       },
       …
@@ -851,7 +851,7 @@ meaning among the shared entries.
   },
   "shared": {
     "<namespace>": {
-      "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …], "icdOnly": true},
+      "<name>": {"spellId": <id>, "tag": <tag>, "rank": <rank>, "registeredBy": ["<spec>", …], "icdOnlyBy": ["<spec>", …]},
       …
     },
     …
@@ -871,9 +871,10 @@ meaning among the shared entries.
   for a class's entry, only that class's specs. It is empty when no build registers it, for a name kept for files
   written before. Parsing never reads it: editors offer the names the file's spec registers, and the registration
   check reads it.
-- `icdOnly`, only on an `aura` entry and only when true, marks an internal cooldown trigger that every build which
-  registers it lists only as a trigger: the sim finds it in `icd_is_ready` and `trigger_icd` and in no other aura
-  position, where a name of it is `icd-trigger` (§13).
+- `icdOnlyBy`, only on an `aura` entry and left out when empty, lists the specs of `registeredBy` whose builds list
+  the aura only as an internal cooldown trigger, in byte order. For a file of one of those specs the sim finds it in
+  `icd_is_ready`, `internal_cooldown` and `trigger_icd` and in no other aura position, where a name of it is
+  `icd-trigger` (§13).
 - `slots` lists, in `ItemSlot` order, the slots of the item types that the entry's enchant rows fit.
 - **Layout.** The keys of every object are in byte order, each entry is on a line of its own, and each level is
   indented two spaces. Empty objects are left out, lines end in LF, and the file ends in one newline. So a
@@ -885,7 +886,7 @@ meaning among the shared entries.
   It refuses a table that breaks any of these:
     - the table, each of its sections, each class and namespace, and each spell-like or enchant entry is an
       object; the table and the entries hold only the keys the form shows; `registeredBy` and `slots` are lists of
-      strings; `icdOnly` is a bool on an `aura` entry;
+      strings; `icdOnlyBy` is a list of strings on an `aura` entry, each a spec of its `registeredBy`;
     - every spell id, tag and rank, item id, effect id and random suffix id is a whole number in the range of
       `int32`;
     - every name matches `[a-z_][a-z0-9_]*` and is no reserved word (§4 note 6), which a file would never read as
@@ -1489,38 +1490,38 @@ The protos are then compared with `proto.Equal`.
 Each diagnostic has a range, a severity, a code and a message. In repository files under `ui/specs`, warnings
 are errors.
 
-| Code                                                                                                          | Severity | When                                                              |
-| ------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- |
-| `bad-character`                                                                                               | error    | a character that starts no token                                  |
-| `unclosed-string`, `unclosed-raw`, `unclosed-bracket`                                                         | error    | end of line or file inside one                                    |
-| `expected-name`                                                                                               | error    | `$` or `%` not followed by a name ("expected a name after $")     |
-| `missing-version`, `unsupported-version`                                                                      | error    | §3.3                                                              |
-| `misplaced-statement`                                                                                         | error    | §3.3, and a group file's line before its first header (§1)        |
-| `indented-header`, `unknown-section`, `section-not-allowed`, `duplicate-section`                              | error    | §3.2                                                              |
-| `misplaced-note`, `misplaced-var`, `bad-hidden-row`                                                           | error    | §10, §6.1, §6.3                                                   |
-| `misplaced-when`, `misplaced-def`                                                                             | error    | §6.9, §6.10                                                       |
-| `empty-when`                                                                                                  | warning  | §6.9                                                              |
-| `missing-time`, `unexpected-time`                                                                             | error    | a prepull row without a time, or another row with one             |
-| `spec-required`, `unknown-spec`, `spec-mismatch`                                                              | error    | §3.3, §9                                                          |
-| `use-not-found`, `use-cycle`, `use-refused`, `section-conflict`, `with-unknown-variable`, `with-not-rotation` | error    | §9                                                                |
-| `parse`                                                                                                       | error    | an unexpected token, listing what was expected; §4 note 10        |
-| `write-not`                                                                                                   | error    | `!` ("write not")                                                 |
-| `write-and`, `write-or`                                                                                       | error    | `&&`/`&`, `\|\|`/`\|` ("write and" / "write or")                  |
-| `write-eq`                                                                                                    | error    | `=` where a comparison is expected ("write == to compare")        |
-| `chained-comparison`                                                                                          | error    | `a < b < c` ("comparisons do not chain: write a < b and b < c")   |
-| `expected-if`                                                                                                 | error    | tokens after a complete action ("a condition starts with if")     |
-| `args-on-head`                                                                                                | error    | `aura(x, f=v).p` ("arguments go on the property: aura(x).p(f=v)") |
-| `unknown-kind`, `unknown-property`, `unknown-field`, `duplicate-field`, `positional-not-allowed`              | error    | §8.3, §5.2; each message carries a did-you-mean                   |
-| `wrong-type`, `unknown-enum`, `bad-literal`, `bad-raw`                                                        | error    | a value that does not fit its field                               |
-| `unknown-slot`, `duplicate-slot`                                                                              | error    | §5.3                                                              |
-| `unknown-name`                                                                                                | error    | §7.2; the message names where the name is, or a did-you-mean      |
-| `icd-trigger`                                                                                                 | error    | §7.4; an `icdOnly` aura outside `icd_is_ready` and `trigger_icd`  |
-| `ambiguous-variable`                                                                                          | error    | §7.5                                                              |
-| `duplicate-group`, `duplicate-variable`, `reference-cycle`                                                    | error    | §6.1, §7.5, §6.10                                                 |
-| `undefined-variable`, `undefined-group`, `undefined-placeholder`, `undefined-sequence`                        | warning  | §7.5                                                              |
-| `def-shadows`, `duplicate-def`, `duplicate-parameter`, `def-arity`, `positional-only`                         | error    | §6.10                                                             |
-| `unused-def`, `unused-parameter`                                                                              | warning  | §6.10                                                             |
-| `raw-ref`                                                                                                     | error    | §7.3; reported by the repository check only, never by the parser  |
+| Code                                                                                                          | Severity | When                                                                  |
+| ------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------- |
+| `bad-character`                                                                                               | error    | a character that starts no token                                      |
+| `unclosed-string`, `unclosed-raw`, `unclosed-bracket`                                                         | error    | end of line or file inside one                                        |
+| `expected-name`                                                                                               | error    | `$` or `%` not followed by a name ("expected a name after $")         |
+| `missing-version`, `unsupported-version`                                                                      | error    | §3.3                                                                  |
+| `misplaced-statement`                                                                                         | error    | §3.3, and a group file's line before its first header (§1)            |
+| `indented-header`, `unknown-section`, `section-not-allowed`, `duplicate-section`                              | error    | §3.2                                                                  |
+| `misplaced-note`, `misplaced-var`, `bad-hidden-row`                                                           | error    | §10, §6.1, §6.3                                                       |
+| `misplaced-when`, `misplaced-def`                                                                             | error    | §6.9, §6.10                                                           |
+| `empty-when`                                                                                                  | warning  | §6.9                                                                  |
+| `missing-time`, `unexpected-time`                                                                             | error    | a prepull row without a time, or another row with one                 |
+| `spec-required`, `unknown-spec`, `spec-mismatch`                                                              | error    | §3.3, §9                                                              |
+| `use-not-found`, `use-cycle`, `use-refused`, `section-conflict`, `with-unknown-variable`, `with-not-rotation` | error    | §9                                                                    |
+| `parse`                                                                                                       | error    | an unexpected token, listing what was expected; §4 note 10            |
+| `write-not`                                                                                                   | error    | `!` ("write not")                                                     |
+| `write-and`, `write-or`                                                                                       | error    | `&&`/`&`, `\|\|`/`\|` ("write and" / "write or")                      |
+| `write-eq`                                                                                                    | error    | `=` where a comparison is expected ("write == to compare")            |
+| `chained-comparison`                                                                                          | error    | `a < b < c` ("comparisons do not chain: write a < b and b < c")       |
+| `expected-if`                                                                                                 | error    | tokens after a complete action ("a condition starts with if")         |
+| `args-on-head`                                                                                                | error    | `aura(x, f=v).p` ("arguments go on the property: aura(x).p(f=v)")     |
+| `unknown-kind`, `unknown-property`, `unknown-field`, `duplicate-field`, `positional-not-allowed`              | error    | §8.3, §5.2; each message carries a did-you-mean                       |
+| `wrong-type`, `unknown-enum`, `bad-literal`, `bad-raw`                                                        | error    | a value that does not fit its field                                   |
+| `unknown-slot`, `duplicate-slot`                                                                              | error    | §5.3                                                                  |
+| `unknown-name`                                                                                                | error    | §7.2; the message names where the name is, or a did-you-mean          |
+| `icd-trigger`                                                                                                 | error    | §7.4; an aura in `icdOnlyBy` of the file's spec outside the ICD kinds |
+| `ambiguous-variable`                                                                                          | error    | §7.5                                                                  |
+| `duplicate-group`, `duplicate-variable`, `reference-cycle`                                                    | error    | §6.1, §7.5, §6.10                                                     |
+| `undefined-variable`, `undefined-group`, `undefined-placeholder`, `undefined-sequence`                        | warning  | §7.5                                                                  |
+| `def-shadows`, `duplicate-def`, `duplicate-parameter`, `def-arity`, `positional-only`                         | error    | §6.10                                                                 |
+| `unused-def`, `unused-parameter`                                                                              | warning  | §6.10                                                                 |
+| `raw-ref`                                                                                                     | error    | §7.3; reported by the repository check only, never by the parser      |
 
 **Recovery.** Each statement is read on its own, so a bad statement costs only itself. A file with any error
 produces no proto. The diagnostics are exactly these:

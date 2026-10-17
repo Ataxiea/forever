@@ -300,7 +300,7 @@ func (u *updater) registeredBy() {
 		for ns, entries := range names {
 			for name, e := range entries {
 				e.RegisteredBy = u.specs(class, ns, Identity{e.SpellID, e.Tag})
-				e.ICDOnly = u.c.Registered[ns][Identity{e.SpellID, e.Tag}].ICDOnly
+				e.ICDOnlyBy = u.icdOnlyBy(e.RegisteredBy, ns, Identity{e.SpellID, e.Tag})
 				entries[name] = e
 			}
 		}
@@ -308,10 +308,16 @@ func (u *updater) registeredBy() {
 	for ns, entries := range u.t.Shared {
 		for name, e := range entries {
 			e.RegisteredBy = u.specs(proto.Class_ClassUnknown, ns, Identity{e.SpellID, e.Tag})
-			e.ICDOnly = u.c.Registered[ns][Identity{e.SpellID, e.Tag}].ICDOnly
+			e.ICDOnlyBy = u.icdOnlyBy(e.RegisteredBy, ns, Identity{e.SpellID, e.Tag})
 			entries[name] = e
 		}
 	}
+}
+
+// The specs of registeredBy whose builds list the aura only as an internal cooldown trigger.
+func (u *updater) icdOnlyBy(registeredBy []string, ns siml.Namespace, id Identity) []string {
+	icd := u.c.Registered[ns][id].ICDSpecs
+	return slices.DeleteFunc(slices.Clone(registeredBy), func(s string) bool { return !slices.Contains(icd, s) })
 }
 
 // The names a new entry must not take: those that mean something else where the entry is looked up.

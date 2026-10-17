@@ -108,15 +108,16 @@ func (s kindScope) readsICD() bool {
 		return false
 	}
 	switch s.kind.message.desc.FullName() {
-	case icdIsReadyMessage.FullName(), triggerICDMessage.FullName():
+	case icdIsReadyMessage.FullName(), triggerICDMessage.FullName(), internalCooldownMessage.FullName():
 		return true
 	}
 	return false
 }
 
 var (
-	icdIsReadyMessage = (&proto.APLValueAuraICDIsReady{}).ProtoReflect().Descriptor()
-	triggerICDMessage = (&proto.APLActionTriggerICD{}).ProtoReflect().Descriptor()
+	icdIsReadyMessage       = (&proto.APLValueAuraICDIsReady{}).ProtoReflect().Descriptor()
+	triggerICDMessage       = (&proto.APLActionTriggerICD{}).ProtoReflect().Descriptor()
+	internalCooldownMessage = (&proto.APLValueAuraInternalCooldown{}).ProtoReflect().Descriptor()
 )
 
 // The namespace of the auras on a unit of type typ: a pet's, a target's, or else the player's.

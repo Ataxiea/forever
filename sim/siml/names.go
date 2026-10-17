@@ -52,7 +52,7 @@ func (ns Namespace) SpellLike() bool {
 type SpellName struct {
 	SpellID, Tag, Rank int32
 	RegisteredBy       []string // The specs that register it, by Player spec field name in byte order; empty when no build does.
-	ICDOnly            bool     // An aura name the sim knows only as an internal cooldown trigger, which only the ICD kinds find.
+	ICDOnlyBy          []string // The specs of RegisteredBy that know the aura only as an internal cooldown trigger, which only the ICD kinds find.
 }
 
 // An enchant entry: an effect id, and the slots of the item types its rows fit.
@@ -399,7 +399,7 @@ func spellNames(scope string, v any) (SpellNames, error) {
 		named := map[spellKey]string{}
 		for name, v := range entries {
 			where := scope + "." + space + "." + name
-			e, err := object(where, v, "spellId", "tag", "rank", "registeredBy", "icdOnly")
+			e, err := object(where, v, "spellId", "tag", "rank", "registeredBy", "icdOnlyBy")
 			if err != nil {
 				return nil, err
 			}
@@ -424,11 +424,16 @@ func spellNames(scope string, v any) (SpellNames, error) {
 					return nil, fmt.Errorf("names: %s is registered by %q, which is no spec", where, spec)
 				}
 			}
-			icdOnly, icdOK := e["icdOnly"].(bool)
-			if e["icdOnly"] != nil && (!icdOK || ns != NamespaceAura) {
-				return nil, fmt.Errorf("names: %s.icdOnly is no bool on an aura", where)
+			icdOnly, err := stringList(where+".icdOnlyBy", e["icdOnlyBy"])
+			if err != nil {
+				return nil, err
 			}
-			entry := SpellName{SpellID: id, Tag: tag, Rank: rank, RegisteredBy: specs, ICDOnly: icdOnly}
+			for _, spec := range icdOnly {
+				if ns != NamespaceAura || !slices.Contains(specs, spec) {
+					return nil, fmt.Errorf("names: %s.icdOnlyBy lists %q, which is no spec of registeredBy on an aura", where, spec)
+				}
+			}
+			entry := SpellName{SpellID: id, Tag: tag, Rank: rank, RegisteredBy: specs, ICDOnlyBy: icdOnly}
 			key := spellKey{id, tag}
 			if other, ok := named[key]; ok {
 				return nil, fmt.Errorf("names: %s.%s names %s twice, as %s and %s", scope, ns, spellText(entry), min(name, other), max(name, other))
@@ -644,8 +649,12 @@ func writeSpellNames(b *bytes.Buffer, names SpellNames, indent string) {
 				specs[k] = quote(s)
 			}
 			fmt.Fprintf(b, ", \"registeredBy\": [%s]", strings.Join(specs, ", "))
-			if e.ICDOnly {
-				b.WriteString(", \"icdOnly\": true")
+			if len(e.ICDOnlyBy) > 0 {
+				icd := slices.Sorted(slices.Values(e.ICDOnlyBy))
+				for k, s := range icd {
+					icd[k] = quote(s)
+				}
+				fmt.Fprintf(b, ", \"icdOnlyBy\": [%s]", strings.Join(icd, ", "))
 			}
 			fmt.Fprintf(b, "}%s", comma(j, len(keys)))
 		}

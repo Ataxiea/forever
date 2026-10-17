@@ -62,6 +62,7 @@ type typer struct {
 	ix           *schemaIndex
 	names        *Names
 	class        proto.Class // The class the spec line sets, whose names the file reads (SPEC.md §7.1).
+	spec         string      // The spec line's Player spec field name; "" without one.
 	diags        []diag
 	refs         []nameRef // The names the file writes, as they are typed.
 	rawRefs      []span    // The raw tokens that hold an id a name could write.
@@ -1042,8 +1043,8 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 		if !ok {
 			return nil
 		}
-		if e, _ := t.names.spellEntry(t.class, ns, n.name.text); e.ICDOnly && !t.kind.readsICD() {
-			t.report("icd-trigger", fmt.Sprintf("%s is an internal cooldown trigger, which only icd_is_ready and trigger_icd find", n.name.text), n.name.span)
+		if e, _ := t.names.spellEntry(t.class, ns, n.name.text); slices.Contains(e.ICDOnlyBy, t.spec) && !t.kind.readsICD() {
+			t.report("icd-trigger", fmt.Sprintf("%s is an internal cooldown trigger, which only icd_is_ready, internal_cooldown and trigger_icd find", n.name.text), n.name.span)
 		}
 		t.refs = append(t.refs, r)
 		t.mark(n.span)

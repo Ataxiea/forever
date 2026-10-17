@@ -187,8 +187,11 @@ func (c *Collection) add(b *build) {
 			c.Registered[ns] = map[Identity]Registration{}
 		}
 		for id, r := range ids {
-			reg, seen := c.Registered[ns][id]
-			reg.ICDOnly = r.ICDOnly && (!seen || reg.ICDOnly)
+			reg := c.Registered[ns][id]
+			if r.ICDOnly && !slices.Contains(reg.ICDSpecs, spec) {
+				reg.ICDSpecs = append(reg.ICDSpecs, spec)
+				slices.Sort(reg.ICDSpecs)
+			}
 			reg.Rank = max(reg.Rank, r.Rank)
 			reg.Castable = reg.Castable || r.Castable
 			if !slices.Contains(reg.Specs, spec) {
