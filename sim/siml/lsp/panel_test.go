@@ -18,6 +18,7 @@ type rotationAnswer struct {
 	Findings  []panelFinding `json:"findings"`
 	Spans     []panelSpan    `json:"spans"`
 	Used      []string       `json:"used"`
+	Spec      string         `json:"spec"`
 	Structure *struct {
 		Whens      []map[string]any `json:"whens"`
 		Calls      []map[string]any `json:"calls"`
@@ -32,7 +33,7 @@ type rotationAnswer struct {
 			Name string         `json:"name"`
 			ID   map[string]any `json:"id"`
 		} `json:"registered"`
-	} `json:"registered"`
+	} `json:"-"` // Read through siml/registered.
 }
 
 func readRotation(t *testing.T, c *client, uri, text string) rotationAnswer {
@@ -40,6 +41,7 @@ func readRotation(t *testing.T, c *client, uri, text string) rotationAnswer {
 	c.open(uri, text)
 	var answer rotationAnswer
 	c.request("siml/rotation", map[string]any{"uri": uri}, &answer)
+	c.request("siml/registered", map[string]any{"uri": uri}, &answer.Registered)
 	return answer
 }
 
@@ -107,7 +109,7 @@ func TestRotationReadsWithItsRows(t *testing.T) {
 	if rows, _ := r.Rotation["priorityList"].([]any); len(rows) != 13 {
 		t.Errorf("%d priority rows, want 13", len(rows))
 	}
-	if r.ClassName != "hunter" || r.Registered.Status != "ready" || r.Registered.Spec != "hunter" {
+	if r.ClassName != "hunter" || r.Spec != "hunter" || r.Registered.Status != "ready" || r.Registered.Spec != "hunter" {
 		t.Errorf("class %q, registered %q %q", r.ClassName, r.Registered.Status, r.Registered.Spec)
 	}
 	serpent := strings.Index(text, "cast serpent_sting")

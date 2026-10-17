@@ -114,7 +114,7 @@ export interface RotationResult {
 	findings: Finding[];
 	spans: { path: JsonPath; range: Range }[];
 	used: string[];
-	registered: Registered;
+	spec?: string; // The field of Player's spec oneof, which siml/registered answers for.
 	structure?: AplStructure; // Left out while the text has errors.
 }
 

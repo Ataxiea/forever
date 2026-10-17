@@ -121,7 +121,8 @@ export async function insertPattern(uri: vscode.Uri, path: JsonPath): Promise<vo
 		const names = (list: unknown) => (Array.isArray(list) ? list.map(item => String((item as JsonObject)?.name ?? '')) : []);
 		const taken = { groups: names(rotation.groups), variables: names(rotation.valueVariables) };
 		const db = await request<AplDatabase>(uri, 'siml/database', { uri: uri.toString() });
-		const values = await askAll(pattern, namePicks(read.registered, db), taken);
+		const registered = await request<Registered>(uri, 'siml/registered', { uri: uri.toString() });
+		const values = await askAll(pattern, namePicks(registered, db), taken);
 		if (!values) return;
 		const { edits } = await request<{ edits: TextEdit[] }>(uri, 'siml/insertPattern', { uri: uri.toString(), version, id: pattern.id, values, path });
 		if ((await applyEdits(await documentFor(uri), version, edits)) === undefined)

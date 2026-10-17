@@ -41,6 +41,8 @@ func (s *server) panelRequest(ctx context.Context, method string, params json.Ra
 		return s.rotation(p.URI)
 	case "siml/splice":
 		return s.splice(p.URI, p.Version, p.Edits)
+	case "siml/registered":
+		return s.registered(p.URI)
 	case "siml/database":
 		return s.panelDatabase(p.URI)
 	case "siml/patterns":
@@ -92,30 +94,32 @@ type registeredName struct {
 // What the panel's pickers offer: the names a spec's builds register by the namespace each position reads (SPEC.md
 // §7.1), and the items with a use. Status is ready, or unavailable with the reason.
 type registered struct {
-	Status     string `json:"status"`
-	Spec       string `json:"spec,omitempty"` // The field of Player's spec oneof.
-	Reason     string `json:"reason,omitempty"`
-	Registered *struct {
-		Spells       []registeredName `json:"spells"`
-		Auras        []registeredName `json:"auras"`
-		TargetAuras  []registeredName `json:"targetAuras"`
-		PetAuras     []registeredName `json:"petAuras"`
-		TargetSpells []registeredName `json:"targetSpells"`
-		Items        []registeredName `json:"items"`
-	} `json:"registered,omitempty"`
+	Status     string           `json:"status"`
+	Spec       string           `json:"spec,omitempty"` // The field of Player's spec oneof.
+	Reason     string           `json:"reason,omitempty"`
+	Registered *registeredNames `json:"registered,omitempty"`
+}
+
+type registeredNames struct {
+	Spells       []registeredName `json:"spells"`
+	Auras        []registeredName `json:"auras"`
+	TargetAuras  []registeredName `json:"targetAuras"`
+	PetAuras     []registeredName `json:"petAuras"`
+	TargetSpells []registeredName `json:"targetSpells"`
+	Items        []registeredName `json:"items"`
 }
 
 // The rotation an .apl.siml reads as at a document version, for the panel.
 type rotationResult struct {
-	Version    int             `json:"version"`
-	Rotation   json.RawMessage `json:"rotation,omitempty"`  // Left out while the text has errors.
-	ReadOnly   string          `json:"readOnly,omitempty"`  // Why the panel cannot edit it.
-	ClassName  string          `json:"className,omitempty"` // The class the names are read with: hunter.
-	Findings   []panelFinding  `json:"findings"`
-	Spans      []panelSpan     `json:"spans"`
-	Used       []string        `json:"used"` // The files the use lines read, and the files those use.
-	Registered registered      `json:"registered"`
-	Structure  *panelStructure `json:"structure,omitempty"` // Left out while the text has errors.
+	Version   int             `json:"version"`
+	Rotation  json.RawMessage `json:"rotation,omitempty"`  // Left out while the text has errors.
+	ReadOnly  string          `json:"readOnly,omitempty"`  // Why the panel cannot edit it.
+	ClassName string          `json:"className,omitempty"` // The class the names are read with: hunter.
+	Findings  []panelFinding  `json:"findings"`
+	Spans     []panelSpan     `json:"spans"`
+	Used      []string        `json:"used"`                // The files the use lines read, and the files those use.
+	Spec      string          `json:"spec,omitempty"`      // The field of Player's spec oneof; siml/registered answers for it.
+	Structure *panelStructure `json:"structure,omitempty"` // Left out while the text has errors.
 }
 
 // The when blocks, def calls and defs of the rotation, with the text of each block's line and each def.
@@ -151,7 +155,6 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 	out := rotationResult{Version: a.version, Findings: []panelFinding{}, Spans: []panelSpan{}, Used: []string{}}
 	if a.err != nil {
 		out.ReadOnly = a.err.Error()
-		out.Registered = registered{Status: "unavailable", Reason: a.err.Error()}
 		return out, nil
 	}
 	d := a.doc
@@ -167,6 +170,7 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 	}
 	if hasSpec {
 		out.ClassName = siml.ClassName(info.Class)
+		out.Spec = string(info.Field.Name())
 	}
 	if d.Kind().Section == "apl" {
 		for _, span := range d.Spans() {
@@ -177,12 +181,27 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 		path := d.PathAt(fromPosition(diag.Range.Start))
 		out.Findings = append(out.Findings, panelFinding{Path: nonNil(path), Severity: severityNames[diag.Severity], Code: diag.Code, Message: diag.Message})
 	}
-	if !hasSpec {
-		out.Registered = registered{Status: "unavailable", Reason: "the file has no spec line"}
-	} else {
-		out.Registered = s.registeredFor(a, info)
-	}
 	return out, nil
+}
+
+// The names the panel's pickers offer for an open file's spec. They depend on the spec line and the name table only,
+// so the panel asks again when the spec changes or a server starts, not on each edit.
+func (s *server) registered(uri string) (any, *ResponseError) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a := s.analyzeLocked(uri)
+	if a == nil {
+		return nil, failed("%s is not open", uri)
+	}
+	if a.err != nil {
+		return registered{Status: "unavailable", Reason: a.err.Error()}, nil
+	}
+	if f, _ := a.doc.File(); f != nil {
+		if info, ok := siml.SpecOf(f.Spec); ok {
+			return s.registeredFor(a, info), nil
+		}
+	}
+	return registered{Status: "unavailable", Reason: "the file has no spec line"}, nil
 }
 
 // Why the panel cannot edit the rotation: the text has an error, or the rotation is put together with another file,
@@ -223,14 +242,7 @@ func (s *server) registeredFor(a *analysis, info siml.SpecInfo) registered {
 		}
 		return out
 	}
-	out := registered{Status: "ready", Spec: spec, Registered: &struct {
-		Spells       []registeredName `json:"spells"`
-		Auras        []registeredName `json:"auras"`
-		TargetAuras  []registeredName `json:"targetAuras"`
-		PetAuras     []registeredName `json:"petAuras"`
-		TargetSpells []registeredName `json:"targetSpells"`
-		Items        []registeredName `json:"items"`
-	}{
+	out := registered{Status: "ready", Spec: spec, Registered: &registeredNames{
 		Spells:       list(siml.NamespaceSpell),
 		Auras:        list(siml.NamespaceAura),
 		TargetAuras:  list(siml.NamespaceTargetAura),

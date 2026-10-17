@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 
 import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, samePath, spanFor, spansOf, vscodeRange } from './host';
 import { insertPattern } from './insert_pattern';
-import type { AplDatabase, FromPanel, PanelState, Range, TextEdit, ToPanel } from './protocol';
+import type { AplDatabase, FromPanel, PanelState, Range, Registered, TextEdit, ToPanel } from './protocol';
 import { onServerStarted, request } from './server';
 import { onSimRecord, simDocument, type SimRecord, simRecord } from './simulate';
 
@@ -64,12 +64,18 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 	// The last of the panel's edits made or refused, and the document versions its own edits made.
 	let handled = 0;
 	const own = new Set<number>();
-	// The names last posted to the pickers, as JSON.
-	let registered: string | undefined;
+	// The spec whose names the pickers hold, read again when the spec line changes; undefined before the first read.
+	let spec: string | null | undefined;
 	// The files the rotation's `use` lines read, whose text it is read with.
 	let used: string[] = [];
 	const uses = (file: vscode.Uri) => file.scheme === 'file' && used.some(path => samePath(path, file.fsPath));
 
+	const postRegistered = async () => {
+		const registered = await request<Registered>(uri, 'siml/registered', { uri: key }).catch(
+			(e: Error): Registered => ({ status: 'unavailable', reason: e.message }),
+		);
+		post({ type: 'registered', registered });
+	};
 	const postRotation = async (document: vscode.TextDocument) => {
 		const version = document.version;
 		const read = await readRotation(document).catch((e: Error) => e);
@@ -80,9 +86,9 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		used = read.used;
 		const { rotation, readOnly, className, findings, structure } = read;
 		post({ type: 'rotation', version: read.version, handled, rotation, readOnly, className, findings, structure });
-		if (JSON.stringify(read.registered) !== registered) {
-			registered = JSON.stringify(read.registered);
-			post({ type: 'registered', registered: read.registered });
+		if ((read.spec ?? null) !== spec) {
+			spec = read.spec ?? null;
+			await postRegistered();
 		}
 	};
 	const postSim = (version: number, record: SimRecord | undefined = simRecord(key), running = false) =>
@@ -158,7 +164,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 					// A page loaded again counts its edits from the start.
 					const document = await documentFor(uri);
 					handled = 0;
-					registered = undefined;
+					spec = undefined;
 					loaded = true;
 					await postInit();
 					await postRotation(document);
@@ -203,6 +209,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		}),
 		onServerStarted(() => {
 			if (loaded) void postInit();
+			spec = undefined;
 			changed();
 		}),
 		vscode.window.onDidChangeTextEditorSelection(async event => {
