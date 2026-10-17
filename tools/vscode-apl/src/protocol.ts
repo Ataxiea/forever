@@ -167,7 +167,7 @@ export type ToPanel =
 	| { type: 'cursor'; path: JsonPath }
 	| { type: 'registered'; registered: Registered }
 	// The file's last sim; `stale` once the text has changed since.
-	| { type: 'sim'; sim?: { result: SimResult; stale: boolean; baseline?: 'saved' | 'HEAD' }; running?: boolean };
+	| { type: 'sim'; sim?: { result: SimResult; stale: boolean }; running?: boolean };
 
 // What the panel sends the extension. An edit names the document version of the rotation it was made against and its
 // place in the panel's sequence of edits; one against a version that someone else's change has moved past is dropped.

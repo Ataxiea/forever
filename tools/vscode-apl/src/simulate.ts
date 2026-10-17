@@ -3,12 +3,12 @@ import * as vscode from 'vscode';
 import { isAplSiml, spanFor, spansOf } from './host';
 import type { SimResult } from './protocol';
 import { request } from './server';
+import { differenceText, perFight, standardError } from './sim_text';
 
 // The last sim of each rotation file, with the document version it ran against.
 export interface SimRecord {
 	result: SimResult;
 	version: number;
-	baseline?: 'saved' | 'HEAD'; // What the compare's base was, when the run was a compare.
 }
 
 const records = new Map<string, SimRecord>();
@@ -30,10 +30,6 @@ function setRecord(uri: string, record: SimRecord): void {
 
 let decorations: { counts: vscode.TextEditorDecorationType; dead: vscode.TextEditorDecorationType };
 
-function format(executions: number): string {
-	return executions >= 10 ? executions.toFixed(0) : executions.toFixed(executions >= 1 ? 1 : 2);
-}
-
 // The count after each row's line and the never-ran marker after each row the sim never ran, while the editor's text
 // is the version that was simmed. Rows of a used file have no line here.
 async function decorate(editor: vscode.TextEditor): Promise<void> {
@@ -50,7 +46,7 @@ async function decorate(editor: vscode.TextEditor): Promise<void> {
 			if (line === undefined) continue;
 			const range = new vscode.Range(line, Number.MAX_SAFE_INTEGER, line, Number.MAX_SAFE_INTEGER);
 			if (stats.executions === 0) never.push({ range, renderOptions: { after: { contentText: 'never ran' } } });
-			else ran.push({ range, renderOptions: { after: { contentText: `▸ ${format(stats.executions)} per fight` } } });
+			else ran.push({ range, renderOptions: { after: { contentText: `▸ ${perFight(stats.executions)} per fight` } } });
 		}
 	}
 	editor.setDecorations(decorations.counts, ran);
@@ -62,7 +58,7 @@ const decorateAll = (uri: vscode.Uri) =>
 
 // Sims the editor's text of an .apl.siml in the server. A compare sims the saved file, or HEAD when nothing is
 // unsaved, as the base, and the editor's text against it on the same seed.
-async function simulate(document: vscode.TextDocument, compare: boolean): Promise<void> {
+export async function simulate(document: vscode.TextDocument, compare: boolean): Promise<void> {
 	if (!isAplSiml(document.uri.path)) {
 		void vscode.window.showWarningMessage('The sim runs an .apl.siml rotation in a WoWSims repository.');
 		return;
@@ -82,12 +78,12 @@ async function simulate(document: vscode.TextDocument, compare: boolean): Promis
 					timeline: true,
 				};
 				const result = await request<SimResult>(document.uri, 'siml/sim', params, token);
-				setRecord(document.uri.toString(), { result, version, baseline: result.baseline });
+				setRecord(document.uri.toString(), { result, version });
 				decorateAll(document.uri);
 				const run = result.compare ?? result;
 				const summary = result.difference
-					? `${run.dps.mean.toFixed(1)} DPS, ${result.difference.delta >= 0 ? '+' : ''}${result.difference.delta.toFixed(1)} (${result.difference.percent.toFixed(2)}%) against ${result.baseline}`
-					: `${run.dps.mean.toFixed(1)} DPS ± ${(run.dps.stdev / Math.sqrt(run.iterations)).toFixed(1)}`;
+					? `${run.dps.mean.toFixed(1)} DPS, ${differenceText(result.difference)} against ${result.baseline}`
+					: `${run.dps.mean.toFixed(1)} DPS ± ${standardError(run).toFixed(1)}`;
 				void vscode.window.setStatusBarMessage(`$(pulse) ${name}: ${summary}`, 30000);
 				if (result.character.warnings?.length) void vscode.window.showWarningMessage(`Sim character: ${result.character.warnings.join('; ')}`);
 			} catch (e) {
@@ -124,9 +120,4 @@ export function registerSim(context: vscode.ExtensionContext): void {
 			if (records.has(event.document.uri.toString()) && event.contentChanges.length > 0) decorateAll(event.document.uri);
 		}),
 	);
-}
-
-// Run by the panel: the same commands for the file the panel shows.
-export function simDocument(document: vscode.TextDocument, compare: boolean): Promise<void> {
-	return simulate(document, compare);
 }

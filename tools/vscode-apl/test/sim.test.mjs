@@ -39,7 +39,7 @@ test('a compare sims HEAD and the text on one seed, and the panel shows the row 
 	panel.send({ type: 'sim', compare: true });
 	await until(() => panel.posted.some(m => m.type === 'sim' && m.sim && !m.running));
 	const { sim } = panel.posted.findLast(m => m.type === 'sim');
-	assert.equal(sim.baseline, 'HEAD');
+	assert.equal(sim.result.baseline, 'HEAD');
 	assert.equal(sim.stale, false);
 	assert.equal(sim.result.iterations, 20);
 	assert.equal(sim.result.rows['prepullActions/0'].executions, 1);

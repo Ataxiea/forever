@@ -3,6 +3,7 @@ import './style.css';
 import { createContext, type CSSProperties, Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { differenceText, perFight, standardError } from '../sim_text';
 import type { AplDatabase, AplEdit, AplStructure, Finding, FromPanel, Named, PanelState, Registered, ToPanel } from '../protocol';
 import { applyEdit, shiftKeys } from './apply';
 import { CommitInput } from './commit_input';
@@ -42,7 +43,7 @@ function RowCount({ rowKey }: { rowKey: string }) {
 		<span
 			className={`count-badge${stale}`}
 			title={`The last sim ran this row ${n.toFixed(2)} times per fight${state.sim?.stale ? ' (before the latest edits)' : ''}`}>
-			{n >= 10 ? n.toFixed(0) : n.toFixed(1)}×
+			{perFight(n)}×
 		</span>
 	);
 }
@@ -70,12 +71,11 @@ function SimBar() {
 				<span
 					className={`sim-text${state.sim?.stale ? ' stale' : ''}`}
 					title={`${result.character.source}: ${result.character.race}, talents ${result.character.talents}${result.character.gear ? `, gear ${result.character.gear}` : ''}`}>
-					<strong>{run.dps.mean.toFixed(1)} DPS</strong> ± {(run.dps.stdev / Math.sqrt(run.iterations)).toFixed(1)}
+					<strong>{run.dps.mean.toFixed(1)} DPS</strong> ± {standardError(run).toFixed(1)}
 					{result.difference ? (
 						<span className={result.difference.delta >= 0 ? 'better' : 'worse'}>
 							{' '}
-							{result.difference.delta >= 0 ? '+' : ''}
-							{result.difference.delta.toFixed(1)} ({result.difference.percent.toFixed(2)}%) vs {state.sim?.baseline}
+							{differenceText(result.difference)} vs {result.baseline}
 						</span>
 					) : null}
 					{state.sim?.stale ? ' · stale' : ''}

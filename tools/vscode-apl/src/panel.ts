@@ -8,7 +8,7 @@ import { applyEdits, documentFor, isAplSiml, pathAt, readRotation, samePath, spa
 import { insertPattern } from './insert_pattern';
 import type { AplDatabase, FromPanel, PanelState, Range, Registered, TextEdit, ToPanel } from './protocol';
 import { databaseFor, onServerStarted, request } from './server';
-import { onSimRecord, simDocument, type SimRecord, simRecord } from './simulate';
+import { onSimRecord, type SimRecord, simRecord, simulate } from './simulate';
 
 const VIEW_TYPE = 'wowsims-apl.editor';
 const ICON_HOST = 'https://wow.zamimg.com';
@@ -93,7 +93,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 		}
 	};
 	const postSim = (version: number, record: SimRecord | undefined = simRecord(key), running = false) =>
-		post({ type: 'sim', running, sim: record && { result: record.result, stale: record.version !== version, baseline: record.baseline } });
+		post({ type: 'sim', running, sim: record && { result: record.result, stale: record.version !== version } });
 
 	// While an edit of the panel is being made, the text's changes are not posted: the edit posts the text it leaves,
 	// with the count of edits made that it holds.
@@ -178,7 +178,7 @@ function bind(panel: vscode.WebviewPanel, uri: vscode.Uri, extensionUri: vscode.
 				case 'sim': {
 					const document = await documentFor(uri);
 					postSim(document.version, undefined, true);
-					await simDocument(document, message.compare);
+					await simulate(document, message.compare);
 					postSim(document.version);
 					break;
 				}
