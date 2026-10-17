@@ -40,20 +40,11 @@ func simlLSP(out, errOut io.Writer, args []string) error {
 	return nil
 }
 
-// One sim at a time: the sim's row counts go through a hook all sims share.
-var simlSimSlot = make(chan struct{}, 1)
-
 // Runs a `siml sim` request for the language server: the request and the result as `siml sim` reads and writes them.
 func simlSimJSON(ctx context.Context, root string, request json.RawMessage) (result json.RawMessage, err error) {
 	req, err := readRequest(bytes.NewReader(request))
 	if err != nil {
 		return nil, fmt.Errorf("reading the request: %w", err)
-	}
-	select {
-	case simlSimSlot <- struct{}{}:
-		defer func() { <-simlSimSlot }()
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
 	defer func() {
 		if r := recover(); r != nil {

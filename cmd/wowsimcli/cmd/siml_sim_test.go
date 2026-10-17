@@ -152,9 +152,6 @@ func TestSimlSimCountsEveryRowAndKeepsPathsAcrossHiddenRows(t *testing.T) {
 	if res.Error != "" {
 		t.Fatal(res.Error)
 	}
-	if core.APLActionExecuted != nil {
-		t.Error("the hook is left set after the run")
-	}
 	if want := len(listRows(rotation)); len(res.Rows) != want {
 		t.Errorf("%d rows, want %d", len(res.Rows), want)
 	}

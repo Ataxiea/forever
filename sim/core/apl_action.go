@@ -30,8 +30,8 @@ func (action *APLAction) IsReady(sim *Simulation) bool {
 }
 
 func (action *APLAction) Execute(sim *Simulation) {
-	if APLActionExecuted != nil && action.Path != "" {
-		APLActionExecuted(sim, action.unit, action)
+	if sim.aplActionExecuted != nil && action.Path != "" {
+		sim.aplActionExecuted(sim, action.unit, action)
 	}
 	action.impl.Execute(sim)
 }

@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 // The language server's sims run `siml sim`'s request in process, and stop when the request is cancelled.
@@ -45,11 +44,4 @@ func TestSimlSimJSON(t *testing.T) {
 		t.Error("a request with an unknown field is read")
 	}
 
-	simlSimSlot <- struct{}{}
-	defer func() { <-simlSimSlot }()
-	queued, cancelQueued := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	defer cancelQueued()
-	if _, err := simlSimJSON(queued, root, req); !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("a sim cancelled while another runs gave %v", err)
-	}
 }

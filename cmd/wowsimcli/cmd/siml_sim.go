@@ -255,10 +255,9 @@ func listRows(rotation *proto.APLRotation) map[string]rowStats {
 	return rows
 }
 
-// Counts the player's executed rows. The counts start over when another Simulation runs a row, so a presim
-// run before the recorded iterations is not counted.
+// Counts the player's executed rows, and while record is set writes the first iteration's timeline: an iteration
+// starts over at its prepull time, so the first row earlier than the last ends the recording.
 type recorder struct {
-	sim      *core.Simulation
 	counts   map[string]int
 	timeline []timelineEvent
 	limit    int
@@ -269,19 +268,22 @@ func (r *recorder) executed(sim *core.Simulation, unit *core.Unit, action *core.
 	if unit.Type != core.PlayerUnit || action.Path == "" {
 		return
 	}
-	if sim != r.sim {
-		r.sim, r.counts, r.timeline = sim, map[string]int{}, nil
-	}
 	r.counts[action.Path]++
-	if !r.record || len(r.timeline) >= r.limit {
+	if !r.record {
 		return
 	}
 	event := timelineEvent{TimeMs: sim.CurrentTime.Milliseconds(), Path: action.Path, Label: label(action)}
-	if n := len(r.timeline); n > 0 {
-		last := r.timeline[n-1]
-		if last.TimeMs == event.TimeMs && strings.HasPrefix(last.Label, "Group Reference") {
-			event.Via = last.Path
-		}
+	n := len(r.timeline)
+	if n > 0 && event.TimeMs < r.timeline[n-1].TimeMs {
+		r.record = false
+		return
+	}
+	if n >= r.limit {
+		return
+	}
+	// A group's row runs only from a reference, which is recorded just before it.
+	if n > 0 && strings.HasPrefix(event.Path, "groups/") {
+		event.Via = r.timeline[n-1].Path
 	}
 	r.timeline = append(r.timeline, event)
 }
@@ -315,11 +317,8 @@ func simAPL(ctx context.Context, base *proto.RaidSimRequest, folder string, rota
 		return request
 	}
 
-	rec := &recorder{}
-	core.APLActionExecuted = rec.executed
-	defer func() { core.APLActionExecuted = nil }()
-
-	simRes := runRaidSim(ctx, makeRequest(req.Iterations))
+	rec := &recorder{counts: map[string]int{}, timeline: []timelineEvent{}, limit: req.TimelineLimit, record: req.Timeline}
+	simRes := runRaidSim(ctx, makeRequest(req.Iterations), rec.executed)
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -340,25 +339,17 @@ func simAPL(ctx context.Context, base *proto.RaidSimRequest, folder string, rota
 	}
 
 	if req.Timeline {
-		rec = &recorder{record: true, limit: req.TimelineLimit}
-		core.APLActionExecuted = rec.executed
-		if timelineRes := runRaidSim(ctx, makeRequest(1)); timelineRes.Error != nil {
-			return nil, fmt.Errorf("%s", simError(timelineRes.Error))
-		}
 		out.Timeline = rec.timeline
-		if out.Timeline == nil {
-			out.Timeline = []timelineEvent{}
-		}
 	}
 	return out, nil
 }
 
 // The sim of request, aborted when ctx is done.
-func runRaidSim(ctx context.Context, request *proto.RaidSimRequest) *proto.RaidSimResult {
+func runRaidSim(ctx context.Context, request *proto.RaidSimRequest, executed core.APLActionHook) *proto.RaidSimResult {
 	signals := simsignals.CreateSignals()
 	stop := context.AfterFunc(ctx, signals.Abort.Trigger)
 	defer stop()
-	return core.RunSim(request, nil, signals)
+	return core.RunSimWithAPLHook(request, signals, executed)
 }
 
 // The message of a sim error without the stack trace the sim appends to a panic.

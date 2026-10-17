@@ -61,9 +61,9 @@ type APLRotation struct {
 	groupListIdxMap    [][]int
 }
 
-// Called with every executed row, a group reference's row and then the row it ran from the group. Nil except
-// in tools that read a rotation's choices; it is shared by every sim in the process.
-var APLActionExecuted func(sim *Simulation, unit *Unit, action *APLAction)
+// Called with every executed row, a group reference's row and then the row it ran from the group, by a sim that
+// RunSimWithAPLHook runs. Tools that read a rotation's choices pass one.
+type APLActionHook func(sim *Simulation, unit *Unit, action *APLAction)
 
 type APLGroup struct {
 	name         string
