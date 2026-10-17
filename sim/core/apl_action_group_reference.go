@@ -12,7 +12,6 @@ type APLActionGroupReference struct {
 	variables map[string]*proto.APLValue
 	group     *APLGroup
 	matched   bool
-	unit      *Unit
 }
 
 func (rot *APLRotation) newActionGroupReference(config *proto.APLActionGroupReference) APLActionImpl {
@@ -75,8 +74,6 @@ func (action *APLActionGroupReference) Finalize(rot *APLRotation) {
 		fmt.Println("Skipping finalization: groupName is empty")
 		return
 	}
-
-	action.unit = rot.unit
 
 	// Find the referenced group
 	for _, group := range rot.groups {
@@ -181,9 +178,6 @@ func (action *APLActionGroupReference) Execute(sim *Simulation) {
 	// Execute the first ready action in the group
 	for _, groupAction := range action.group.actions {
 		if groupAction.IsReady(sim) {
-			if APLActionExecuted != nil {
-				APLActionExecuted(sim, action.unit, groupAction)
-			}
 			groupAction.Execute(sim)
 			return
 		}

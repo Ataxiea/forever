@@ -158,6 +158,7 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 						action := rotation.newAPLAction(prepullItem.Action)
 						if action != nil {
 							action.Path = fmt.Sprintf("prepullActions/%d", prepullIdx)
+							action.unit = unit
 							rotation.prepullActions = append(rotation.prepullActions, action)
 							rotation.prepullIdxMap = append(rotation.prepullIdxMap, prepullIdx)
 							unit.RegisterPrepullAction(doAt, func(sim *Simulation) {
@@ -169,9 +170,6 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 								// so this action.Execute needs to record warnings.
 								rotation.doAndRecordWarnings(&rotation.prepullValidations[prepullIdx], true, func() {
 									if action.condition == nil || action.condition.GetBool(sim) {
-										if APLActionExecuted != nil {
-											APLActionExecuted(sim, unit, action)
-										}
 										action.Execute(sim)
 									}
 								})
@@ -190,6 +188,7 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 				action := rotation.newAPLAction(aplItem.Action)
 				if action != nil {
 					action.Path = fmt.Sprintf("priorityList/%d", i)
+					action.unit = unit
 					rotation.priorityList = append(rotation.priorityList, action)
 					rotation.priorityListIdxMap = append(rotation.priorityListIdxMap, i)
 				}
@@ -224,6 +223,7 @@ func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
 					if action != nil {
 						// A group referenced twice is parsed twice; both copies carry the path of the one in the file.
 						action.Path = fmt.Sprintf("groups/%d/actions/%d", slices.Index(config.Groups, groupConfig), i)
+						action.unit = unit
 						group.actions = append(group.actions, action)
 						rotation.groupListIdxMap[groupIdx] = append(rotation.groupListIdxMap[groupIdx], i)
 					}
@@ -474,9 +474,6 @@ func (apl *APLRotation) DoNextAction(sim *Simulation) {
 			panic(fmt.Sprintf("[USER_ERROR] Infinite loop detected, current action:\n%s", nextAction))
 		}
 
-		if APLActionExecuted != nil {
-			APLActionExecuted(sim, apl.unit, nextAction)
-		}
 		nextAction.Execute(sim)
 		// Shoot has no GCD to end the pass; any later cast would cut it.
 		if apl.unit.Wand.wanding() {
