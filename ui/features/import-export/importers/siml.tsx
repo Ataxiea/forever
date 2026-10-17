@@ -3,7 +3,7 @@ import { APLRotation_Type as APLRotationType } from '@generated/proto/apl';
 import { EquipmentSpec, Spec } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
 import i18n from '@i18n/config';
-import { SIM_CATEGORY_KEYS, SimSettingCategories } from '@sim/constants/sim_settings';
+import { SIM_CATEGORY_OF_KEY, SimSettingCategories } from '@sim/constants/sim_settings';
 import { Database } from '@sim/proto/database';
 import type { IndividualSimHost } from '@sim/sim_host';
 import { withViewerStatFilters } from '@sim/state/stat_filter_sharing';
@@ -16,8 +16,6 @@ import { type ImporterDefinition, ImportProblems } from './types';
 // What text with no file name reads as: a full setup, or any part of one (sim/siml/SPEC.md §1).
 const PASTED_FILE = 'wowsims.siml';
 
-const CATEGORY_OF_KEY = new Map([...SIM_CATEGORY_KEYS].map(([category, key]) => [key, category]));
-
 /**
  * Reads `text` as the file `path` names and loads exactly the categories it holds, so a file holding a rotation
  * leaves the gear and the talents as they are, and an empty section resets its category. A file that does not read
@@ -28,7 +26,7 @@ const importSiml = async (host: IndividualSimHost<any>, text: string, path: stri
 	const errors = parsed.diagnostics.filter(d => !d.warning);
 	if (errors.length) throw new ImportProblems(i18n.t('import.siml.error_problems'), errors.map(located));
 
-	const categories = parsed.categories.map(key => CATEGORY_OF_KEY.get(key)!);
+	const categories = parsed.categories.map(key => SIM_CATEGORY_OF_KEY.get(key)!);
 	// `fromProto` reads no category as every category, which a file holding none must not do.
 	if (!categories.length) throw new Error(i18n.t('import.siml.error_empty'));
 	// A gear planner loads no encounter, so a file holding only that has nothing for the page.
