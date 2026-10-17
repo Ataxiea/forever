@@ -39,21 +39,28 @@ func repositoryProblems(doc *siml.Doc, catalog *siml.DatabaseCatalog, path strin
 			problems = append(problems, fmt.Sprintf("%s: spec %s is a %s spec, and the file is not under ui/specs/%s", path, info.Field.Name(), class, class))
 		}
 	}
-	parser := doc.Diagnostics()
-	var gearItems []siml.Position // Where the gear check already found an item the database lacks.
+	type place struct {
+		code  string
+		start siml.Position
+	}
+	parser := map[place]bool{}
+	for _, p := range doc.Diagnostics() {
+		parser[place{p.Code, p.Start}] = true
+	}
+	gearItems := map[siml.Position]bool{} // Where the gear check already found an item the database lacks.
 	for _, d := range doc.EditorDiagnostics(catalog) {
-		if slices.ContainsFunc(parser, func(p siml.Diagnostic) bool { return p.Code == d.Code && p.Start == d.Start }) {
+		if parser[place{d.Code, d.Start}] {
 			continue
 		}
 		if slices.Contains(repositoryCodes, d.Code) || d.Code != "raw-ref" && d.Severity == siml.Error {
 			problems = append(problems, fmt.Sprintf("%s: %s", at(d.Start), d.Message))
 		}
 		if d.Code == "gear-item" {
-			gearItems = append(gearItems, d.Start)
+			gearItems[d.Start] = true
 		}
 	}
 	for _, r := range f.Names {
-		if r.Namespace != siml.NamespaceItem || slices.Contains(gearItems, r.Start) {
+		if r.Namespace != siml.NamespaceItem || gearItems[r.Start] {
 			continue
 		}
 		if _, ok := catalog.ItemName(r.ID); !ok {
