@@ -68,29 +68,14 @@ func isSplit(v *proto.APLValue) bool { return len(v.GetAnd().GetVals()) > 1 }
 // Removes the def calls at path in a statement, inside it and around it: an edit there changes their values.
 func clearCalls(forced map[string]string, calls map[string]spliceCall, path []any) {
 	at := pathKey(path)
-	for key := range keysOf(forced) {
-		if under(key, at) || under(at, key) {
-			delete(forced, key)
-		}
-	}
-	for key := range keysOf(calls) {
-		if under(key, at) || under(at, key) {
-			delete(calls, key)
-		}
-	}
+	related := func(key string) bool { return under(key, at) || under(at, key) }
+	maps.DeleteFunc(forced, func(key, _ string) bool { return related(key) })
+	maps.DeleteFunc(calls, func(key string, _ spliceCall) bool { return related(key) })
 }
 
 // Whether the path key is prefix's or one below it.
 func under(key, prefix string) bool {
 	return prefix == "[]" || key == prefix || strings.HasPrefix(key, strings.TrimSuffix(prefix, "]")+" ")
-}
-
-func keysOf[V any](m map[string]V) map[string]bool {
-	out := map[string]bool{}
-	for k := range m {
-		out[k] = true
-	}
-	return out
 }
 
 // p with the def calls a statement writes: those its text writes, while the edits leave their values as they are,

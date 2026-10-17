@@ -2,6 +2,7 @@ package siml
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,25 +47,33 @@ type TextEdit struct {
 	NewText string
 }
 
-// The edits that apply edits, in order, to the rotation the text writes: only the statements they change are printed
-// again, and every other line of the text is kept. The error says why not: the file is no x.apl.siml, the text has an
-// error or uses another file, a path leads through an index or a field that does not exist, or the edited rotation has
-// an error.
-func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
+// The typed x.apl.siml the panel reads and edits, or why the text is none.
+func (d *Doc) aplFile() (*typedFile, error) {
 	f := d.typed
-	if f == nil {
-		return nil, d.err
-	}
-	if f.kind.Section != sectionAPL {
+	switch {
+	case f == nil:
+		return nil, cmp.Or(d.err, errors.New("the text reads as no file"))
+	case f.kind.Section != sectionAPL:
 		return nil, errors.New("the panel edits the rotation of an x.apl.siml file")
-	}
-	if hasError(f.diags) {
+	case hasError(f.diags):
 		return nil, errors.New("the text has errors; fix them to edit the rotation")
 	}
 	for _, s := range f.tree.top {
 		if use, ok := s.(*useStmt); ok {
 			return nil, fmt.Errorf("the rotation is put together with %s; edit it as text", use.path.value)
 		}
+	}
+	return f, nil
+}
+
+// The edits that apply edits, in order, to the rotation the text writes: only the statements they change are printed
+// again, and every other line of the text is kept. The error says why not: the file is no x.apl.siml, the text has an
+// error or uses another file, a path leads through an index or a field that does not exist, or the edited rotation has
+// an error.
+func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
+	f, err := d.aplFile()
+	if err != nil {
+		return nil, err
 	}
 	if len(edits) == 1 && (edits[0].Op == "defSet" || edits[0].Op == "defRename") {
 		return d.editDef(edits[0])

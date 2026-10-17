@@ -54,14 +54,9 @@ type DefInfo struct {
 
 // The structure of an x.apl.siml's rotation; nil when the text has an error, uses another file, or is no x.apl.siml.
 func (d *Doc) Structure() *Structure {
-	f := d.typed
-	if f == nil || f.kind.Section != sectionAPL || hasError(f.diags) {
+	f, err := d.aplFile()
+	if err != nil {
 		return nil
-	}
-	for _, s := range f.tree.top {
-		if _, ok := s.(*useStmt); ok {
-			return nil
-		}
 	}
 	m := newRotationModel(d.ix, f)
 	out := &Structure{Whens: []WhenBlock{}, Rows: []BlockRow{}, Calls: []DefCall{}, Defs: []DefInfo{}}
@@ -93,11 +88,8 @@ func (d *Doc) Structure() *Structure {
 				// The calls of the conjuncts its blocks join are the blocks' own.
 				calls = maps.Clone(calls)
 				for i := range n {
-					for key := range calls {
-						if under(key, pathKey(conjunctPath(i, n+len(own)))) {
-							delete(calls, key)
-						}
-					}
+					prefix := pathKey(conjunctPath(i, n+len(own)))
+					maps.DeleteFunc(calls, func(key string, _ spliceCall) bool { return under(key, prefix) })
 				}
 			}
 			out.Calls = append(out.Calls, outermostCalls(path, calls)...)
