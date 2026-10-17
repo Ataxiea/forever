@@ -547,18 +547,7 @@ func (d *Doc) describe(w wordRole, c *DatabaseCatalog) (string, int32) {
 		return fmt.Sprintf("accessor head **%s**\n\n`%[1]s(…).%s`", w.word, strings.Join(props, "` · `")), 0
 	case "field":
 		f := w.field
-		typ := f.Printed
-		switch {
-		case f.Printed == "ref":
-			typ = f.Ref
-		case f.Type != "":
-			typ = strings.TrimPrefix(f.Type, "proto.")
-		}
-		list := ""
-		if f.isList() {
-			list = " list"
-		}
-		return fmt.Sprintf("field **%s**: %s%s\n\n`%s` in the JSON", f.Siml, typ, list, f.JSON), 0
+		return fmt.Sprintf("field **%s**: %s\n\n`%s` in the JSON", f.Siml, fieldType(f), f.JSON), 0
 	case "unit":
 		u := ix.unitReference(w.word)
 		if u == nil {
@@ -722,10 +711,7 @@ func (d *Doc) itemText(c *DatabaseCatalog, id int32) string {
 	}
 	parts := []string{fmt.Sprintf("**%s** · item %d", title, id)}
 	if found {
-		var slots []string
-		for _, s := range ItemSlots(item) {
-			slots = append(slots, d.slotWord(int32(s)))
-		}
+		slots := d.slotWords(ItemSlots(item))
 		var facts []string
 		if item.Ilvl != 0 {
 			facts = append(facts, fmt.Sprintf("ilvl %d", item.Ilvl))
