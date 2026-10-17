@@ -42,7 +42,7 @@ consumables:
       greater_arcane_elixir,
       elixir_of_cunning,
       elixir_of_the_owl,
-      elixir_of_the_sages,
+      elixir_of_sages,
       greater_mageblood_elixir
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
