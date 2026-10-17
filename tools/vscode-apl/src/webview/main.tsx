@@ -746,20 +746,12 @@ interface AppProps {
 	fileName: string;
 	rotation: JsonObject;
 	readOnly?: string;
+	cursor: JsonPath; // The rotation path at the text cursor.
 	send: (edits: AplEdit[]) => void;
 }
 
-function App({ db, fileName, rotation, readOnly, send }: AppProps) {
-	const [cursor, setCursor] = useState<JsonPath>([]);
+function App({ db, fileName, rotation, readOnly, cursor, send }: AppProps) {
 	const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-	useEffect(() => {
-		const onMessage = (event: MessageEvent<ToPanel>) => {
-			if (event.data.type === 'cursor') setCursor(event.data.path);
-		};
-		window.addEventListener('message', onMessage);
-		return () => window.removeEventListener('message', onMessage);
-	}, []);
 
 	const groups = useMemo(() => (Array.isArray(rotation.groups) ? rotation.groups.filter(isObject) : []), [rotation]);
 	const variables = useMemo(() => (Array.isArray(rotation.valueVariables) ? rotation.valueVariables : []), [rotation]);
@@ -933,6 +925,7 @@ function Root() {
 	const seq = useRef(0);
 	const [registered, setRegistered] = useState<Registered>({ status: 'loading' });
 	const [sim, setSim] = useState<SimState>({ type: 'sim' });
+	const [cursor, setCursor] = useState<JsonPath>([]);
 
 	useEffect(() => {
 		const onMessage = (event: MessageEvent<ToPanel>) => {
@@ -954,6 +947,8 @@ function Root() {
 				setRegistered(message.registered);
 			} else if (message.type === 'sim') {
 				setSim(message);
+			} else if (message.type === 'cursor') {
+				setCursor(message.path);
 			}
 		};
 		window.addEventListener('message', onMessage);
@@ -994,7 +989,7 @@ function Root() {
 			<FindingsContext.Provider value={findings}>
 				<StructureContext.Provider value={doc.structure}>
 					<SimContext.Provider value={sim}>
-						<App db={db} fileName={init.fileName} rotation={rotation} readOnly={doc.readOnly} send={send} />
+						<App db={db} fileName={init.fileName} rotation={rotation} readOnly={doc.readOnly} cursor={cursor} send={send} />
 					</SimContext.Provider>
 				</StructureContext.Provider>
 			</FindingsContext.Provider>
