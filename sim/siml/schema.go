@@ -17,6 +17,7 @@ import (
 // words, the prefixes of the indexed units (target1, player2), and every section name, in the schema's order.
 type Words struct {
 	Keywords, Heads, Units, UnitPrefixes, Sections []string
+	DurationUnits                                  []string // The units a duration literal takes (SPEC.md §2).
 }
 
 func GrammarWords() (Words, error) {
@@ -25,10 +26,11 @@ func GrammarWords() (Words, error) {
 		return Words{}, err
 	}
 	w := Words{
-		Keywords:     s.Keywords,
-		Heads:        s.Heads,
-		Units:        slices.Sorted(maps.Keys(s.Units.Words)),
-		UnitPrefixes: slices.Sorted(maps.Keys(s.Units.Indexed)),
+		Keywords:      s.Keywords,
+		Heads:         s.Heads,
+		Units:         slices.Sorted(maps.Keys(s.Units.Words)),
+		UnitPrefixes:  slices.Sorted(maps.Keys(s.Units.Indexed)),
+		DurationUnits: slices.Clone(durationUnits),
 	}
 	for _, def := range s.Sections {
 		w.Sections = append(w.Sections, def.Name)

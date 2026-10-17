@@ -44,7 +44,6 @@ var (
 
 const (
 	grammarNumber   = `[0-9]+(?:\.[0-9]+)?`
-	grammarUnit     = `(?:ns|us|µs|ms|s|m|h)`
 	grammarIdentEnd = `(?![A-Za-z0-9_])`
 )
 
@@ -109,6 +108,7 @@ func simlGrammarObject() (orderedObject, error) {
 	if err != nil {
 		return nil, err
 	}
+	unit := `(?:` + grammarWords(words.DurationUnits) + `)`
 	var control []string
 	for _, w := range words.Keywords {
 		if !slices.Contains(grammarActionWords, w) && !slices.Contains(grammarLogicWords, w) && !slices.Contains(grammarConstantWords, w) {
@@ -173,7 +173,7 @@ func simlGrammarObject() (orderedObject, error) {
 			},
 			grammarNamed("variable.other.siml", `\$(?:\{[^}\n]*\}|[A-Za-z_][A-Za-z0-9_]*)`),
 			grammarNamed("variable.parameter.placeholder.siml", `%(?:\{[^}\n]*\}|[A-Za-z_][A-Za-z0-9_]*)`),
-			grammarNamed("constant.numeric.siml", `(?<![A-Za-z0-9_.])`+grammarNumber+`(?:%|`+grammarUnit+`(?:`+grammarNumber+grammarUnit+`)*)?`+grammarIdentEnd),
+			grammarNamed("constant.numeric.siml", `(?<![A-Za-z0-9_.])`+grammarNumber+`(?:%|`+unit+`(?:`+grammarNumber+unit+`)*)?`+grammarIdentEnd),
 			// Before the keywords: `sequence(` is the accessor head, `sequence "S"` the action.
 			grammarNamed("support.function.head.siml", `\b(?:`+grammarWords(words.Heads)+`)(?=\s*\()`),
 			grammarNamed("keyword.other.action.siml", `\b(?:`+grammarWords(grammarActionWords)+`)`+grammarIdentEnd),
