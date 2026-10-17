@@ -7,10 +7,12 @@ settings:
   profession2 tailoring
   reaction_time_ms 100
   distance_from_target 20
-  summon succubus
-  sacrifice_summon
-  armor fel_armor
+  summon imp
+  armor demon_armor
   curse_options recklessness
+  sacrificed_demon succubus
+  // A full Felcloth Bag (21341), the largest Soul Bag a warlock can carry.
+  soul_shards 32
 
 consumables:
   offensive_pot major_spellblasting_potion
@@ -22,9 +24,9 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
 
-party_buffs: mana_spring_totem, moonkin_aura
+party_buffs: mana_spring_totem
 
-raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
 
 debuffs:
   judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire, expose_armor

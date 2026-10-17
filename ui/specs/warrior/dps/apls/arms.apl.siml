@@ -94,6 +94,8 @@ group "Engineering":
 group "CD: Racials":
   cast blood_fury
   cast berserking
+  cast eureka
+  cast elunes_light
 
 group "Sunder Armor":
   cast sunder_armor if target.aura(sunder_armor).num_stacks(include_reaction_time=true) < 5

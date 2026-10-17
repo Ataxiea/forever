@@ -173,7 +173,7 @@ func TestCompleteEntries(t *testing.T) {
 	hasAll(t, "race", complete(t, "siml 1\nspec hunter\n\nsettings:\n  race |\n", setupPath), "orc")
 	hasAll(t, "quiver", complete(t, "siml 1\nspec hunter\n\nsettings:\n  quiver_bonus |\n", setupPath), "ancient_sinew_wrapped_lamina")
 	hasAll(t, "buffs", complete(t, "siml 1\n\nbuffs: |\n", setupPath), "greater_blessing_of_kings")
-	hasAll(t, "flag value", complete(t, "siml 1\n\nparty_buffs: battle_shout=|\n", setupPath), "improved")
+	hasAll(t, "flag value", complete(t, "siml 1\n\nraid_buffs: battle_shout=|\n", setupPath), "improved")
 }
 
 func TestCompleteConsumables(t *testing.T) {

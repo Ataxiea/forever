@@ -1,0 +1,104 @@
+siml 1
+spec dps_priest
+talents "00530321103--50052001231312251"
+
+settings:
+  name "Player"
+  race undead
+  profession1 enchanting
+  profession2 tailoring
+  reaction_time_ms 100
+  channel_clip_delay_ms 100
+  distance_from_target 20
+  healing_model()
+  armor inner_fire
+  pre_shadowform
+
+gear:
+  head       eternal_crown of_shadow_wrath
+  neck       chains_of_the_lich
+  shoulder   felcloth_shoulders
+  back       arcanoweave_cloak
+  chest      robe_of_winter_night + chest_major_intellect
+  wrist      masters_bracers of_shadow_wrath + bracer_superior_intellect
+  hands      felcloth_gloves
+  waist      masters_belt of_shadow_wrath
+  legs       masters_leggings of_shadow_wrath
+  feet       masters_boots of_shadow_wrath
+  finger1    blessed_band_of_light
+  finger2    brilliant_watchers_signet
+  trinket1   weakness_analyzer
+  trinket2   jewel_of_the_guard_captain
+  main_hand  verimondes_last_resort + weapon_revelation
+  off_hand   masters_rod of_shadow_wrath
+  ranged     lunar_wand of_shadow_wrath
+  bonus_stats()
+
+item_swap: prepull_bonus_stats()
+
+consumables:
+  flask flask_of_supreme_power
+  food nightfin_soup
+  conjured demonic_rune
+  mh_imbue brilliant_wizard_oil
+  elixir elixir_of_shadow_power,
+      greater_arcane_elixir,
+      elixir_of_cunning,
+      elixir_of_the_owl,
+      elixir_of_sages,
+      greater_mageblood_elixir
+  resource_pot major_mana_potion
+  offensive_pot major_spellblasting_potion
+
+buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
+
+party_buffs: mana_spring_totem
+
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
+
+debuffs: judgement_of_the_crusader, judgement_of_wisdom, curse_of_elements
+
+encounter:
+  duration 180
+  duration_variation 5
+  execute_proportion_20 0.2
+  execute_proportion_25 0.25
+  execute_proportion_35 0.35
+  execute_proportion_45 0.45
+  execute_proportion_90 0.9
+  targets(id=31146,
+      name="Raid Target",
+      level=63,
+      mob_type=mechanical,
+      stats(attack_power=320, block_value=54, armor=3731, health=1428900),
+      min_base_damage=2601,
+      damage_spread=0.5,
+      swing_speed=2,
+      parry_haste,
+      can_crush)
+
+apl:
+  var ${Dark Sac} = current_mana <= 2000
+  var ${Inner Focus Rules} = spell(mind_blast).is_ready
+  var ${SWP Refresh} = not dot(shadow_word_pain).is_active
+
+cooldowns:
+
+prepull:
+  -5s cast shadowform
+  -1.5s cast mind_blast
+
+priority:
+  cast shadowform if not aura(shadowform).is_active
+  cast dark_sacrifice if $dark_sac
+  cast other.offensive_potion
+  autocast_other_cooldowns
+  # cast vampiric_embrace
+      if not target1.aura(vampiric_embrace).is_active(include_reaction_time=true)
+  cast inner_focus if $inner_focus_rules
+  cast mind_blast
+  cast shadow_word_pain if $swp_refresh
+  cast shadow_word_death
+  cast devouring_plague if not dot(devouring_plague).is_active
+  # cast starshards if spell(starshards).is_known
+  channel mind_flay until none

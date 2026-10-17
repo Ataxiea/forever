@@ -1,2 +1,31 @@
 siml 1
 spec feral_bear_druid
+
+var ${Lacerate at 5 stacks} = dot(lacerate).is_active and target.aura(lacerate).num_stacks >= 5
+var ${Demoralizing Roar is up} = target.aura(demoralizing_roar).is_active
+var ${Berserk follows Primal Bite} =
+    spell(berserk).is_known
+    and spell(berserk).is_ready
+    and $demoralizing_roar_is_up
+    and spell(primal_bite).time_to_ready >= 4s
+var ${Lacerate falls off} = $lacerate_at_5_stacks and dot(lacerate).remaining_time <= 1.5s
+
+priority:
+  group "Cooldowns"
+  cast frenzied_regeneration if current_health_percent < 20%
+  group "Keep up"
+  group "Damage"
+  cast maul if current_rage >= 20
+
+group "Cooldowns":
+  cast berserk if $berserk_follows_primal_bite
+  cast elunes_light if aura(berserk).is_active or not spell(berserk).is_known
+  autocast_other_cooldowns
+
+group "Keep up":
+  cast lacerate if $lacerate_falls_off and not $berserk_follows_primal_bite
+  cast demoralizing_roar if not $demoralizing_roar_is_up
+
+group "Damage":
+  cast primal_bite
+  cast lacerate if not $berserk_follows_primal_bite

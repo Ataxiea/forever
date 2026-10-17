@@ -31,11 +31,11 @@ buffs:
   greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_wisdom
   greater_blessing_of_salvation
 
-party_buffs:
-  battle_shout, leader_of_the_pack, mana_spring_totem, strength_of_earth_totem, windfury_totem
+party_buffs: mana_spring_totem
 
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  strength_of_earth_totem, windfury_totem, battle_shout, leader_of_the_pack
 
 debuffs:
   judgement_of_light, judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire

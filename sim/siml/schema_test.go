@@ -359,8 +359,7 @@ func TestSchemaDerivations(t *testing.T) {
 		{"proto.HunterOptions.PetAttackSpeed", "PetAttackSpeedNone", "pet_attack_speed_none"},
 		{"proto.HunterOptions.PetAttackSpeed", "FasterAttackII", "faster_attack_ii"},
 		{"proto.OtherAction", "OtherActionOffensivePotion", "offensive_potion"},
-		{"proto.FeralBearDruid.Rotation.SwipeUsage", "SwipeUsage_Never", "never"},
-		{"proto.FeralCatDruid.Rotation.FinishingMove", "None", "finishing_move_none"},
+		{"proto.MageArmor", "MageArmorFrostArmor", "frost_armor"},
 		{"proto.HunterOptions.PetType", "PetNone", "pet_none"},
 	} {
 		if got := shortOf(c.enum, c.value); got != c.short {
@@ -392,7 +391,7 @@ func TestSchemaDerivations(t *testing.T) {
 		{"proto.ItemSpec", "random_suffix", "random_suffix", "", "ref", "suffix"},
 		{"proto.APLActionCastAllStatBuffCooldowns", "stat_type2", "stat_type2", "", "stat", ""},
 		{"proto.Target", "id", "id", "", "number", ""},
-		{"proto.PartyBuffs", "battle_shout", "battle_shout", "", "flag_enum", ""},
+		{"proto.RaidBuffs", "battle_shout", "battle_shout", "", "flag_enum", ""},
 		{"proto.Player", "distance_from_target", "distance_from_target", "", "number", ""},
 		{"proto.Player", "race", "race", "", "enum", ""},
 		{"proto.Cooldown", "id", "id", "", "action_id", ""},
@@ -449,7 +448,7 @@ func TestSchemaDerivations(t *testing.T) {
 		"short": {"cast_spell", "channel_spell", "wait", "wait_until", "move", "move_duration", "group_reference", "schedule", "sequence",
 			"const", "and", "or", "not", "cmp", "math", "variable_ref", "variable_placeholder"},
 		"bare": {"autocast_other_cooldowns", "current_time", "current_time_percent", "remaining_time", "remaining_time_percent", "number_targets",
-			"current_rage", "current_energy", "current_combo_points", "current_solar_energy", "current_lunar_energy", "current_generic_resource",
+			"current_rage", "current_energy", "current_combo_points", "current_generic_resource",
 			"current_mana_regen", "max_health", "max_mana", "max_combo_points", "max_energy", "max_rage", "time_to_next_energy_tick", "gcd_is_ready",
 			"gcd_time_to_ready", "channel_clip_delay", "input_delay", "front_of_target", "protection_paladin_damage_taken_last_global"},
 		"unit_prefix": {"current_health", "current_health_percent", "current_mana", "current_mana_percent", "unit_is_moving", "unit_distance",
@@ -480,7 +479,7 @@ func TestSchemaDerivations(t *testing.T) {
 		"reset_sequence":               "sequence_name",
 		"cast_all_stat_buff_cooldowns": "stat_type1",
 		"multidot":                     "spell_id",
-		"bear_optimal_rotation_action": "swipe_usage",
+		"warlock_active_pet":           "summon",
 		"change_target":                "",
 	} {
 		if k := kinds[kind]; k.Form != "generic" || k.Positional != positional {

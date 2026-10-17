@@ -16,7 +16,7 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 	className: 'balance-druid-sim-ui',
 	cssScheme: PlayerClasses.getCssScheme(PlayerClasses.Druid),
 	// List any known bugs / issues here, and they'll be shown on the site.
-	knownIssues: ['We need assistance testing in-game Treant base damage and spell damage scaling. If interested please join our Discord!'],
+	knownIssues: [],
 
 	// All stats for which EP should be calculated.
 	epStats: [
@@ -54,7 +54,7 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 	defaults: {
 		...PresetUtils.specDefaultsFromSettings(Spec.SpecBalanceDruid, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
-		epWeights: new Stats(),
+		epWeights: Presets.P1EpWeights.epWeights,
 		// Default stat caps for stat weights tab. (also needed for reforging since we don't want to reforge above stat caps)
 		statCaps: (() => {
 			return new Stats().withPseudoStat(PseudoStat.PseudoStatSpellHitPercent, 17);
@@ -77,12 +77,12 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.P1EpWeights, Presets.PreBiSEpWeights],
 		// Preset talents that the user can quickly select.
-		talents: [],
+		talents: [Presets.StandardTalents],
 		rotations: [Presets.StandardRotation],
 		// Preset gear configurations that the user can quickly select.
-		gear: [],
+		gear: [Presets.PreBiSGear, Presets.P1Gear],
 	},
 
 	autoRotation: (_player: Player<Spec.SpecBalanceDruid>): APLRotation => {

@@ -1,0 +1,94 @@
+siml 1
+spec feral_cat_druid
+
+def in_cat = aura(cat_form).is_active
+def clearcast = aura(clearcasting).is_active
+def omen_ready = aura(omen_of_clarity).icd_is_ready
+def cost(x) = spell(x).current_cost
+// Energy after this GCD's regen falls short of x.
+def short_for(x) = current_energy + 10 < spell(x).current_cost
+// A Shred now leaves the next GCD short of x.
+def shred_leaves_short_for(x) =
+    current_energy - spell(shred).current_cost + 10 < spell(x).current_cost
+def bleed_due(x) = not dot(x).is_active or dot(x).remaining_time < 1s
+
+var ${Rip has time} = remaining_time >= 10s
+var ${Rip now} =
+    current_combo_points >= 5
+    and not dot(rip).is_active
+    and $rip_has_time
+    and spell(rip).can_cast
+var ${Rake now} = (not dot(rake).is_active and spell(rake).can_cast) and remaining_time >= 6s
+var ${Shifting Power now} =
+    spell(shifting_power).can_cast
+    and (clearcast and current_energy < 40 or not clearcast and current_energy < 50)
+var ${Pool for a refresh} =
+    current_combo_points >= 5 and dot(rip).is_active and $rip_has_time and dot(rip).remaining_time > 0s and dot(rip).remaining_time <= 2s and shred_leaves_short_for(rip)
+    or dot(rake).is_active and remaining_time >= 9s and dot(rake).remaining_time > 0s and dot(rake).remaining_time <= 1s and shred_leaves_short_for(rake)
+var ${Faerie Fire for Omen} =
+    not clearcast
+    and omen_ready
+    and spell(shifting_power).time_to_ready >= 1s
+    and short_for(shred)
+    and (not bleed_due(rake) or short_for(rake))
+    and (not (current_combo_points >= 5 and $rip_has_time and bleed_due(rip)) or short_for(rip))
+    and spell(faerie_fire).can_cast
+var ${Clearcasting into Shred} = in_cat and clearcast
+var ${Bite at the end} =
+    current_combo_points >= 5 and not $rip_has_time
+    or current_combo_points >= 3 and remaining_time < 3s
+var ${Energized now} =
+    in_cat
+    and spell(read_leyline).is_ready
+    and not clearcast
+    and not aura(berserk).is_active
+    and current_energy <= 30
+    and current_mana < 1400
+var ${Mana short} = current_mana < 1400 and current_mana < remaining_time * 50
+
+priority:
+  cast item.goblin_sapper_charge
+  cast cat_form if not in_cat
+  group "Berserk"
+  group "Cooldowns"
+  when $clearcasting_into_shred:
+    cast shred
+    cast claw if not spell(shred).can_cast
+  group "Bleeds"
+  cast ferocious_bite if $bite_at_the_end
+  cast shifting_power
+      if $shifting_power_now
+      or $pool_for_a_refresh and spell(shifting_power).can_cast
+  group "Builders"
+  cast read_leyline if $energized_now
+  cast innervate
+      if in_cat
+      and $mana_short
+      and current_energy <= 30
+      and not clearcast
+      and not aura(berserk).is_active
+      and remaining_time >= 15s
+  cast faerie_fire if $faerie_fire_for_omen
+
+group "Berserk":
+  when in_cat and not $rip_now:
+    strict_sequence(cast berserk, cast rake) if $rake_now
+    strict_sequence(cast berserk, cast shred)
+        if not $rake_now
+        and not $pool_for_a_refresh
+        and not $shifting_power_now
+        and spell(shred).can_cast
+
+group "Cooldowns":
+  cast item.thistle_tea if current_energy <= 20
+  cast other.resource_potion if current_mana + (current_mana_regen * 5 + 2250) <= max_mana
+  autocast_other_cooldowns
+
+group "Bleeds":
+  cast rip if $rip_now
+  cast rake if $rake_now
+
+group "Builders":
+  when not $pool_for_a_refresh:
+    cast shred
+    cast claw if current_energy >= cost(shred)

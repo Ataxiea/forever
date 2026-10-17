@@ -15,8 +15,7 @@
 		"class": "ClassDruid",
 		"balanceDruid": {
 			"options": {
-				"classOptions": {},
-				"okfUptime": 0.12345679
+				"classOptions": {}
 			}
 		},
 		"cooldowns": {

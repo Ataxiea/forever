@@ -277,7 +277,7 @@ func TestSettingsFileSuppliesTheCharacter(t *testing.T) {
 func TestSimlSimReportsWhatCannotBeSimmed(t *testing.T) {
 	path := tempPath(t, "default.apl.siml")
 	for text, want := range map[string]string{
-		"siml 1\nspec mage\n":                             "the sim cannot run mage/dps",
+		"siml 1\nspec rogue\n":                            "the sim cannot run rogue/dps",
 		"siml 1\nspec nope\n":                             path + ":2:6 unknown-spec",
 		"siml 1\nspec hunter\n\npriority:\n  cast nope\n": path + ":5:8 unknown-name no spell is named nope",
 		"siml 1\nspec hunter\n":                           "",

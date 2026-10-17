@@ -1,6 +1,6 @@
 siml 1
 spec elemental_shaman
-talents "3500301323113051-04-053150001001"
+talents "5500331023001351-053002001-053"
 
 settings:
   race troll
@@ -37,9 +37,7 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
 
-party_buffs: moonkin_aura
-
-raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
 
 debuffs:
   judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire, expose_armor

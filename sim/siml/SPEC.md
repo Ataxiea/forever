@@ -287,8 +287,8 @@ import categories (`SIM_CATEGORY_KEYS`).
 | `priority`       | `Player.rotation.priority_list`                                                                                                                                                                                                                                                                                                                                                                     | r        | rows                  |
 | `group "<name>"` | one `Player.rotation.groups` element                                                                                                                                                                                                                                                                                                                                                                | r        | `var` and rows        |
 
-**Skipped fields.** These are never written or read: `Player.database`, `FeralCatDruid.rotation` (neither the
-sim nor the site reads it), every `api_version`, and every field of type `UUID`. `Player.class` comes from `spec`
+**Skipped fields.** These are never written or read: `Player.database`, every `api_version`, and every field of
+type `UUID`. `Player.class` comes from `spec`
 (§8.4).
 
 **Categories.** A category is **present** when any of its sections is present, including empty, or when its
@@ -338,7 +338,7 @@ An entry line sets fields of the section's message. How each field type is writt
   field as an entry would.
 - **Numbers.** A `float` field holds the double nearest the number, rounded to a float32, as the site holds it.
   The printer writes the shortest decimal that reads back to that float32, the nearer of two, and of two as near
-  the one whose last digit is even (`okf_uptime 0.123456789` reads as `0.12345679`). A number past the range of
+  the one whose last digit is even (`0.123456789` reads as `0.12345679`). A number past the range of
   its field is `wrong-type`.
 - **Stats.** A stat field reads a `Stat` short or proto name, or any integer; the printer writes the short name
   of a `Stat` value and the number otherwise.
@@ -582,7 +582,7 @@ These rules are in §8.3; the v1 instances are listed for reference.
 
 | Form            | Rule                                                           | v1 instances                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | --------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| bare word       | a kind with no fields                                          | `current_time`, `current_time_percent`, `remaining_time`, `remaining_time_percent`, `number_targets`, `current_rage`, `current_energy`, `current_combo_points`, `current_solar_energy`, `current_lunar_energy`, `current_generic_resource`, `current_mana_regen`, `max_health`, `max_mana`, `max_combo_points`, `max_energy`, `max_rage`, `time_to_next_energy_tick`, `gcd_is_ready`, `gcd_time_to_ready`, `channel_clip_delay`, `input_delay`, `front_of_target`, `protection_paladin_damage_taken_last_global` |
+| bare word       | a kind with no fields                                          | `current_time`, `current_time_percent`, `remaining_time`, `remaining_time_percent`, `number_targets`, `current_rage`, `current_energy`, `current_combo_points`, `current_generic_resource`, `current_mana_regen`, `max_health`, `max_mana`, `max_combo_points`, `max_energy`, `max_rage`, `time_to_next_energy_tick`, `gcd_is_ready`, `gcd_time_to_ready`, `channel_clip_delay`, `input_delay`, `front_of_target`, `protection_paladin_damage_taken_last_global` |
 | unit prefix     | a value kind whose only field is a `UnitReference`: `[u.]kind` | `current_health`, `current_health_percent`, `current_mana`, `current_mana_percent`, `unit_is_moving`, `unit_distance`, `boss_current_target`, `warlock_assigned_curse_is_active`                                                                                                                                                                                                                                                                                                                                 |
 | plain arguments | a kind whose only field is repeated                            | `max(a, b)`, `min(a, b)`, `and(x)`, `or(x)`, `strict_sequence(a, b)`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | generic         | any other kind                                                 | `is_execute_phase(e20)`, `auto_time_to_next(main_hand_auto)`, `auto_time_since_last(main_hand_auto)`, `action_group_used("Stance Dance ON/OFF")`, `multiple_cd_usages(x, target_spell_id=y, offset=2s)`, `selected_potion(x)`, `energy_time_to_target(50)`, `totem_remaining_time(air)`                                                                                                                                                                                                                          |
@@ -1105,7 +1105,7 @@ grammar`).
 | `refs`        | `proto.ItemSpec.id`→item, `proto.ItemSpec.enchant`→enchant, `proto.ItemSpec.random_suffix`→suffix, `proto.ConsumesSpec.*_id`, `*_ids`, `potions` and `conjured_items`→item, `*.stat_type1`, `stat_type2` and `stat_type3`→stat, `proto.ActionID.spell_id` and `item_id`, `proto.Target.id` and `proto.Encounter.zone_id`→number |
 | `indexed`     | `proto.UnitStats.stats`→`proto.Stat`, `proto.UnitStats.pseudo_stats`→`proto.PseudoStat`, `proto.Target.stats`→`proto.Stat`                                                                                                                                                                                                      |
 | `flag_values` | `proto.TristateEffect`→`TristateEffectRegular`                                                                                                                                                                                                                                                                                  |
-| `skip`        | `proto.Player.database`, `proto.FeralCatDruid.rotation`, `*.api_version`, fields of type `proto.UUID`                                                                                                                                                                                                                           |
+| `skip`        | `proto.Player.database`, `*.api_version`, fields of type `proto.UUID`                                                                                                                                                                                                                                                           |
 
 **The Go tests that guard this table:**
 
@@ -1949,10 +1949,10 @@ consumables:
 
 buffs: greater_blessing_of_kings
 
-party_buffs: battle_shout, leader_of_the_pack, strength_of_earth_totem, grace_of_air_totem
-
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  strength_of_earth_totem
+  grace_of_air_totem, battle_shout, leader_of_the_pack
   prayer_of_shadow_protection
 
 debuffs:
@@ -1974,5 +1974,5 @@ Some notes on this file:
   `{"timeToWeave":400,"useMulti":true,"useArcane":true,"playstyle":"Weave"}` into `spec_rotation_json` (§5.4).
 - **Left-out fields.** `pet_type pet_none` is the zero value and is not printed. `class` comes from
   `spec hunter`.
-- **Buff order.** The fields of `party_buffs` follow declaration order in `proto/buffs.proto`. `battle_shout` is
+- **Buff order.** The fields of `raid_buffs` follow declaration order in `proto/buffs.proto`. `battle_shout` is
   the `TristateEffect` written bare, which means `regular`.

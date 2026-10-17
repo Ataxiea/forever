@@ -18,7 +18,7 @@ gear:
   bonus_stats(stats(strength=10, attack_power=-20))
 
 item_swap:
-  prepull_bonus_stats(stats=`[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7]`)
+  prepull_bonus_stats(stats=`[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7]`)
 
 consumables:
   extra goblin_sapper_charge,
@@ -33,12 +33,11 @@ consumables:
       flask_of_the_titans
   elixir elixir_of_the_mongoose
 
-party_buffs:
-  blood_pact, battle_shout=improved, devotion_aura, leader_of_the_pack, mana_spring_totem
-  moonkin_aura, retribution_aura, concentration_aura, trueshot_aura, strength_of_earth_totem
-  grace_of_air_totem, windfury_totem
+party_buffs: blood_pact, devotion_aura, mana_spring_totem, retribution_aura, concentration_aura
 
-raid_buffs: arcane_brilliance
+raid_buffs:
+  arcane_brilliance, strength_of_earth_totem, grace_of_air_totem, windfury_totem
+  battle_shout=improved, trueshot_aura, leader_of_the_pack, moonkin_aura
 
 debuffs:
   hunters_mark, judgement_of_the_crusader, judgement_of_light, judgement_of_wisdom

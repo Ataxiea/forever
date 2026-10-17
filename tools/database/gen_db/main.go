@@ -127,6 +127,7 @@ func main() {
 	g.Go(func() error { _, err := database.LoadAndWriteItemArmorShield(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteArmorLocation(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteItemEffects(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemSetSpells(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteSpells(helper, inputsDir); return err })
 	g.Go(func() (err error) { consumables, err = database.LoadAndWriteConsumables(helper, inputsDir); return })
 	g.Go(func() (err error) {
@@ -631,7 +632,7 @@ func GetAllRotationSpellIds() map[string][]int32 {
 			Class:         proto.Class_ClassDruid,
 			Equipment:     &proto.EquipmentSpec{},
 			TalentsString: rotationTalentsString("druid"),
-		}, &proto.Player_FeralCatDruid{FeralCatDruid: &proto.FeralCatDruid{Options: &proto.FeralCatDruid_Options{ClassOptions: &proto.DruidOptions{}}, Rotation: &proto.FeralCatDruid_Rotation{}}}), nil, nil, nil)},
+		}, &proto.Player_FeralCatDruid{FeralCatDruid: &proto.FeralCatDruid{Options: &proto.FeralCatDruid_Options{ClassOptions: &proto.DruidOptions{}}}}), nil, nil, nil)},
 		{Name: "feralBearDruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
 			Class:         proto.Class_ClassDruid,
 			Equipment:     &proto.EquipmentSpec{},

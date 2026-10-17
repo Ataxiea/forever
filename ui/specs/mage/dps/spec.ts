@@ -65,12 +65,6 @@ export default defineSpec<Spec.SpecMage>({
 	),
 	displayWeaponSkillGroups: [WeaponSkillGroup.Wands],
 
-	modifyDisplayStats: (player: Player<Spec.SpecMage>) => {
-		return {
-			talents: new Stats().addPseudoStat(PseudoStat.PseudoStatSpellCritPercent, player.getTalents().arcaneInstability),
-		};
-	},
-
 	consumableStats: [
 		Stat.StatIntellect,
 		Stat.StatSpirit,
@@ -115,9 +109,9 @@ export default defineSpec<Spec.SpecMage>({
 		// Preset rotations that the user can quickly select.
 		rotations: [Presets.DEFAULT_APL, Presets.APL_ARCANE_SIMPLE],
 		// Preset talents that the user can quickly select.
-		talents: [],
+		talents: [Presets.ArcaneTalents],
 		// Preset gear configurations that the user can quickly select.
-		gear: [],
+		gear: [Presets.P1ArcaneGear],
 	},
 
 	autoRotation: (_player: Player<Spec.SpecMage>): APLRotation => {

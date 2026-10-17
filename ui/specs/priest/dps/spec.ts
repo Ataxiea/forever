@@ -97,7 +97,9 @@ export default defineSpec<Spec.SpecDpsPriest>({
 		talents: [Presets.StandardTalents, Presets.SmiteTalents],
 		rotations: [Presets.ROTATION_PRESET_DEFAULT, Presets.ROTATION_SMITE_DEFAULT],
 		// Preset gear configurations that the user can quickly select.
-		gear: [Presets.PreraidGear, Presets.PreraidSmite],
+		gear: [Presets.ShadowTestingGear, Presets.SmiteTestingGear],
+		// Preset builds that the user can quickly select.
+		builds: [Presets.ShadowTestingBuild, Presets.SmiteTestingBuild],
 	},
 
 	autoRotation: (priest: Player<Spec.SpecDpsPriest>): APLRotation => {

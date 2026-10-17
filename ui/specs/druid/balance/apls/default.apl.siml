@@ -1,2 +1,11 @@
 siml 1
 spec balance_druid
+
+priority:
+  autocast_other_cooldowns
+  cast innervate if current_mana_percent < 10%
+  cast moonfire if not dot(moonfire).is_active
+  cast insect_swarm if not dot(insect_swarm).is_active
+  cast hurricane if number_targets >= 4
+  cast starfire if aura(eclipse).is_active
+  cast wrath

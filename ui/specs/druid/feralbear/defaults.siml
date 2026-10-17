@@ -1,6 +1,7 @@
 siml 1
 spec feral_bear_druid
-use "apls/default.apl.siml"
+talents "0500220000000000-55200322120132012551-0000000000000000"
+use "gear_sets/default.gear.siml"
 
 settings:
   race night_elf
@@ -15,6 +16,7 @@ settings:
       burst_window=6,
       inspiration_uptime=0.25)
   tanks player1
+  assume_bleed_active
 
 consumables:
   defensive_pot greater_stoneshield_potion
@@ -26,11 +28,13 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_might, thorns
 
-party_buffs: battle_shout, mana_spring_totem, strength_of_earth_totem, windfury_totem
+party_buffs: mana_spring_totem
 
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
-  prayer_of_shadow_protection
+  prayer_of_shadow_protection, strength_of_earth_totem, windfury_totem, battle_shout
 
 debuffs:
   judgement_of_wisdom, curse_of_recklessness, faerie_fire, expose_armor, sunder_armor, insect_swarm
+
+apl: type auto

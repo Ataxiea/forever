@@ -1,6 +1,8 @@
 siml 1
 spec enhancement_shaman
-talents "050533102-053030031005112251"
+talents "053503102-053030031005112251"
+
+def totem_down(slot) = totem_remaining_time(slot) <= 0s
 
 settings:
   name "Player"
@@ -10,7 +12,7 @@ settings:
   reaction_time_ms 100
   distance_from_target 5
   healing_model()
-  imbue_mh rockbiter_weapon
+  imbue_mh windfury_weapon
 
 gear:
   head       black_dragonscale_helm + arcanum_of_rapidity
@@ -23,7 +25,7 @@ gear:
   waist      belt_of_preserved_heads
   legs       ironfeather_leggings + arcanum_of_rapidity
   feet       boots_of_the_five_thunders + boots_greater_agility
-  finger1    band_of_the_better_half
+  finger1    brilliant_watchers_signet
   finger2    channelers_ring
   trinket1   adaptive_combat_assistant
   trinket2   frozen_heart_of_the_mountain
@@ -50,11 +52,13 @@ consumables:
       elixir_of_ferocity
   resource_pot major_mana_potion
 
-buffs: greater_blessing_of_kings, greater_blessing_of_might
+buffs: greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_salvation
 
-party_buffs: battle_shout, leader_of_the_pack, strength_of_earth_totem, windfury_totem
+party_buffs:
 
-raid_buffs: arcane_brilliance, gift_of_the_wild, prayer_of_fortitude
+raid_buffs:
+  arcane_brilliance, gift_of_the_wild, prayer_of_fortitude, grace_of_air_totem, flametongue_totem
+  battle_shout, leader_of_the_pack
 
 debuffs:
   hunters_mark, judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire
@@ -72,8 +76,8 @@ encounter:
       name="Raid Target",
       level=63,
       mob_type=mechanical,
-      stats(attack_power=320, block_value=54, armor=3731, health=1299000),
-      min_base_damage=15113,
+      stats(attack_power=320, block_value=54, armor=3731, health=1428900),
+      min_base_damage=2601,
       damage_spread=0.5,
       swing_speed=2,
       parry_haste,
@@ -82,8 +86,8 @@ encounter:
 cooldowns:
 
 prepull:
-  -8s cast grace_of_air_totem
-  -7s cast flametongue_totem
+  -8s cast windfury_totem
+  # -7s cast flametongue_totem
   -6s cast strength_of_earth_totem
   -5s cast mana_spring_totem
 
@@ -91,11 +95,11 @@ priority:
   cast other.resource_potion if current_mana_percent < 80%
   cast item.demonic_rune if current_mana_percent < 70%
   autocast_other_cooldowns
-  cast grace_of_air_totem if totem_remaining_time(air) <= 0s
-  cast strength_of_earth_totem if totem_remaining_time(earth) <= 0s
+  cast windfury_totem if totem_down(air)
+  cast strength_of_earth_totem if totem_down(earth)
   cast fire_nova if aura(clearcasting).is_active(include_reaction_time=true)
   cast lightning_shield if not aura(lightning_shield).is_active
-  cast searing_totem if totem_remaining_time(fire) <= 0s
+  cast searing_totem if totem_down(fire)
   cast stormstrike
   cast lightning_bolt if aura(maelstrom_weapon).is_known and aura(maelstrom_weapon).num_stacks >= 5
   cast flame_shock if not dot(flame_shock).is_active

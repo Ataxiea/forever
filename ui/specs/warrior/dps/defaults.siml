@@ -25,9 +25,8 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_might
 
-party_buffs: leader_of_the_pack, strength_of_earth_totem, windfury_totem
-
-raid_buffs: gift_of_the_wild, prayer_of_fortitude
+raid_buffs:
+  gift_of_the_wild, prayer_of_fortitude, strength_of_earth_totem, windfury_totem, leader_of_the_pack
 
 debuffs: curse_of_recklessness, faerie_fire, expose_armor, sunder_armor, gift_of_arthas
 

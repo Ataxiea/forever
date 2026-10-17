@@ -1,7 +1,9 @@
 {
 	"raidBuffs": {
 		"arcaneBrilliance": true,
-		"giftOfTheWild": true
+		"giftOfTheWild": true,
+		"battleShout": "TristateEffectImproved",
+		"leaderOfThePack": true
 	},
 	"debuffs": {
 		"huntersMark": true,
@@ -12,8 +14,6 @@
 		"sunderArmor": true
 	},
 	"partyBuffs": {
-		"battleShout": "TristateEffectImproved",
-		"leaderOfThePack": true,
 		"manaSpringTotem": "TristateEffectRegular",
 		"manaTideTotems": 2
 	},

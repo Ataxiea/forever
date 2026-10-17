@@ -42,10 +42,10 @@ consumables:
 
 buffs: greater_blessing_of_kings
 
-party_buffs: battle_shout, leader_of_the_pack, strength_of_earth_totem, grace_of_air_totem
-
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  strength_of_earth_totem
+  grace_of_air_totem, battle_shout, leader_of_the_pack
   prayer_of_shadow_protection
 
 debuffs:

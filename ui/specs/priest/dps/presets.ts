@@ -1,21 +1,22 @@
 import * as PresetUtils from '@app/preset_utils';
-import { Stat } from '@generated/proto/common';
+import { Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
-import DefaultApl from './apls/default.apl.siml';
-import SmiteApl from './apls/smite.apl.siml';
-import PreraidGearJson from './gear_sets/preraid.gear.siml';
-import PreraidSmiteGear from './gear_sets/preraid-smite.gear.siml';
+import SmiteTestingBuildJson from './builds/smite_testing.siml';
+import ShadowTestingBuildJson from './builds/testing.siml';
 
-export const ROTATION_PRESET_DEFAULT = PresetUtils.makePresetAPLRotation('Default', DefaultApl);
-export const ROTATION_SMITE_DEFAULT = PresetUtils.makePresetAPLRotation('Smite', SmiteApl);
+export const ROTATION_PRESET_DEFAULT = PresetUtils.makePresetAPLRotation('Default', ShadowTestingBuildJson.player.rotation);
+export const ROTATION_SMITE_DEFAULT = PresetUtils.makePresetAPLRotation('Smite', SmiteTestingBuildJson.player.rotation);
 
-export const PreraidGear = PresetUtils.makePresetGear('Pre-raid', PreraidGearJson);
-export const PreraidSmite = PresetUtils.makePresetGear('Smite Pre-raid', PreraidSmiteGear);
+export const ShadowTestingGear = PresetUtils.makePresetGear('Shadow Testing', ShadowTestingBuildJson.player.equipment);
+export const SmiteTestingGear = PresetUtils.makePresetGear('Smite Testing', SmiteTestingBuildJson.player.equipment);
 
-export const StandardTalents = PresetUtils.makePresetTalents('Standard', SavedTalents.create({ talentsString: '005300211303--500320501201312251' }));
-export const SmiteTalents = PresetUtils.makePresetTalents('Smite', SavedTalents.create({ talentsString: '525230031305001001-30515100002-3' }));
+export const StandardTalents = PresetUtils.makePresetTalents('Standard', SavedTalents.create({ talentsString: ShadowTestingBuildJson.player.talentsString }));
+export const ShadowTestingBuild = PresetUtils.makePresetBuildFromJSON('Shadow Testing', Spec.SpecDpsPriest, ShadowTestingBuildJson);
+
+export const SmiteTalents = PresetUtils.makePresetTalents('Smite', SavedTalents.create({ talentsString: SmiteTestingBuildJson.player.talentsString }));
+export const SmiteTestingBuild = PresetUtils.makePresetBuildFromJSON('Smite Testing', Spec.SpecDpsPriest, SmiteTestingBuildJson);
 
 export const ShadowEpWeights = PresetUtils.makePresetEpWeights(
 	'Shadow',

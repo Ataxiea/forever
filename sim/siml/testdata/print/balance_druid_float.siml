@@ -1,6 +1,0 @@
-siml 1
-spec balance_druid
-
-settings: okf_uptime 0.2
-
-sim: filters(min_consumable_lvl=`{"5":3,"10":2,"-1":4,"-2":1}`)

@@ -39,11 +39,11 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_wisdom, thorns
 
-party_buffs: mana_spring_totem, leader_of_the_pack, windfury_totem, battle_shout
+party_buffs: mana_spring_totem
 
 raid_buffs:
   arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
-  prayer_of_shadow_protection
+  prayer_of_shadow_protection, windfury_totem, battle_shout, leader_of_the_pack
 
 debuffs:
   judgement_of_the_crusader, judgement_of_light, judgement_of_wisdom, curse_of_elements

@@ -18,12 +18,14 @@ priority:
   group "CD: Shield Wall Dual Wield"
   cast shield_wall if current_health_percent <= 35% and not $defensive_cooldown_active
   # schedule "0s, 0s" cast shield_wall
+  cast stoneform if not $defensive_cooldown_active and current_health_percent <= 50%
+  cast shatter_curse if not $defensive_cooldown_active and current_health_percent <= 50%
   cast item.major_healthstone if current_health_percent <= 30%
   cast other.defensive_potion if current_health_percent <= 35%
   cast other.offensive_potion
   cast other.resource_potion
   cast death_wish
-  # group "CD: Racials"
+  group "CD: Racials"
   cast shield_block
       if current_rage >= 40
       or aura(revenge).is_inactive(include_reaction_time=true) and spell(revenge).time_to_ready <= 1.5s
@@ -72,6 +74,8 @@ group "CD: Offensive Trinkets":
 group "CD: Racials":
   cast blood_fury
   cast berserking
+  cast eureka
+  cast elunes_light
 
 group "Execute":
   cast battle_stance if is_execute_phase(e20)

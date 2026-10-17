@@ -5,25 +5,27 @@
 			"minConsumableLvl": {
 				"6": 50
 			},
-			"favoriteEnchants": ["a`b"]
+			"favoriteEnchants": [
+				"a`b"
+			]
 		}
 	},
 	"raidBuffs": {
-		"arcaneBrilliance": true
-	},
-	"partyBuffs": {
-		"bloodPact": true,
+		"arcaneBrilliance": true,
 		"battleShout": "TristateEffectImproved",
-		"devotionAura": true,
 		"leaderOfThePack": true,
-		"manaSpringTotem": "TristateEffectRegular",
 		"moonkinAura": true,
-		"retributionAura": true,
-		"concentrationAura": true,
 		"trueshotAura": true,
 		"strengthOfEarthTotem": true,
 		"graceOfAirTotem": true,
 		"windfuryTotem": true
+	},
+	"partyBuffs": {
+		"bloodPact": true,
+		"devotionAura": true,
+		"manaSpringTotem": "TristateEffectRegular",
+		"retributionAura": true,
+		"concentrationAura": true
 	},
 	"debuffs": {
 		"huntersMark": true,
@@ -71,17 +73,152 @@
 			]
 		},
 		"bonusStats": {
-			"stats": [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			"stats": [
+				10,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				-20,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			],
+			"pseudoStats": [
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			]
 		},
 		"itemSwap": {
 			"prepullBonusStats": {
-				"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7]
+				"stats": [
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					0,
+					7
+				]
 			}
 		},
 		"consumables": {
-			"extraIds": [10646, 10310, 13452, 250341, 12662, 18588, 250943, 250072, 13444, 13510],
-			"elixirIds": [13452]
+			"extraIds": [
+				10646,
+				10310,
+				13452,
+				250341,
+				12662,
+				18588,
+				250943,
+				250072,
+				13444,
+				13510
+			],
+			"elixirIds": [
+				13452
+			]
 		},
 		"dpsWarrior": {
 			"options": {
@@ -108,7 +245,10 @@
 					"id": {
 						"spellId": 12328
 					},
-					"timings": [30, 90]
+					"timings": [
+						30,
+						90
+					]
 				},
 				{
 					"id": {

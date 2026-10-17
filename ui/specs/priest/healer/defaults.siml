@@ -1,6 +1,6 @@
 siml 1
 spec healer_priest
-talents "005203011301-33505003030121531"
+talents "00520101133-33505003030121531"
 use "gear_sets/preraid.gear.siml"
 
 settings:

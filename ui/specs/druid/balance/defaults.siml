@@ -1,5 +1,7 @@
 siml 1
 spec balance_druid
+talents "5532220115501351--505"
+use "gear_sets/prebis.gear.siml"
 
 settings:
   race night_elf
@@ -10,18 +12,21 @@ settings:
   innervate_target none
 
 consumables:
+  offensive_pot major_spellblasting_potion
   resource_pot major_mana_potion
   flask flask_of_supreme_power
-  food nightfin_soup
+  food lobster_stew
   conjured demonic_rune
+  explosive saf_t_clever_dynamite
   mh_imbue brilliant_wizard_oil
+  elixir greater_arcane_elixir, elixir_of_nature_power, elixir_of_the_owl, greater_mageblood_elixir
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
 
+party_buffs: mana_spring_totem
+
 raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
 
-debuffs:
-  judgement_of_wisdom, curse_of_elements, curse_of_recklessness, expose_armor, sunder_armor
-  gift_of_arthas
+debuffs: judgement_of_wisdom, curse_of_elements
 
 apl: type auto

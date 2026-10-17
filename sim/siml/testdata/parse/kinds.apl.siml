@@ -17,12 +17,10 @@ priority:
   cast x if target_is_mob_type(undead) and encounter_in_area(forest_grassland)
   cast x if all_item_stat_procs_active(agility, stat_type2=14, stat_type3=-1, min_icd_seconds=2.5)
   cast x if num_stat_buff_cooldowns(stat_type1=StatAttackPower) > 0
-  cast x if druid_current_eclipse_phase(solar_phase) and warlock_is_assigned_curse(doom)
+  cast x if target2.druid_bleed_is_active and warlock_is_assigned_curse(weakness) and warlock_active_pet(imp)
   cast x if active_item_swap_set(swap1)
   cast x if target.warlock_assigned_curse_is_active
   activate_all_stat_buff_proc_auras(main, stat_type1=strength)
-  bear_optimal_rotation_action(maintain_faerie_fire, swipe_usage=with_enough_ap, maul_rage_threshold=50)
-  cat_optimal_rotation_action(finishing_move_none)
   guardian_hotw_dps_rotation(hybrid)
   cast other.other_action_wait
   cast_warlock_assigned_curse(target=target)

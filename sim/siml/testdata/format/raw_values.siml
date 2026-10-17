@@ -2,7 +2,6 @@ siml 1
 spec balance_druid
 
 settings:
-  okf_uptime 0.123456789
   `{"distanceFromTarget": "1e3", "darkIntentUptime": "-0"}`
 
 sim:

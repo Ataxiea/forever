@@ -1,0 +1,137 @@
+siml 1
+spec feral_cat_druid
+
+def in_cat = aura(cat_form).is_active
+def clearcast = aura(clearcasting).is_active
+def gcd_ready = gcd_time_to_ready <= 0s
+def cost(x) = spell(x).current_cost
+def mana_short = current_mana < 1400 and current_mana < remaining_time * 50
+// A Shred now leaves the next GCD short of x.
+def shred_leaves_short_for(x) =
+    current_energy - spell(shred).current_cost + 10 < spell(x).current_cost
+// A global of t with nothing better to spend it on: n energy regenerates before the next Shred, bleed
+// or Bite is affordable, and no bleed falls off inside it.
+def free_global(n, t) =
+    in_cat
+    and gcd_ready
+    and not clearcast
+    and spell(shifting_power).time_to_ready >= t
+    and current_energy + n < cost(shred)
+    and (not $rake_due or current_energy + n < cost(rake))
+    and (not $rip_due or current_energy + n < cost(rip))
+    and (not $bite_allowed or current_energy + n < cost(ferocious_bite))
+    and (not dot(rip).is_active or dot(rip).remaining_time > t or current_energy + n < cost(rip))
+    and (not dot(rake).is_active or dot(rake).remaining_time > t or current_energy + n < cost(rake))
+
+var ${Shift Energy ceiling} = 50
+var ${Bite minimum CP} = 4
+var ${Bite Energy ceiling} = 55
+var ${Rip minimum CP} = 4
+var ${Terminal window} = remaining_time < 6s
+var ${Shift now} =
+    in_cat
+    and current_energy <= $shift_energy_ceiling
+    and spell(shifting_power).can_cast
+var ${Rake due} = not dot(rake).is_active and remaining_time > 6s
+var ${Rip due} =
+    current_combo_points >= $rip_minimum_cp
+    and not dot(rip).is_active
+    and not $terminal_window
+var ${Bite allowed} =
+    current_combo_points >= $bite_minimum_cp
+    and current_energy <= $bite_energy_ceiling
+    and $terminal_window
+var ${Reserve refresh Energy} =
+    current_combo_points >= $rip_minimum_cp and dot(rip).is_active and dot(rip).remaining_time <= 2s and not $terminal_window and shred_leaves_short_for(rip)
+    or dot(rake).is_active and dot(rake).remaining_time <= 2s and shred_leaves_short_for(rake)
+var ${Free global 1.0s} = free_global(10, 1.0s)
+var ${Free global 1.5s} = free_global(15, 1.5s)
+var ${Elune's Light now} =
+    spell(elunes_light).is_known
+    and not aura(berserk).is_active
+    and spell(berserk).time_to_ready > 15s
+var ${Shadowmeld into Ravage} =
+    spell(spell_20580).is_known
+    and gcd_ready
+    and in_cat
+    and spell(spell_20580).is_ready
+    and not $reserve_refresh_energy
+    and (clearcast or current_energy >= cost(ravage))
+var ${Energized now} =
+    spell(read_leyline).is_known
+    and in_cat
+    and spell(read_leyline).is_ready
+    and not clearcast
+    and not aura(berserk).is_active
+    and current_energy <= 30
+    and current_mana < 1400
+    and $free_global_1_5s
+
+prepull:
+  -1s group "Prepull opener"
+
+priority:
+  /// Ravage opener
+  cast ravage if aura(prowl).is_active and clearcast
+  cast innervate
+      if not in_cat
+      and not aura(dire_bear_form).is_active
+      and mana_short
+      and spell(innervate).can_cast
+  cast cat_form if not in_cat
+  autocast_other_cooldowns
+  /// Return to Cat
+  cast cat_form if not in_cat and not aura(dire_bear_form).is_active
+  when in_cat and not $shift_now and not ($rip_due and spell(rip).can_cast):
+    /// Berserk with Rake
+    strict_sequence(cast berserk, cast rake) if $rake_due and spell(rake).can_cast
+    /// Berserk with Shred
+    strict_sequence(cast berserk, cast shred)
+        if (not $rake_due and not $reserve_refresh_energy)
+        and spell(shred).can_cast
+  /// Elune's Light outside Berserk
+  cast elunes_light if $elunes_light_now
+  /// Shift below ceiling
+  cast shifting_power if $shift_now
+  when in_cat:
+    /// Tea threshold
+    cast item.thistle_tea if current_energy <= 20
+    /// Mighty Rage Potion
+    cast other.offensive_potion
+    /// Terminal Bite
+    cast ferocious_bite if $bite_allowed
+    /// Maintain Rip
+    cast rip if $rip_due
+    /// Maintain Rake
+    cast rake if $rake_due
+  /// Shadowmeld into Ravage
+  strict_sequence(cast spell_20580, cast ravage) if $shadowmeld_into_ravage
+  /// Shred
+  cast shred if in_cat and not $reserve_refresh_energy
+  /// Sapper in a free global
+  strict_sequence(cancel_aura(cat_form), cast item.goblin_sapper_charge, cast cat_form)
+      if spell(item.goblin_sapper_charge).is_known
+      and $free_global_1_5s
+      and spell(item.goblin_sapper_charge).is_ready
+      and current_mana >= cost(cat_form)
+      and not aura(berserk).is_active
+      and not $reserve_refresh_energy
+  /// Read Ley Line in a free global
+  cast read_leyline if $energized_now
+  /// Faerie Fire filler
+  cast faerie_fire
+      if $free_global_1_0s
+      and aura(omen_of_clarity).icd_is_ready
+      and (not spell(item.goblin_sapper_charge).is_known or not spell(item.goblin_sapper_charge).is_ready or not $free_global_1_5s)
+  cancel_aura(cat_form)
+      if in_cat
+      and spell(innervate).is_ready
+      and mana_short
+      and gcd_ready
+      and current_energy <= 30
+      and not clearcast
+      and not aura(berserk).is_active
+      and remaining_time >= 15s
+
+group "Prepull opener":
+  cast prowl if clearcast

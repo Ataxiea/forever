@@ -3,8 +3,8 @@ import { Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
-export const DiscTalents = PresetUtils.makePresetTalents('Disc', SavedTalents.create({ talentsString: '005023021305101531-335001030301' }));
-export const HolyTalents = PresetUtils.makePresetTalents('Holy', SavedTalents.create({ talentsString: '005203011301-33505003030121531' }));
+export const DiscTalents = PresetUtils.makePresetTalents('Disc', SavedTalents.create({ talentsString: '005025021330011531-335001030301' }));
+export const HolyTalents = PresetUtils.makePresetTalents('Holy', SavedTalents.create({ talentsString: '00520101133-33505003030121531' }));
 
 export const DiscSingleTargetEpWeights = PresetUtils.makePresetEpWeights(
 	'Disc Single-Target',

@@ -1,5 +1,7 @@
 siml 1
 spec mage
+talents "0502205003100301531--055500032"
+use "gear_sets/p1Arcane.gear.siml"
 
 settings:
   race human

@@ -23,13 +23,11 @@
 			"options": {
 				"classOptions": {
 					"summon": "Imp",
-					"detonateSeed": true,
-					"useItemSwapBonusStats": true,
-					"armor": "FelArmor",
-					"petOptions": "MeleeOnly",
-					"curseOptions": "Recklessness"
-				},
-				"exhaleWindow": 8
+					"armor": "DemonArmor",
+					"curseOptions": "Recklessness",
+					"sacrificedDemon": "Succubus",
+					"soulShards": 8
+				}
 			}
 		},
 		"profession1": "Tailoring",

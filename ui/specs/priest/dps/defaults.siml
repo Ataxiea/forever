@@ -1,7 +1,6 @@
 siml 1
 spec dps_priest
-talents "005300211303--500320501201312251"
-use "gear_sets/preraid.gear.siml"
+talents "00530321103--50052001231312251"
 
 settings:
   race undead
@@ -9,9 +8,28 @@ settings:
   profession2 tailoring
   reaction_time_ms 100
   channel_clip_delay_ms 100
-  distance_from_target 28
+  distance_from_target 20
   armor inner_fire
   pre_shadowform
+
+gear:
+  head       eternal_crown of_shadow_wrath
+  neck       chains_of_the_lich
+  shoulder   felcloth_shoulders
+  back       arcanoweave_cloak
+  chest      robe_of_winter_night + chest_major_intellect
+  wrist      masters_bracers of_shadow_wrath + bracer_superior_intellect
+  hands      felcloth_gloves
+  waist      masters_belt of_shadow_wrath
+  legs       masters_leggings of_shadow_wrath
+  feet       masters_boots of_shadow_wrath
+  finger1    blessed_band_of_light
+  finger2    brilliant_watchers_signet
+  trinket1   weakness_analyzer
+  trinket2   jewel_of_the_guard_captain
+  main_hand  verimondes_last_resort + weapon_revelation
+  off_hand   masters_rod of_shadow_wrath
+  ranged     lunar_wand of_shadow_wrath
 
 consumables:
   offensive_pot major_spellblasting_potion
@@ -29,9 +47,9 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
 
-party_buffs: mana_spring_totem, moonkin_aura
+party_buffs: mana_spring_totem
 
-raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
 
 debuffs: judgement_of_the_crusader, judgement_of_wisdom, curse_of_elements
 

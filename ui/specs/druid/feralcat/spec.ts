@@ -1,9 +1,8 @@
 import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLAction, APLListItem, APLRotation } from '@generated/proto/apl';
-import { Cooldowns, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { FeralCatDruid_Rotation as DruidRotation } from '@generated/proto/druid';
+import { APLRotation } from '@generated/proto/apl';
+import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { Stats, UnitStat } from '@sim/proto/stats';
@@ -38,7 +37,7 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 		Stat.StatHasteRating,
 		Stat.StatArmorPenetration,
 	],
-	epPseudoStats: [],
+	epPseudoStats: [PseudoStat.PseudoStatMainHandDps],
 	// Reference stat against which to calculate EP. I think all classes use either spell power or attack power.
 	epReferenceStat: Stat.StatAgility,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
@@ -65,7 +64,7 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 	defaults: {
 		...PresetUtils.specDefaultsFromSettings(Spec.SpecFeralCatDruid, Defaults),
 		// Default EP weights for sorting gear in the gear picker.
-		epWeights: new Stats(),
+		epWeights: Presets.PreRaidEp,
 		statCaps: (() => {
 			return new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 8).withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 		})(),
@@ -73,8 +72,6 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 
 	// IconInputs to include in the 'Player' section on the settings tab.
 	playerIconInputs: [],
-	// Inputs to include in the 'Rotation' section on the settings tab.
-	rotationInputs: FeralInputs.FeralDruidRotationConfig,
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [Stat.StatMP5, Stat.StatIntellect, Stat.StatStamina],
 	excludeBuffDebuffInputs: [BuffDebuffInputs.AtieshMage],
@@ -86,6 +83,8 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 			OtherInputs.TankAssignment,
 			OtherInputs.InFrontOfTarget,
 			FeralInputs.CannotShredTarget,
+			FeralInputs.AssumeBleedActive,
+			FeralInputs.PrepullClearcasting,
 		],
 	},
 	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand, ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2],
@@ -95,28 +94,26 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.PreRaidEpWeights, Presets.Level60EpWeights],
 		// Preset talents that the user can quickly select.
-		talents: [],
-		rotations: [Presets.SIMPLE, Presets.APL],
+		talents: [Presets.CatTalents, Presets.BearweaveTalents, Presets.ManaEfficientTalents, Presets.HybridTalents],
+		rotations: [
+			Presets.MONOCAT_APL,
+			Presets.SHADOWMELD_APL,
+			Presets.ENERGIZED_APL,
+			Presets.RAVAGE_APL,
+			Presets.POUNCE_APL,
+			Presets.BEARWEAVE_APL,
+			Presets.JVMES_APL,
+		],
+		builds: [Presets.BearweaveBuild],
 		// Preset gear configurations that the user can quickly select.
-		gear: [],
+		gear: [Presets.PreRaidGear, Presets.Level60Gear],
 	},
 
+	// Auto is the Monocat APL.
 	autoRotation: (_player: Player<Spec.SpecFeralCatDruid>): APLRotation => {
-		return Presets.APL.rotation.rotation!;
-	},
-
-	simpleRotation: (_player: Player<Spec.SpecFeralCatDruid>, simple: DruidRotation, _cooldowns: Cooldowns): APLRotation => {
-		// All cooldowns (potions, sappers, runes) are fired by the Go rotation
-		// during power shifts (ClearForm → fire MCDs → CatForm), not through the APL.
-		const doRotation = APLAction.fromJsonString(
-			`{"catOptimalRotationAction":{"finishingMove":${simple.finishingMove},"biteweave":${simple.biteweave},"ripweave":${simple.ripweave},"ripMinComboPoints":${simple.ripMinComboPoints},"biteMinComboPoints":${simple.biteMinComboPoints},"mangleTrick":${simple.mangleTrick},"rakeTrick":${simple.rakeTrick},"maintainFaerieFire":${simple.maintainFaerieFire}}}`,
-		);
-
-		return APLRotation.create({
-			priorityList: [APLListItem.create({ action: doRotation })],
-		});
+		return Presets.MONOCAT_APL.rotation.rotation!;
 	},
 
 	hiddenMCDs: [],

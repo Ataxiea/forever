@@ -433,15 +433,6 @@
 		},
 		{
 			"action": {
-				"catOptimalRotationAction": {
-					"finishingMove": "Bite",
-					"biteweave": true,
-					"ripMinComboPoints": 5
-				}
-			}
-		},
-		{
-			"action": {
 				"castSpell": {
 					"spellId": {
 						"otherId": "OtherActionOffensivePotion"

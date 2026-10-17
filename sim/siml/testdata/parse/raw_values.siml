@@ -3,7 +3,6 @@ spec balance_druid
 
 // Raw JSON as JSON.parse reads it, then as protojson reads that value (SPEC.md §11).
 settings:
-  okf_uptime 0.123456789
   `{"distanceFromTarget": "1e3", "reactionTimeMs": "10e-1", "darkIntentUptime": "-0", "name": "a", "name": "b"}`
 
 encounter: targets(stats=`[]`)

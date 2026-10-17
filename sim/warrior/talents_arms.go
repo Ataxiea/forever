@@ -87,8 +87,13 @@ func (warrior *Warrior) registerImprovedOverpower() {
 
 var angerManagementRank = spellData.AngerManagement.Highest()
 
-var angerManagementRage = angerManagementRank.EffectN(2).Average()
-var angerManagementPeriod = time.Duration(angerManagementRank.EffectN(3).Average()) * time.Second
+// The rage regen aura on effect 1 states its amount on the rage bar's tenths, per five seconds as
+// every A_MOD_POWER_REGEN does. The game files state no tick for it, so the rage arrives as one
+// gain every five seconds while in combat. The tooltip's "$m2 Rage every $m3 sec" reads the two
+// dummies instead, 1 rage every 3 seconds.
+var angerManagementRage = angerManagementRank.EffectN(1).Tenths()
+
+const angerManagementPeriod = 5 * time.Second
 
 func (warrior *Warrior) registerAngerManagement() {
 	if !warrior.Talents.AngerManagement {
@@ -251,17 +256,13 @@ func (warrior *Warrior) registerBloodthrill() {
 	}
 
 	talent := spellData.Bloodthrill.Rank(warrior.Talents.Bloodthrill)
-	// The tooltip's "Lasts $1289681d" is the one spell the row refers to, not the Overpower its
-	// effect fires.
-	window := talent.Refs()[0].Duration()
 
-	// The proc makes Overpower usable for the buff's duration; the cast consumes it like a dodge
-	// would. The rate is the shape where the tooltip's $s1 names an effect, so the row's own
-	// ProcChanceEffectN reads the ladder; the Rend the tooltip asks for is the caller's.
+	// The proc opens Overpower's window as a dodge would, for the window's own duration, and the
+	// cast consumes it. The tooltip's $s1 names an effect, so the row's own ProcChanceEffectN
+	// reads the rate ladder. The caller checks for the Rend the tooltip asks for.
 	trigger := spelldata.ProcTrigger(&warrior.Character, talent,
 		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			warrior.OverpowerAura.Activate(sim)
-			warrior.OverpowerAura.UpdateExpires(sim.CurrentTime + window)
 		})
 	trigger.Name = "Bloodthrill - Trigger"
 	trigger.RequireDamageDealt = false
@@ -282,14 +283,11 @@ func (warrior *Warrior) registerWeaponmaster() {
 	actionID := core.ActionID{SpellID: spellData.Weaponmaster.Rank(rank).ID}
 
 	// The three branches share A_DUMMY and misc 0, so each is named by its effect index.
-	mainHandIs := func(weaponTypes ...proto.WeaponType) bool {
-		return warrior.GetProcMaskForTypes(weaponTypes...).Matches(core.ProcMaskMeleeMH)
-	}
 	var critOn, armorIgnoreOn bool
 	var swordMask core.ProcMask
 	readWeapons := func() {
 		critOn = warrior.GetProcMaskForTypes(proto.WeaponType_WeaponTypeAxe, proto.WeaponType_WeaponTypePolearm).Matches(core.ProcMaskMelee)
-		armorIgnoreOn = mainHandIs(proto.WeaponType_WeaponTypeMace, proto.WeaponType_WeaponTypeStaff)
+		armorIgnoreOn = warrior.GetProcMaskForTypes(proto.WeaponType_WeaponTypeMace, proto.WeaponType_WeaponTypeStaff).Matches(core.ProcMaskMelee)
 		swordMask = warrior.GetProcMaskForTypes(proto.WeaponType_WeaponTypeSword)
 	}
 	readWeapons()
@@ -311,6 +309,8 @@ func (warrior *Warrior) registerWeaponmaster() {
 		core.MakePermanent(critAura)
 	}
 
+	// The aura is up while either hand holds a one- or two-handed mace or a staff, and its armor
+	// ignore reaches every attack. A mace in each hand ignores the share once.
 	armorIgnore := spellData.Weaponmaster.EffectAt(2).FractionAt(rank)
 	armorIgnoreAura := warrior.RegisterAura(core.Aura{
 		Label:    "Weaponmaster (Mace/Staff)",

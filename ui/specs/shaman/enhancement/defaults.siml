@@ -1,7 +1,6 @@
 siml 1
 spec enhancement_shaman
-talents "050533102-053030031005112251"
-use "gear_sets/prebis.gear.siml"
+talents "053503102-053030031005112251"
 
 settings:
   race orc
@@ -12,6 +11,24 @@ settings:
   // Windfury Weapon on the main hand outbids the party's Windfury Totem, so the default is
   // Rockbiter Weapon.
   imbue_mh rockbiter_weapon
+
+gear:
+  head       black_dragonscale_helm + arcanum_of_rapidity
+  neck       beads_of_ogre_might
+  shoulder   horned_pauldron
+  back       arcanoweave_cloak + cloak_agility
+  chest      dawn_armor + chest_greater_stats
+  wrist      wildheart_bracers + bracer_superior_strength
+  hands      stormshroud_gloves + gloves_greater_strength
+  waist      belt_of_preserved_heads
+  legs       ironfeather_leggings + arcanum_of_rapidity
+  feet       boots_of_the_five_thunders + boots_greater_agility
+  finger1    brilliant_watchers_signet
+  finger2    channelers_ring
+  trinket1   adaptive_combat_assistant
+  trinket2   frozen_heart_of_the_mountain
+  main_hand  arcanite_reaper + weapon_crusader
+  ranged     totem_of_the_storm
 
 consumables:
   resource_pot major_mana_potion
@@ -32,9 +49,9 @@ consumables:
 
 buffs: greater_blessing_of_kings, greater_blessing_of_might
 
-party_buffs: battle_shout, leader_of_the_pack, strength_of_earth_totem, windfury_totem
-
-raid_buffs: arcane_brilliance, gift_of_the_wild, prayer_of_fortitude
+raid_buffs:
+  arcane_brilliance, gift_of_the_wild, prayer_of_fortitude, strength_of_earth_totem, windfury_totem
+  battle_shout, leader_of_the_pack
 
 debuffs:
   hunters_mark, judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire

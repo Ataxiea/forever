@@ -492,13 +492,21 @@
 					"and": {
 						"vals": [
 							{
-								"druidCurrentEclipsePhase": {
-									"eclipsePhase": "SolarPhase"
+								"druidBleedIsActive": {
+									"targetUnit": {
+										"type": "Target",
+										"index": 1
+									}
 								}
 							},
 							{
 								"warlockIsAssignedCurse": {
-									"curseType": "Doom"
+									"curseType": "Weakness"
+								}
+							},
+							{
+								"warlockActivePet": {
+									"summon": "Imp"
 								}
 							}
 						]
@@ -545,22 +553,6 @@
 			"action": {
 				"activateAllStatBuffProcAuras": {
 					"swapSet": "Main"
-				}
-			}
-		},
-		{
-			"action": {
-				"bearOptimalRotationAction": {
-					"maintainFaerieFire": true,
-					"maulRageThreshold": 50,
-					"swipeUsage": "SwipeUsage_WithEnoughAP"
-				}
-			}
-		},
-		{
-			"action": {
-				"catOptimalRotationAction": {
-					"finishingMove": "None"
 				}
 			}
 		},

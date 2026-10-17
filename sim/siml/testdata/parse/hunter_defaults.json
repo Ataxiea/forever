@@ -7,7 +7,11 @@
 		"prayerOfSpirit": true,
 		"giftOfTheWild": true,
 		"prayerOfFortitude": true,
-		"prayerOfShadowProtection": true
+		"prayerOfShadowProtection": true,
+		"battleShout": "TristateEffectRegular",
+		"leaderOfThePack": true,
+		"strengthOfEarthTotem": true,
+		"graceOfAirTotem": true
 	},
 	"debuffs": {
 		"judgementOfLight": true,
@@ -19,12 +23,6 @@
 		"sunderArmor": true,
 		"giftOfArthas": true,
 		"insectSwarm": true
-	},
-	"partyBuffs": {
-		"battleShout": "TristateEffectRegular",
-		"leaderOfThePack": true,
-		"strengthOfEarthTotem": true,
-		"graceOfAirTotem": true
 	},
 	"player": {
 		"race": "RaceOrc",
@@ -96,8 +94,14 @@
 			"foodId": 250072,
 			"conjuredId": 12662,
 			"explosiveId": 18588,
-			"extraIds": [10646, 10310],
-			"elixirIds": [13452, 250341]
+			"extraIds": [
+				10646,
+				10310
+			],
+			"elixirIds": [
+				13452,
+				250341
+			]
 		},
 		"buffs": {
 			"greaterBlessingOfKings": true
