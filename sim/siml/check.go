@@ -92,18 +92,9 @@ func (t *typer) checkReferences(declarations []*variableDecl, groups []nameUse, 
 		case res.found:
 			use.ref.Name = res.name
 			targets[use] = declarationOf(declarations, res.name, use.scope)
-		case len(res.ambiguous) > 0:
-			exact := make([]string, len(res.ambiguous))
-			for i, a := range res.ambiguous {
-				exact[i] = "${" + a + "}"
-			}
-			t.report("ambiguous-variable", fmt.Sprintf("$%s could be any of %s; write the exact name", n.name, strings.Join(exact, ", ")), n.span)
+		case t.reportAmbiguous(n, res):
 		default:
-			written := "$" + n.name
-			if n.braced {
-				written = "${" + n.name + "}"
-			}
-			t.warn("undefined-variable", "no variable here is named "+written, n.span)
+			t.warn("undefined-variable", "no variable here is named "+nodeText(n, ""), n.span)
 		}
 	}
 	t.site = nil
@@ -200,4 +191,17 @@ func reaches[T comparable](from, to T, next func(T) []T) bool {
 		stack = append(stack, next(x)...)
 	}
 	return false
+}
+
+// Reports ambiguous-variable at v when res holds several names; false when it holds none.
+func (t *typer) reportAmbiguous(v *varNode, res resolution) bool {
+	if len(res.ambiguous) == 0 {
+		return false
+	}
+	exact := make([]string, len(res.ambiguous))
+	for i, a := range res.ambiguous {
+		exact[i] = braced("$", a)
+	}
+	t.report("ambiguous-variable", fmt.Sprintf("%s could be any of %s; write the exact name", nodeText(v, ""), strings.Join(exact, ", ")), v.span)
+	return true
 }

@@ -585,19 +585,10 @@ func (f *typedFile) setVariables(rotation *proto.APLRotation, with []varBind, pa
 	var values []*proto.APLValue
 	for _, b := range with {
 		res := resolveVariable(b.variable.name, b.variable.braced, names)
-		written := "$" + b.variable.name
-		if b.variable.braced {
-			written = "${" + b.variable.name + "}"
-		}
 		switch {
-		case len(res.ambiguous) > 0:
-			exact := make([]string, len(res.ambiguous))
-			for i, a := range res.ambiguous {
-				exact[i] = "${" + a + "}"
-			}
-			t.report("ambiguous-variable", fmt.Sprintf("%s could be any of %s; write the exact name", written, strings.Join(exact, ", ")), b.variable.span)
+		case t.reportAmbiguous(b.variable, res):
 		case !res.found:
-			t.report("with-unknown-variable", fmt.Sprintf("%s declares no variable %s%s", path, written, didYouMean(b.variable.name, names)), b.variable.span)
+			t.report("with-unknown-variable", fmt.Sprintf("%s declares no variable %s%s", path, nodeText(b.variable, ""), didYouMean(b.variable.name, names)), b.variable.span)
 		default:
 			k := slices.Index(names, res.name)
 			value := t.valueIn(b.value, slices.Concat(jsonKeys(t.ix.rotationPath), []any{"valueVariables", k, "value"})...)
