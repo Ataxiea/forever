@@ -2,7 +2,6 @@ import * as PresetUtils from '@app/preset_utils';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
-import { Encounter } from '@sim/raid/encounter';
 
 import DefaultsJson from './defaults.siml';
 import DefaultApl from './apls/default.apl.siml';
@@ -28,11 +27,9 @@ export const Level60Gear = PresetUtils.makePresetGear('Level 60', Level60GearJso
 	tooltip: 'Leather at level 60 with no set bonus and no proc. The idol slot is empty: every idol has an effect.',
 });
 
-// The raid target swings for 6000 before armor.
-const level60Encounter = Encounter.defaultEncounterProto();
-level60Encounter.targets[0].minBaseDamage = 6000;
+// The fight defaults.siml writes: the raid target, swinging for 6000 before armor.
 export const Level60Encounter = {
-	...PresetUtils.makePresetEncounter('Level 60 boss', level60Encounter),
+	...PresetUtils.makePresetEncounter('Level 60 boss', Defaults.encounter!.encounter),
 	tooltip: 'The raid target, hitting for 6000 before armor.',
 };
 

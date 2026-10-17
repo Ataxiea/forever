@@ -79,9 +79,9 @@ func TestCharacterFromRepoReadsTheSpecDefaults(t *testing.T) {
 	if !c.settings.RaidBuffs.GetGiftOfTheWild() || !c.settings.Debuffs.GetSunderArmor() || !p.Buffs.GetGreaterBlessingOfKings() {
 		t.Errorf("buffs not read: raid %v, debuffs %v, individual %v", c.settings.RaidBuffs, c.settings.Debuffs, p.Buffs)
 	}
-	// The defaults set no encounter, so the request takes the default target and says so.
-	if c.settings.Encounter != nil {
-		t.Errorf("encounter %v, want none, for the request to fill in", c.settings.Encounter)
+	// The defaults write the site's default fight, so the request adds no default target and no warning.
+	if c.settings.Encounter.GetDuration() != 180 || len(c.settings.Encounter.GetTargets()) != 1 {
+		t.Errorf("encounter %v, want the defaults' fight", c.settings.Encounter)
 	}
 }
 
@@ -253,10 +253,10 @@ func TestSettingsFileSuppliesTheCharacter(t *testing.T) {
 	if fromFile.Error != "" || fromFile.DPS != fromRepo.DPS || fromFile.Character.Source != path {
 		t.Errorf("from the file: %v (%s), from the repo: %v", fromFile.DPS, fromFile.Error, fromRepo.DPS)
 	}
-	// An x.siml with no encounter is simmed against the default target, which the warnings say.
+	// defaults.siml is a full setup with its own encounter, so it sims as the repo does, with no warning.
 	defaults := filepath.Join(root, "ui/specs/hunter/dps/defaults.siml")
 	fromSIML := runSimlSim(context.Background(), root, simlSimRequest{SIML: text, Path: apl, Iterations: 10, SettingsFile: defaults})
-	if fromSIML.Error != "" || fromSIML.DPS != fromRepo.DPS || len(fromSIML.Character.Warnings) != 1 {
+	if fromSIML.Error != "" || fromSIML.DPS != fromRepo.DPS || len(fromSIML.Character.Warnings) != 0 {
 		t.Errorf("from defaults.siml: %v (%s, warnings %q), from the repo: %v", fromSIML.DPS, fromSIML.Error, fromSIML.Character.Warnings, fromRepo.DPS)
 	}
 	// A preset build is loaded over its spec's defaults, as with no settings file.

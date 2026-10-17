@@ -72,7 +72,6 @@ export default defineSpec<Spec.SpecFeralBearDruid>({
 
 	defaults: {
 		...Presets.Defaults,
-		encounter: Presets.Level60Encounter,
 		epWeights: Presets.Level60SurvivalEp,
 		statCaps: (() => {
 			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 8);
