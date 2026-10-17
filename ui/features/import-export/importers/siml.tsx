@@ -6,6 +6,7 @@ import i18n from '@i18n/config';
 import { SIM_CATEGORY_KEYS, SimSettingCategories } from '@sim/constants/sim_settings';
 import { Database } from '@sim/proto/database';
 import type { IndividualSimHost } from '@sim/sim_host';
+import { withViewerStatFilters } from '@sim/state/stat_filter_sharing';
 import { toastManager } from '@ui-kit/Toast';
 
 import { SIML_ROTATION_FILE } from '../exporters/siml';
@@ -72,7 +73,7 @@ const importSiml = async (host: IndividualSimHost<any>, text: string, path: stri
 	if (categories.includes(SimSettingCategories.Gear)) {
 		await Database.loadLeftoversIfNecessary(EquipmentSpec.create({ items: [...(player.equipment?.items ?? []), ...(player.itemSwap?.items ?? [])] }));
 	}
-	host.fromProto(settings, categories);
+	host.fromProto(withViewerStatFilters(settings, host.sim), categories);
 };
 
 /**

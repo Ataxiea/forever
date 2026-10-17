@@ -4,6 +4,7 @@ import { IndividualSimSettings, type SimlPrintRequest } from '@generated/proto/u
 import i18n from '@i18n/config';
 import { SIM_CATEGORY_KEYS, type SimSettingCategories } from '@sim/constants/sim_settings';
 import type { IndividualSimHost } from '@sim/sim_host';
+import { withoutStatFilters } from '@sim/state/stat_filter_sharing';
 
 import { located, printSiml } from '../siml_client';
 import { selectedCategories } from './categories';
@@ -31,7 +32,7 @@ const printReadable = async (host: IndividualSimHost<any>, request: Partial<Siml
  */
 const printSimlSettings = (host: IndividualSimHost<any>, categories: Array<SimSettingCategories>): Promise<string> =>
 	printReadable(host, {
-		settings: host.toProto(categories),
+		settings: withoutStatFilters(host.toProto(categories)),
 		categories: categories.map(category => SIM_CATEGORY_KEYS.get(category)!),
 	});
 
