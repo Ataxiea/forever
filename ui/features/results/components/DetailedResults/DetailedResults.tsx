@@ -3,6 +3,7 @@ import { SimRun, SimRunData } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { useDisplayMetrics } from '@sim/hooks/useDisplayMetrics';
+import { usePlayerStore } from '@sim/hooks/usePlayerStore';
 import { SimResult } from '@sim/proto/sim_result';
 import { subscribeSimSettingsChange } from '@sim/state/subscriptions';
 import { isDevMode } from '@sim/utils/env';
@@ -20,6 +21,7 @@ import { CastMetricsTable } from '../CastMetricsTable';
 import { DamageMetricsTable } from '../DamageMetricsTable';
 import { DtpsMetricsTable } from '../DtpsMetricsTable';
 import { HealingMetricsTable } from '../HealingMetricsTable';
+import { HealingSpellTable } from '../HealingSpellTable';
 import { LogRunner } from '../LogRunner';
 import { ResourceMetricsTable } from '../ResourceMetricsTable';
 import { ALL_UNITS, hasTarget, ResultsFilter, simResultFilter } from '../ResultsFilter';
@@ -28,13 +30,14 @@ import { Timeline } from '../Timeline';
 import { DrStickySlotContext } from './context/DrStickySlotContext';
 import { DetailedResultsPane } from './DetailedResultsPane';
 import { DetailedResultsTabs } from './DetailedResultsTabs';
-import { DEFAULT_DETAILED_RESULTS_TAB, DETAILED_RESULTS_TABS, type DetailedResultsTabConfig } from './utils';
+import { DEFAULT_DETAILED_RESULTS_TAB, DETAILED_RESULTS_TABS, HEALING_SPELLS_RESULTS_TAB, type DetailedResultsTabConfig } from './utils';
 
 export interface DetailedResultsViewProps {
 	tabs: ReadonlyArray<DetailedResultsTabConfig>;
 	activeId: string;
 	onActiveIdChange: (id: string) => void;
 	hasResults: boolean;
+	hasStaticResults?: boolean;
 	iterationDisabled: boolean;
 	deathDisabled: boolean;
 	onSimulateIteration: () => void;
@@ -49,6 +52,7 @@ export const DetailedResultsView = ({
 	activeId,
 	onActiveIdChange,
 	hasResults,
+	hasStaticResults,
 	iterationDisabled,
 	deathDisabled,
 	onSimulateIteration,
@@ -73,7 +77,7 @@ export const DetailedResultsView = ({
 				<Tabs.Root
 					className="group/dr flex scroll-mt-sim-header flex-col"
 					data-testid="dr-root"
-					data-no-results={!hasResults ? '' : undefined}
+					data-no-results={!hasResults && !hasStaticResults ? '' : undefined}
 					value={activeId}
 					onValueChange={next => onActiveIdChange(String(next))}>
 					<div ref={toolbarRef} data-testid="dr-toolbar" className={clsx(stickyToolbarClassName, 'flex-col')} data-stuck={stuck ? '' : undefined}>
@@ -112,22 +116,26 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 
 	const settingsSubscribe = subscribeSimSettingsChange(sim);
 	const { damage: showDamage, threat: showThreat, healing: showHealing } = useDisplayMetrics(sim);
+	const currentStats = usePlayerStore('currentStats');
+	const supportsHealingSpellStats = currentStats.healingSpells.length > 0;
+	const hasResults = useSimResult() !== null;
 
 	const visibleTabs = useMemo(
 		() =>
 			DETAILED_RESULTS_TABS.filter(tab => {
+				if (supportsHealingSpellStats && !hasResults) return tab.id === HEALING_SPELLS_RESULTS_TAB;
+				if (tab.id === HEALING_SPELLS_RESULTS_TAB) return supportsHealingSpellStats;
 				if (tab.id === 'damageTab') return showDamage;
 				if (tab.id === 'healingTab') return showHealing;
 				if (tab.id === 'threatTab' || tab.id === 'damageTakenTab') return showThreat;
 				return true;
 			}),
-		[showDamage, showThreat, showHealing],
+		[hasResults, showDamage, showThreat, showHealing, supportsHealingSpellStats],
 	);
 
-	const [activeId, setActiveId] = useState<string>(DEFAULT_DETAILED_RESULTS_TAB);
+	const [activeId, setActiveId] = useState<string>(supportsHealingSpellStats ? HEALING_SPELLS_RESULTS_TAB : DEFAULT_DETAILED_RESULTS_TAB);
 	const [deathDisabled, setDeathDisabled] = useState(true);
 	const [target, setTarget] = useState(ALL_UNITS);
-	const hasResults = useSimResult() !== null;
 
 	// `updateResults` is bound to the emitter, not to the filter, so the selection it reads is a ref.
 	const targetRef = useRef(target);
@@ -241,6 +249,7 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 			activeId={activeId}
 			onActiveIdChange={setActiveId}
 			hasResults={hasResults}
+			hasStaticResults={supportsHealingSpellStats}
 			iterationDisabled={host.disabled}
 			deathDisabled={deathDisabled}
 			onSimulateIteration={() => {
@@ -270,6 +279,11 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 			{showHealing && (
 				<DetailedResultsPane id="healingTab" className="[&_.ui-metrics-table]:text-xs" topline>
 					<HealingMetricsTable />
+				</DetailedResultsPane>
+			)}
+			{supportsHealingSpellStats && (
+				<DetailedResultsPane id={HEALING_SPELLS_RESULTS_TAB} showWithoutResults>
+					<HealingSpellTable />
 				</DetailedResultsPane>
 			)}
 			{showThreat && (

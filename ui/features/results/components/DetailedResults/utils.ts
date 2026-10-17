@@ -5,6 +5,7 @@ export interface DetailedResultsTabConfig {
 }
 
 export const DETAILED_RESULTS_TABS: ReadonlyArray<DetailedResultsTabConfig> = [
+	{ id: 'healingSpellsTab', labelKey: 'results_tab.details.tabs.healing_spells' },
 	{ id: 'damageTab', labelKey: 'results_tab.details.tabs.damage' },
 	{ id: 'threatTab', labelKey: 'results_tab.details.tabs.threat' },
 	{ id: 'healingTab', labelKey: 'results_tab.details.tabs.healing' },
@@ -18,6 +19,7 @@ export const DETAILED_RESULTS_TABS: ReadonlyArray<DetailedResultsTabConfig> = [
 ];
 
 export const DEFAULT_DETAILED_RESULTS_TAB = 'damageTab';
+export const HEALING_SPELLS_RESULTS_TAB = 'healingSpellsTab';
 
 /** Ties a pane to the tab button that controls it. */
 export const tabButtonId = (tabId: string): string => `${tabId}-nav`;

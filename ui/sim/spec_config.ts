@@ -6,7 +6,7 @@ import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/prot
 import { ConsumesSpec, EquipmentSpec, HealingModel, ItemSlot, ItemSwap, Profession, PseudoStat, Race, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import type { SavedDataConfig } from '@ui-kit/SavedDataPanel/types';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import { Player, PlayerConfig, registerSpecConfig as registerPlayerConfig } from './player/player';
 import type { WeaponSkillGroup } from './player/weapon_skill_groups';
@@ -157,6 +157,10 @@ export interface IndividualSimUIConfig<SpecType extends Spec> extends PlayerConf
 	hideSimpleCooldowns?: boolean;
 	includeBuffDebuffInputs: Array<any>;
 	excludeBuffDebuffInputs: Array<any>;
+	healingInputs?: InputSection;
+	healingSpellOrder?: Array<string>;
+	healingProcAuras?: Array<{ spellId: number; labelKey: string }>;
+	healingMetricsSourceActions?: Array<{ spellId: number; source: 'damage' | 'healing' }>;
 	otherInputs: InputSection;
 	// Currently, many classes don't support item swapping, and only in certain slots.
 	// So enable it only where it is supported.
@@ -164,6 +168,8 @@ export interface IndividualSimUIConfig<SpecType extends Spec> extends PlayerConf
 
 	// Extra settings-tab sections, as data (e.g. Shaman totems).
 	sections?: Array<CustomSection<SpecType>>;
+	settingsComponentUnderPlayer?: ComponentType;
+	hideDebuffs?: boolean;
 
 	encounterPicker: EncounterPickerConfig;
 

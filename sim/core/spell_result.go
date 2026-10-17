@@ -314,12 +314,12 @@ func getCritChance(rawChance float64, target *Unit) float64 {
 func (spell *Spell) HealingPower(target *Unit) float64 {
 	return spell.Unit.GetStat(stats.HealingPower) + target.PseudoStats.BonusHealingTaken
 }
-func (spell *Spell) HealingCritChance() float64 {
-	return (spell.Unit.GetStat(stats.SpellCritPercent) + spell.BonusCritPercent) / 100
+func (spell *Spell) HealingCritChance(target *Unit) float64 {
+	return min(spell.SpellCritChance(target), 1)
 }
 
-func (spell *Spell) HealingCritCheck(sim *Simulation) bool {
-	critChance := spell.HealingCritChance()
+func (spell *Spell) HealingCritCheck(sim *Simulation, target *Unit) bool {
+	critChance := spell.HealingCritChance(target)
 	return sim.RandomFloat("Healing Crit Roll") < critChance
 }
 
@@ -716,6 +716,69 @@ func (spell *Spell) CalcHealing(sim *Simulation, target *Unit, baseHealing float
 	}
 	return spell.calcHealingInternal(sim, target, baseHealing, spell.CasterHealingMultiplier(), outcomeApplier)
 }
+
+type HealingRange struct {
+	Min  float64
+	Mean float64
+	Max  float64
+}
+
+// CalculateHealingRange applies a spell's healing modifiers to the supplied base range without
+// rolling its direct variance or healing crit chance.
+func (spell *Spell) CalculateHealingRange(sim *Simulation, target *Unit, baseMin, baseMean, baseMax float64, periodic bool) (HealingRange, HealingRange) {
+	var casterMultiplier float64
+	if periodic {
+		dot := spell.Hot(target)
+		if dot == nil {
+			return HealingRange{}, HealingRange{}
+		}
+		if dot.BonusCoefficient > 0 {
+			bonus := dot.BonusCoefficient * spell.HealingPower(target)
+			baseMin += bonus
+			baseMean += bonus
+			baseMax += bonus
+		}
+		casterMultiplier = dot.CasterPeriodicHealingMultiplier()
+	} else {
+		if spell.BonusCoefficient > 0 {
+			bonus := spell.BonusCoefficient * spell.HealingPower(target)
+			baseMin += bonus
+			baseMean += bonus
+			baseMax += bonus
+		}
+		if spell.DirectVariance > 0 {
+			variance := spell.DirectVariance / 2
+			baseMin *= 1 - variance
+			baseMax *= 1 + variance
+		}
+		casterMultiplier = spell.CasterHealingMultiplier()
+	}
+
+	calculate := func(amount float64, critical bool) float64 {
+		outcome := spell.OutcomeHealing
+		if critical {
+			outcome = func(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+				result.Outcome = OutcomeCrit
+				result.Damage *= spell.CritDamageMultiplier(attackTable)
+			}
+		}
+		result := spell.calcHealingInternal(sim, target, amount, casterMultiplier, outcome)
+		value := result.Damage
+		spell.DisposeResult(result)
+		return value
+	}
+
+	return HealingRange{
+			Min:  calculate(baseMin, false),
+			Mean: calculate(baseMean, false),
+			Max:  calculate(baseMax, false),
+		}, HealingRange{
+			Min:  calculate(baseMin, true),
+			Mean: calculate(baseMean, true),
+			Max:  calculate(baseMax, true),
+		}
+}
+
 func (spell *Spell) CalcPeriodicHealing(sim *Simulation, target *Unit, baseHealing float64, outcomeApplier OutcomeApplier) *SpellResult {
 	var dot *Dot
 	if spell.aoeDot != nil {

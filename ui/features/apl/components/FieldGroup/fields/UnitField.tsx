@@ -12,6 +12,7 @@ import type { Player } from '@sim/player/player';
 import { type ChoiceOption, UnitIcon } from '@ui-kit/ChoiceField';
 import { CLASS_TEXT } from '@ui-kit/utils/colors';
 import { useMemo } from 'react';
+import { useStore } from 'zustand';
 
 export interface UnitFieldProps {
 	player: Player<any>;
@@ -22,8 +23,8 @@ export interface UnitFieldProps {
 /** Two `UnitValue`s are the same unit; the display fields around the reference are deliberately not compared. */
 const sameUnit = (a: UnitValue, b: UnitValue) => UnitReference.equals(a.value || UnitReference.create(), b.value || UnitReference.create());
 
-/** A `UnitValue`'s icon, class colour and text as an option; `submenu` files a pet under its owner. */
-const unitOption = (unit: UnitValue, submenu?: Array<UnitValue>): PathOption<UnitValue> => ({
+/** A `UnitValue`'s icon, class colour and text as an option; `submenu` files it under a category or owner. */
+const unitOption = (unit: UnitValue, submenu?: Array<UnitValue | string>): PathOption<UnitValue> => ({
 	value: unit,
 	label: unit.text,
 	icon: unit.icon ?? (unit.iconUrl ? { iconUrl: unit.iconUrl, name: unit.text ?? '' } : undefined),
@@ -48,15 +49,18 @@ const renderUnit = ({ value: unit, label }: ChoiceOption<UnitValue>) => (
 export const UnitField = ({ player, config, unitSet }: UnitFieldProps) => {
 	const targetUI = unitSets[unitSet].targetUI;
 	const metadataVersion = useUnitMetadataVersion(player.sim);
+	const targetDummyCount = useStore(player.sim.store, state => state.raid.targetDummies);
+	const activeParties = useStore(player.sim.store, state => state.raid.numActiveParties);
+	const composition = useStore(player.sim.store, state => state.raid.composition);
 	// eslint-disable-next-line react-hooks/exhaustive-deps -- the metadata version is what moves when the units do.
-	const models = useMemo(() => unitOptionModels(unitSet, player), [unitSet, player, metadataVersion]);
+	const models = useMemo(() => unitOptionModels(unitSet, player), [unitSet, player, metadataVersion, targetDummyCount, activeParties, composition]);
 	const icons = useActionIds(models.map(({ unit }) => (typeof unit.iconUrl === 'string' ? undefined : unit.iconUrl)));
 	const choices = useMemo(() => {
 		const built = pathChoices(
 			models.map((model, index) =>
 				unitOption(
 					withIconUrl(model.unit, icons[index]),
-					model.submenu?.map(unit => withIconUrl(unit)),
+					model.submenu?.map(unit => (typeof unit === 'string' ? unit : withIconUrl(unit))),
 				),
 			),
 			sameUnit,

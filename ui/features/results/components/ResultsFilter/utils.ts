@@ -9,15 +9,19 @@ export const ALL_UNITS = -1;
 export const simResultFilter = (target: number): SimResultFilter => ({ target: target === ALL_UNITS ? null : target });
 
 /** False once a run has fewer targets than the one the filter is pointing at. */
-export const hasTarget = (result: SimResult, target: number): boolean => target === ALL_UNITS || result.getTargets().some(unit => unit.index === target);
+export const hasTarget = (result: SimResult, target: number): boolean =>
+	target === ALL_UNITS || result.getTargets().some(unit => unit.index === target) || (result.getHealingTargets?.() ?? []).some(unit => unit.index === target);
 
-/** All targets, then one option per target of the run, each valued by its encounter index. */
-export const targetOptions = (result: SimResult): Array<ChoiceOption<number>> => [
-	{ value: ALL_UNITS, label: i18n.t('results_tab.details.all_targets') },
-	...result.getTargets().map((unit): ChoiceOption<number> => ({
-		value: unit.index,
-		label: i18n.t('results_tab.details.target_number', { number: unit.index + 1 }),
-		icon: unit.iconUrl ? { iconUrl: unit.iconUrl, name: unit.name } : undefined,
-		className: unit.classColor && CLASS_TEXT[unit.classColor],
-	})),
-];
+/** Shows only healed targets in a healing sim; otherwise, all targets in encounter order. */
+export const targetOptions = (result: SimResult): Array<ChoiceOption<number>> => {
+	const healingTargets = result.getHealingTargets?.() ?? [];
+	const targets = result.isHealingSimulation?.()
+		? healingTargets.map((unit): ChoiceOption<number> => ({ value: unit.index, label: unit.label }))
+		: result.getTargets().map((unit): ChoiceOption<number> => ({
+				value: unit.index,
+				label: i18n.t('results_tab.details.target_number', { number: unit.index + 1 }),
+				icon: unit.iconUrl ? { iconUrl: unit.iconUrl, name: unit.name } : undefined,
+				className: unit.classColor && CLASS_TEXT[unit.classColor],
+			}));
+	return [{ value: ALL_UNITS, label: i18n.t('results_tab.details.all_targets') }, ...targets];
+};
