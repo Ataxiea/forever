@@ -242,14 +242,14 @@ func readRotation(root, path, text string, names *siml.Names) (*proto.APLRotatio
 func listRows(rotation *proto.APLRotation) map[string]rowStats {
 	rows := map[string]rowStats{}
 	for i, item := range rotation.PrepullActions {
-		rows[fmt.Sprintf("prepullActions/%d", i)] = rowStats{Hidden: item.Hide}
+		rows[core.PrepullRowPath(i)] = rowStats{Hidden: item.Hide}
 	}
 	for i, item := range rotation.PriorityList {
-		rows[fmt.Sprintf("priorityList/%d", i)] = rowStats{Hidden: item.Hide}
+		rows[core.PriorityRowPath(i)] = rowStats{Hidden: item.Hide}
 	}
 	for g, group := range rotation.Groups {
 		for i, item := range group.Actions {
-			rows[fmt.Sprintf("groups/%d/actions/%d", g, i)] = rowStats{Hidden: item.Hide}
+			rows[core.GroupRowPath(g, i)] = rowStats{Hidden: item.Hide}
 		}
 	}
 	return rows
