@@ -314,7 +314,7 @@ func TestSimReadsAFullSetup(t *testing.T) {
 		"rotation.apl.siml": "holds only its apl section, and a setup is an x.siml",
 		"broken.siml":       "broken.siml:4:1 unknown-section",
 		// The test runs where ui/specs holds no defaults.siml to load a build over.
-		"build.siml": "build.siml names no race, so it is a preset build, and ui/specs holds no defaults.siml for SpecHunter",
+		"build.siml": "build.siml is a preset build, and ui/specs holds no defaults.siml for SpecHunter",
 	} {
 		if _, _, err := readSimRequest(filepath.Join(dir, file)); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: error %v, want %q", file, err, want)
@@ -329,7 +329,7 @@ func TestSimLoadsAPresetBuildOverItsSpecDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(warnings, build+" names no race, so it is a preset build: simmed over "+defaults) {
+	if !slices.Contains(warnings, build+" is a preset build: simmed over "+defaults) {
 		t.Errorf("warnings %q", warnings)
 	}
 	player := request.Raid.Parties[0].Players[0]

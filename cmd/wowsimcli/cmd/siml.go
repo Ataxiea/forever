@@ -186,27 +186,14 @@ func printDiagnostics(w io.Writer, diags siml.Diagnostics) {
 	}
 }
 
-// Parses the file at path with its uses, as the sim's loaders read it.
-func parseFile(path string, names *siml.Names) (*siml.File, error) {
-	src, err := siml.ReadSource(path)
-	if err != nil {
-		return nil, err
-	}
-	return siml.Parse(path, src, names, siml.ReadSource)
-}
-
 func simlParse(out, errOut io.Writer, args []string) error {
 	flags := newFlags("parse [-json] <file>", errOut)
 	asJSON := flags.Bool("json", false, "print the message the file loads as, as protojson")
 	if err := parseFlags(flags, args, 1); err != nil {
 		return err
 	}
-	names, err := siml.DefaultNames()
-	if err != nil {
-		return err
-	}
 	path := flags.Arg(0)
-	f, err := parseFile(path, names)
+	f, err := siml.ReadFile(path)
 	fail, warn, err := failures(path, f, err)
 	if err != nil {
 		return err
@@ -361,15 +348,15 @@ func simlVerify(out, errOut io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	names, err := siml.DefaultNames()
-	if err != nil {
-		return err
-	}
 	old := loaderMessage(kind)
 	if err := readJSON(oldPath, old); err != nil {
 		return err
 	}
-	f, err := parseFile(newPath, names)
+	names, err := siml.DefaultNames()
+	if err != nil {
+		return err
+	}
+	f, err := siml.ReadFile(newPath)
 	if diags := (siml.Diagnostics{}); errors.As(err, &diags) {
 		printDiagnostics(errOut, diags)
 		return fmt.Errorf("%s does not load", newPath)
