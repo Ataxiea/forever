@@ -418,7 +418,7 @@ func (d *Doc) tokens() []Token {
 
 // --- Hover.
 
-func (d *Doc) hover(at Position, c Catalog) (Hover, bool) {
+func (d *Doc) hover(at Position, c *DatabaseCatalog) (Hover, bool) {
 	if d.tree() == nil {
 		return Hover{}, false
 	}
@@ -532,7 +532,7 @@ func (d *Doc) lineText(offset int) string {
 func fence(text, language string) string { return "```" + language + "\n" + text + "\n```" }
 
 // What a word is, and the spell whose game files row goes with it.
-func (d *Doc) describe(w wordRole, c Catalog) (string, int32) {
+func (d *Doc) describe(w wordRole, c *DatabaseCatalog) (string, int32) {
 	ix := d.ix
 	switch w.role {
 	case "name":
@@ -614,9 +614,8 @@ func thingOf(ns Namespace) string {
 	return thing
 }
 
-func (d *Doc) describeName(ref *nameRef, c Catalog) (string, int32) {
+func (d *Doc) describeName(ref *nameRef, c *DatabaseCatalog) (string, int32) {
 	names := d.names
-	details, _ := c.(CatalogDetails)
 	if ref.ns.SpellLike() {
 		entry, ok := names.spellEntry(d.class(), ref.ns, ref.name)
 		if !ok {
@@ -676,8 +675,8 @@ func (d *Doc) describeName(ref *nameRef, c Catalog) (string, int32) {
 		}
 		title := ref.name
 		var stats []string
-		if details != nil {
-			if s, ok := details.Suffix(id); ok {
+		if c != nil {
+			if s, ok := c.Suffix(id); ok {
 				title = s.Name
 				for i, v := range s.Stats {
 					if v == 0 {
@@ -709,7 +708,7 @@ func (d *Doc) slotWords(slots []proto.ItemSlot) []string {
 	return out
 }
 
-func (d *Doc) itemText(c Catalog, id int32) string {
+func (d *Doc) itemText(c *DatabaseCatalog, id int32) string {
 	var item CatalogItem
 	found := false
 	if c != nil {

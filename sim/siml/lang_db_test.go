@@ -25,7 +25,7 @@ func langNames(t *testing.T) *Names {
 	return names
 }
 
-func langCatalog() Catalog { return CatalogAt(langRoot) }
+func langCatalog() *DatabaseCatalog { return CatalogAt(langRoot) }
 
 func analyzeText(t *testing.T, path, text string) *Doc {
 	t.Helper()

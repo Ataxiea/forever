@@ -63,8 +63,7 @@ var retriggers = regexp.MustCompile(`[ (.="]$`)
 type completer struct {
 	d       *Doc
 	ctx     *cursorContext
-	c       Catalog
-	details CatalogDetails // Nil when the catalog gives none.
+	c       *DatabaseCatalog
 	defined []occurrence
 	read    bool
 	items   []Completion
@@ -78,7 +77,7 @@ type offerAs struct {
 	ranked                                    bool
 }
 
-func (d *Doc) complete(at Position, c Catalog) []Completion {
+func (d *Doc) complete(at Position, c *DatabaseCatalog) []Completion {
 	if d.tree() == nil {
 		return nil
 	}
@@ -87,7 +86,6 @@ func (d *Doc) complete(at Position, c Catalog) []Completion {
 		return nil
 	}
 	b := &completer{d: d, ctx: ctx, c: c, seen: map[string]bool{}}
-	b.details, _ = c.(CatalogDetails)
 	for _, w := range ctx.wants {
 		b.offer(w)
 	}
@@ -503,8 +501,8 @@ func (b *completer) usable() {
 			ids = append(ids, item.ID)
 		}
 	}
-	if b.details != nil {
-		for _, x := range b.details.Consumables() {
+	if b.c != nil {
+		for _, x := range b.c.Consumables() {
 			if x.OnUse {
 				ids = append(ids, x.ID)
 			}
@@ -633,11 +631,11 @@ func (b *completer) fieldValues(f *field) {
 	names := b.d.names
 	switch f.Ref {
 	case "item":
-		if b.details == nil {
+		if b.c == nil {
 			return
 		}
 		types, typed := consumableTypes[f.Name]
-		for _, x := range b.details.Consumables() {
+		for _, x := range b.c.Consumables() {
 			if !typed || slices.Contains(types, x.Type) {
 				b.itemItem(x.ID)
 			}
@@ -649,8 +647,8 @@ func (b *completer) fieldValues(f *field) {
 	case "suffix":
 		for _, name := range names.Visible(proto.Class_ClassUnknown, NamespaceSuffix) {
 			detail := ""
-			if id, ok := names.Suffix(name); ok && b.details != nil {
-				if s, ok := b.details.Suffix(id); ok {
+			if id, ok := names.Suffix(name); ok && b.c != nil {
+				if s, ok := b.c.Suffix(id); ok {
 					detail = s.Name
 				}
 			}
@@ -705,8 +703,8 @@ func (b *completer) slotRest(slot, itemName string) {
 			continue
 		}
 		what := fmt.Sprint(id)
-		if b.details != nil {
-			if s, ok := b.details.Suffix(id); ok {
+		if b.c != nil {
+			if s, ok := b.c.Suffix(id); ok {
 				what = s.Name
 			}
 		}

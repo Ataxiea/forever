@@ -19,7 +19,7 @@ var parserChecks = []string{"undefined-group", "undefined-variable", "undefined-
 var lintSeverity = map[string]Severity{"error": Error, "warning": Warning, "info": Information}
 
 // The parser's diagnostics and the checks, as the editor shows them: under ui/specs the parser's warnings are errors.
-func (d *Doc) EditorDiagnostics(c Catalog) Diagnostics {
+func (d *Doc) EditorDiagnostics(c *DatabaseCatalog) Diagnostics {
 	strict := d.repository()
 	var out Diagnostics
 	for _, x := range d.Diagnostics() {
@@ -31,7 +31,7 @@ func (d *Doc) EditorDiagnostics(c Catalog) Diagnostics {
 	return append(out, d.checks(c)...)
 }
 
-func (d *Doc) checks(c Catalog) Diagnostics {
+func (d *Doc) checks(c *DatabaseCatalog) Diagnostics {
 	if d.typed == nil {
 		return nil
 	}
@@ -103,7 +103,7 @@ func (d *Doc) unregistered(check func(Range, string, string)) {
 
 // Slot rows whose item, suffix or enchant the database says do not go together: the item goes in another slot, the
 // item rolls no such suffix, or no row of the enchant fits the slot or the item.
-func (d *Doc) gear(c Catalog, check func(Range, string, string)) {
+func (d *Doc) gear(c *DatabaseCatalog, check func(Range, string, string)) {
 	var rows []*slotRowStmt
 	for _, s := range d.tree().statements {
 		switch x := s.(type) {

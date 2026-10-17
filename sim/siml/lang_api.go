@@ -6,15 +6,6 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-// What the editor checks and offers about gear: the item database, which the language server reads.
-type Catalog interface {
-	Item(id int32) (CatalogItem, bool)
-	Items() []CatalogItem              // every item a slot may offer
-	Enchants() []CatalogEnchant        // every enchant effect
-	Suffixes(itemID int32) []int32     // the random suffixes an item may roll
-	SpellName(id int32) (string, bool) // a spell's game files name, from the database's spell icons
-}
-
 type CatalogItem struct {
 	ID         int32
 	Name       string
@@ -71,7 +62,7 @@ type Completion struct {
 }
 
 // What may go at a position: keywords, kinds, names, fields and values, each with the text it replaces.
-func (d *Doc) Complete(at Position, c Catalog) []Completion { return d.complete(at, c) }
+func (d *Doc) Complete(at Position, c *DatabaseCatalog) []Completion { return d.complete(at, c) }
 
 type Hover struct {
 	Markdown string
@@ -81,7 +72,7 @@ type Hover struct {
 
 // What the word at a position is: a name and what it means, a kind, field, unit, section or spec, or a variable,
 // group, sequence or placeholder with its declaration.
-func (d *Doc) Hover(at Position, c Catalog) (Hover, bool) { return d.hover(at, c) }
+func (d *Doc) Hover(at Position, c *DatabaseCatalog) (Hover, bool) { return d.hover(at, c) }
 
 type Token struct {
 	Range     Range

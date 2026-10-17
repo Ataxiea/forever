@@ -13,16 +13,6 @@ import (
 // The item database as the editor reads it (assets/database/db.json, then leftover_db.json): names and icons, which
 // slots an item goes in, which enchants fit it and which random suffixes it rolls, and the kind of each consumable.
 
-// What a Catalog may also give, which the analysis asks for by a type assertion and goes without where a catalog
-// lacks it: the names of consumables and item icons, suffix names and stats, enchant rows by effect, and the
-// consumables a consumables: field and item.<name> offer. DatabaseCatalog gives it.
-type CatalogDetails interface {
-	ItemName(id int32) (string, bool)            // Any item's name: gear, a consumable or an item icon.
-	Consumables() []CatalogConsumable            // In database order.
-	Suffix(id int32) (CatalogSuffix, bool)       // A random suffix's name and stats.
-	EnchantRows(effectID int32) []CatalogEnchant // The rows of an enchant effect, in database order.
-}
-
 type CatalogConsumable struct {
 	ID    int32
 	Name  string
@@ -39,7 +29,7 @@ type CatalogSuffix struct {
 // The database files, from the repository root, in the order they are read: the first holds an id both hold.
 var CatalogFiles = []string{filepath.Join("assets", "database", "db.json"), filepath.Join("assets", "database", "leftover_db.json")}
 
-// A Catalog read from the database files.
+// The catalog read from the database files.
 type DatabaseCatalog struct {
 	items       map[int32]CatalogItem
 	itemList    []CatalogItem
@@ -267,31 +257,16 @@ func EnchantFits(row CatalogEnchant, item CatalogItem) bool {
 }
 
 // The rows of an enchant effect in c.
-func enchantRows(c Catalog, effectID int32) []CatalogEnchant {
-	if d, ok := c.(CatalogDetails); ok {
-		return d.EnchantRows(effectID)
-	}
-	var out []CatalogEnchant
-	for _, row := range c.Enchants() {
-		if row.EffectID == effectID {
-			out = append(out, row)
-		}
-	}
-	return out
+func enchantRows(c *DatabaseCatalog, effectID int32) []CatalogEnchant {
+	return c.EnchantRows(effectID)
 }
 
 // Whether a row of the enchant effect fits the item.
-func enchantEffectFits(c Catalog, effectID int32, item CatalogItem) bool {
+func enchantEffectFits(c *DatabaseCatalog, effectID int32, item CatalogItem) bool {
 	return slices.ContainsFunc(enchantRows(c, effectID), func(row CatalogEnchant) bool { return EnchantFits(row, item) })
 }
 
 // An item's name in c: the gear's, a consumable's or an item icon's.
-func catalogItemName(c Catalog, id int32) (string, bool) {
-	if d, ok := c.(CatalogDetails); ok {
-		return d.ItemName(id)
-	}
-	if item, ok := c.Item(id); ok && item.Name != "" {
-		return item.Name, true
-	}
-	return "", false
+func catalogItemName(c *DatabaseCatalog, id int32) (string, bool) {
+	return c.ItemName(id)
 }

@@ -52,7 +52,7 @@ func positionOf(text, needle string, k int) Position {
 	return newLineMap(text).position(strings.Index(text, needle) + k)
 }
 
-func completionsIn(t *testing.T, names *Names, c Catalog, path, source string) []Completion {
+func completionsIn(t *testing.T, names *Names, c *DatabaseCatalog, path, source string) []Completion {
 	t.Helper()
 	text, at := marked(source)
 	return Analyze(path, []byte(text), names, langOpen).Complete(at, c)
