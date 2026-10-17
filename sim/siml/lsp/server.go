@@ -402,8 +402,14 @@ func (s *server) scheduleLocked(uri string, delay time.Duration) {
 
 // Publishes the diagnostics of an open document.
 func (s *server) publish(uri string) {
-	catalog := s.readCatalog(uri)
+	var catalog catalogRead
 	s.mu.Lock()
+	if a := s.analyzeLocked(uri); a == nil || a.diags == nil {
+		// The diagnostics are not read yet, so the catalog they check against is read first, outside the lock.
+		s.mu.Unlock()
+		catalog = s.readCatalog(uri)
+		s.mu.Lock()
+	}
 	defer s.mu.Unlock()
 	a := s.analyzeLocked(uri)
 	if a == nil {
