@@ -401,13 +401,14 @@ func (s *server) scheduleLocked(uri string, delay time.Duration) {
 
 // Publishes the diagnostics of an open document.
 func (s *server) publish(uri string) {
+	catalog := s.readCatalog(uri)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	a := s.analyzeLocked(uri)
 	if a == nil {
 		return
 	}
-	params := map[string]any{"uri": uri, "version": a.version, "diagnostics": s.diagnosticsLocked(a)}
+	params := map[string]any{"uri": uri, "version": a.version, "diagnostics": s.diagnosticsLocked(a, catalog.of(a))}
 	s.w.notify("textDocument/publishDiagnostics", params)
 }
 
@@ -476,8 +477,9 @@ func (s *server) rootLocked(path string) (string, bool) {
 	return "", false
 }
 
-// The diagnostics of a document: the parser's and the checks'.
-func (s *server) diagnosticsLocked(a *analysis) []Diagnostic {
+// The diagnostics of a document: the parser's and the checks' against c, which the caller reads before taking the
+// lock (readCatalog).
+func (s *server) diagnosticsLocked(a *analysis, c *siml.DatabaseCatalog) []Diagnostic {
 	if a.diags != nil {
 		return a.diags
 	}
@@ -486,7 +488,7 @@ func (s *server) diagnosticsLocked(a *analysis) []Diagnostic {
 		return a.diags
 	}
 	a.diags = []Diagnostic{}
-	for _, d := range a.doc.EditorDiagnostics(siml.CatalogAt(a.root)) {
+	for _, d := range a.doc.EditorDiagnostics(c) {
 		a.diags = append(a.diags, s.toDiagnosticLocked(d))
 	}
 	return a.diags

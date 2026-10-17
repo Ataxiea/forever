@@ -30,6 +30,6 @@ func BenchmarkDiagnose(b *testing.B) {
 	siml.CatalogAt(repository)
 	for i := range b.N {
 		s.docs[uri] = &document{uri: uri, path: path, version: i + 1, text: text}
-		s.diagnosticsLocked(s.analyzeLocked(uri))
+		s.diagnosticsLocked(s.analyzeLocked(uri), siml.CatalogAt(repository))
 	}
 }

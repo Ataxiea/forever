@@ -146,6 +146,7 @@ func newPanelStructure(s *siml.Structure) *panelStructure {
 var severityNames = map[int]string{severityError: "error", severityWarning: "warning", severityInformation: "info"}
 
 func (s *server) rotation(uri string) (any, *ResponseError) {
+	catalog := s.readCatalog(uri)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	a := s.analyzeLocked(uri)
@@ -177,7 +178,7 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 			out.Spans = append(out.Spans, panelSpan{Path: span.Path, Range: toRange(span.Range)})
 		}
 	}
-	for _, diag := range s.diagnosticsLocked(a) {
+	for _, diag := range s.diagnosticsLocked(a, catalog.of(a)) {
 		path := d.PathAt(fromPosition(diag.Range.Start))
 		out.Findings = append(out.Findings, panelFinding{Path: nonNil(path), Severity: severityNames[diag.Severity], Code: diag.Code, Message: diag.Message})
 	}
@@ -187,6 +188,7 @@ func (s *server) rotation(uri string) (any, *ResponseError) {
 // The names the panel's pickers offer for an open file's spec. They depend on the spec line and the name table only,
 // so the panel asks again when the spec changes or a server starts, not on each edit.
 func (s *server) registered(uri string) (any, *ResponseError) {
+	catalog := s.readCatalog(uri)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	a := s.analyzeLocked(uri)
@@ -198,7 +200,7 @@ func (s *server) registered(uri string) (any, *ResponseError) {
 	}
 	if f, _ := a.doc.File(); f != nil {
 		if info, ok := siml.SpecOf(f.Spec); ok {
-			return s.registeredFor(a, info), nil
+			return s.registeredFor(a, info, catalog.of(a)), nil
 		}
 	}
 	return registered{Status: "unavailable", Reason: "the file has no spec line"}, nil
@@ -233,7 +235,7 @@ func sentence(message string) string {
 	return message
 }
 
-func (s *server) registeredFor(a *analysis, info siml.SpecInfo) registered {
+func (s *server) registeredFor(a *analysis, info siml.SpecInfo, c *siml.DatabaseCatalog) registered {
 	spec := string(info.Field.Name())
 	list := func(ns siml.Namespace) []registeredName {
 		out := []registeredName{}
@@ -250,7 +252,7 @@ func (s *server) registeredFor(a *analysis, info siml.SpecInfo) registered {
 		TargetSpells: list(siml.NamespaceTargetSpell),
 		Items:        []registeredName{},
 	}}
-	for _, id := range usableItems(siml.CatalogAt(a.root)) {
+	for _, id := range usableItems(c) {
 		if name, ok := a.names.ItemName(id); ok {
 			out.Registered.Items = append(out.Registered.Items, registeredName{Name: "item." + name, ID: actionID{ItemID: id}})
 		}
