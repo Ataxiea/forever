@@ -1,2 +1,121 @@
 siml 1
 spec rogue
+
+var ${Use Backstab} = false
+var ${Use Expose Armor} = false
+var ${Use Stealth/Vanish for Damage} = true
+var ${Use Ambush Opener} = false
+var ${Current Points less than 5} = current_combo_points < 5
+var ${SnD Fall Imminent} = aura(slice_and_dice).remaining_time <= 2s
+var ${Current Points is 0} = current_combo_points == 0
+var ${Above SnD Point Threshold} = current_combo_points >= 1
+var ${At or Below SnD Clipping Threshold} = aura(slice_and_dice).remaining_time <= 0s
+var ${In Danger of Energy Capping} = current_energy >= 75
+var ${Fight About to End} = remaining_time <= 6s
+var ${Expose - Low Duration} =
+    $use_expose_armor
+    and (not target.aura(expose_armor).is_active or target.aura(expose_armor).remaining_time <= 16s)
+var ${Expose - Should Cast Check} = current_combo_points == 5 and $expose_low_duration
+var ${Expose - Prevent Other Finishers} = $use_expose_armor and $expose_low_duration
+
+prepull:
+  -2s cast blade_flurry
+  -2s cast premeditation
+  -1s cast stealth
+
+priority:
+  group "Maintain Expose" if $use_expose_armor
+  cast ambush
+      if (aura(cutthroat).is_active(include_reaction_time=true) or $use_stealth_vanish_for_damage and $use_ambush_opener)
+      and $current_points_less_than_5
+  cast garrote
+      if not $use_ambush_opener
+      and $use_stealth_vanish_for_damage
+      and $current_points_less_than_5
+      and not dot(garrote).is_active
+  cast vanish
+      if not dot(garrote).is_active
+      and current_energy >= spell(garrote).current_cost
+      and not $use_ambush_opener
+      and $use_stealth_vanish_for_damage
+      and $current_points_less_than_5
+      and not $snd_fall_imminent
+  cast vanish
+      if current_energy >= spell(ambush).current_cost
+      and $use_ambush_opener
+      and $use_stealth_vanish_for_damage
+      and $current_points_less_than_5
+      and not $snd_fall_imminent
+  cast preparation if and(not spell(vanish).is_ready)
+  autocast_other_cooldowns
+  cast adrenaline_rush
+      if current_energy <= 50
+      and aura(slice_and_dice).is_active(include_reaction_time=true)
+      and not spell(blood_fury).is_known
+  cast blood_fury if spell(adrenaline_rush).time_to_ready >= 2m
+  strict_sequence(cast blood_fury, cast adrenaline_rush)
+      if spell(adrenaline_rush).is_ready
+      and spell(blood_fury).is_ready
+      and aura(slice_and_dice).is_active(include_reaction_time=true)
+  cast other.offensive_potion
+      if not spell(blade_flurry).is_known
+      or aura(blade_flurry).is_active(include_reaction_time=true)
+  cast eureka
+      if not spell(blade_flurry).is_known
+      or aura(blade_flurry).is_active(include_reaction_time=true)
+  cast item.thistle_tea
+      if (current_energy <= 15 or current_energy <= 20 and aura(eureka).is_active(include_reaction_time=true))
+      and spell(item.thistle_tea).can_cast
+      and (current_combo_points < 3 or $expose_low_duration or aura(eureka).is_active(include_reaction_time=true))
+  cast blade_flurry if and(not $snd_fall_imminent)
+  cast premeditation if current_combo_points <= 3
+  cast slice_and_dice
+      if $at_or_below_snd_clipping_threshold
+      and $above_snd_point_threshold
+      and not $fight_about_to_end
+      and not $expose_prevent_other_finishers
+  cast venom
+      if aura(venom).is_inactive(include_reaction_time=true)
+      and current_combo_points >= 3
+      and not $expose_prevent_other_finishers
+  cast rupture
+      if current_combo_points >= 3
+      and not dot(rupture).is_active
+      and (aura(thousand_cuts_1310723).is_known or target.aura(hemorrhage).is_active(include_reaction_time=true))
+      and not $fight_about_to_end
+      and not $expose_prevent_other_finishers
+  cast cold_blood
+      if current_combo_points == 5
+      and not $snd_fall_imminent
+      and current_energy >= spell(eviscerate).current_cost
+      and not $expose_prevent_other_finishers
+  cast eviscerate
+      if (current_combo_points >= 5 or current_combo_points == 4 and spell(mutilate).is_known or current_combo_points >= 4 and aura(slice_and_dice).remaining_time <= 6s and not $snd_fall_imminent or current_combo_points >= 3 and $fight_about_to_end)
+      and (not aura(thousand_cuts).is_known or dot(rupture).remaining_time >= 4 or $in_danger_of_energy_capping or $fight_about_to_end)
+      and not $expose_prevent_other_finishers
+  cast ghostly_strike if $current_points_less_than_5
+  cast hemorrhage
+      if $use_backstab
+      and not target.aura(hemorrhage).is_active(include_reaction_time=true)
+      and $current_points_less_than_5
+  cast backstab
+      if not aura(cutthroat).is_active(include_reaction_time=true)
+      and $use_backstab
+      and $current_points_less_than_5
+      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(backstab).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+  cast mutilate
+      if $current_points_less_than_5
+      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(mutilate).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+  cast hemorrhage
+      if not $use_backstab
+      and $current_points_less_than_5
+      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(hemorrhage).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+  cast sinister_strike
+      if not spell(mutilate).is_known
+      and not spell(hemorrhage).is_known
+      and not $use_backstab
+      and $current_points_less_than_5
+      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(sinister_strike).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+
+group "Maintain Expose":
+  cast expose_armor if $expose_should_cast_check

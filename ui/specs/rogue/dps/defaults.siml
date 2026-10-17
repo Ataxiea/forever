@@ -1,5 +1,7 @@
 siml 1
 spec rogue
+talents "005323101012-32030320201515231"
+use "gear_sets/p1_slowmh.gear.siml"
 
 settings:
   race human
@@ -11,13 +13,20 @@ consumables:
   offensive_pot major_frenzy_potion
   food swiftstrike_steak
   conjured thistle_tea
-  elixir elixir_of_the_mongoose, elixir_of_greater_fortitude
+  mh_imbue dense_weightstone
+  oh_imbue dense_sharpening_stone
+  mh_weapon_imbue instant_poison_vi
+  oh_weapon_imbue deadly_poison_iv
+  elixir elixir_of_the_mongoose, elixir_of_greater_fortitude, elixir_of_ferocity, juju_might
 
-buffs: greater_blessing_of_kings, greater_blessing_of_might
+buffs: greater_blessing_of_kings, greater_blessing_of_might, greater_blessing_of_salvation
 
 raid_buffs:
-  gift_of_the_wild, strength_of_earth_totem, windfury_totem, battle_shout, leader_of_the_pack
+  gift_of_the_wild, strength_of_earth_totem, grace_of_air_totem, windfury_totem, battle_shout
+  leader_of_the_pack
+  moonkin_aura, prayer_of_fortitude
 
-debuffs: curse_of_recklessness, faerie_fire, sunder_armor, gift_of_arthas
+debuffs:
+  curse_of_recklessness, curse_of_elements, faerie_fire, sunder_armor, armor_shatter, gift_of_arthas
 
-apl: type auto
+simple:
