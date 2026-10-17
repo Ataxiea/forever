@@ -1,20 +1,21 @@
 import * as PresetUtils from '@app/preset_utils';
-import { PseudoStat, Stat } from '@generated/proto/common';
+import { PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 import { Encounter } from '@sim/raid/encounter';
 
+import DefaultsJson from './defaults.siml';
 import DefaultApl from './apls/default.apl.siml';
 import Level60GearJson from './gear_sets/default.gear.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecFeralBearDruid, DefaultsJson);
 
 export const ROTATION_DEFAULT = PresetUtils.makePresetAPLRotation('APL', DefaultApl);
 
 // Nature's Reach (melee hit) and Nature's Majesty (melee crit) are worth more to the bear than Furor and
 // Naturalist. Feral Instinct raises only Swipe, which the single-target APL does not cast.
-export const BearTalents = PresetUtils.makePresetTalents(
-	'Bear',
-	SavedTalents.create({ talentsString: '0500220000000000-55200322120132012551-0000000000000000' }),
-);
+export const BearTalents = PresetUtils.makePresetTalents('Bear', Defaults.talents);
 // Tanks and plays cat on one set of talents. As a bear, about the same threat as the Bear talents and a
 // TMI 2 to 3 higher, for no Natural Reaction.
 export const HybridTalents = PresetUtils.makePresetTalents(

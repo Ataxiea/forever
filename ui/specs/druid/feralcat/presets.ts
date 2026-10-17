@@ -1,8 +1,9 @@
 import * as PresetUtils from '@app/preset_utils';
-import { Stat } from '@generated/proto/common';
+import { Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
+import DefaultsJson from './defaults.siml';
 import BearweaveApl from './apls/bearweave.apl.siml';
 import DefaultApl from './apls/default.apl.siml';
 import EnergizedApl from './apls/energized.apl.siml';
@@ -12,6 +13,9 @@ import RavageApl from './apls/ravage.apl.siml';
 import ShadowmeldApl from './apls/shadowmeld.apl.siml';
 import Level60GearJson from './gear_sets/default.gear.siml';
 import PreRaidGearJson from './gear_sets/pre_raid.gear.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecFeralCatDruid, DefaultsJson);
 
 // Leather at 60 with no set bonus and no proc. The stand-in the rotation was tuned on.
 export const Level60Gear = PresetUtils.makePresetGear('Level 60', Level60GearJson, {
@@ -81,7 +85,7 @@ export const POUNCE_APL = PresetUtils.makePresetAPLRotation('Pounce opener', Pou
 export const BEARWEAVE_APL = PresetUtils.makePresetAPLRotation('Bearweave', BearweaveApl);
 
 // Naturalist funds the full Predatory Strikes prerequisite for Rend and Tear.
-export const CatTalents = PresetUtils.makePresetTalents('Monocat', SavedTalents.create({ talentsString: '050022-55000032021031212051-054' }));
+export const CatTalents = PresetUtils.makePresetTalents('Monocat', Defaults.talents);
 // Primal Bite takes one additional point from Naturalist.
 export const BearweaveTalents = PresetUtils.makePresetTalents('Bearweave', SavedTalents.create({ talentsString: '050022-55000032021131212051-053' }));
 // Natural Shapeshifter and Reflection in place of the Balance points' melee hit and crit. About 47 DPS

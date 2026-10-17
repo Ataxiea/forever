@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
 import { APLRotation } from '@generated/proto/apl';
@@ -9,7 +8,6 @@ import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
-import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecProtectionPaladin>({
@@ -83,7 +81,7 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecProtectionPaladin, Defaults),
+		...Presets.Defaults,
 		softCapBreakpoints: [
 			StatCap.fromPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent, {
 				breakpoints: [5.6],

@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
 import { APLRotation } from '@generated/proto/apl';
@@ -11,7 +10,6 @@ import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as ShamanInputs from '../shared/inputs';
-import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecEnhancementShaman>({
@@ -70,7 +68,7 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecEnhancementShaman, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.PreBiSEpWeights.epWeights,
 		statCaps: (() => {

@@ -15,7 +15,7 @@ import P1SlowMhGear from './gear_sets/p1_slowmh.gear.siml';
 // Eventually we will import these values for the raid sim too, so its good to
 // keep them in a separate file.
 
-const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecRogue, DefaultsJson);
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecRogue, DefaultsJson);
 
 export const TALENTS_MUTILATE_ASN = {
 	name: 'Asn Muti',
@@ -31,9 +31,7 @@ export const TALENTS_MUTILATE_COM = {
 };
 export const TALENTS_COMBAT_SS = {
 	name: 'Combat SS',
-	data: SavedTalents.create({
-		talentsString: '005323101012-32030320201515231',
-	}),
+	data: Defaults.talents,
 };
 export const TALENTS_COMBAT_BS = {
 	name: 'Combat BS',

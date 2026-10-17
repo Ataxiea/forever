@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
@@ -7,7 +6,6 @@ import { Player } from '@sim/player/player';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
-import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecBalanceDruid>({
@@ -52,7 +50,7 @@ export default defineSpec<Spec.SpecBalanceDruid>({
 	),
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecBalanceDruid, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.P1EpWeights.epWeights,
 		// Default stat caps for stat weights tab. (also needed for reforging since we don't want to reforge above stat caps)

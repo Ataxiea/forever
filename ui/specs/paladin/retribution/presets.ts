@@ -1,14 +1,17 @@
 import * as PresetUtils from '@app/preset_utils';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
+import DefaultsJson from './defaults.siml';
 import HolyShockApl from './apls/holy_shock.apl.siml';
 import TwistOfLightApl from './apls/twist_of_light.apl.siml';
 import HolyShockBuildJson from './builds/holy_shock.siml';
 import TwistOfLightBuildJson from './builds/twist_of_light.siml';
 import HolyShockGear from './gear_sets/holy_shock.gear.siml';
 import TwistOfLightGear from './gear_sets/twist_of_light.gear.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecRetributionPaladin, DefaultsJson);
 
 export const HolyShockAplPreset = PresetUtils.makePresetAPLRotation('Holy Shock', HolyShockApl);
 export const TwistOfLightAplPreset = PresetUtils.makePresetAPLRotation('Twist of Light', TwistOfLightApl);
@@ -19,9 +22,6 @@ export const HolyShockGearPreset = PresetUtils.makePresetGear('Holy Shock', Holy
 export const TwistOfLightGearPreset = PresetUtils.makePresetGear('Twist of Light', TwistOfLightGear, {
 	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
 });
-
-export const HolyShockTalents = PresetUtils.makePresetTalents('Holy Shock', SavedTalents.create({ talentsString: '550030032101012--052252300012303' }));
-export const TwistOfLightTalents = PresetUtils.makePresetTalents('Twist of Light', SavedTalents.create({ talentsString: '55003003--05225331101330321' }));
 
 export const HolyShockEpWeights = PresetUtils.makePresetEpWeights(
 	'Holy Shock',
@@ -73,8 +73,9 @@ export const TwistOfLightEpWeights = PresetUtils.makePresetEpWeights(
 
 // The settings and the build of each talent tree. The Auto rotation picks the Twist of Light or the Holy Shock APL from
 // the talents; the Holy Shock build swaps in Shin Blade while the Manual Crowd Pummeler is on cooldown.
-export const TwistOfLightSettings = PresetUtils.makePresetSettingsFromJSON('Twist of Light', Spec.SpecRetributionPaladin, TwistOfLightBuildJson);
-export const HolyShockSettings = PresetUtils.makePresetSettingsFromJSON('Holy Shock', Spec.SpecRetributionPaladin, HolyShockBuildJson);
-
 export const TwistOfLightBuild = PresetUtils.makePresetBuildFromJSON('Twist of Light', Spec.SpecRetributionPaladin, TwistOfLightBuildJson);
 export const HolyShockBuild = PresetUtils.makePresetBuildFromJSON('Holy Shock', Spec.SpecRetributionPaladin, HolyShockBuildJson);
+export const TwistOfLightSettings = TwistOfLightBuild.settings!;
+export const HolyShockSettings = HolyShockBuild.settings!;
+export const TwistOfLightTalents = TwistOfLightBuild.talents!;
+export const HolyShockTalents = HolyShockBuild.talents!;

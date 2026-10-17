@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
@@ -14,7 +13,6 @@ import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as WarriorInputs from '../shared/inputs';
-import Defaults from './defaults.siml';
 import * as DpsWarriorInputs from './inputs';
 import * as Presets from './presets';
 
@@ -55,7 +53,7 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecDpsWarrior, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.PreBiSFuryEpWeights.epWeights,
 		statCaps: (() => {

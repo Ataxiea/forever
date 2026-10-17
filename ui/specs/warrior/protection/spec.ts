@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
@@ -10,7 +9,6 @@ import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as WarriorInputs from '../shared/inputs';
-import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecProtectionWarrior>({
@@ -81,7 +79,7 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecProtectionWarrior, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.PreBiSEpWeights.epWeights,
 		statCaps: (() => {

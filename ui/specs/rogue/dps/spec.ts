@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as InputHelpers from '@features/inputs/input_helpers';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
@@ -15,7 +14,6 @@ import type { SpecRotation } from '@sim/proto/spec_types';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
-import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecRogue>({
@@ -63,7 +61,7 @@ export default defineSpec<Spec.SpecRogue>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecRogue, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: Presets.EP_PRESET_COMBAT_SINISTER.epWeights,
 		statCaps: (() => {

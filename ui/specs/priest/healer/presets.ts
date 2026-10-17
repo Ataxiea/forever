@@ -1,10 +1,15 @@
 import * as PresetUtils from '@app/preset_utils';
-import { Stat } from '@generated/proto/common';
+import { Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
+import DefaultsJson from './defaults.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecHealerPriest, DefaultsJson);
+
 export const DiscTalents = PresetUtils.makePresetTalents('Disc', SavedTalents.create({ talentsString: '005025021330011531-335001030301' }));
-export const HolyTalents = PresetUtils.makePresetTalents('Holy', SavedTalents.create({ talentsString: '00520101133-33505003030121531' }));
+export const HolyTalents = PresetUtils.makePresetTalents('Holy', Defaults.talents);
 
 export const DiscSingleTargetEpWeights = PresetUtils.makePresetEpWeights(
 	'Disc Single-Target',

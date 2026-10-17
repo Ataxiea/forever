@@ -1,7 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
 import { makeSpecChangeWarningToast } from '@features/settings/utils/spec_change_warning_toast';
 import { HandType, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
 import { Player } from '@sim/player/player';
 import { Stats } from '@sim/proto/stats';
 
@@ -12,6 +11,9 @@ import PreBiSFuryBuildJson from './builds/prebis_fury.siml';
 import DefaultsJson from './defaults.siml';
 import PreBiSArmsGearJson from './gear_sets/prebis_arms.gear.siml';
 import PreBiSFuryGearJson from './gear_sets/prebis_fury.gear.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecDpsWarrior, DefaultsJson);
 
 // Preset options for this spec.
 // Eventually we will import these values for the raid sim too, so its good to
@@ -68,9 +70,6 @@ const ARMS_PRESET_OPTIONS = {
 // the second ring have no known source.
 export const PreBiSFuryGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSFuryGearJson, FURY_PRESET_OPTIONS);
 
-// The Pre-BiS Fury build's talents, the best found on its gear over a three minute fight.
-export const FuryTalents = PresetUtils.makePresetTalents('Fury', SavedTalents.create({ talentsString: PreBiSFuryBuildJson.player.talentsString }));
-
 // Measured on the Pre-BiS Fury gear with the Fury talents.
 export const PreBiSFuryEpWeights = PresetUtils.makePresetEpWeights(
 	'Pre-BiS - Fury',
@@ -95,10 +94,6 @@ export const PreBiSFuryEpWeights = PresetUtils.makePresetEpWeights(
 // The same sources as the Pre-BiS Fury gear; the cloak and the bow are world-drop greens with the "of the
 // Tiger" suffix too.
 export const PreBiSArmsGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSArmsGearJson, ARMS_PRESET_OPTIONS);
-
-// The Pre-BiS Arms build's talents, a Battle Stance build: Rend keeps Bloodthrill's Overpower procs coming, and
-// Spearing Strike fills the global cooldowns Mortal Strike and Slam leave.
-export const ArmsTalents = PresetUtils.makePresetTalents('Arms', SavedTalents.create({ talentsString: PreBiSArmsBuildJson.player.talentsString }));
 
 // Measured on the Pre-BiS Arms gear with the Arms talents. Hit is its value below the 8% cap.
 export const PreBiSArmsEpWeights = PresetUtils.makePresetEpWeights(
@@ -125,11 +120,7 @@ export const FURY_DEFAULT_ROTATION = PresetUtils.makePresetAPLRotation('Fury', D
 export const ARMS_DEFAULT_ROTATION = PresetUtils.makePresetAPLRotation('Arms', DefaultArmsApl);
 
 // The simple rotation of the spec's defaults.
-export const SIMPLE_DEFAULT_ROTATION = PresetUtils.makePresetSimpleRotation(
-	'Simple',
-	Spec.SpecDpsWarrior,
-	PresetUtils.specDefaultsFromSettings(Spec.SpecDpsWarrior, DefaultsJson).simpleRotation!,
-);
+export const SIMPLE_DEFAULT_ROTATION = PresetUtils.makePresetSimpleRotation('Simple', Spec.SpecDpsWarrior, Defaults.simpleRotation!);
 
 export const DefaultSettings = PresetUtils.makePresetSettingsFromJSON('Defaults', Spec.SpecDpsWarrior, DefaultsJson);
 
@@ -142,3 +133,10 @@ export const PreBiSArmsBuild = PresetUtils.makePresetBuildFromJSON('Pre-BiS', Sp
 	group: 'Arms',
 	epWeights: PreBiSArmsEpWeights,
 });
+
+// The Pre-BiS Fury build's talents, the best found on its gear over a three minute fight.
+export const FuryTalents = PresetUtils.makePresetTalents('Fury', PreBiSFuryBuild.talents!.data);
+
+// The Pre-BiS Arms build's talents, a Battle Stance build: Rend keeps Bloodthrill's Overpower procs coming, and
+// Spearing Strike fills the global cooldowns Mortal Strike and Slam leave.
+export const ArmsTalents = PresetUtils.makePresetTalents('Arms', PreBiSArmsBuild.talents!.data);

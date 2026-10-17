@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import { APLRotation } from '@generated/proto/apl';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
@@ -8,7 +7,6 @@ import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as PriestInputs from '../shared/inputs';
-import Defaults from './defaults.siml';
 import * as Presets from './presets';
 
 // Note: Not used until healing sim available
@@ -34,7 +32,7 @@ export default defineSpec<Spec.SpecHealerPriest>({
 	),
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecHealerPriest, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 	},

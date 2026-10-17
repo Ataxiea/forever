@@ -1,15 +1,18 @@
 import * as PresetUtils from '@app/preset_utils';
-import { Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
+import { Spec, Stat } from '@generated/proto/common';
 import { Stats } from '@sim/proto/stats';
 
+import DefaultsJson from './defaults.siml';
 import DefaultAPL from './apls/default.apl.siml';
 import P1GearJson from './gear_sets/p1.gear.siml';
 import PreBiSGearJson from './gear_sets/prebis.gear.siml';
 
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecBalanceDruid, DefaultsJson);
+
 export const StandardRotation = PresetUtils.makePresetAPLRotation('Default', DefaultAPL);
 
-export const StandardTalents = PresetUtils.makePresetTalents('Moonkin', SavedTalents.create({ talentsString: '5532220115501351--505' }));
+export const StandardTalents = PresetUtils.makePresetTalents('Moonkin', Defaults.talents);
 
 // Dungeon drops, world-drop greens with the "of Magic" suffix and crafted items whose reagents include no
 // raid materials; no reputation or PvP rewards, and no Scourge Invasion drops. The neck is a Dire Maul

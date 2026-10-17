@@ -1,11 +1,14 @@
 import * as PresetUtils from '@app/preset_utils';
-import { PseudoStat, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
+import { PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { Stats } from '@sim/proto/stats';
 
+import DefaultsJson from './defaults.siml';
 import GenericApl from './apls/default.apl.siml';
 import PreBiSGearJson from './gear_sets/prebis.gear.siml';
 import PreBiSThreatGearJson from './gear_sets/prebis_threat.gear.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecProtectionWarrior, DefaultsJson);
 
 // Preset options for this spec.
 // Eventually we will import these values for the raid sim too, so its good to
@@ -25,7 +28,7 @@ export const PreBiSGear = PresetUtils.makePresetGear('Pre-BiS (Defense Cap)', Pr
 // Heart of the Scale drops in Lower Blackrock Spire; Cutthroat's Signet is sold by the Undermine Trader.
 export const PreBiSThreatGear = PresetUtils.makePresetGear('Pre-BiS (Threat)', PreBiSThreatGearJson);
 
-export const ProtectionTalents = PresetUtils.makePresetTalents('Protection', SavedTalents.create({ talentsString: '35300003-05-050531120300021351' }));
+export const ProtectionTalents = PresetUtils.makePresetTalents('Protection', Defaults.talents);
 
 // Measured on each gear set with the Protection talents: 0.6 x the threat weights (Strength = 1) plus 1.15 x the
 // TMI weights (Stamina = 1). On the defense cap gear, defense is its value past the cap; on the threat gear, hit is

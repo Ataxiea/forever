@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
@@ -8,7 +7,6 @@ import { Player } from '@sim/player/player';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
-import Defaults from './defaults.siml';
 import * as FeralBearInputs from './inputs';
 import * as Presets from './presets';
 
@@ -73,7 +71,7 @@ export default defineSpec<Spec.SpecFeralBearDruid>({
 	),
 
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecFeralBearDruid, Defaults),
+		...Presets.Defaults,
 		encounter: Presets.Level60Encounter,
 		epWeights: Presets.Level60SurvivalEp,
 		statCaps: (() => {

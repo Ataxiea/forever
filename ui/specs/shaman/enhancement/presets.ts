@@ -1,10 +1,13 @@
 import * as PresetUtils from '@app/preset_utils';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 
+import DefaultsJson from './defaults.siml';
 import DefaultApl from './apls/default.apl.siml';
 import TestingBuildJson from './builds/testing.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecEnhancementShaman, DefaultsJson);
 
 export const ROTATION_PRESET_DEFAULT = PresetUtils.makePresetAPLRotation('Default', DefaultApl);
 
@@ -14,9 +17,7 @@ export const TestingBuild = PresetUtils.makePresetBuildFromJSON('Testing', Spec.
 
 export const StandardTalents = {
 	name: 'Standard',
-	data: SavedTalents.create({
-		talentsString: '053503102-053030031005112251',
-	}),
+	data: Defaults.talents,
 };
 
 // Measured on the Pre-BiS gear with the Standard talents over a three minute fight. Hit is its value below the

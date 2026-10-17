@@ -19,6 +19,9 @@ import DefaultsJson from './defaults.siml';
 import P1GearJson from './gear_sets/p1.gear.siml';
 import P1MeleeGearJson from './gear_sets/p1_melee.gear.siml';
 
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecHunter, DefaultsJson);
+
 // The same armor twice, with the weapons each playstyle swings: a two-hander to weave with, which
 // is also the better pair of stats at range, and two one-handers to stand in melee with.
 export const P1Gear = PresetUtils.makePresetGear('P1', P1GearJson);
@@ -43,11 +46,7 @@ export const MeleeAPLRotation = PresetUtils.makePresetAPLRotation('Melee', Melee
 export const DefaultRotation = WeaveAPLRotation;
 
 // The simple rotation of the spec's defaults.
-export const SimpleRotation = PresetUtils.makePresetSimpleRotation(
-	'Simple',
-	Spec.SpecHunter,
-	PresetUtils.specDefaultsFromSettings(Spec.SpecHunter, DefaultsJson).simpleRotation!,
-);
+export const SimpleRotation = PresetUtils.makePresetSimpleRotation('Simple', Spec.SpecHunter, Defaults.simpleRotation!);
 
 // Gear, talents, rotation, pet and distance together, one per tree and playstyle: the best build found for each on
 // the P1 gear over a three minute fight.

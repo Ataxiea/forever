@@ -290,7 +290,7 @@ const makePresetSettingsHelper = (name: string, spec: Spec, simSettings: Individ
 };
 
 export const makePresetSettingsFromJSON = (name: string, spec: Spec, json: any): PresetSettings =>
-	makePresetSettingsHelper(name, spec, IndividualSimSettings.fromJson(json, { ignoreUnknownFields: true }));
+	makePresetSettingsHelper(name, spec, IndividualSimSettings.fromJson(json));
 
 export const makePresetBuild = (name: string, options: PresetBuildOptions): PresetBuild => {
 	return { name, ...options };
@@ -303,7 +303,7 @@ export const makePresetBuildFromJSON = (
 	{ settings: customSimSettings, ...customBuildOptions }: PresetBuildOptions = {},
 	options?: PresetOptionsBase,
 ): PresetBuild => {
-	const simSettings = IndividualSimSettings.fromJson(json, { ignoreUnknownFields: true });
+	const simSettings = IndividualSimSettings.fromJson(json);
 	const buildConfig: PresetBuildOptions = {};
 
 	if (simSettings.player) {

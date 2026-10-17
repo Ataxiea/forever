@@ -1,8 +1,12 @@
 import * as PresetUtils from '@app/preset_utils';
-import { SavedTalents } from '@generated/proto/ui';
+import { Spec } from '@generated/proto/common';
 
+import DefaultsJson from './defaults.siml';
 import DefaultApl from './apls/default.apl.siml';
 import DefaultGear from './gear_sets/default.gear.siml';
+
+// The spec's defaults, from defaults.siml.
+export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecProtectionPaladin, DefaultsJson);
 
 // Retribution Aura and Seal of the Crusader before the pull, then Judgement, Swift Judgement, Seal
 // of Fury, Consecration, Holy Shock while Consecrated Ground is on the target, Holy Shield, Holy
@@ -15,4 +19,4 @@ export const GEAR_DEFAULT = PresetUtils.makePresetGear('Default', DefaultGear, {
 	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
 });
 
-export const DefaultTalents = PresetUtils.makePresetTalents('Default', SavedTalents.create({ talentsString: '50003-0530313321301531-5022' }));
+export const DefaultTalents = PresetUtils.makePresetTalents('Default', Defaults.talents);

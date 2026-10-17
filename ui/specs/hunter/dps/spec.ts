@@ -1,4 +1,3 @@
-import * as PresetUtils from '@app/preset_utils';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as other_inputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
@@ -13,7 +12,6 @@ import { SpecRotation } from '@sim/proto/spec_types';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
-import Defaults from './defaults.siml';
 import * as HunterInputs from './inputs';
 import * as Presets from './presets';
 
@@ -71,7 +69,7 @@ export default defineSpec<Spec.SpecHunter>({
 	displayWeaponSkillGroups: [WeaponSkillGroup.Melee, WeaponSkillGroup.Ranged],
 	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand, ItemSlot.ItemSlotRanged, ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2],
 	defaults: {
-		...PresetUtils.specDefaultsFromSettings(Spec.SpecHunter, Defaults),
+		...Presets.Defaults,
 		// Default EP weights for sorting gear in the gear picker.
 		epWeights: new Stats(),
 		softCapBreakpoints: [
