@@ -10,9 +10,15 @@ import (
 // The site's requests (proto/ui.proto), which it sends to lib.wasm or to the web server. Neither reads other files,
 // so a use line is refused.
 
+// The error of a request made before the name table is read.
+const noNames = "no SIML name table is read"
+
 // Reads req.Text as the file at req.Path, with names. Text over the size a file may have is refused.
 func ParseRequest(req *proto.SimlParseRequest, names *Names) (result *proto.SimlParseResult) {
 	defer recovered(func(message string) { result = &proto.SimlParseResult{Error: message} })
+	if names == nil {
+		return &proto.SimlParseResult{Error: noNames}
+	}
 	if err := textSize(req.Text); err != nil {
 		return &proto.SimlParseResult{Error: err.Error()}
 	}
@@ -30,6 +36,9 @@ func ParseRequest(req *proto.SimlParseRequest, names *Names) (result *proto.Siml
 // gives no text, and the diagnostics of the read.
 func PrintRequest(req *proto.SimlPrintRequest, names *Names) (result *proto.SimlPrintResult) {
 	defer recovered(func(message string) { result = &proto.SimlPrintResult{Error: message} })
+	if names == nil {
+		return &proto.SimlPrintResult{Error: noNames}
+	}
 	path := "wowsims.siml"
 	if req.Section != "" {
 		path = "x." + req.Section + ".siml"
@@ -53,6 +62,9 @@ func PrintRequest(req *proto.SimlPrintRequest, names *Names) (result *proto.Siml
 // refused.
 func FormatRequest(req *proto.SimlFormatRequest, names *Names) (result *proto.SimlFormatResult) {
 	defer recovered(func(message string) { result = &proto.SimlFormatResult{Error: message} })
+	if names == nil {
+		return &proto.SimlFormatResult{Error: noNames}
+	}
 	if err := textSize(req.Text); err != nil {
 		return &proto.SimlFormatResult{Error: err.Error()}
 	}

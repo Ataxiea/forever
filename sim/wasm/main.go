@@ -47,10 +47,10 @@ func main() {
 	js.Global().Set("abortById", js.FuncOf(abortById))
 	js.Global().Set("simlNames", js.FuncOf(setSimlNames))
 	js.Global().Set("simlParse", js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-		return simlCall(args, &proto.SimlParseRequest{}, siml.ParseRequest, func(e string) *proto.SimlParseResult { return &proto.SimlParseResult{Error: e} })
+		return simlCall(args, &proto.SimlParseRequest{}, siml.ParseRequest)
 	}))
 	js.Global().Set("simlPrint", js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-		return simlCall(args, &proto.SimlPrintRequest{}, siml.PrintRequest, func(e string) *proto.SimlPrintResult { return &proto.SimlPrintResult{Error: e} })
+		return simlCall(args, &proto.SimlPrintRequest{}, siml.PrintRequest)
 	}))
 	js.Global().Call("wasmready")
 	<-c
@@ -515,15 +515,12 @@ func setSimlNames(this js.Value, args []js.Value) interface{} {
 
 // Answers the SIML request in args[0] with handle, or with failed when it does not unmarshal or no name table is
 // read yet.
-func simlCall[Req, Res googleProto.Message](args []js.Value, req Req, handle func(Req, *siml.Names) Res, failed func(string) Res) interface{} {
-	var result Res
+func simlCall[Req, Res googleProto.Message](args []js.Value, req Req, handle func(Req, *siml.Names) Res) interface{} {
 	if err := googleProto.Unmarshal(getArgsBinary(args[0]), req); err != nil {
-		result = failed("Failed to parse request: " + err.Error())
-	} else if simlNames == nil {
-		result = failed("no SIML name table is read")
-	} else {
-		result = handle(req, simlNames)
+		log.Printf("Failed to parse request: %s", err)
+		return nil
 	}
+	result := handle(req, simlNames)
 	outbytes, err := googleProto.Marshal(result)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal result: %s", err.Error())

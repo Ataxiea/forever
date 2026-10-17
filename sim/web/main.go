@@ -131,10 +131,8 @@ var handlers = map[string]apiHandler{
 		triggered := simsignals.AbortById(requestId)
 		return &proto.AbortResponse{RequestId: requestId, WasTriggered: triggered}
 	}},
-	"/simlParse": simlHandler(func() *proto.SimlParseRequest { return &proto.SimlParseRequest{} }, siml.ParseRequest,
-		func(e string) *proto.SimlParseResult { return &proto.SimlParseResult{Error: e} }),
-	"/simlPrint": simlHandler(func() *proto.SimlPrintRequest { return &proto.SimlPrintRequest{} }, siml.PrintRequest,
-		func(e string) *proto.SimlPrintResult { return &proto.SimlPrintResult{Error: e} }),
+	"/simlParse": simlHandler(func() *proto.SimlParseRequest { return &proto.SimlParseRequest{} }, siml.ParseRequest),
+	"/simlPrint": simlHandler(func() *proto.SimlPrintRequest { return &proto.SimlPrintRequest{} }, siml.PrintRequest),
 }
 
 // The site the server serves, which holds the name table SIML requests read with.
@@ -164,12 +162,13 @@ func simlNames() (*siml.Names, error) {
 	return names, err
 }
 
-// The handler of a SIML request, which answers with failed when the name table does not read.
-func simlHandler[Req, Res googleProto.Message](newReq func() Req, handle func(Req, *siml.Names) Res, failed func(string) Res) apiHandler {
+// The handler of a SIML request. A name table that does not read is logged, and the request answers that no table
+// is read.
+func simlHandler[Req, Res googleProto.Message](newReq func() Req, handle func(Req, *siml.Names) Res) apiHandler {
 	return apiHandler{msg: func() googleProto.Message { return newReq() }, handle: func(msg googleProto.Message) googleProto.Message {
 		names, err := simlNames()
 		if err != nil {
-			return failed(err.Error())
+			log.Printf("SIML name table: %s", err)
 		}
 		return handle(msg.(Req), names)
 	}}
