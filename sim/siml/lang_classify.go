@@ -740,8 +740,8 @@ func (d *Doc) itemText(c *DatabaseCatalog, id int32) string {
 
 // A slot's short name, such as head; its number when the enum has none.
 func (d *Doc) slotWord(number int32) string {
-	if v := d.ix.enums[slotEnum].byNumber[number]; v != nil {
-		return v.Short
+	if s := shortName(slotEnum, number); s != "" {
+		return s
 	}
 	return strconv.Itoa(int(number))
 }

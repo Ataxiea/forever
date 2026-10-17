@@ -179,7 +179,7 @@ func (f *typedFile) format() string {
 			add(defLine(s, tree.lines.src, indent))
 		case *slotRowStmt:
 			w := f.entries[s][0]
-			slot := ix.enums[slotEnum].byNumber[int32(w.index)].Short
+			slot := shortName(slotEnum, int32(w.index))
 			enchant := ""
 			if s.enchant != nil {
 				enchant = s.enchant.text
