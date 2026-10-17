@@ -16,7 +16,7 @@ import {
 	Stat,
 	type UnitReference,
 } from '@generated/proto/common';
-import { SavedTalents } from '@generated/proto/ui';
+import { IndividualSimSettings, SavedTalents } from '@generated/proto/ui';
 import type { SavedDataConfig } from '@ui-kit/SavedDataPanel/types';
 import type { ReactNode } from 'react';
 
@@ -152,6 +152,10 @@ export interface IndividualSimUIConfig<SpecType extends Spec> extends PlayerConf
 		// The APL a TypeAPL spec loads with. Without it the priority list starts empty.
 		aplRotation?: APLRotation;
 		simpleRotation?: SpecRotation<SpecType>;
+
+		// The spec's defaults.siml as read. Applying the defaults reads from it the cooldowns, bonus stats, EP ratios,
+		// reference stats and reforge settings, which have no field of their own here.
+		settings?: IndividualSimSettings;
 
 		// Encounter applied by "Reset to Defaults" and on first load. Falls back to
 		// the generic single-target dummy when unset.

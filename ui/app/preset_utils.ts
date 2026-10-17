@@ -363,28 +363,20 @@ type SpecSettingsDefaults<SpecType extends Spec> = Pick<
 	| 'aplRotation'
 	| 'simpleRotation'
 	| 'other'
->;
+	| 'encounter'
+	| 'itemSwap'
+	| 'settings'
+> &
+	Partial<Pick<IndividualSimUIConfig<SpecType>['defaults'], 'epWeights'>>;
 
 // The proto-backed part of a spec's `defaults`, from the IndividualSimSettings JSON of its defaults.siml. A message the
 // file does not hold is empty, and `other` holds 0 for what the file does not set, which applying the defaults reads
-// as unset.
+// as unset. `settings` keeps the whole file, so applying the defaults also reads what has no field of its own here.
 export const specDefaultsFromSettings = <SpecType extends Spec>(spec: SpecType, json: any): SpecSettingsDefaults<SpecType> => {
 	const settings = IndividualSimSettings.fromJson(json);
 	const player = settings.player;
 	if (!player?.spec.oneofKind || getPlayerSpecFromPlayer(player).specID !== spec) {
 		throw new Error(`The defaults are not ${Spec[spec]} settings.`);
-	}
-	// The site reads only what the return below holds, so a section it would drop is refused here: the editor's
-	// sim reads the whole file and would sim a different character.
-	const unread = [
-		settings.encounter && 'encounter',
-		player.enableItemSwap && 'item_swap',
-		player.itemSwap && 'item_swap',
-		player.cooldowns && 'cooldowns',
-		player.bonusStats && 'bonus_stats',
-	].filter(Boolean);
-	if (unread.length) {
-		throw new Error(`The ${Spec[spec]} defaults hold ${[...new Set(unread)].join(', ')}, which the site does not read from defaults.`);
 	}
 	const functions = specTypeFunctions[spec] as SpecTypeFunctions<SpecType>;
 	const rotation = player.rotation;
@@ -403,6 +395,12 @@ export const specDefaultsFromSettings = <SpecType extends Spec>(spec: SpecType, 
 		...(rotation?.type === APLRotationType.TypeSimple && {
 			simpleRotation: functions.rotationFromJson(JSON.parse(rotation.simple?.specRotationJson || '{}')),
 		}),
+		...(settings.encounter && {
+			encounter: makePresetEncounter('Default', settings.encounter, undefined, undefined, settings.targetDummies),
+		}),
+		...(player.enableItemSwap && player.itemSwap && { itemSwap: player.itemSwap }),
+		...(settings.epWeightsStats && { epWeights: Stats.fromProto(settings.epWeightsStats) }),
+		settings,
 		other: {
 			race: player.race,
 			profession1: player.profession1,

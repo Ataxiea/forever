@@ -5,6 +5,7 @@ import type { StatSweepSettings } from '@sim/settings/stat_sweep_settings';
 import type { StatWeightActionSettings } from '@sim/settings/stat_weight_settings';
 import type { IndividualSimHost } from '@sim/sim_host';
 import type { IndividualSimUIConfig } from '@sim/spec_config';
+import { Stats } from '@sim/proto/stats';
 import { batch } from '@sim/state/batch';
 
 import { applyBuild } from './apply_build';
@@ -99,7 +100,7 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 
 		host.reforger?.applyDefaults();
 
-		sim.raid.setTargetDummies(healingSpec ? 9 : 0);
+		sim.raid.setTargetDummies(config.defaults.encounter?.targetDummies || (healingSpec ? 9 : 0));
 		if (config.defaults.encounter?.encounter) {
 			sim.encounter.fromProto(config.defaults.encounter.encounter);
 		} else {
@@ -121,8 +122,27 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 		host.statWeightActionSettings.applyDefaults();
 		host.statSweepSettings.applyDefaults();
 
+		applyFileDefaults(host);
+
 		if (config.defaultBuild) {
 			applyBuild(config.defaultBuild, host);
 		}
 	});
+}
+
+// What the spec's defaults.siml sets that has no field of its own in `defaults`: the cooldowns, bonus stats, EP
+// ratios, reference stats and reforge settings. A section the file does not hold keeps what the defaults above set.
+function applyFileDefaults<SpecType extends Spec>({ player, reforger, individualConfig: config }: DefaultsHost<SpecType>) {
+	const settings = config.defaults.settings;
+	if (!settings) {
+		return;
+	}
+	const file = settings.player;
+	if (file?.cooldowns) player.setSimpleCooldowns(file.cooldowns);
+	if (file?.bonusStats) player.setBonusStats(Stats.fromProto(file.bonusStats));
+	if (settings.epRatios.length) player.setEpRatios(settings.epRatios);
+	if (settings.dpsRefStat) player.setRefStat('dpsRefStat', settings.dpsRefStat);
+	if (settings.healRefStat) player.setRefStat('healRefStat', settings.healRefStat);
+	if (settings.tankRefStat) player.setRefStat('tankRefStat', settings.tankRefStat);
+	if (settings.reforgeSettings) reforger?.applyPresetSettings(settings.reforgeSettings);
 }
