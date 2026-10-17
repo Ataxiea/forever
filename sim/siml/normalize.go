@@ -46,11 +46,7 @@ func Normalize(m googleProto.Message, names *Names, class proto.Class) googlePro
 					l.Append(l.NewElement())
 				}
 			case f.Name == "spec_rotation_json" && rotation != nil:
-				r := newMessage(rotation)
-				if ix.readJSON(m.Get(fd).String(), r, protojson.UnmarshalOptions{DiscardUnknown: true}) != "" {
-					r = newMessage(rotation)
-				}
-				m.Set(fd, protoreflect.ValueOfString(ix.jsonText(r)))
+				m.Set(fd, protoreflect.ValueOfString(ix.jsonText(ix.decodedRotation(m.Get(fd).String(), rotation))))
 			case fd.Message() != nil && fd.IsList():
 				for i := range m.Get(fd).List().Len() {
 					pad(m.Mutable(fd).List().Get(i).Message())
@@ -73,4 +69,14 @@ func Normalize(m googleProto.Message, names *Names, class proto.Class) googlePro
 		}
 	})
 	return out
+}
+
+// The Rotation a spec_rotation_json text holds. A text that does not read as one, keys that name no field aside,
+// gives an empty Rotation.
+func (ix *schemaIndex) decodedRotation(text string, md protoreflect.MessageDescriptor) protoreflect.Message {
+	r := newMessage(md)
+	if ix.readJSON(text, r, protojson.UnmarshalOptions{DiscardUnknown: true}) != "" {
+		return newMessage(md)
+	}
+	return r
 }

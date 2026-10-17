@@ -9,7 +9,6 @@ import (
 	"unicode/utf16"
 
 	"github.com/wowsims/forever/sim/core/proto"
-	"google.golang.org/protobuf/encoding/protojson"
 	googleProto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -1425,11 +1424,7 @@ func (in *printInput) valueOf(p *placed) (protoreflect.Value, bool) {
 		key := jsonPath(p.at, p.encoded)
 		decoded, ok := in.decoded[key]
 		if !ok {
-			decoded = newMessage(in.spec.Rotation)
-			// A string that does not read as the Rotation, keys that name no field aside, writes no field of it.
-			if in.ix.readJSON(m.Get(p.encoded).String(), decoded, protojson.UnmarshalOptions{DiscardUnknown: true}) != "" {
-				decoded = newMessage(in.spec.Rotation)
-			}
+			decoded = in.ix.decodedRotation(m.Get(p.encoded).String(), in.spec.Rotation)
 			in.decoded[key] = decoded
 		}
 		m = decoded
