@@ -1,6 +1,11 @@
 // What the extension and the panel's page send each other, and the shapes of the SIML server's requests they carry
 // (sim/siml/lsp/panel.go, patterns.go and sim.go).
 
+import type { Range, TextEdit } from 'vscode-languageserver-types';
+
+// Zero-based, as the protocol counts.
+export type { Range, TextEdit };
+
 export type JsonPath = Array<string | number>;
 export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
 export interface JsonObject {
@@ -44,17 +49,6 @@ export interface AplStructure {
 	defs: { name: string; params: string[]; value: string; used: boolean }[];
 	whenRanges: Range[];
 	defRanges: Range[];
-}
-
-// Zero-based, as the protocol counts.
-export interface Range {
-	start: { line: number; character: number };
-	end: { line: number; character: number };
-}
-
-export interface TextEdit {
-	range: Range;
-	newText: string;
 }
 
 // A diagnostic of the file, at the rotation path of the text it is about.

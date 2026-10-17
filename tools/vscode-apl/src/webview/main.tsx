@@ -271,7 +271,7 @@ function WhenHead({
 						setEditing(!editing);
 						e.preventDefault();
 					}}>
-					<span className="op">{block.hide ? '# when' : 'when'}</span> <ValueText json={block.condition as Json} path={[...at, 'condition']} />
+					<span className="op">{block.hide ? '# when' : 'when'}</span> <ValueText json={block.condition} path={[...at, 'condition']} />
 					{collapsed ? <span className="count"> {rows} rows</span> : null}
 				</div>
 				<span className="row-buttons">
@@ -304,7 +304,7 @@ function WhenHead({
 			</div>
 			{editing ? (
 				<div className="row-body">
-					<ValueEditor json={block.condition as Json} path={[...at, 'condition']} ctx={ctx} />
+					<ValueEditor json={block.condition} path={[...at, 'condition']} ctx={ctx} />
 				</div>
 			) : null}
 		</li>

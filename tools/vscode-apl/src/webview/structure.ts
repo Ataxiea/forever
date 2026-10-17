@@ -38,7 +38,7 @@ export function blocksAt(blocks: Array<WhenBlock & { depth: number }>, index: nu
 }
 
 // What a row's blocks join to its condition, in order.
-export const joinedBy = (blocks: WhenBlock[]): Json[] => blocks.flatMap(block => block.conjuncts as Json[]);
+export const joinedBy = (blocks: WhenBlock[]): Json[] => blocks.flatMap(block => block.conjuncts);
 
 // A condition of conjuncts: none, the one alone, or their and.
 export function conditionOf(conjuncts: Json[]): Json | undefined {

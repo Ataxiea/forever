@@ -2,9 +2,7 @@
 // text, so the next click is made against what the panel shows. Rows keyed by their path follow the edits too.
 
 import type { AplEdit, JsonPath } from '../protocol';
-import type { Json, JsonObject } from './model';
-
-const isObject = (json: Json | undefined): json is JsonObject => !!json && typeof json === 'object' && !Array.isArray(json);
+import { isObject, type Json, type JsonObject } from './model';
 
 // `value` with `change` made at `path`; a change that gives undefined removes the property or element. A path
 // through an index that does not exist changes nothing.

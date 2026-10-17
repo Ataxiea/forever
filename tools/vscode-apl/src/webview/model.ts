@@ -9,9 +9,9 @@ import i18n from '@i18n/config';
 import type { FieldInfo, IMessageType } from '@protobuf-ts/runtime';
 import type { Player } from '@sim/player/player';
 
-export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-export type JsonObject = { [key: string]: Json };
-export type JsonPath = Array<string | number>;
+import type { JsonObject, JsonPath, JsonValue as Json } from '../protocol';
+
+export type { Json, JsonObject, JsonPath };
 
 export type Family = 'action' | 'value';
 
