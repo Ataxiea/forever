@@ -1,6 +1,8 @@
 package siml
 
 import (
+	googleProto "google.golang.org/protobuf/proto"
+
 	"errors"
 	"fmt"
 	"io"
@@ -87,6 +89,41 @@ func (f *File) Rotation() *proto.APLRotation { return f.Settings.GetPlayer().Get
 
 // The 17 items of an x.gear.siml, or of a full file that holds gear:.
 func (f *File) Equipment() *proto.EquipmentSpec { return f.Settings.GetPlayer().GetEquipment() }
+
+// What the file loads as (SPEC.md §1): an x.apl.siml its rotation, an x.gear.siml its equipment, any other file its
+// settings.
+func (f *File) Message() googleProto.Message {
+	switch f.Kind.Section {
+	case sectionAPL:
+		return f.Rotation()
+	case sectionGear:
+		return f.Equipment()
+	}
+	return f.Settings
+}
+
+// The loader's message for a file of kind (SPEC.md §1), empty: an APLRotation, an EquipmentSpec or
+// IndividualSimSettings.
+func (k Kind) Message() googleProto.Message {
+	switch k.Section {
+	case sectionAPL:
+		return &proto.APLRotation{}
+	case sectionGear:
+		return &proto.EquipmentSpec{}
+	}
+	return &proto.IndividualSimSettings{}
+}
+
+// The settings a loader's message stands for: an APLRotation as the rotation, an EquipmentSpec as the equipment.
+func SettingsOf(m googleProto.Message) *proto.IndividualSimSettings {
+	switch m := m.(type) {
+	case *proto.APLRotation:
+		return &proto.IndividualSimSettings{Player: &proto.Player{Rotation: m}}
+	case *proto.EquipmentSpec:
+		return &proto.IndividualSimSettings{Player: &proto.Player{Equipment: m}}
+	}
+	return m.(*proto.IndividualSimSettings)
+}
 
 // Parses src, the text of the file at path, whose names mean what names says (SPEC.md §7). The error is Diagnostics
 // when the file has an error, which then holds its warnings too, and the file holds what read. open reads the files

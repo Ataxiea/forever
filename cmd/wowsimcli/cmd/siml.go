@@ -81,39 +81,6 @@ func parseFlags(flags *flag.FlagSet, args []string, n int) error {
 	return nil
 }
 
-// What a file of kind loads as (SPEC.md §1), empty: an APLRotation, an EquipmentSpec, or IndividualSimSettings.
-func loaderMessage(kind siml.Kind) googleProto.Message {
-	switch kind.Section {
-	case "apl":
-		return &proto.APLRotation{}
-	case "gear":
-		return &proto.EquipmentSpec{}
-	}
-	return &proto.IndividualSimSettings{}
-}
-
-// What a parsed file loads as.
-func loaded(f *siml.File) googleProto.Message {
-	switch f.Kind.Section {
-	case "apl":
-		return f.Rotation()
-	case "gear":
-		return f.Equipment()
-	}
-	return f.Settings
-}
-
-// The settings a loader's message stands for: an APLRotation as the rotation, an EquipmentSpec as the equipment.
-func settingsOf(m googleProto.Message) *proto.IndividualSimSettings {
-	switch m := m.(type) {
-	case *proto.APLRotation:
-		return &proto.IndividualSimSettings{Player: &proto.Player{Rotation: m}}
-	case *proto.EquipmentSpec:
-		return &proto.IndividualSimSettings{Player: &proto.Player{Equipment: m}}
-	}
-	return m.(*proto.IndividualSimSettings)
-}
-
 // The JSON file at path, read as m.
 func readJSON(path string, m googleProto.Message) error {
 	data, err := os.ReadFile(path)
@@ -202,7 +169,7 @@ func simlParse(out, errOut io.Writer, args []string) error {
 	printDiagnostics(errOut, fail)
 	if f.Settings != nil {
 		if *asJSON {
-			data, err := protojson.Marshal(loaded(f))
+			data, err := protojson.Marshal(f.Message())
 			if err != nil {
 				return err
 			}
@@ -293,11 +260,11 @@ func simlPrint(out, errOut io.Writer, args []string) error {
 	}
 
 	path := flags.Arg(0)
-	m := loaderMessage(kind)
+	m := kind.Message()
 	if err := readJSON(path, m); err != nil {
 		return err
 	}
-	settings := settingsOf(m)
+	settings := siml.SettingsOf(m)
 	if held, ok := siml.SpecOf(heldSpec(settings)); ok && spec != proto.Spec_SpecUnknown && held.Spec != spec {
 		return fmt.Errorf("%s holds a %s player, not %s", path, held.Field.Name(), *specName)
 	}
@@ -347,7 +314,7 @@ func simlVerify(out, errOut io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	old := loaderMessage(kind)
+	old := kind.Message()
 	if err := readJSON(oldPath, old); err != nil {
 		return err
 	}
@@ -380,7 +347,7 @@ func simlVerify(out, errOut io.Writer, args []string) error {
 // "path: <JSON value> in the JSON, <its value> in the SIML" for each difference, by JSON path.
 func readBackDifferences(want googleProto.Message, f *siml.File, names *siml.Names) []string {
 	info, _ := siml.SpecOf(f.Spec)
-	a, b := siml.Normalize(want, names, info.Class), siml.Normalize(loaded(f), names, info.Class)
+	a, b := siml.Normalize(want, names, info.Class), siml.Normalize(f.Message(), names, info.Class)
 	var lines []string
 	for _, d := range messageDiff(a.ProtoReflect(), b.ProtoReflect()) {
 		lines = append(lines, fmt.Sprintf("%s: %s in the JSON, %s in the SIML", d.path, d.old, d.new))

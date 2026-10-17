@@ -86,28 +86,6 @@ func diagnosticLines(diags Diagnostics) []string {
 	return lines
 }
 
-// The loader's message for a file of kind (SPEC.md §1), empty.
-func loaderMessage(kind Kind) googleProto.Message {
-	switch kind.Section {
-	case sectionAPL:
-		return &proto.APLRotation{}
-	case sectionGear:
-		return &proto.EquipmentSpec{}
-	}
-	return &proto.IndividualSimSettings{}
-}
-
-// The loader's message a parsed file gives.
-func loaded(f *File) googleProto.Message {
-	switch f.Kind.Section {
-	case sectionAPL:
-		return f.Rotation()
-	case sectionGear:
-		return f.Equipment()
-	}
-	return f.Settings
-}
-
 // The JSON file at path, read as the loader's message for kind.
 func readMessage(t *testing.T, path string, kind Kind) googleProto.Message {
 	t.Helper()
@@ -115,7 +93,7 @@ func readMessage(t *testing.T, path string, kind Kind) googleProto.Message {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := loaderMessage(kind)
+	m := kind.Message()
 	if err := protojson.Unmarshal(text, m); err != nil {
 		t.Fatalf("%s does not read as %T: %v", path, m, err)
 	}
@@ -147,7 +125,7 @@ func TestParseCases(t *testing.T) {
 			}
 			checkRawRefs(t, file, f)
 			want := readMessage(t, strings.TrimSuffix(file, ".siml")+".json", f.Kind)
-			if got := loaded(f); !googleProto.Equal(got, want) {
+			if got := f.Message(); !googleProto.Equal(got, want) {
 				t.Errorf("the parse differs from the expected JSON\ngot:  %s\nwant: %s", protojson.Format(got), protojson.Format(want))
 			}
 		})
@@ -247,17 +225,6 @@ func caseCategories(file string) []string {
 	return strings.Split(strings.TrimSpace(string(letters)), "")
 }
 
-// The settings a print case's JSON stands for: the rotation of an apl case, the equipment of a gear case.
-func settingsOf(m googleProto.Message) *proto.IndividualSimSettings {
-	switch m := m.(type) {
-	case *proto.APLRotation:
-		return &proto.IndividualSimSettings{Player: &proto.Player{Rotation: m}}
-	case *proto.EquipmentSpec:
-		return &proto.IndividualSimSettings{Player: &proto.Player{Equipment: m}}
-	}
-	return m.(*proto.IndividualSimSettings)
-}
-
 // The class whose names a file of spec reads.
 func classOf(spec proto.Spec) proto.Class {
 	for _, info := range Specs() {
@@ -278,7 +245,7 @@ func TestPrintCases(t *testing.T) {
 			kind := kindOf(target)
 			input := readMessage(t, file, kind)
 			categories := caseCategories(file)
-			got := Print(kind, caseSpec(file), settingsOf(input), categories, names)
+			got := Print(kind, caseSpec(file), SettingsOf(input), categories, names)
 			want, err := os.ReadFile(target)
 			if err != nil {
 				t.Fatal(err)
@@ -295,7 +262,7 @@ func TestPrintCases(t *testing.T) {
 				if !slices.Equal(f.Categories, categories) {
 					t.Errorf("the print holds the categories %v, want %v", f.Categories, categories)
 				}
-			} else if back, in := Normalize(loaded(f), names, class), Normalize(input, names, class); !googleProto.Equal(back, in) {
+			} else if back, in := Normalize(f.Message(), names, class), Normalize(input, names, class); !googleProto.Equal(back, in) {
 				t.Errorf("the print reads back differently\ngot:  %s\nwant: %s", protojson.Format(back), protojson.Format(in))
 			}
 		})
@@ -354,7 +321,7 @@ func TestCorpusRoundTrips(t *testing.T) {
 				t.Fatalf("the print does not read: %v\n%s", err, printed)
 			}
 			class := classOf(f.Spec)
-			if got, want := Normalize(loaded(back), names, class), Normalize(loaded(f), names, class); !googleProto.Equal(got, want) {
+			if got, want := Normalize(back.Message(), names, class), Normalize(f.Message(), names, class); !googleProto.Equal(got, want) {
 				t.Errorf("the print reads back differently\n%s\ngot:  %s\nwant: %s", printed, protojson.Format(got), protojson.Format(want))
 			}
 		})

@@ -143,7 +143,7 @@ func serveFile(req simlServeRequest, names *siml.Names) (res simlServeResponse) 
 	}
 	res.Errors, res.Warnings = serveDiagnostics(fail), serveDiagnostics(warn)
 	if f.Settings != nil {
-		if res.JSON, err = protojson.Marshal(loaded(f)); err != nil {
+		if res.JSON, err = protojson.Marshal(f.Message()); err != nil {
 			res.Error = err.Error()
 		}
 	}
