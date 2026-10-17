@@ -77,12 +77,9 @@ A spec's presets are SIML files under `ui/specs/<class>/<spec>/`. `sim/siml/SPEC
 
 Every spell, aura, item and enchant is written by its name in the name table, `sim/siml/names.json`:
 `cast mortal_strike`, `target.aura(sunder_armor).num_stacks`, `cast item.goblin_sapper_charge`. A spell or aura has
-a name once the sim registers it, so register the spells first and then run `make sim/siml/names.json`. It adds
-their names, and the table goes into the same commit as the spells. A `qualified:` line in its report means a shared
-entry (a gear or encounter spell) holds the plain name of one of the class's spells, so `cast fireball` would mean the
-shared spell: run the generator with the `-repin` that line names on the committed table
-(`git checkout sim/siml/names.json` first) to give the class the plain name, and commit the line it adds to the repin
-record, `sim/siml/gen/repinned.txt`, with the table. The site's Rotation tab writes a rotation with
+a name once the sim registers it, so register the spells first, then run `make sim/siml/names.json` and commit
+the table with them. A `qualified:` line in its report needs a repin; `wowsims-spells`, "Names in SIML files", has
+how the table, repins and the repin record work. The site's Rotation tab writes a rotation with
 **Export SIML**. `make vscode-apl` builds the editor extension, which completes the names the file's spec registers
 (`tools/vscode-apl/README.md`). A name the table does not hold fails, with the names close to it:
 

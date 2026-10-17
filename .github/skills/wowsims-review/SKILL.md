@@ -125,20 +125,14 @@ Each of these has a section in `references/defects.md`.
 
 `sim/siml/SPEC.md` is the language. A spell change usually moves two kinds of SIML file.
 
-**The name table, `sim/siml/names.json`.** A regeneration only adds lines to it, apart from an entry's
-`registeredBy` list and the comma JSON needs before a new last entry. Any other change to a name is a repin
-(`simlnames -w -repin`), the only way a name changes meaning, which adds a `<name>: was …, now …` line to the repin
-record, `sim/siml/gen/repinned.txt`; the pull request has to say it intends each one. This fails on every name of the
-base's table that means something else, or nothing, now and that the record does not add a line for; CI runs it on
-pull requests against the merge commit's first parent:
+**The name table, `sim/siml/names.json`.** A regeneration only adds names; any other change to a name is a repin,
+which adds a line to `sim/siml/gen/repinned.txt`, and the pull request has to say it intends each one. How the table
+and repins work is in `wowsims-spells`, "Names in SIML files". Check it with:
 
 ```
 go run ./sim/siml/cmd/simlnames -base "$(git merge-base origin/master HEAD)"   # passes unless a name changed without its record line
 git diff "$(git merge-base origin/master HEAD)" -- sim/siml/gen/repinned.txt   # the repins the change makes; read each one
 ```
-
-A committed entry that regenerates with another meaning or registered-by list fails `TestTableKeepsItsEntries`; a
-spell registered without the table regenerated is only logged there, and has no name on the site until the table is committed.
 
 **Rotations and gear sets, `ui/specs/**/*.siml`.** Their diff reads as SIML rows (`cast mortal_strike if …`,
 `main_hand arcanite_reaper + weapon_crusader`), so read each changed row for what it does. Check that each name means
