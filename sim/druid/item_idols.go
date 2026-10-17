@@ -4,8 +4,11 @@ import (
 	"github.com/wowsims/forever/sim/common/shared"
 )
 
-// The idols' equip spells reach their spells by class flags, which no druid spell sets until the
-// class is ported, so until then they change nothing.
+// The idols' equip spells reach their spells by class flags.
+//
+// TODO: Items without full game files data are not registered here:
+//   - Idol of Shifting Tides 263411 (1270470, shapeshifting spells cost 40 less mana).
+//   - Mark of Urs'endris 263435 (1270490, armor from items +4%, base and bonus).
 func init() {
 	// Idol of Health
 	// https://www.wowhead.com/forever/item=22399/idol-of-health
@@ -19,7 +22,7 @@ func init() {
 	// Howling Idol
 	// https://www.wowhead.com/forever/item=272427/howling-idol
 	//
-	// Reduces the cooldown of your Shifting Power ability by 1 sec.
+	// Reduces the cooldown of your Shifting Power ability by 0.5 sec.
 	shared.NewSpellDataEquipAura(shared.SpellDataProc{TriggerSpellID: 1291059},
 		[]shared.ItemVariant{
 			{ItemID: 272427, ItemName: "Howling Idol"},
@@ -44,6 +47,14 @@ func init() {
 	shared.NewSpellDataEquipAura(shared.SpellDataProc{TriggerSpellID: 1291061},
 		[]shared.ItemVariant{
 			{ItemID: 272430, ItemName: "Swarming Idol"},
+		})
+
+	// Mystic Mushroom
+	//
+	// Increases your Spirit by 5%.
+	shared.NewSpellDataEquipAura(shared.SpellDataProc{TriggerSpellID: 1248751},
+		[]shared.ItemVariant{
+			{ItemID: 249396, ItemName: "Mystic Mushroom"},
 		})
 
 	// Idol of Swiftness

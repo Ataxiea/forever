@@ -88,7 +88,7 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 	// skill over the target's defense, with no crit of its own.
 	addPetStatDependencies(&hp.Character)
 
-	// Bestial Discipline's effect 1 raises every effect of the pet's focus passive: +50% a rank.
+	// Bestial Discipline's effect 1 raises every effect of the pet's focus passive: +10% a rank.
 	hp.EnableFocusBar(spellData.BestialDiscipline.EffectAt(1).MultiplierAt(hunter.Talents.BestialDiscipline))
 
 	// Normalized in ApplyTalents to the Faster or Slower Attack passive's swing.
@@ -105,25 +105,32 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 }
 
 // Hunter Pet Scaling (415429) states every inherited stat without an amount, the server pricing
-// them: 2 health a point of stamina, 30% of armor, 10% of the higher attack power and the owner's
-// melee crit (inheritedMeleeCrit). Not linear, so the pet snapshots them; registerStatInheritance
-// says when.
+// them: 2 health a point of stamina, 30% of armor, 10% of the higher attack power, the owner's
+// higher crit (inheritedCrit) and the owner's expertise. Not linear, so the pet snapshots them;
+// registerStatInheritance says when.
 func (hunter *Hunter) makeStatInheritance() core.PetStatInheritance {
 	return func(ownerStats stats.Stats) stats.Stats {
 		return stats.Stats{
 			stats.Health:              ownerStats[stats.Stamina] * 2,
 			stats.Armor:               ownerStats[stats.Armor] * 0.3,
 			stats.AttackPower:         max(ownerStats[stats.AttackPower], ownerStats[stats.RangedAttackPower]) * 0.1,
-			stats.PhysicalCritPercent: hunter.inheritedMeleeCrit(ownerStats),
+			stats.PhysicalCritPercent: hunter.inheritedCrit(ownerStats),
+			// TODO: 415429 effect 17 (A_MOD_COMBAT_RESULT_CHANCE2, misc 4) states expertise without an
+			// amount; the full share is unmeasured.
+			stats.ExpertisePercent: ownerStats[stats.ExpertisePercent],
 		}
 	}
 }
 
-// The melee crit the in-game character sheet shows: the owner's physical crit less 0.04% a point of
-// main-hand skill below the level-based maximum, at least 0. Ranged crit does not reach a pet.
-func (hunter *Hunter) inheritedMeleeCrit(ownerStats stats.Stats) float64 {
+// The higher of the melee and ranged crit the in-game character sheet shows, at least 0. Melee is the
+// owner's physical crit; ranged adds the ranged crit. Each loses 0.04% a point of its weapon's skill
+// below the level-based maximum.
+func (hunter *Hunter) inheritedCrit(ownerStats stats.Stats) float64 {
 	mhSkillBonus := core.GetWeaponSkill(&hunter.Unit, hunter.GetMHWeapon())
-	return max(0, ownerStats[stats.PhysicalCritPercent]+min(mhSkillBonus, 0)*0.04)
+	rangedSkillBonus := core.GetWeaponSkill(&hunter.Unit, hunter.GetRangedWeapon())
+	melee := ownerStats[stats.PhysicalCritPercent] + min(mhSkillBonus, 0)*0.04
+	ranged := ownerStats[stats.PhysicalCritPercent] + ownerStats[stats.RangedCritPercent] + min(rangedSkillBonus, 0)*0.04
+	return max(0, melee, ranged)
 }
 
 // The server's HunterPetInheritance: the pet snapshots its owner's stats when summoned and again on
@@ -406,7 +413,7 @@ func (hp *HunterPet) registerDustCloud(rank *spelldata.Spell) *core.Spell {
 	return hp.RegisterSpell(config)
 }
 
-// The party's attack power. TODO: the party within 15 yd; the hunter and the pet are what is here.
+// The pet's and the hunter's attack power. TODO: the row's target is the raid within 15 yd.
 func (hp *HunterPet) registerFuriousHowl(rank *spelldata.Spell) *core.Spell {
 	var auras []*core.Aura
 	for _, character := range []*core.Character{&hp.Character, &hp.hunterOwner.Character} {
