@@ -8,7 +8,9 @@ import (
 // The request the site's individual sim sends for settings, with options: the player alone in the first of the raid's
 // five parties, with the party buffs, the raid buffs, debuffs, tanks and target dummies, against the encounter. A ring enchant needs
 // Enchanting, so a player without it is simmed without its ring enchants. Settings with no encounter, or one with no
-// target, are simmed against one default target, which the warnings say. s is not changed.
+// target, are simmed against one default target, in the site's default fight, which the warnings say. s is not
+// changed. The potions and conjured items the site adds for simming (getConsumes(true)) are not added: which are
+// relevant comes from the spec configs under ui/specs.
 func IndividualSimRequest(s *proto.IndividualSimSettings, options *proto.SimOptions) (*proto.RaidSimRequest, []string) {
 	var warnings []string
 	player := googleProto.Clone(orEmpty(s.GetPlayer())).(*proto.Player)
@@ -30,7 +32,7 @@ func IndividualSimRequest(s *proto.IndividualSimSettings, options *proto.SimOpti
 	encounter := s.Encounter
 	switch {
 	case encounter == nil:
-		encounter = MakeSingleTargetEncounter(0)
+		encounter = MakeSingleTargetEncounter(siteDurationVariation)
 		warnings = append(warnings, "the settings hold no encounter; simmed against one default target")
 	case len(encounter.Targets) == 0:
 		encounter = googleProto.Clone(encounter).(*proto.Encounter)
@@ -39,6 +41,9 @@ func IndividualSimRequest(s *proto.IndividualSimSettings, options *proto.SimOpti
 	}
 	return &proto.RaidSimRequest{Raid: raid, Encounter: encounter, SimOptions: options, Type: proto.SimType_SimTypeIndividual}, warnings
 }
+
+// The seconds the site's default encounter varies the fight by (ENCOUNTER_DEFAULTS in ui/sim/constants/encounter.ts).
+const siteDurationVariation = 5
 
 // m, or an empty message of its type when it is nil.
 func orEmpty[M googleProto.Message](m M) M {
