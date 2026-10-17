@@ -3,10 +3,10 @@ package siml
 import (
 	"fmt"
 	"math"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/wowsims/forever/sim/core/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -375,68 +375,27 @@ func collect(apl lintObject) *collected {
 
 // --- Constants
 
-var (
-	// A Go duration: an optional sign, then one or more number-unit pairs.
-	goDuration   = regexp.MustCompile(`^[-+]?(?:(?:\d+\.?\d*|\.\d+)(?:ns|us|µs|μs|ms|s|m|h))+$`)
-	durationPart = regexp.MustCompile(`(\d+\.?\d*|\.\d+)(ns|us|µs|μs|ms|s|m|h)`)
-	unitSeconds  = map[string]float64{"ns": 1e-9, "us": 1e-6, "µs": 1e-6, "μs": 1e-6, "ms": 1e-3, "s": 1, "m": 60, "h": 3600}
-	signedInt    = regexp.MustCompile(`^[-+]?\d+$`)
-	jsDecimal    = regexp.MustCompile(`^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$`)
-	jsRadix      = regexp.MustCompile(`^0([xX][0-9a-fA-F]+|[oO][0-7]+|[bB][01]+)$`)
-)
-
-// A string as ECMAScript's Number reads it; false where that is NaN.
-func jsNumberOf(s string) (float64, bool) {
-	s = strings.TrimFunc(s, isJSSpace)
-	switch {
-	case s == "":
-		return 0, true
-	case s == "Infinity" || s == "+Infinity":
-		return math.Inf(1), true
-	case s == "-Infinity":
-		return math.Inf(-1), true
-	case jsRadix.MatchString(s):
-		n, err := strconv.ParseUint(s[2:], map[byte]int{'x': 16, 'X': 16, 'o': 8, 'O': 8, 'b': 2, 'B': 2}[s[1]], 64)
-		return float64(n), err == nil
-	case jsDecimal.MatchString(s):
-		n, err := strconv.ParseFloat(s, 64)
-		return n, err == nil || math.IsInf(n, 0)
-	}
-	return 0, false
-}
-
-func isFinite(n float64) bool { return !math.IsInf(n, 0) && !math.IsNaN(n) }
-
-// A constant's number as the sim parses const: a duration in seconds, an integer, a percent as a fraction, or a float.
-// Every number type reads as the same value in seconds when compared with a duration. False when it is no number.
+// A constant's number as the sim's newValueConst parses it: a duration in seconds, an int32, a percent as a fraction,
+// or a float. False when the sim reads it as a string.
 func constNumber(val string) (float64, bool) {
-	if val == "0" {
-		return 0, true
+	if d, err := time.ParseDuration(val); err == nil {
+		return d.Seconds(), true
 	}
-	if goDuration.MatchString(val) {
-		sign := 1.0
-		if strings.HasPrefix(val, "-") {
-			sign = -1
-		}
-		seconds := 0.0
-		for _, m := range durationPart.FindAllStringSubmatch(val, -1) {
-			amount, _ := jsNumberOf(m[1])
-			seconds += amount * unitSeconds[m[2]]
-		}
-		return sign * seconds, true
-	}
-	if signedInt.MatchString(val) {
-		n, _ := jsNumberOf(val)
-		return n, true
+	if n, err := strconv.Atoi(val); err == nil {
+		return float64(int32(n)), true
 	}
 	if number, ok := strings.CutSuffix(val, "%"); ok && len(val) > 1 {
-		if n, ok := jsNumberOf(number); ok && strings.TrimFunc(number, isJSSpace) != "" && isFinite(n) {
+		if n, err := strconv.ParseFloat(number, 64); err == nil {
 			return n / 100, true
 		}
 	}
-	n, ok := jsNumberOf(val)
-	return n, ok && strings.TrimFunc(val, isJSSpace) != "" && isFinite(n)
+	n, err := strconv.ParseFloat(val, 64)
+	return n, err == nil
 }
+
+// ConstSeconds is a const value's number as the sim reads it, a duration in seconds; false when the sim reads it as a
+// string.
+func ConstSeconds(val string) (float64, bool) { return constNumber(val) }
 
 // A const value's text, a missing val being ""; false when value is no const.
 func constOf(value lintObject) (string, bool) {

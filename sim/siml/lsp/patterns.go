@@ -489,10 +489,10 @@ func edit(op string, path []any, value any, index int) (siml.AplEdit, error) {
 // The prepull time a row runs at, when it is a plain constant time.
 func prepullSeconds(r any) (float64, bool) {
 	val, ok := at(r, []any{"doAtValue", "const", "val"}).(string)
-	if !ok || !simpleTime.MatchString(strings.TrimSpace(val)) {
+	if !ok {
 		return 0, false
 	}
-	return seconds(val), true
+	return siml.ConstSeconds(strings.TrimSpace(val))
 }
 
 // The edits that put a built pattern into the rotation. Prepull rows go where their time keeps the prepull list in
