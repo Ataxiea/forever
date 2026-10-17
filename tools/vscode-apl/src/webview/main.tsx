@@ -13,7 +13,7 @@ import { Icon } from './icons';
 import { isObject, type Json, type JsonObject, type JsonPath, newKindJson, setClassName } from './model';
 import { KindPicker } from './pickers';
 import { idKey, RegisteredContext } from './registered';
-import { blocksAt, blocksIn, conditionOf, emptyStructure, joinedBy, ownConjuncts, StructureContext, useStructure } from './structure';
+import { blocksAt, blocksIn, conditionOf, emptyStructure, joinedBy, key, ownConjuncts, rowAt, StructureContext, useStructure } from './structure';
 import { ActionText, ValueText } from './summary';
 
 type SimState = Extract<ToPanel, { type: 'sim' }>;
@@ -151,17 +151,30 @@ function SimDetails() {
 	);
 }
 
-// The lint findings for the file, which rows show as markers.
-const FindingsContext = createContext<Finding[]>([]);
+// The lint findings for the file, which rows show as markers: all of them, and those under each path, its own and
+// those of anything nested in it.
+interface Findings {
+	all: Finding[];
+	under: Map<string, Finding[]>;
+}
+const FindingsContext = createContext<Findings>({ all: [], under: new Map() });
+
+function indexFindings(all: Finding[]): Findings {
+	const under = new Map<string, Finding[]>();
+	for (const finding of all) {
+		for (let n = 0; n <= finding.path.length; n++) {
+			const at = key(finding.path.slice(0, n));
+			under.set(at, [...(under.get(at) ?? []), finding]);
+		}
+	}
+	return { all, under };
+}
 
 const RANK = { error: 0, warning: 1, info: 2 } as const;
 
 // The findings under a row: its own and those of anything nested in it.
 function RowFindings({ rowKey }: { rowKey: string }) {
-	const findings = useContext(FindingsContext).filter(f => {
-		const key = f.path.join('/');
-		return key === rowKey || key.startsWith(`${rowKey}/`);
-	});
+	const findings = useContext(FindingsContext).under.get(rowKey) ?? [];
 	if (findings.length === 0) return null;
 	const worst = findings.reduce((a, b) => (RANK[b.severity] < RANK[a.severity] ? b : a)).severity;
 	return (
@@ -173,7 +186,7 @@ function RowFindings({ rowKey }: { rowKey: string }) {
 }
 
 function FindingsBadge() {
-	const findings = useContext(FindingsContext);
+	const findings = useContext(FindingsContext).all;
 	if (findings.length === 0) return null;
 	const count = (severity: Finding['severity']) => findings.filter(f => f.severity === severity).length;
 	return (
@@ -192,8 +205,6 @@ function FindingsBadge() {
 
 declare function acquireVsCodeApi(): { postMessage(message: FromPanel): void; setState(state: PanelState): void };
 const vscode = acquireVsCodeApi();
-
-const key = (path: JsonPath) => path.join('/');
 
 function collectIds(json: Json, into: Set<string>): Set<string> {
 	if (Array.isArray(json)) {
@@ -336,7 +347,7 @@ function ItemList({ title, path, items, ctx, selected, expanded, toggle, open }:
 	});
 
 	const blocks = useMemo(() => blocksIn(structure, path), [structure, path]);
-	const rowInfo = (i: number) => structure.rows.find(row => key(row.path) === key([...path, i]));
+	const rowInfo = (i: number) => rowAt(structure, [...path, i]);
 	const conditionAt = (i: number) => {
 		const row = items[i];
 		return isObject(row) && isObject(row.action) ? row.action.condition : undefined;
@@ -963,6 +974,7 @@ function Root() {
 		[version],
 	);
 	const rotation = useMemo(() => doc && pending.reduce((r, p) => p.edits.reduce(applyEdit, r), doc.rotation), [doc, pending]);
+	const findings = useMemo(() => indexFindings(doc?.findings ?? []), [doc?.findings]);
 
 	// The table's names fill in the spells the database has no entry for, with no icon.
 	const db = useMemo(() => {
@@ -981,7 +993,7 @@ function Root() {
 	}
 	return (
 		<RegisteredContext.Provider value={registered}>
-			<FindingsContext.Provider value={doc.findings}>
+			<FindingsContext.Provider value={findings}>
 				<StructureContext.Provider value={doc.structure}>
 					<SimContext.Provider value={sim}>
 						<App db={db} fileName={init.fileName} rotation={rotation} readOnly={doc.readOnly} send={send} />

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext } from 'react';
 
 import type { AplDatabase } from '../protocol';
 import type { Json } from './model';
@@ -45,7 +45,7 @@ export function resolveId(db: AplDatabase, json: Json | undefined): ResolvedId |
 export function IdChip({ json }: { json: Json | undefined }) {
 	const resolved = resolveId(useDb(), json);
 	const registered = useRegistered();
-	const keys = useMemo(() => registeredKeys(registered), [registered]);
+	const keys = registeredKeys(registered);
 	if (!resolved) {
 		return <span className="chip chip-empty">none</span>;
 	}

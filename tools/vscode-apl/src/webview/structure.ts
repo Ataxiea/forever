@@ -12,16 +12,30 @@ export const StructureContext = createContext<AplStructure>(emptyStructure);
 
 export const useStructure = () => useContext(StructureContext);
 
-const key = (path: JsonPath) => path.join('/');
+export const key = (path: JsonPath) => path.join('/');
 
 export type DefCall = AplStructure['calls'][number];
+export type RowInfo = AplStructure['rows'][number];
+
+// The rows and def calls of each server reply by their joined paths, built on first use: every row and value of a
+// render looks itself up.
+const indexes = new WeakMap<AplStructure, { rows: Map<string, RowInfo>; calls: Map<string, DefCall> }>();
+function indexOf(structure: AplStructure) {
+	let index = indexes.get(structure);
+	if (!index) {
+		index = { rows: new Map(structure.rows.map(row => [key(row.path), row])), calls: new Map(structure.calls.map(call => [key(call.path), call])) };
+		indexes.set(structure, index);
+	}
+	return index;
+}
 
 // The def call a value at `path` is written as.
 export function callAt(structure: AplStructure, path: JsonPath | undefined): DefCall | undefined {
-	if (!path) return undefined;
-	const at = key(path);
-	return structure.calls.find(call => key(call.path) === at);
+	return path ? indexOf(structure).calls.get(key(path)) : undefined;
 }
+
+// What the server says of the row at `path`: the conjuncts its blocks join to it.
+export const rowAt = (structure: AplStructure, path: JsonPath): RowInfo | undefined => indexOf(structure).rows.get(key(path));
 
 export const callText = (name: string, args: string[]) => (args.length > 0 ? `${name}(${args.join(', ')})` : name);
 

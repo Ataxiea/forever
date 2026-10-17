@@ -48,9 +48,16 @@ export function offeredFor(
 	return ITEM_SETS.has(field.set) ? [...spells, ...items] : spells;
 }
 
-// Every id the spec registers, as a spell or as an aura on any unit.
+const keyCache = new WeakMap<Registered, Set<string>>();
+
+// Every id the spec registers, as a spell or as an aura on any unit; built once for each answer.
 export function registeredKeys(registered: Registered): Set<string> | undefined {
 	if (registered.status !== 'ready') return undefined;
-	const { spells, auras, petAuras, targetAuras, targetSpells } = registered.registered;
-	return new Set([...spells, ...auras, ...petAuras, ...targetAuras, ...targetSpells].map(entry => idKey(entry.id)).filter((key): key is string => !!key));
+	let keys = keyCache.get(registered);
+	if (!keys) {
+		const { spells, auras, petAuras, targetAuras, targetSpells } = registered.registered;
+		keys = new Set([...spells, ...auras, ...petAuras, ...targetAuras, ...targetSpells].map(entry => idKey(entry.id)).filter((key): key is string => !!key));
+		keyCache.set(registered, keys);
+	}
+	return keys;
 }
