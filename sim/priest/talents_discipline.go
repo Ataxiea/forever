@@ -239,24 +239,66 @@ func (priest *Priest) applyDivineAegis() {
 			ShieldStrengthCalculator: func(_ *core.Unit) float64 { return 0 },
 		})
 	})
-	priest.MakeProcTriggerAura(core.ProcTrigger{
-		Name:     "Divine Aegis",
-		Callback: core.CallbackOnHealDealt | core.CallbackOnPeriodicHealDealt,
-		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			if !result.DidCrit() {
-				return
-			}
-			shield := shields.Get(result.Target)
-			strength := result.Damage * shieldFraction
+	aegisSpells := make(map[*core.Spell]func(*core.Simulation, *core.Unit, float64))
+	priest.OnSpellRegistered(func(sourceSpell *core.Spell) {
+		if !sourceSpell.ProcMask.Matches(core.ProcMaskSpellHealing) {
+			return
+		}
+
+		shieldStrength := 0.0
+		config := spelldata.SpellConfig(
+			&priest.Unit,
+			spellData.DivineAegisTriggered.Highest(),
+			spelldata.Magic(core.ProcMaskEmpty),
+			spelldata.RemoveFlags(core.SpellFlagAPL),
+			spelldata.Flags(core.SpellFlagNoOnCastComplete),
+		)
+		sourceTag := sourceSpell.ActionID.SpellID
+		if sourceTag == 0 && sourceSpell.ActionID.ItemID != 0 {
+			sourceTag = -sourceSpell.ActionID.ItemID
+		}
+		config.ActionID.Tag = sourceTag
+		config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			shield := shields.Get(target)
 			if shield.IsActive() {
 				shield.Aura.Activate(sim)
 			} else {
 				shield.Activate(sim)
 			}
-			shield.ShieldStrength += strength
+			shield.ShieldStrength += shieldStrength
 			shield.SetStacks(sim, max(1, int32(shield.ShieldStrength)))
+			spell.SpellMetrics[target.UnitIndex].TotalShielding += shieldStrength
+			spell.SpellMetrics[target.UnitIndex].Hits++
+		}
+		aegisSpell := priest.RegisterSpell(config)
+		aegisSpells[sourceSpell] = func(sim *core.Simulation, target *core.Unit, amount float64) {
+			shieldStrength = amount
+			aegisSpell.Proc(sim, target)
+		}
+	})
+	priest.MakeProcTriggerAura(core.ProcTrigger{
+		Name:             "Divine Aegis",
+		Callback:         core.CallbackOnHealDealt,
+		CanProcFromProcs: spellData.DivineAegis.Highest().CanProcFromProcs(),
+		Handler: func(sim *core.Simulation, sourceSpell *core.Spell, result *core.SpellResult) {
+			if !result.DidCrit() {
+				return
+			}
+			proc := aegisSpells[sourceSpell]
+			if proc == nil {
+				return
+			}
+			proc(sim, result.Target, result.Damage*shieldFraction)
 		},
 	})
+}
+
+// Reports the shield fraction granted by Divine Aegis at the selected talent rank.
+func (priest *Priest) DivineAegisShieldFraction() float64 {
+	if priest.Talents.DivineAegis == 0 {
+		return 0
+	}
+	return spellData.DivineAegis.EffectAt(1).FractionAt(priest.Talents.DivineAegis)
 }
 
 // Infuses the target with power, increasing their spell damage and healing done by 20% for 15 sec.
