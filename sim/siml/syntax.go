@@ -987,6 +987,39 @@ func (p *parser) isWord(text string, k int) bool {
 	return p.peekKind(k, tokIdent) && p.toks[p.i+k].text == text
 }
 
+// Takes the next token when it is the word text, and says whether it was.
+func (p *parser) acceptWord(text string) bool {
+	ok := p.isWord(text, 0)
+	if ok {
+		p.take()
+	}
+	return ok
+}
+
+// Takes the next token when it is the punctuation text, and says whether it was.
+func (p *parser) acceptPunct(text string) bool {
+	ok := p.isPunct(text, 0)
+	if ok {
+		p.take()
+	}
+	return ok
+}
+
+// The items of a list whose open bracket is taken, each read by item, up to close, which it takes.
+func (p *parser) items(open token, close string, item func()) {
+	p.nest(open, 1)
+	if !p.isPunct(close, 0) {
+		for {
+			item()
+			if !p.acceptPunct(",") {
+				break
+			}
+		}
+	}
+	p.expectPunct(close, "',' or '"+close+"'")
+	p.depth--
+}
+
 func (p *parser) take() token {
 	p.i++
 	return p.toks[p.i-1]
@@ -1098,8 +1131,7 @@ func (p *parser) talents() stmt {
 func (p *parser) use() stmt {
 	p.take()
 	s := &useStmt{path: *p.string("the used file's path in quotes")}
-	if p.isWord("with", 0) {
-		p.take()
+	if p.acceptWord("with") {
 		for {
 			if len(s.with) > 0 {
 				p.take()
@@ -1160,8 +1192,7 @@ func (p *parser) defDecl() stmt {
 	}
 	p.take()
 	s := &defStmt{name: t.name()}
-	if p.isPunct("(", 0) {
-		p.take()
+	if p.acceptPunct("(") {
 		for !p.isPunct(")", 0) {
 			if len(s.params) > 0 {
 				p.expectPunct(",", "',' or ')'")
@@ -1188,9 +1219,7 @@ func (p *parser) when() stmt {
 	p.take()
 	s.condition = p.expr()
 	if !p.isPunct(":", 0) || p.has(1) {
-		if p.isPunct(":", 0) {
-			p.take()
-		}
+		p.acceptPunct(":")
 		p.fail("a when line ends with :", "parse")
 	}
 	p.take()
@@ -1218,8 +1247,7 @@ func (p *parser) slotRow() stmt {
 		suffix := p.take().name()
 		s.suffix = &suffix
 	}
-	if p.isPunct("+", 0) {
-		p.take()
+	if p.acceptPunct("+") {
 		if !p.peekKind(0, tokIdent) {
 			p.expected("the enchant's name", "parse")
 		}
@@ -1272,8 +1300,7 @@ func (p *parser) flags() stmt {
 		}
 		p.take()
 		fl := flag{name: t.name()}
-		if p.isPunct("=", 0) {
-			p.take()
+		if p.acceptPunct("=") {
 			fl.value = p.term(entryEnds)
 		}
 		fl.span = p.from(t.start)
@@ -1364,8 +1391,7 @@ func (p *parser) action(ends []string) *actionNode {
 	if p.has(0) && !p.isWord("if", 0) && !(p.peek(0).kind == tokPunct && slices.Contains(ends, p.peek(0).text)) {
 		p.fail("a condition starts with if", "expected-if")
 	}
-	if p.isWord("if", 0) {
-		p.take()
+	if p.acceptWord("if") {
 		a.condition = p.expr()
 	}
 	a.span = p.from(start)
@@ -1395,8 +1421,7 @@ func (p *parser) step() node {
 		p.take()
 		s := &channelStep{spell: p.ref()}
 		s.target = p.on()
-		if p.isWord("until", 0) {
-			p.take()
+		if p.acceptWord("until") {
 			s.until = p.expr()
 		}
 		if s.recast = p.isWord("recast", 0); s.recast {
@@ -1440,18 +1465,7 @@ func (p *parser) step() node {
 		}
 		p.take()
 		s := &sequenceStep{name: p.take().stringNode()}
-		p.nest(p.expectPunct("[", "'[' and the sequence's actions"), 1)
-		if !p.isPunct("]", 0) {
-			for {
-				s.actions = append(s.actions, p.action(listEnds))
-				if !p.isPunct(",", 0) {
-					break
-				}
-				p.take()
-			}
-		}
-		p.expectPunct("]", "',' or ']'")
-		p.depth--
+		p.items(p.expectPunct("[", "'[' and the sequence's actions"), "]", func() { s.actions = append(s.actions, p.action(listEnds)) })
 		s.span = p.from(start)
 		return s
 	}
@@ -1466,8 +1480,7 @@ func (p *parser) step() node {
 func (p *parser) groupStep() node {
 	start := p.take().start
 	s := &groupStep{name: p.string("the group's name in quotes")}
-	if p.isWord("with", 0) {
-		p.take()
+	if p.acceptWord("with") {
 		for {
 			if len(s.with) > 0 {
 				p.take()
@@ -1664,7 +1677,7 @@ func (p *parser) callable() bool {
 	if !stopWords[t.text] {
 		return true
 	}
-	return (t.text == "and" || t.text == "or" || t.text == "not") && p.isPunct("(", 1) && p.peek(1).start == t.end
+	return callWords[t.text] && p.isPunct("(", 1) && p.peek(1).start == t.end
 }
 
 func (p *parser) word() node {
@@ -1679,7 +1692,7 @@ func (p *parser) word() node {
 			return &noneNode{span: t.at()}
 		}
 	}
-	if t.text != "none" && !p.callable() {
+	if !p.callable() {
 		p.expected("a value", "parse")
 	}
 	p.take()
@@ -1741,19 +1754,8 @@ func (p *parser) accessor(unit *name, head name, headArgs *argList, start int) n
 
 func (p *parser) args() *argList {
 	open := p.take()
-	p.nest(open, 1)
 	l := &argList{}
-	if !p.isPunct(")", 0) {
-		for {
-			l.items = append(l.items, p.arg())
-			if !p.isPunct(",", 0) {
-				break
-			}
-			p.take()
-		}
-	}
-	p.expectPunct(")", "',' or ')'")
-	p.depth--
+	p.items(open, ")", func() { l.items = append(l.items, p.arg()) })
 	l.span = p.from(open.start)
 	return l
 }
@@ -1795,19 +1797,8 @@ func (p *parser) term(ends []string) node {
 
 func (p *parser) list() node {
 	open := p.take()
-	p.nest(open, 1)
 	l := &listNode{}
-	if !p.isPunct("]", 0) {
-		for {
-			l.items = append(l.items, p.term(listEnds))
-			if !p.isPunct(",", 0) {
-				break
-			}
-			p.take()
-		}
-	}
-	p.expectPunct("]", "',' or ']'")
-	p.depth--
+	p.items(open, "]", func() { l.items = append(l.items, p.term(listEnds)) })
 	l.span = p.from(open.start)
 	return l
 }
