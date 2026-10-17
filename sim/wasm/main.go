@@ -513,8 +513,8 @@ func setSimlNames(this js.Value, args []js.Value) interface{} {
 	return js.ValueOf("")
 }
 
-// Answers the SIML request in args[0] with handle, or with failed when it does not unmarshal or no name table is
-// read yet.
+// Answers the SIML request in args[0] with handle, which answers a request that comes before the name table with an
+// error, or nil when the request does not unmarshal.
 func simlCall[Req, Res googleProto.Message](args []js.Value, req Req, handle func(Req, *siml.Names) Res) interface{} {
 	if err := googleProto.Unmarshal(getArgsBinary(args[0]), req); err != nil {
 		log.Printf("Failed to parse request: %s", err)
