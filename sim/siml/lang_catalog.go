@@ -175,28 +175,24 @@ func (c *DatabaseCatalog) EnchantRows(effectID int32) []CatalogEnchant { return 
 // The catalog of the repository at root, read again whenever a database file changes on disk.
 func CatalogAt(root string) *DatabaseCatalog {
 	catalogs.Lock()
-	defer catalogs.Unlock()
-	var stamp [2]FileStamp
+	held := catalogs.byRoot[root]
+	if held == nil {
+		held = &Reread[*DatabaseCatalog]{}
+		catalogs.byRoot[root] = held
+	}
+	catalogs.Unlock()
+	paths := make([]string, len(CatalogFiles))
 	for i, file := range CatalogFiles {
-		stamp[i] = StampOf(filepath.Join(root, file))
+		paths[i] = filepath.Join(root, file)
 	}
-	if held, ok := catalogs.byRoot[root]; ok && held.stamp == stamp {
-		return held.catalog
-	}
-	c := ReadCatalog(root)
-	catalogs.byRoot[root] = heldCatalog{stamp: stamp, catalog: c}
+	c, _ := held.Get(paths, func() (*DatabaseCatalog, error) { return ReadCatalog(root), nil })
 	return c
-}
-
-type heldCatalog struct {
-	stamp   [2]FileStamp
-	catalog *DatabaseCatalog
 }
 
 var catalogs = struct {
 	sync.Mutex
-	byRoot map[string]heldCatalog
-}{byRoot: map[string]heldCatalog{}}
+	byRoot map[string]*Reread[*DatabaseCatalog]
+}{byRoot: map[string]*Reread[*DatabaseCatalog]{}}
 
 // --- What goes together, by the rules core.EligibleSlotsForItem and core.EnchantAppliesToItem check a gear set with.
 

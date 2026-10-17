@@ -65,7 +65,7 @@ func simlServe(out, errOut io.Writer, args []string) error {
 }
 
 func serveSiml(in io.Reader, out io.Writer, namesPath string) error {
-	table := namesFile{path: namesPath}
+	table := siml.NamesFile{Path: namesPath}
 	reader := bufio.NewReader(in)
 	encoder := json.NewEncoder(out)
 	for {
@@ -75,7 +75,7 @@ func serveSiml(in io.Reader, out io.Writer, namesPath string) error {
 			res := newResponse()
 			if err := json.Unmarshal(line, &req); err != nil {
 				res.Error = fmt.Sprintf("reading the request: %v", err)
-			} else if names, err := table.get(); err != nil {
+			} else if names, err := table.Get(); err != nil {
 				res.Error = err.Error()
 			} else {
 				res = serveFile(req, names)
@@ -91,28 +91,6 @@ func serveSiml(in io.Reader, out io.Writer, namesPath string) error {
 			return err
 		}
 	}
-}
-
-// A name table file, read again when its modification time or size changes.
-type namesFile struct {
-	path  string
-	stamp siml.FileStamp
-	names *siml.Names
-	err   error
-}
-
-func (n *namesFile) get() (*siml.Names, error) {
-	if stamp := siml.StampOf(n.path); stamp != n.stamp {
-		n.stamp, n.names, n.err = stamp, nil, nil
-		data, err := siml.ReadSource(n.path)
-		if err == nil {
-			n.names, err = siml.ParseNames(data)
-		}
-		if err != nil {
-			n.err = fmt.Errorf("%s does not load: %w", n.path, err)
-		}
-	}
-	return n.names, n.err
 }
 
 // A response with empty lists, which JSON writes as [] rather than null.
