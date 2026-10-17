@@ -434,7 +434,9 @@ group header it is one of the group's `variables`. Anywhere else, a `when` body 
 | else any rotation section or rotation `var` line, or the file is an `x.apl.siml` | `TypeAPL`                       |
 | no rotation section                                                              | the rotation category is absent |
 
-The rotation sections are the sections of category r, `cooldowns:` among them. In a file that uses others (§9),
+The rotation sections are the sections of category r other than `cooldowns:`, which writes `Player.cooldowns` and
+leaves the rotation alone, so a file of cooldowns alone does not replace a rotation on import. In a file that uses
+others (§9),
 the type is read over all of them: an explicit `type` in any of them, else a `simple:` in any of them, else
 `TypeAPL`.
 

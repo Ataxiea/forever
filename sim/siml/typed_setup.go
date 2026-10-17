@@ -149,7 +149,7 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 		f.present.add(key)
 	}
 	f.explicitType = rotation.explicitType || used.explicitType
-	if kind.Section == sectionAPL || slices.ContainsFunc(f.present.keys, func(key string) bool { return categoryOf(ix, key) == rotationCategory }) {
+	if kind.Section == sectionAPL || slices.ContainsFunc(f.present.keys, func(key string) bool { return categoryOf(ix, key) == rotationCategory && key != "cooldowns" }) {
 		r := f.rotation()
 		if !f.explicitType {
 			r.Type = proto.APLRotation_TypeAPL
