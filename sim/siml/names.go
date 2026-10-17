@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/wowsims/forever/sim/core/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // The name table of SPEC.md §7: what every name of a .siml file means. sim/siml/cmd/simlnames writes it from what
@@ -245,7 +244,16 @@ func (t *Names) Holding(class proto.Class, name string) []Namespace {
 }
 
 // The short name of a class (SPEC.md §8.2), which keys its entries in names.json: warrior.
-func ClassName(class proto.Class) string { return classNames()[protoreflect.EnumNumber(class)] }
+func ClassName(class proto.Class) string { return shortName(classEnum, int32(class)) }
+
+// The class whose short name is short (SPEC.md §8.2); false for none and for ClassUnknown.
+func ClassNamed(short string) (proto.Class, bool) {
+	v, ok := shortValue(classEnum, short)
+	if !ok || v.Number == 0 {
+		return 0, false
+	}
+	return proto.Class(v.Number), true
+}
 
 // Whether the generator must not write word as a name: a keyword, head or unit word (SPEC.md §4 note 6).
 func Reserved(word string) bool {
@@ -256,43 +264,28 @@ func Reserved(word string) bool {
 	return ix.isReserved(word)
 }
 
-// The short names of a Class or ItemSlot enum's values, by number, as SPEC.md §8.2 derives them.
-func shortNames(ed protoreflect.EnumDescriptor) map[protoreflect.EnumNumber]string {
-	f, err := loadForms()
+const classEnum = "proto.Class"
+
+// The value of an enum the schema reaches, by its short name (SPEC.md §8.2).
+func shortValue(enumName, short string) (*enumValue, bool) {
+	ix, err := loadIndex()
 	if err != nil {
 		panic(err)
 	}
-	short := enumShortNames(ed, f.keywordSet())
-	names := make(map[protoreflect.EnumNumber]string, len(short))
-	for i, s := range short {
-		names[ed.Values().Get(i).Number()] = s
+	v := ix.enums[enumName].byName[short]
+	return v, v != nil && v.Short == short
+}
+
+// The short name of an enum the schema reaches, by number; "" for a number that names no value.
+func shortName(enumName string, number int32) string {
+	ix, err := loadIndex()
+	if err != nil {
+		panic(err)
 	}
-	return names
-}
-
-var classNamesValue, slotNamesValue lazy[map[protoreflect.EnumNumber]string]
-
-func classNames() map[protoreflect.EnumNumber]string {
-	names, _ := classNamesValue.get(func() (map[protoreflect.EnumNumber]string, error) {
-		return shortNames(proto.Class_ClassUnknown.Descriptor()), nil
-	})
-	return names
-}
-
-func slotNames() map[protoreflect.EnumNumber]string {
-	names, _ := slotNamesValue.get(func() (map[protoreflect.EnumNumber]string, error) {
-		return shortNames(proto.ItemSlot_ItemSlotHead.Descriptor()), nil
-	})
-	return names
-}
-
-func byShortName(names map[protoreflect.EnumNumber]string, short string) (protoreflect.EnumNumber, bool) {
-	for n, s := range names {
-		if s == short {
-			return n, true
-		}
+	if v := ix.enums[enumName].byNumber[number]; v != nil {
+		return v.Short
 	}
-	return 0, false
+	return ""
 }
 
 // Reads a name table in the form of SPEC.md §7.4, and refuses one that breaks a rule of what a loader checks. The JSON
@@ -327,8 +320,8 @@ func ParseNames(data []byte) (*Names, error) {
 		return nil, err
 	}
 	for class, entries := range classes {
-		number, ok := byShortName(classNames(), class)
-		if !ok || number == 0 {
+		number, ok := ClassNamed(class)
+		if !ok {
 			return nil, fmt.Errorf("names: %s is no class", class)
 		}
 		names, err := spellNames(class, entries)
@@ -373,11 +366,11 @@ func ParseNames(data []byte) (*Names, error) {
 		}
 		entry := EnchantName{EffectID: id}
 		for _, s := range slots {
-			n, ok := byShortName(slotNames(), s)
+			v, ok := shortValue(slotEnum, s)
 			if !ok {
 				return nil, fmt.Errorf("names: %s: %s is no slot", where, s)
 			}
-			entry.Slots = append(entry.Slots, proto.ItemSlot(n))
+			entry.Slots = append(entry.Slots, proto.ItemSlot(v.Number))
 		}
 		slices.Sort(entry.Slots)
 		t.Enchants[name] = entry
@@ -579,7 +572,7 @@ func (t *Names) Encode() []byte {
 				e := t.Enchants[name]
 				slots := make([]string, len(e.Slots))
 				for j, s := range e.Slots {
-					slots[j] = quote(slotNames()[protoreflect.EnumNumber(s)])
+					slots[j] = quote(shortName(slotEnum, int32(s)))
 				}
 				fmt.Fprintf(b, "    %s: {\"effectId\": %d, \"slots\": [%s]}%s", quote(name), e.EffectID, strings.Join(slots, ", "), comma(i, len(names)))
 			}
@@ -608,7 +601,7 @@ func (t *Names) encodedClasses() map[string]SpellNames {
 	classes := map[string]SpellNames{}
 	for class, names := range t.Classes {
 		if hasSpellNames(names) {
-			classes[classNames()[protoreflect.EnumNumber(class)]] = names
+			classes[ClassName(class)] = names
 		}
 	}
 	return classes

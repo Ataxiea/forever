@@ -29,10 +29,8 @@ func ParsePin(s string) (Pin, error) {
 		if parts[0] == "shared" {
 			return Pin{Namespace: siml.Namespace(parts[1]), Name: parts[2]}, nil
 		}
-		for value := range proto.Class_name {
-			if class := proto.Class(value); class != proto.Class_ClassUnknown && siml.ClassName(class) == parts[0] {
-				return Pin{Class: class, Namespace: siml.Namespace(parts[1]), Name: parts[2]}, nil
-			}
+		if class, ok := siml.ClassNamed(parts[0]); ok {
+			return Pin{Class: class, Namespace: siml.Namespace(parts[1]), Name: parts[2]}, nil
 		}
 		return Pin{}, fmt.Errorf("%s: %s is no class", s, parts[0])
 	}
