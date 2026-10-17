@@ -48,6 +48,30 @@ func writeFiles(t *testing.T, files map[string]string) string {
 	return dir
 }
 
+// A folder that reads as a repository, holding files: the name table marks its root, and its database files link to
+// this repository's, which the checks of files under ui/specs read.
+func repositoryFiles(t *testing.T, files map[string]string) string {
+	t.Helper()
+	dir := writeFiles(t, files)
+	names, err := filepath.Abs("../../../sim/siml/names.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	links := map[string]string{filepath.Join("sim", "siml", "names.json"): names}
+	for _, file := range siml.CatalogFiles {
+		links[file] = filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(names))), file)
+	}
+	for link, target := range links {
+		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(link)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, filepath.Join(dir, link)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
+}
+
 func TestPrintReadsBackAsItsJSON(t *testing.T) {
 	for _, c := range []struct{ json, kind, spec, siml string }{
 		{"parse/hunter_default.apl.json", "apl", "hunter", "default.apl.siml"},
@@ -164,7 +188,7 @@ func TestVerifyListsTheDiagnosticsOfAFileThatDoesNotLoad(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	dir := writeFiles(t, map[string]string{
+	dir := repositoryFiles(t, map[string]string{
 		"x.apl.siml":      "siml 1\nspec hunter\n\npriority:\n  cast multi_shot if $nope\n",
 		"broken.siml":     "siml 1\nspec hunter\n\nnope:\n",
 		"ui/specs/x.siml": "siml 1\nspec hunter\n\npriority:\n  cast multi_shot if $nope\n",
@@ -189,7 +213,7 @@ func TestParse(t *testing.T) {
 func TestFmt(t *testing.T) {
 	canonical := "siml 1\nspec hunter\n\npriority:\n  cast multi_shot\n"
 	warning := "siml 1\nspec hunter\n\npriority:\n  cast multi_shot if $nope\n"
-	dir := writeFiles(t, map[string]string{
+	dir := repositoryFiles(t, map[string]string{
 		"a.apl.siml":                         canonical,
 		"b.apl.siml":                         "siml 1\nspec hunter\npriority:\n    cast   multi_shot\n",
 		"c.apl.siml":                         "siml 1\nspec hunter\n\npriority:\n  cast nope\n",

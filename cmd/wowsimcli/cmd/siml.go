@@ -105,12 +105,6 @@ func specNamed(field string) (siml.SpecInfo, error) {
 	return siml.SpecInfo{}, fmt.Errorf("no spec is named %q; the specs are %s", field, strings.Join(fields, ", "))
 }
 
-// Whether path lies under ui/specs, where warnings are errors and no raw ref is written (SPEC.md §7.3, §13).
-func underSpecs(path string) bool {
-	abs, err := filepath.Abs(path)
-	return err == nil && strings.Contains(filepath.ToSlash(abs), "/ui/specs/")
-}
-
 // The diagnostics of a parse of the file at path that fail its check: every error, and for a file under ui/specs its
 // warnings and raw refs too; and the warnings that do not.
 func failures(path string, f *siml.File, err error) (fail, warn siml.Diagnostics, _ error) {
@@ -122,7 +116,7 @@ func failures(path string, f *siml.File, err error) (fail, warn siml.Diagnostics
 	default:
 		diags = f.Warnings
 	}
-	repository := underSpecs(path)
+	repository := siml.UnderSpecs(path)
 	for _, d := range diags {
 		if d.Severity == siml.Error || repository {
 			fail = append(fail, d)
@@ -355,15 +349,15 @@ func readBackDifferences(want googleProto.Message, f *siml.File, names *siml.Nam
 	return lines
 }
 
-// The database catalog of the repository the command runs in, which the checks of files under ui/specs read.
-func repositoryCatalog() (*siml.DatabaseCatalog, error) {
-	wd, err := os.Getwd()
+// The database catalog of the repository the file at path sits in, which the checks of files under ui/specs read.
+func repositoryCatalog(path string) (*siml.DatabaseCatalog, error) {
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	root, ok := siml.RepositoryRoot(filepath.Join(wd, "x"))
+	root, ok := siml.RepositoryRoot(abs)
 	if !ok {
-		return nil, errors.New("the check of files under ui/specs runs inside the repository, which holds the database")
+		return nil, fmt.Errorf("%s: no repository holds the file, so no database checks it", path)
 	}
 	return siml.CatalogAt(root), nil
 }
@@ -386,7 +380,6 @@ func simlFmt(out, errOut io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	var catalog *siml.DatabaseCatalog // Read for the first file under ui/specs.
 	failed := 0
 	for _, path := range files {
 		src, err := siml.ReadSource(path)
@@ -399,11 +392,10 @@ func simlFmt(out, errOut io.Writer, args []string) error {
 			return err
 		}
 		var problems []string
-		if len(fail) == 0 && underSpecs(path) {
-			if catalog == nil {
-				if catalog, err = repositoryCatalog(); err != nil {
-					return err
-				}
+		if len(fail) == 0 && siml.UnderSpecs(path) {
+			catalog, err := repositoryCatalog(path)
+			if err != nil {
+				return err
 			}
 			problems = repositoryProblems(siml.Analyze(path, src, names, siml.ReadSource), catalog, path, f)
 		}

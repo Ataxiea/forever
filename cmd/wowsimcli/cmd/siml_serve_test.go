@@ -86,10 +86,11 @@ func TestServeReadsWhatAFullSetupUses(t *testing.T) {
 func TestServeFailsAnErrorAndAWarningUnderUISpecs(t *testing.T) {
 	broken := "siml 1\nspec hunter\n\npriority:\n  cast hunters_mrak\n"
 	undefinedGroup := "siml 1\nspec hunter\n\npriority:\n  group \"Nowhere\"\n"
+	underSpecs := filepath.Join(repositoryFiles(t, nil), "ui/specs/hunter/dps/apls/nowhere.apl.siml")
 	responses := serveRequests(t, committedNamesFile,
 		simlServeRequest{ID: 1, Path: "broken.apl.siml", Text: broken},
 		simlServeRequest{ID: 2, Path: "nowhere.apl.siml", Text: undefinedGroup},
-		simlServeRequest{ID: 3, Path: "/repo/ui/specs/hunter/dps/apls/nowhere.apl.siml", Text: undefinedGroup},
+		simlServeRequest{ID: 3, Path: underSpecs, Text: undefinedGroup},
 	)
 	want := serveDiagnostic{Line: 5, Col: 8, Severity: "error", Code: "unknown-name", Message: "no spell is named hunters_mrak; did you mean hunters_mark?"}
 	if res := responses[0]; len(res.Errors) != 1 || res.Errors[0] != want || res.JSON != nil {

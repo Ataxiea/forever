@@ -37,7 +37,7 @@ func TestRepositoryCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	names.Items["ghost_blade"] = 999999
-	catalog, err := repositoryCatalog()
+	catalog, err := repositoryCatalog(".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestRepositoryCheck(t *testing.T) {
 	for _, c := range cases {
 		files[c.name] = c.text
 	}
-	dir := writeFiles(t, files)
+	dir := repositoryFiles(t, files)
 	for _, c := range cases {
 		path := filepath.Join(dir, c.name)
 		src, err := os.ReadFile(path)
