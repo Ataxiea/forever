@@ -44,7 +44,7 @@ type Doc struct {
 	words     []wordRole // What classify reads, once.
 
 	pathOnce  sync.Once
-	pathLines map[int][]int // The typer's spans by each line they cover, from 0, for PathAt.
+	pathLines map[int][]pathSpan // The rotation's spans, with their paths within it, by each line they cover from 0, for PathAt.
 }
 
 // Reads src as the file at path, as Parse does; the result holds the diagnostics, and an error only when the schema
@@ -226,35 +226,34 @@ func (d *Doc) PathAt(p Position) []any {
 		return []any{}
 	}
 	offset := d.Offset(p)
-	base := d.rotationBase()
-	spans := d.typed.typer.spans
 	d.pathOnce.Do(func() {
-		d.pathLines = map[int][]int{}
-		for i, s := range spans {
+		// Each span the rotation holds, with its path within the rotation, by the lines it covers.
+		base := d.rotationBase()
+		d.pathLines = map[int][]pathSpan{}
+		for _, s := range d.typed.typer.spans {
+			path, ok := d.within(s.path)
+			if !ok || !hasPrefix(path, base) {
+				continue
+			}
+			at := pathSpan{span: s.span, path: path[len(base):]}
 			for line := d.lines.line(s.start); line <= d.lines.line(s.end); line++ {
-				d.pathLines[line] = append(d.pathLines[line], i)
+				d.pathLines[line] = append(d.pathLines[line], at)
 			}
 		}
 	})
 	var best *pathSpan
-	for _, i := range d.pathLines[d.lines.line(offset)] {
-		s := spans[i]
-		path, ok := d.within(s.path)
-		if !ok || s.start > offset || offset > s.end || !hasPrefix(path, base) {
+	for i, s := range d.pathLines[d.lines.line(offset)] {
+		if s.start > offset || offset > s.end {
 			continue
 		}
-		size, bestSize := s.end-s.start, 0
-		if best != nil {
-			bestSize = best.end - best.start
-		}
-		if best == nil || size < bestSize || size == bestSize && len(path) > len(best.path) {
-			best = &pathSpan{span: s.span, path: path}
+		if best == nil || s.end-s.start < best.end-best.start || s.end-s.start == best.end-best.start && len(s.path) > len(best.path) {
+			best = &d.pathLines[d.lines.line(offset)][i]
 		}
 	}
 	if best == nil {
 		return []any{}
 	}
-	return best.path[len(base):]
+	return slices.Clone(best.path)
 }
 
 // The rotation's path within the loader's message: none in an x.apl.siml, the settings' rotation field otherwise.
