@@ -92,6 +92,8 @@ test('the panel opens on an .apl.siml and reads its rotation, its findings and t
 	const init = panel.posted.find(m => m.type === 'init');
 	assert.equal(init.fileName, 'default.apl.siml');
 	assert.equal(init.db.spells[71]?.[0], 'Defensive Stance');
+	// The names come through their own request, after the rotation.
+	await until(() => panel.posted.some(m => m.type === 'registered'));
 	const registered = panel.posted.find(m => m.type === 'registered').registered;
 	assert.equal(registered.status, 'ready');
 	assert.equal(registered.spec, 'hunter');
