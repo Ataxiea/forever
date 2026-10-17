@@ -815,11 +815,7 @@ func (w *spliceWriter) lineIndent(list *spliceList, b *whenStmt) int {
 	if b.condition != nil {
 		return columnOf(b, w.lines)
 	}
-	var outer []*whenStmt
-	for p := b.parent; p != nil; p = p.parent {
-		outer = append([]*whenStmt{p}, outer...)
-	}
-	return w.bodyIndent(list, outer)
+	return w.bodyIndent(list, whenChain(b.parent))
 }
 
 // The column of the rows in the innermost of blocks.

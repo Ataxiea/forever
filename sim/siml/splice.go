@@ -678,10 +678,16 @@ func blocksOf(s stmt) []*whenStmt {
 	if !ok {
 		return nil
 	}
+	return whenChain(r.when)
+}
+
+// w and the blocks it is in, the outermost first.
+func whenChain(w *whenStmt) []*whenStmt {
 	var out []*whenStmt
-	for w := r.when; w != nil; w = w.parent {
-		out = append([]*whenStmt{w}, out...)
+	for ; w != nil; w = w.parent {
+		out = append(out, w)
 	}
+	slices.Reverse(out)
 	return out
 }
 
@@ -1360,7 +1366,7 @@ func (w *spliceWriter) list(list *spliceList) {
 		out.drop(line, w.lines.line(onHeader.end))
 		text := onHeader.name.text + ":"
 		if list.group != nil {
-			text = sectionGroup + " " + jsonString(list.group.name) + ":"
+			text = groupKey(list.group.name) + ":"
 		}
 		out.insert(line, []spliceLine{headerLine(text)}, block)
 		old[0].dirty = true // It is printed from its JSON on its own line.
@@ -1556,7 +1562,7 @@ func (w *spliceWriter) groups() {
 			continue
 		}
 		if g.renamed && g.header.body == nil {
-			text := sectionGroup + " " + jsonString(g.name) + ":"
+			text := groupKey(g.name) + ":"
 			if k := slices.IndexFunc(g.header.inner, func(t trivia) bool { return t.kind == triviaComment }); k >= 0 {
 				text += " " + trailingText(g.header.inner[k])
 			}
@@ -1590,7 +1596,7 @@ func (w *spliceWriter) groups() {
 
 // A group the text does not hold.
 func (w *spliceWriter) group(g *spliceGroup) []spliceLine {
-	lines := []spliceLine{headerLine(sectionGroup + " " + jsonString(g.name) + ":")}
+	lines := []spliceLine{headerLine(groupKey(g.name) + ":")}
 	for _, list := range []*spliceList{g.variables, g.actions} {
 		for _, s := range list.slots {
 			lines = append(lines, w.render(s, list, w.printer, groupScope(g))...)

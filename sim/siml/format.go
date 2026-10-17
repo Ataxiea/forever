@@ -106,9 +106,7 @@ func (f *typedFile) format() string {
 		case *whenStmt:
 			in = s.parent
 		}
-		for ; in != nil; in = in.parent {
-			indent += indentWidth
-		}
+		indent += indentWidth * len(whenChain(in))
 		startsBlock := previous != nil && group != current
 		prev, afterHeader := previous.(*headerStmt)
 		startsSection := afterHeader && sectionOf[previous] == section
@@ -151,10 +149,7 @@ func (f *typedFile) format() string {
 			st.trailing = trailing
 			items = append(items, &item{stmt: st})
 		}
-		sc := scope{}
-		if section != nil && section.group != nil {
-			sc = scope{group: section.group.value, inGroup: true}
-		}
+		sc := scopeOf(section)
 		switch s := s.(type) {
 		case *versionStmt:
 			items = append(items, line("siml 1"))
@@ -171,7 +166,7 @@ func (f *typedFile) format() string {
 		case *headerStmt:
 			text := s.name.text + ":"
 			if s.group != nil {
-				text = "group " + jsonString(s.group.value) + ":"
+				text = groupKey(s.group.value) + ":"
 			}
 			header = line(text)
 			items = append(items, header)

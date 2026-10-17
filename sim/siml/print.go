@@ -986,7 +986,7 @@ func (p *printer) shortAction(k *aplKind, body protoreflect.Message, sc scope) t
 				binds = append(binds, cat(placeholder, word(" = "), p.value(value.Message(), precTop, sc)))
 			}
 		}
-		out := word("group " + jsonString(body.Get(p.fieldOf(body, "group_name").desc).String()))
+		out := word(groupKey(body.Get(p.fieldOf(body, "group_name").desc).String()))
 		if len(binds) > 0 {
 			out = cat(out, word(" with "), joinTexts(binds, ", "))
 		}
@@ -1567,7 +1567,7 @@ func printFile(ix *schemaIndex, names *Names, kind Kind, spec *SpecInfo, s *prot
 		case sectionGroup:
 			for _, g := range rotation.GetGroups() {
 				sc := scope{group: g.GetName(), inGroup: true}
-				out := &printedSection{def: def, header: "group " + jsonString(g.GetName()) + ":", written: true}
+				out := &printedSection{def: def, header: groupKey(g.GetName()) + ":", written: true}
 				for _, v := range g.GetVariables() {
 					out.body = append(out.body, &item{stmt: p.variable(v.ProtoReflect(), sc, indent(def))})
 				}
