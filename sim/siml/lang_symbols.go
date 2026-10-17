@@ -216,10 +216,7 @@ func (d *Doc) readOccurrences() []occurrence {
 			}
 		}
 		if u, ok := statement.(*useStmt); ok {
-			var found []declaredVariable
-			if used := d.typed.used[u]; used != nil {
-				found = declaredByFile(used, resolveUse(d.path, u.path.value))
-			}
+			found := declaredByFile(d.typed.used[u], resolveUse(d.path, u.path.value))
 			used = append(used, found...)
 			out = append(out, d.withBinds(u, found)...)
 			continue
@@ -375,50 +372,37 @@ type declaredVariable struct {
 }
 
 // The variables a use line naming usePath can set: those the file declares outside its groups, then those of the files
-// it uses in turn, each with the file that declares it.
+// it uses in turn, each with the file that declares it. A use line the parse holds reads the file it typed; one still
+// being written reads the file now.
 func (d *Doc) settableVariables(usePath string) []declaredVariable {
-	return variablesOf(d.declaredThrough(resolveUse(d.path, usePath), []string{d.path}))
-}
-
-// The variables of what used files declare, without the groups.
-func variablesOf(found []declaredVariable) []declaredVariable {
-	return slices.DeleteFunc(slices.Clone(found), func(x declaredVariable) bool { return x.group })
-}
-
-func (d *Doc) declaredThrough(path string, chain []string) []declaredVariable {
-	if slices.ContainsFunc(chain, func(file string) bool { return samePath(file, path) }) {
+	path := resolveUse(d.path, usePath)
+	if d.typed != nil {
+		for u, used := range d.typed.used {
+			if use, ok := u.(*useStmt); ok && samePath(resolveUse(d.path, use.path.value), path) {
+				return variablesOf(declaredByFile(used, path))
+			}
+		}
+	}
+	if samePath(path, d.path) {
 		return nil
 	}
 	text, ok := d.readUsed(path)
 	if !ok {
 		return nil
 	}
-	used := d.analyze(path, text)
-	tree := used.tree()
-	if tree == nil {
-		return nil
-	}
-	sections := sectionsByStatement(tree)
-	var out []declaredVariable
-	for _, s := range tree.statements {
-		switch x := s.(type) {
-		case *varStmt:
-			if sections[s] == nil || sections[s].group == nil {
-				out = append(out, declaredVariable{name: x.variable.name, file: path})
-			}
-		case *headerStmt:
-			if x.group != nil && sections[s] != nil && sections[s].name == sectionGroup {
-				out = append(out, declaredVariable{name: x.group.value, file: path, group: true})
-			}
-		case *useStmt:
-			out = append(out, used.declaredThrough(resolveUse(path, x.path.value), append(slices.Clone(chain), path))...)
-		}
-	}
-	return out
+	return variablesOf(declaredByFile(d.analyze(path, text).typed, path))
+}
+
+// The variables of what used files declare, without the groups.
+func variablesOf(found []declaredVariable) []declaredVariable {
+	return slices.DeleteFunc(found, func(x declaredVariable) bool { return x.group })
 }
 
 // The variables and groups a typed used file at path declares, through the files it uses in turn.
 func declaredByFile(t *typedFile, path string) []declaredVariable {
+	if t == nil {
+		return nil
+	}
 	sections := sectionsByStatement(t.tree)
 	var out []declaredVariable
 	for _, s := range t.tree.statements {
@@ -432,9 +416,7 @@ func declaredByFile(t *typedFile, path string) []declaredVariable {
 				out = append(out, declaredVariable{name: x.group.value, file: path, group: true})
 			}
 		case *useStmt:
-			if used := t.used[x]; used != nil {
-				out = append(out, declaredByFile(used, resolveUse(path, x.path.value))...)
-			}
+			out = append(out, declaredByFile(t.used[x], resolveUse(path, x.path.value))...)
 		}
 	}
 	return out
