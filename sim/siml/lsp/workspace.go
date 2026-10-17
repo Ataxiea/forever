@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/wowsims/forever/sim/siml"
 )
@@ -17,23 +16,9 @@ import (
 // whenever it changes on disk; the schema is the one the server is built with.
 var tableFile = filepath.Join("sim", "siml", "names.json")
 
-// A file's size and time, which say it changed.
-type stamp struct {
-	size int64
-	time time.Time
-}
-
-func stampOf(path string) stamp {
-	info, err := os.Stat(path)
-	if err != nil {
-		return stamp{size: -1}
-	}
-	return stamp{info.Size(), info.ModTime()}
-}
-
 // A repository's name table, or why it does not read.
 type table struct {
-	stamp stamp
+	stamp siml.FileStamp
 	names *siml.Names
 	err   error
 }
@@ -52,7 +37,7 @@ func (w *workspaces) names(root string) (*siml.Names, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	path := filepath.Join(root, tableFile)
-	now := stampOf(path)
+	now := siml.StampOf(path)
 	if t := w.tables[root]; t != nil && t.stamp == now {
 		return t.names, t.err
 	}

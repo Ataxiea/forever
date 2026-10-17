@@ -176,13 +176,9 @@ func (c *DatabaseCatalog) EnchantRows(effectID int32) []CatalogEnchant { return 
 func CatalogAt(root string) *DatabaseCatalog {
 	catalogs.Lock()
 	defer catalogs.Unlock()
-	stamp := ""
-	for _, file := range CatalogFiles {
-		if info, err := os.Stat(filepath.Join(root, file)); err == nil {
-			stamp += info.ModTime().String() + "|"
-		} else {
-			stamp += "missing|"
-		}
+	var stamp [2]FileStamp
+	for i, file := range CatalogFiles {
+		stamp[i] = StampOf(filepath.Join(root, file))
 	}
 	if held, ok := catalogs.byRoot[root]; ok && held.stamp == stamp {
 		return held.catalog
@@ -193,7 +189,7 @@ func CatalogAt(root string) *DatabaseCatalog {
 }
 
 type heldCatalog struct {
-	stamp   string
+	stamp   [2]FileStamp
 	catalog *DatabaseCatalog
 }
 

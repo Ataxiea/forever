@@ -95,17 +95,14 @@ func serveSiml(in io.Reader, out io.Writer, namesPath string) error {
 
 // A name table file, read again when its modification time or size changes.
 type namesFile struct {
-	path, stamp string
-	names       *siml.Names
-	err         error
+	path  string
+	stamp siml.FileStamp
+	names *siml.Names
+	err   error
 }
 
 func (n *namesFile) get() (*siml.Names, error) {
-	info, err := os.Stat(n.path)
-	if err != nil {
-		return nil, err
-	}
-	if stamp := fmt.Sprintf("%d:%d", info.ModTime().UnixNano(), info.Size()); stamp != n.stamp {
+	if stamp := siml.StampOf(n.path); stamp != n.stamp {
 		n.stamp, n.names, n.err = stamp, nil, nil
 		data, err := siml.ReadSource(n.path)
 		if err == nil {
