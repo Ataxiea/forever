@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -63,29 +64,15 @@ var absolutePath = regexp.MustCompile(`^([A-Za-z]:)?[\\/]`)
 
 // The path target names, read against the folder of from, with / between its parts and . and .. resolved.
 func resolveUse(from, target string) string {
-	var parts []string
+	target = strings.ReplaceAll(target, `\`, "/")
 	if !absolutePath.MatchString(target) {
-		parts = splitPath(from)
-		parts = parts[:len(parts)-1]
+		target = path.Join(path.Dir(strings.ReplaceAll(from, `\`, "/")), target)
 	}
-	var out []string
-	for i, part := range slices.Concat(parts, splitPath(target)) {
-		last := ""
-		if len(out) > 0 {
-			last = out[len(out)-1]
-		}
-		switch {
-		case part == "." || part == "" && i > 0:
-		case part == ".." && len(out) > 0 && last != ".." && last != "":
-			out = out[:len(out)-1]
-		default:
-			out = append(out, part)
-		}
+	if target = path.Clean(target); target == "." {
+		return ""
 	}
-	return strings.Join(out, "/")
+	return target
 }
-
-func splitPath(p string) []string { return strings.Split(strings.ReplaceAll(p, `\`, "/"), "/") }
 
 // Types a file's syntax tree.
 func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *uses) *typedFile {
