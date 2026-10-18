@@ -9,8 +9,6 @@ import DiscTestingBuildJson from './builds/disc_testing.build.json';
 import HolyTestingBuildJson from './builds/holy_testing.build.json';
 import PreraidGearJson from './gear_sets/preraid.gear.json';
 
-
-
 export const DefaultOptions = HealerPriestOptions.create({
 	prayerOfMendingJumps: 5,
 	prayerOfMendingDelay: 2.5,
@@ -40,8 +38,6 @@ export const OtherDefaults = {
 	profession1: Profession.Tailoring,
 	profession2: Profession.Enchanting,
 };
-
-
 
 export const ROTATION_DISC_DEFAULT = PresetUtils.makePresetAPLRotation('Disc Testing', DiscTestingBuildJson.player.rotation);
 export const ROTATION_HOLY_DEFAULT = PresetUtils.makePresetAPLRotation('Holy Testing', HolyTestingBuildJson.player.rotation);

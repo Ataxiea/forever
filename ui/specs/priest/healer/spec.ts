@@ -132,7 +132,7 @@ export default defineSpec<Spec.SpecHealerPriest>({
 	},
 
 	autoRotation: (priest: Player<Spec.SpecHealerPriest>): APLRotation => {
-		const [disc, holy,] = priest.getTalentTreePoints();
+		const [disc, holy] = priest.getTalentTreePoints();
 
 		if (disc > holy) {
 			return Presets.ROTATION_DISC_DEFAULT.rotation.rotation!;
