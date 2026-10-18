@@ -8,7 +8,7 @@ const meta = {
 	tags: ['autodocs'],
 	parameters: { spec: 'none' },
 	args: {
-		info: { date: '2026-10-18', commit: '2fe052cd96a4b1f0e2d3c4b5a6978877665544332', gameVersion: '1.60.1.70450' },
+		info: { date: '2026-10-18', commit: '2fe052cd96a4b1f0e2d3c4b5a697887766554433', gameVersion: '1.60.1.70450' },
 		className: 'text-xs text-secondary',
 	},
 } satisfies Meta<typeof ReleaseInfo>;

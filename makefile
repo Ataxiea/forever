@@ -27,6 +27,8 @@ $(OUT_DIR)/bundle/.dirstamp: \
   vite.config.mts \
   vite.build-workers.mts \
   tools/vite/spec_pages.mts \
+  tools/vite/build_info.mts \
+  assets/db_inputs/spell_store_inputs.json \
   node_modules \
   tsconfig.json \
   ui/generated/proto/api.ts

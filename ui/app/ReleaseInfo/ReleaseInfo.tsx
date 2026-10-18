@@ -28,7 +28,6 @@ export const ReleaseInfo = ({ info, className }: ReleaseInfoProps) => {
 					href={commitUrl(info.commit)}
 					target="_blank"
 					variant="unstyled"
-					className="text-link"
 					title={i18n.t('common.release_info.commit_link', { commit: short })}>
 					{short}
 				</Button>
@@ -39,7 +38,7 @@ export const ReleaseInfo = ({ info, className }: ReleaseInfoProps) => {
 		return null;
 	}
 	return (
-		<p className={clsx('m-0', className)} data-testid="release-info">
+		<p className={clsx('m-0', className)}>
 			{parts.map((part, index) => (
 				<Fragment key={part.key}>
 					{index > 0 && ' · '}

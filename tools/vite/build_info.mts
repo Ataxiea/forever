@@ -21,8 +21,13 @@ export const readBuildInfo = (root: string): BuildInfo => ({
 	gameVersion: gameVersion(root),
 });
 
-// The deploy checks out the commit it builds, so git names it; GITHUB_SHA covers a tree without .git.
+// BUILD_COMMIT names the commit when the checkout is not it: a pull request's checkout is the merge
+// commit, and its preview names the head. Otherwise git names the checkout; GITHUB_SHA covers a tree
+// without .git.
 const gitCommit = (root: string): string => {
+	if (process.env.BUILD_COMMIT) {
+		return process.env.BUILD_COMMIT;
+	}
 	try {
 		return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] })
 			.toString()
