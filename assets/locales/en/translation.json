@@ -1177,6 +1177,7 @@
 			"total_iterations_tooltip": "The batch sims at least this many iterations. The error target adds more as it runs.",
 			"groups": {
 				"encounters": "Encounters",
+				"talents": "Talents",
 				"enchants": "Enchants",
 				"frozen_slots": "Frozen slots"
 			},
@@ -1187,13 +1188,29 @@
 				"saved": "Saved",
 				"empty": "No saved encounters yet. Save one in Settings → Saved Encounters to run the batch against it too.",
 				"duplicate": "Same as another encounter, skipped",
-				"count": "Encounters",
 				"health_summary": "Health",
 				"targets_one": "{{count}} target",
 				"targets_other": "{{count}} targets"
 			},
 			"talents": {
+				"description": "The batch runs every gear set with each talent setup and ranks them together. Save talents in Talents → Saved Talents.",
+				"current": "Current talents",
+				"presets": "Presets",
+				"saved": "Saved",
+				"empty": "No saved talents yet. Save some in Talents → Saved Talents to run the batch with them too.",
+				"duplicate": "Same as another talent setup, skipped",
 				"no_points": "No talent points"
+			},
+			"runs": {
+				"encounters": "{{count}} encounters",
+				"encounters_one": "{{count}} encounter",
+				"encounters_other": "{{count}} encounters",
+				"talents": "{{count}} talent setups",
+				"talents_one": "{{count}} talent setup",
+				"talents_other": "{{count}} talent setups",
+				"total": "= {{runs}} runs",
+				"total_one": "= {{runs}} run",
+				"total_other": "= {{runs}} runs"
 			},
 			"iterations": "Iterations",
 			"freeze_ring": {
