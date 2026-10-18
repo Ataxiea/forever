@@ -20,6 +20,11 @@ export interface TopGearResult {
 	pairedErrorToBaseline?: number;
 }
 
+/** A gear set and the talent setup it ran with. Only rows from the current talents' run carry the backend rank and paired errors. */
+export interface BulkRankedResult extends TopGearResult {
+	talents: BulkTalentSetup;
+}
+
 export interface BulkPickerEntry {
 	/** Index into the batch's item array, or -1/-2 for the two equipped slots this group covers. */
 	index: number;
@@ -27,10 +32,12 @@ export interface BulkPickerEntry {
 }
 
 export interface BulkResults {
-	chains: TopGearResult[][];
-	originalGearResults: TopGearResult;
+	chains: BulkRankedResult[][];
+	originalGearResults: BulkRankedResult;
 	/** Frozen at run end: the tie brackets were built with it, so the per-row margins have to agree. */
 	iterations: number;
+	/** How many talent setups the encounter ran; rows name theirs when it is more than one. */
+	talentSetups: number;
 }
 
 export interface BulkTalentSetup {

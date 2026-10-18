@@ -1,9 +1,10 @@
 import { ItemSlot } from '@generated/proto/common';
-import type { BulkEncounterResults, TopGearResult } from '@sim/bulk/types';
+import type { BulkEncounterResults, BulkRankedResult } from '@sim/bulk/types';
 import { ActionId } from '@sim/proto/action_id';
 import type { EquippedItem } from '@sim/proto/equipped_item';
 import type { Gear } from '@sim/proto/gear';
 import { stDevToConf95 } from '@sim/utils/math';
+import { CURRENT_TALENT_SETUP } from '@testing/storybook/fixtures/bulk-compare';
 import { describe, expect, it } from 'vitest';
 
 import { bulkResultsCsv } from './results_csv';
@@ -23,7 +24,7 @@ const gear = (head: EquippedItem | null, mainHand: EquippedItem | null): Gear =>
 	return set as unknown as Gear;
 };
 
-const result = (set: Gear, avg: number, stdev = 0): TopGearResult => ({ gear: set, dpsMetrics: { avg, stdev } as never });
+const result = (set: Gear, avg: number, stdev = 0): BulkRankedResult => ({ gear: set, dpsMetrics: { avg, stdev } as never, talents: CURRENT_TALENT_SETUP });
 
 const LIONHEART = equipped(12640, 'Lionheart Helm');
 const THUNDERFURY = equipped(19019, 'Thunderfury, Blessed Blade of the Windseeker', { name: 'Crusader', effectId: 1900 });
@@ -40,7 +41,7 @@ const entry = (name: string, isCurrent: boolean, best: number, timed = true, upg
 		isCurrent,
 		duration: timed ? 180 : null,
 		durationVariation: timed ? 5 : null,
-		results: { chains: [[result(upgrade, best, 10)], [base]], originalGearResults: base, iterations: 100 },
+		results: { chains: [[result(upgrade, best, 10)], [base]], originalGearResults: base, iterations: 100, talentSetups: 1 },
 	};
 };
 

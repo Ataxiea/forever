@@ -49,7 +49,7 @@ const COUNCIL = Encounter.create({ duration: 90, durationVariation: 10, targets:
 const ref = (name: string, preset = false) => BulkEncounterRef.create({ name, preset });
 
 const batchHost = (checked: BulkEncounterRef[] = [ref('Patchwerk', true), ref('Same as current'), ref('Gone'), ref('Council')], powerTools = true) => {
-	const player = makeBulkPlayer({ getGear: () => GEAR, setGearAsync: vi.fn(async () => {}) });
+	const player = makeBulkPlayer({ getGear: () => GEAR, getTalentsString: () => '', setGearAsync: vi.fn(async () => {}) });
 	patchSlice(player.sim.store, 'ui', { showPowerTools: powerTools });
 	const saved = { 'Same as current': CURRENT, Council: COUNCIL };
 	player.sim.env.storage.setItem(

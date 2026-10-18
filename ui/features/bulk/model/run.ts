@@ -2,22 +2,19 @@ import { enchantPresetPool } from '@features/enchant-presets/model/enchant_prese
 import { BulkSettings, ProgressMetrics } from '@generated/proto/api';
 import type { Encounter } from '@generated/proto/common';
 import i18n from '@i18n/config';
-import { BulkEncounterResults, BulkSimProgressConfig, TopGearResult } from '@sim/bulk/types';
+import { BulkEncounterResults, BulkSimProgressConfig } from '@sim/bulk/types';
 import type { Player } from '@sim/player/player';
-import type { Gear } from '@sim/proto/gear';
-import { getGearIdentityKey } from '@sim/proto/items';
 import { bulkState, patchBulkState } from '@sim/settings/bulk_settings';
 import type { IndividualSimHost } from '@sim/sim_host';
 import { RequestTypes } from '@sim/sim_signal_manager';
-import { bulkSimHighStageFloor } from '@sim/wasm/bulk_sim/estimate';
 import { toastManager } from '@ui-kit/Toast';
 
 import { trackEvent } from '../../../tracking/utils';
 import { type CoreBulkSimResult, runCoreBulkSim as runCoreBulkSimImpl } from './core_sim';
 import { bulkEncounterRuns, encounterLabel, encounterLength, formatEncounterSummary, pickableBulkEncounters } from './encounters';
 import { BulkProgress, candidateGearProgress, simProgress } from './progress';
+import { rankEncounterResults } from './results';
 import { createBulkSettingsProto } from './settings';
-import { buildTieChains } from './tie_chains';
 
 // The stored settings plus the enchant pool, which is derived from the presets and never stored.
 const bulkRequestSettings = (player: Player<any>): BulkSettings => ({ ...createBulkSettingsProto(player), enchants: enchantPresetPool(player) });
@@ -168,17 +165,6 @@ const runCoreBulkSim = async (
 	);
 };
 
-const rankResults = (bulkSimResult: CoreBulkSimResult, baseGear: Gear) => {
-	const { referenceDpsMetrics, topGearResults } = bulkSimResult;
-	const originalGearKey = getGearIdentityKey(baseGear.asSpec());
-	const rankedResults = topGearResults.filter(result => getGearIdentityKey(result.gear.asSpec()) !== originalGearKey);
-	const originalGearResults: TopGearResult = { gear: baseGear, dpsMetrics: referenceDpsMetrics };
-	rankedResults.push(originalGearResults);
-	rankedResults.sort((a, b) => b.dpsMetrics.avg - a.dpsMetrics.avg);
-	const iterations = Math.max(1, bulkSimResult.iterations || bulkSimHighStageFloor());
-	return { chains: buildTieChains(rankedResults, originalGearResults, iterations), originalGearResults, iterations };
-};
-
 const abortBulkSimWork = async (host: IndividualSimHost<any>) => {
 	const run = runOf(host.player);
 	if (run.abortPromise) {
@@ -264,7 +250,10 @@ export const runBulkBatch = async (host: IndividualSimHost<any>) => {
 				name: encounterRun.name,
 				isCurrent: encounterRun.isCurrent,
 				...encounterLength(encounterRun.encounter),
-				results: rankResults(bulkSimResult, baseGear),
+				results: rankEncounterResults(
+					[{ talents: { name: '', talentsString: player.getTalentsString(), isCurrent: true }, result: bulkSimResult }],
+					baseGear,
+				),
 			});
 		}
 	} catch (error) {

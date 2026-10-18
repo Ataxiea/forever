@@ -1,7 +1,7 @@
 import { DistributionMetrics } from '@generated/proto/api';
 import { Class, ItemSlot, ItemType, Spec } from '@generated/proto/common';
 import { UIItem } from '@generated/proto/ui';
-import type { BulkEncounterResults, TopGearResult } from '@sim/bulk/types';
+import type { BulkEncounterResults, BulkRankedResult, BulkTalentSetup } from '@sim/bulk/types';
 import type { Player } from '@sim/player/player';
 import { EquippedItem } from '@sim/proto/equipped_item';
 import { Gear } from '@sim/proto/gear';
@@ -19,7 +19,13 @@ export const compareGearSet = (id: number) =>
 
 const CURRENT = compareGearSet(1);
 
-const result = (gear: Gear, avg: number): TopGearResult => ({ gear, dpsMetrics: DistributionMetrics.create({ avg, stdev: 10 }) });
+export const CURRENT_TALENT_SETUP: BulkTalentSetup = { name: '', talentsString: '0000000000', isCurrent: true };
+
+const result = (gear: Gear, avg: number): BulkRankedResult => ({
+	gear,
+	dpsMetrics: DistributionMetrics.create({ avg, stdev: 10 }),
+	talents: CURRENT_TALENT_SETUP,
+});
 
 // An encounter ranking the sets with the given helm ids at the given DPS, and the current gear at 1000, best first.
 const encounter = (name: string, duration: number | null, ranked: Array<[number, number]>): BulkEncounterResults => {
@@ -30,7 +36,7 @@ const encounter = (name: string, duration: number | null, ranked: Array<[number,
 		isCurrent: false,
 		duration,
 		durationVariation: duration === null ? null : 5,
-		results: { chains: results.map(ranking => [ranking]), originalGearResults: base, iterations: 100 },
+		results: { chains: results.map(ranking => [ranking]), originalGearResults: base, iterations: 100, talentSetups: 1 },
 	};
 };
 

@@ -1,9 +1,10 @@
 import { DistributionMetrics } from '@generated/proto/api';
 import { ItemSlot, ItemType } from '@generated/proto/common';
 import { UIEnchant, UIItem } from '@generated/proto/ui';
-import type { BulkEncounterResults, TopGearResult } from '@sim/bulk/types';
+import type { BulkEncounterResults, BulkRankedResult } from '@sim/bulk/types';
 import { EquippedItem } from '@sim/proto/equipped_item';
 import { Gear } from '@sim/proto/gear';
+import { CURRENT_TALENT_SETUP } from '@testing/storybook/fixtures/bulk-compare';
 import { describe, expect, it } from 'vitest';
 
 import { changedItemLabels, compareMatrix, gainTint, type MatrixRow } from './compare';
@@ -14,7 +15,11 @@ const equipped = (id: number, enchant?: UIEnchant) =>
 // A set wearing `head` and, when given, `hands`; two sets built from the same ids are the same set to the gear identity key.
 const gearSet = (head: number, hands?: EquippedItem) => new Gear({ [ItemSlot.ItemSlotHead]: equipped(head), [ItemSlot.ItemSlotHands]: hands ?? null });
 
-const result = (gear: Gear, avg: number): TopGearResult => ({ gear, dpsMetrics: DistributionMetrics.create({ avg, stdev: 1 }) });
+const result = (gear: Gear, avg: number): BulkRankedResult => ({
+	gear,
+	dpsMetrics: DistributionMetrics.create({ avg, stdev: 1 }),
+	talents: CURRENT_TALENT_SETUP,
+});
 
 const CURRENT = gearSet(1);
 const A = gearSet(2);
@@ -30,7 +35,7 @@ const entry = (name: string, duration: number | null, ranked: Array<[Gear, numbe
 		isCurrent: false,
 		duration,
 		durationVariation: duration === null ? null : 5,
-		results: { chains, originalGearResults: base, iterations: 100 },
+		results: { chains, originalGearResults: base, iterations: 100, talentSetups: 1 },
 	};
 };
 
