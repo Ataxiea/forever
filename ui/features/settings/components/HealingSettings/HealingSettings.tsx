@@ -52,7 +52,7 @@ export const HealingSettings = () => {
 
 	return (
 		<ContentBlock rootDataAttributes={{ 'data-block': 'healing-settings' }} config={{ header: { title: i18n.t('settings_tab.healing_settings.title') } }}>
-			<div className="flex flex-col gap-3">
+			<div className="flex flex-col gap-4">
 				<ChoiceField
 					label={i18n.t('settings_tab.healing_settings.group_size')}
 					value={raidSize}

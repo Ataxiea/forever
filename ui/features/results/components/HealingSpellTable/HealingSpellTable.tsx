@@ -47,7 +47,7 @@ const HealingSpellRankCell = ({ spell }: { spell: HealingSpellRow }) => {
 	return (
 		<TableCell>
 			<span className="inline-flex items-center gap-2">
-				{iconUrl && <WowheadIcon href={href} iconUrl={iconUrl} label={spell.name} className="rounded h-5 w-5" />}
+				{iconUrl && <WowheadIcon href={href} iconUrl={iconUrl} label={spell.name} className="size-4 rounded-sm" />}
 				<span>{rankLabel}</span>
 			</span>
 		</TableCell>
@@ -58,7 +58,7 @@ const HealingSpellGroupTitle = ({ spell }: { spell: HealingSpellRow }) => {
 	const { iconUrl } = useActionId(spell.id);
 	return (
 		<span className="inline-flex items-center gap-2">
-			{iconUrl && <WowheadIcon as="div" iconUrl={iconUrl} label={spell.name} className="rounded h-6 w-6 shrink-0" />}
+			{iconUrl && <WowheadIcon as="div" iconUrl={iconUrl} label={spell.name} className="h-6 w-6 shrink-0 rounded-sm" />}
 			<span>{spell.name}</span>
 		</span>
 	);
@@ -191,7 +191,7 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 				})}
 			</Accordion>
 			{procUptimes.length > 0 && (
-				<div className="mt-3">
+				<div className="mt-4">
 					<h3 className="px-2 pb-2 text-sm font-semibold">{i18n.t('results_tab.details.healing_spells.proc_uptimes')}</h3>
 					<Table dense striped testId="healing-proc-uptime-table">
 						<thead>

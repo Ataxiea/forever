@@ -1,4 +1,5 @@
 import { APLRotation } from '@generated/proto/apl';
+import { HealingSimSettings_Assignment } from '@generated/proto/ui';
 import { createSimStore } from '@sim/state/sim_store';
 
 /**
@@ -28,6 +29,7 @@ export const makePlayer = (rotation: APLRotation, notify: () => void = () => {})
 				getActivePlayers: () => [],
 				getTargetDummies: () => 0,
 				getNumActiveParties: () => 5,
+				getHealingSettings: () => ({ assignment: HealingSimSettings_Assignment.TankHealing, groupSize: 5 }),
 				size: () => 1,
 			},
 			encounter: { targetsMetadata: { asList: () => [] } },
