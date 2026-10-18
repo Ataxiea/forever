@@ -24,11 +24,7 @@ export const ReleaseInfo = ({ info, className }: ReleaseInfoProps) => {
 		parts.push({
 			key: 'commit',
 			node: (
-				<Button
-					href={commitUrl(info.commit)}
-					target="_blank"
-					variant="unstyled"
-					title={i18n.t('common.release_info.commit_link', { commit: short })}>
+				<Button href={commitUrl(info.commit)} target="_blank" variant="unstyled" title={i18n.t('common.release_info.commit_link', { commit: short })}>
 					{short}
 				</Button>
 			),
