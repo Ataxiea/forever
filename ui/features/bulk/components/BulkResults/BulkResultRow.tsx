@@ -51,6 +51,7 @@ export const BulkResultRowView = ({
 }: BulkResultRowViewProps) => {
 	const marginTooltipId = useId();
 	const deltaTooltipId = useId();
+	const talentsTooltipId = useId();
 
 	return (
 		<div
@@ -78,7 +79,10 @@ export const BulkResultRowView = ({
 			<div className="flex min-w-0 flex-1 flex-wrap gap-1 max-md:order-last max-md:basis-full" data-testid="bulk-gear-combo">
 				{talents && (
 					<div className="basis-full text-sm wrap-break-word" data-testid="bulk-result-talents">
-						{talents.label} <span className="text-xs text-muted">{talents.talentsString}</span>
+						<span data-tooltip-id={talentsTooltipId} data-tooltip-content={talents.talentsString}>
+							{talents.label}
+						</span>
+						<Tooltip id={talentsTooltipId} />
 					</div>
 				)}
 				{gearUnchanged ? (
