@@ -126,13 +126,18 @@ export default defineSpec<Spec.SpecHealerPriest>({
 		// Preset talents that the user can quickly select.
 		talents: [Presets.DiscTalents, Presets.HolyTalents],
 		// Preset rotations that the user can quickly select.
-		rotations: [],
+		rotations: [Presets.ROTATION_DISC_DEFAULT, Presets.ROTATION_HOLY_DEFAULT],
 		// Preset gear configurations that the user can quickly select.
 		gear: [],
 	},
 
-	autoRotation: (_: Player<Spec.SpecHealerPriest>): APLRotation => {
-		return APLRotation.create();
+	autoRotation: (priest: Player<Spec.SpecHealerPriest>): APLRotation => {
+		const [disc, holy,] = priest.getTalentTreePoints();
+
+		if (disc > holy) {
+			return Presets.ROTATION_DISC_DEFAULT.rotation.rotation!;
+		}
+		return Presets.ROTATION_HOLY_DEFAULT.rotation.rotation!;
 	},
 
 	// The gear optimizer.
