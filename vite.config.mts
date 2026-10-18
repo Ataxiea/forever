@@ -172,7 +172,7 @@ export default defineConfig(({ command, mode }) => {
 		],
 		// GitHub Actions sets GITHUB_REPOSITORY in every job, so the issue links point at whichever
 		// repository built this page. A fork's build files its issues on the fork. The build date, commit
-		// and game build are the release the landing page and the options dialog show (tools/vite/build_info.mts).
+		// and game build are the release the landing page and the spec pages' sidebar show (tools/vite/build_info.mts).
 		define: {
 			'import.meta.env.VITE_GITHUB_REPOSITORY': JSON.stringify(process.env.GITHUB_REPOSITORY ?? ''),
 			'import.meta.env.VITE_BUILD_DATE': JSON.stringify(buildInfo.date),

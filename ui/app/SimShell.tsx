@@ -93,7 +93,7 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 										info={BUILD_INFO}
 										specName={lastSpecChange ? translatePlayerSpec(spec) : ''}
 										specVersion={lastSpecChange}
-										className="border-t border-border px-sidebar py-2 text-xs text-secondary"
+										className="border-t border-border px-sidebar py-2 text-xs text-white/65"
 									/>
 								)}
 							</aside>

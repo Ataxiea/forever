@@ -25,9 +25,9 @@ const CommitLink = ({ commit }: { commit: string }) => (
 
 const joined = (parts: ReactNode[]) => parts.filter(Boolean).flatMap((part, index) => (index > 0 ? [' · ', part] : [part]));
 
-// The page's release, under the sidebar's stats: the game build, the build date and the commit. Hovering it
-// lists the sim's build, the spec's last change and the game data, each left out when the build could not
-// read it. The caller sets the text size and colour.
+// The page's release, under the sidebar's stats: the game build, the build date and the commit. The info
+// button beside it, on hover or focus, lists the sim's build, the spec's last change and the game data, each
+// left out when the build could not read it. The caller sets the text size and colour.
 export const SpecReleaseInfo = ({ info, specName, specVersion, className }: SpecReleaseInfoProps) => {
 	const id = useId();
 	if (!info.gameVersion && !info.date && !info.commit && !specVersion) {
@@ -53,9 +53,11 @@ export const SpecReleaseInfo = ({ info, specName, specVersion, className }: Spec
 		rows.push({ label: i18n.t('common.release_info.game_data'), value: [info.gameVersion] });
 	}
 	return (
-		<div className={clsx('flex items-center gap-2', className)} {...tooltipAnchorProps(id)}>
+		<div className={clsx('flex items-center gap-2', className)}>
 			<ReleaseInfo info={info} />
-			<Icon name="circle-info" />
+			<Button variant="unstyled" aria-label={i18n.t('common.release_info.details')} {...tooltipAnchorProps(id)}>
+				<Icon name="circle-info" />
+			</Button>
 			<Tooltip
 				id={id}
 				place="top"

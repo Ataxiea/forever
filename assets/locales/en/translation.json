@@ -448,7 +448,8 @@
 			"commit_link": "View commit {{commit}} on GitHub",
 			"sim": "Sim",
 			"changed": "Changed {{date}}",
-			"game_data": "Game data"
+			"game_data": "Game data",
+			"details": "Release details"
 		}
 	},
 	"sim": {

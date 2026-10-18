@@ -75,10 +75,11 @@ const compareBuilds = (a: string, b: string): number => {
 	return 0;
 };
 
-// A spec is its page folder, ui/specs/<class>/<spec>, the class's shared UI folder, and its sim code:
-// sim/<class>/<spec> with the class's own files beside it, or the whole sim/<class> for a class with one
-// sim folder. The expected results files are left out, since a core change rewrites them all. A shallow
-// clone has no history to read, so it reports no spec at all rather than its one commit for every spec.
+// A spec is its page folder, ui/specs/<class>/<spec>, the class's shared UI folder, and its sim code: the
+// class's own files in sim/<class>, plus sim/<class>/<spec> when the spec has a sim folder. The expected
+// results files are left out, since a core change rewrites them all. The log starts at the commit the
+// release names, so a pull request's preview never names its merge commit. A shallow clone has no
+// history to read, so it reports no spec at all rather than its one commit for every spec.
 const specVersions = (root: string): Record<string, SpecVersion> => {
 	try {
 		if (git(root, ['rev-parse', '--is-shallow-repository']) === 'true') {
@@ -100,12 +101,10 @@ const specVersions = (root: string): Record<string, SpecVersion> => {
 			if (!existsSync(path.join(specDir, 'spec.ts')) && !existsSync(path.join(specDir, 'spec.tsx'))) {
 				continue;
 			}
-			const sim = existsSync(path.join(root, 'sim', className, specName))
-				? [`:(glob)sim/${className}/*`, `sim/${className}/${specName}`]
-				: [`sim/${className}`];
+			const sim = [`:(glob)sim/${className}/*`, ...(existsSync(path.join(root, 'sim', className, specName)) ? [`sim/${className}/${specName}`] : [])];
 			const paths = [`ui/specs/${className}/${specName}`, `ui/specs/${className}/shared`, ...sim, ':(exclude,glob)**/*.results'];
 			try {
-				const [commit, date] = git(root, ['log', '-1', '--format=%H %cs', '--', ...paths]).split(' ');
+				const [commit, date] = git(root, ['log', '-1', '--format=%H %cs', process.env.BUILD_COMMIT || 'HEAD', '--', ...paths]).split(' ');
 				if (commit) {
 					specs[`${className}/${specName}`] = { commit, date };
 				}

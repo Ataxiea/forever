@@ -1627,10 +1627,13 @@
 						},
 						"game_data": {
 							"type": "string"
+						},
+						"details": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["game_version", "built", "commit_link", "sim", "changed", "game_data"]
+					"required": ["game_version", "built", "commit_link", "sim", "changed", "game_data", "details"]
 				}
 			},
 			"additionalProperties": false,

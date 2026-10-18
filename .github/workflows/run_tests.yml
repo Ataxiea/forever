@@ -35,7 +35,9 @@ jobs:
               with:
                   ref: ${{ inputs.ref }}
                   # The full history, so the build can name each spec's last change (tools/vite/build_info.mts).
+                  # git log over paths reads commits and trees only, so the file contents stay out of it.
                   fetch-depth: 0
+                  filter: blob:none
 
             - name: Check commit blacklist 🔎
               run: |
