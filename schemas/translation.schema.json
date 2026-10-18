@@ -4286,6 +4286,16 @@
 								"targets_other"
 							]
 						},
+						"talents": {
+							"type": "object",
+							"properties": {
+								"no_points": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": ["no_points"]
+						},
 						"iterations": {
 							"type": "string"
 						},
@@ -4424,6 +4434,7 @@
 						"total_iterations_tooltip",
 						"groups",
 						"encounters",
+						"talents",
 						"iterations",
 						"freeze_ring",
 						"freeze_trinket",
@@ -4578,6 +4589,9 @@
 						"current": {
 							"type": "string"
 						},
+						"current_talents": {
+							"type": "string"
+						},
 						"export_csv": {
 							"type": "string"
 						}
@@ -4593,6 +4607,7 @@
 						"encounters",
 						"encounters_caption",
 						"current",
+						"current_talents",
 						"export_csv"
 					]
 				},

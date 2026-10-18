@@ -32,6 +32,13 @@ export interface BulkResults {
 	iterations: number;
 }
 
+export interface BulkTalentSetup {
+	/** Empty for the current talents, which the views label themselves. */
+	name: string;
+	talentsString: string;
+	isCurrent: boolean;
+}
+
 export interface BulkEncounterResults {
 	/** Empty for the current encounter, which the views label themselves. */
 	name: string;

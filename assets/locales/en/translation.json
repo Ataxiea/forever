@@ -1192,6 +1192,9 @@
 				"targets_one": "{{count}} target",
 				"targets_other": "{{count}} targets"
 			},
+			"talents": {
+				"no_points": "No talent points"
+			},
 			"iterations": "Iterations",
 			"freeze_ring": {
 				"label": "Freeze ring slot",
@@ -1272,6 +1275,7 @@
 			"encounters": "Encounters",
 			"encounters_caption": "The best set's DPS and its gain over your current gear, per encounter. Pick one to see its ranking.",
 			"current": "Current",
+			"current_talents": "Current talents",
 			"export_csv": "Export CSV"
 		},
 		"compare": {
