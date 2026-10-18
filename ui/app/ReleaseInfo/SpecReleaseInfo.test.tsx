@@ -18,11 +18,11 @@ const specCommit = '8109a4ce0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f6';
 describe('SpecReleaseInfo', () => {
 	it('lists the sim build, the spec change and the game data on hovering its info button', () => {
 		render(<SpecReleaseInfo info={info} specName="Feral Cat" specVersion={{ commit: specCommit, date: '2026-10-17' }} />);
-		expect(screen.queryByText('Changed 2026-10-17')).toBeNull();
+		expect(document.querySelector('dd')).toBeNull();
 
 		fireEvent.mouseEnter(screen.getByRole('button', { name: 'Release details' }));
 		expect([...document.querySelectorAll('dt')].map(dt => dt.textContent)).toEqual(['Sim', 'Feral Cat', 'Game data']);
-		expect(screen.getByText('Changed 2026-10-17')).toBeTruthy();
+		expect([...document.querySelectorAll('dd')].map(dd => dd.textContent)).toEqual(['Built 2026-10-18 · 2fe052c', 'Changed 2026-10-17 · 8109a4c', '1.60.1.70450']);
 		expect(screen.getByRole('link', { name: '8109a4c' }).getAttribute('href')).toBe(`https://github.com/wowsims/forever/commit/${specCommit}`);
 	});
 
