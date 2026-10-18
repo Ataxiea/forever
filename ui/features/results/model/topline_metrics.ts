@@ -112,7 +112,9 @@ export const toplineResultMetrics = (simResult: SimResult, filter?: SimResultFil
 				: (() => {
 						const targetActions = playerMetrics
 							.getPlayerAndPetActions()
-							.filter(action => action.targets.some(target => target.data.unitIndex === targetIndex && (target.healing > 0 || target.shielding > 0)))
+							.filter(action =>
+								action.targets.some(target => target.data.unitIndex === targetIndex && (target.healing > 0 || target.shielding > 0)),
+							)
 							.map(action => action.forTarget(filter));
 						return targetActions.length ? ActionMetrics.merge(targetActions).hps : 0;
 					})();

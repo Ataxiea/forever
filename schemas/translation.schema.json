@@ -7592,24 +7592,34 @@
 										"next_target": {
 											"type": "string"
 										},
-									"random_heal_target": {
-										"type": "string"
-									},
+										"random_heal_target": {
+											"type": "string"
+										},
 										"player": {
 											"type": "string"
 										},
 										"target": {
 											"type": "string"
 										},
-									"heal_target": {
-										"type": "string"
-									},
+										"heal_target": {
+											"type": "string"
+										},
 										"pet": {
 											"type": "string"
 										}
 									},
 									"additionalProperties": false,
-								"required": ["self", "current_target", "previous_target", "next_target", "random_heal_target", "player", "target", "heal_target", "pet"]
+									"required": [
+										"self",
+										"current_target",
+										"previous_target",
+										"next_target",
+										"random_heal_target",
+										"player",
+										"target",
+										"heal_target",
+										"pet"
+									]
 								},
 								"placeholder_tooltip": {
 									"type": "string"
@@ -8148,7 +8158,29 @@
 								"no_spells": { "type": "string" }
 							},
 							"additionalProperties": false,
-							"required": ["rank", "rank_label", "normal", "critical", "crit_chance", "absorb", "divine_aegis", "proc_uptimes", "inspiration", "uptime_note", "proc", "target", "uptime", "min", "mean", "max", "per_tick", "normal_tick", "crit_tick", "periodic_tooltip", "no_spells"]
+							"required": [
+								"rank",
+								"rank_label",
+								"normal",
+								"critical",
+								"crit_chance",
+								"absorb",
+								"divine_aegis",
+								"proc_uptimes",
+								"inspiration",
+								"uptime_note",
+								"proc",
+								"target",
+								"uptime",
+								"min",
+								"mean",
+								"max",
+								"per_tick",
+								"normal_tick",
+								"crit_tick",
+								"periodic_tooltip",
+								"no_spells"
+							]
 						},
 						"damage": {
 							"type": "object",
@@ -8649,7 +8681,19 @@
 								}
 							},
 							"additionalProperties": false,
-							"required": ["damage", "healing", "healing_spells", "threat", "damage_taken", "buffs", "debuffs", "casts", "resources", "timeline", "log"]
+							"required": [
+								"damage",
+								"healing",
+								"healing_spells",
+								"threat",
+								"damage_taken",
+								"buffs",
+								"debuffs",
+								"casts",
+								"resources",
+								"timeline",
+								"log"
+							]
 						},
 						"columns": {
 							"type": "object",

@@ -35,9 +35,7 @@ const sourceActionIdsFor = (resultData: SimResultData): Set<number> => {
 	const players = resultData.result.getRaidIndexedPlayers(resultData.filter);
 	if (!players.length) return new Set();
 	const player = players[0];
-	const availableSourceActionTags = new Set(
-		[...player.getDamageActions(), ...player.getHealingActions()].map(action => sourceActionTag(action.actionId)),
-	);
+	const availableSourceActionTags = new Set([...player.getDamageActions(), ...player.getHealingActions()].map(action => sourceActionTag(action.actionId)));
 	return new Set(
 		player
 			.getHealingActions()
@@ -74,12 +72,16 @@ const healingSourceMetrics = (resultData: SimResultData | null) => {
 	return {
 		sourceActionIds,
 		byProcId: new Map(
-			[...sourceActionIds].map(sourceActionId => [
-				sourceActionId,
-				ActionMetrics.groupById(sourceActions.filter(action => action.actionId.spellId === sourceActionId), true).map(group =>
-					ActionMetrics.merge(group),
-				),
-			] as const),
+			[...sourceActionIds].map(
+				sourceActionId =>
+					[
+						sourceActionId,
+						ActionMetrics.groupById(
+							sourceActions.filter(action => action.actionId.spellId === sourceActionId),
+							true,
+						).map(group => ActionMetrics.merge(group)),
+					] as const,
+			),
 		),
 	};
 };
@@ -144,10 +146,12 @@ export const HealingMetricsTable = () => {
 		() =>
 			[...sourceMetricsByProcId.values()].flatMap(metrics =>
 				metrics.length
-					? [{
-							metric: ActionMetrics.merge(metrics, { removeTag: true }),
-							subRows: metrics.map(metric => ({ metric })),
-						}]
+					? [
+							{
+								metric: ActionMetrics.merge(metrics, { removeTag: true }),
+								subRows: metrics.map(metric => ({ metric })),
+							},
+						]
 					: [],
 			),
 		[sourceMetricsByProcId],
@@ -186,10 +190,10 @@ export const HealingMetricsTable = () => {
 						const isProcParent = isSourceActionMetric(metric, sourceMetrics.sourceActionIds) && metric.actionId.tag === 0;
 						const sourceAction = isProcParent
 							? undefined
-							: sourceActionsByType.damage.get(metric.actionId.tag) ?? sourceActionsByType.healing.get(metric.actionId.tag);
+							: (sourceActionsByType.damage.get(metric.actionId.tag) ?? sourceActionsByType.healing.get(metric.actionId.tag));
 						return (
 							<MetricsActionCell
-								name={isProcParent ? metric.actionId.withoutTag().name : sourceAction?.name ?? metric.name}
+								name={isProcParent ? metric.actionId.withoutTag().name : (sourceAction?.name ?? metric.name)}
 								actionId={sourceAction?.actionId ?? metric.actionId}
 								expandable={info.row.getCanExpand()}
 								expanded={info.row.getIsExpanded()}

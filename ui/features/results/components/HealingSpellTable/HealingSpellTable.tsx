@@ -123,12 +123,12 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 												<TableHeaderCell colSpan={3}>{i18n.t('results_tab.details.healing_spells.critical')}</TableHeaderCell>
 											</>
 										)}
-						{!isAbsorb && <TableHeaderCell rowSpan={2}>{i18n.t('results_tab.details.healing_spells.crit_chance')}</TableHeaderCell>}
-						{visibleCustomMetrics.map(key => (
-							<TableHeaderCell key={key} colSpan={3}>
-								{i18n.t(`results_tab.details.custom_metrics.${key}`, { defaultValue: key })}
-							</TableHeaderCell>
-						))}
+										{!isAbsorb && <TableHeaderCell rowSpan={2}>{i18n.t('results_tab.details.healing_spells.crit_chance')}</TableHeaderCell>}
+										{visibleCustomMetrics.map(key => (
+											<TableHeaderCell key={key} colSpan={3}>
+												{i18n.t(`results_tab.details.custom_metrics.${key}`, { defaultValue: key })}
+											</TableHeaderCell>
+										))}
 									</TableRow>
 									<TableRow>
 										{!isAbsorb &&
@@ -144,19 +144,19 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 													{i18n.t(`results_tab.details.healing_spells.${column}`)}
 												</TableHeaderCell>
 											))}
-						{isAbsorb &&
+										{isAbsorb &&
 											['min', 'mean', 'max'].map(column => (
 												<TableHeaderCell key={`absorb-${column}`}>
 													{i18n.t(`results_tab.details.healing_spells.${column}`)}
 												</TableHeaderCell>
 											))}
-						{visibleCustomMetrics.flatMap(key =>
-							['min', 'mean', 'max'].map(column => (
-								<TableHeaderCell key={`${key}-${column}`}>
-									{i18n.t(`results_tab.details.healing_spells.${column}`)}
-								</TableHeaderCell>
-							)),
-						)}
+										{visibleCustomMetrics.flatMap(key =>
+											['min', 'mean', 'max'].map(column => (
+												<TableHeaderCell key={`${key}-${column}`}>
+													{i18n.t(`results_tab.details.healing_spells.${column}`)}
+												</TableHeaderCell>
+											)),
+										)}
 									</TableRow>
 								</thead>
 								<tbody>
@@ -176,12 +176,12 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 														<TableCell key={`crit-${index}`}>{displayAmount(value)}</TableCell>
 													))}
 												{!isAbsorb && <TableCell>{displayAmount(spell.critChance)}%</TableCell>}
-							{visibleCustomMetrics.flatMap(key => {
-								const range = spell.customMetrics?.[key];
-								return [range?.min, range?.avg, range?.max].map((value, index) => (
-									<TableCell key={`${key}-${index}`}>{displayOptionalAmount(value)}</TableCell>
-								));
-							})}
+												{visibleCustomMetrics.flatMap(key => {
+													const range = spell.customMetrics?.[key];
+													return [range?.min, range?.avg, range?.max].map((value, index) => (
+														<TableCell key={`${key}-${index}`}>{displayOptionalAmount(value)}</TableCell>
+													));
+												})}
 											</TableRow>
 										);
 									})}
@@ -234,7 +234,9 @@ export const HealingSpellTable = () => {
 				player.auras.flatMap(aura => {
 					if (!aura.id) return [];
 					const actionId = ActionId.fromProto(aura.id);
-					return procAuraIdSet.has(actionId.spellId) ? [{ name: actionId.name, target: player.name, uptime: ((aura.uptimeSecondsAvg || 0) / duration) * 100 }] : [];
+					return procAuraIdSet.has(actionId.spellId)
+						? [{ name: actionId.name, target: player.name, uptime: ((aura.uptimeSecondsAvg || 0) / duration) * 100 }]
+						: [];
 				}),
 			)
 			.sort((a, b) => a.name.localeCompare(b.name) || a.target.localeCompare(b.target));
@@ -277,11 +279,5 @@ export const HealingSpellTable = () => {
 				};
 			});
 	}, [resultData]);
-	return (
-		<HealingSpellTableView
-			spells={actions}
-			procUptimes={procUptimes}
-			spellOrder={host.individualConfig.healingSpellOrder}
-		/>
-	);
+	return <HealingSpellTableView spells={actions} procUptimes={procUptimes} spellOrder={host.individualConfig.healingSpellOrder} />;
 };

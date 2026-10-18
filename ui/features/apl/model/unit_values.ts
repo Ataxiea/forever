@@ -54,9 +54,7 @@ export const refToValue = (ref: UnitReference | undefined, player: Player<any>, 
 			const groupTargetIndex = healTargets
 				.filter(index => Math.floor(index / MAX_PARTY_SIZE) === Math.floor(ref.index / MAX_PARTY_SIZE))
 				.indexOf(ref.index);
-			return healTargetIndex >= 0
-				? { value: ref, icon: 'user', text: `${label('target')} ${groupTargetIndex + 1}` }
-				: { value: ref };
+			return healTargetIndex >= 0 ? { value: ref, icon: 'user', text: `${label('target')} ${groupTargetIndex + 1}` } : { value: ref };
 		}
 		case UnitType.Target: {
 			const targetMetadata = player.sim.encounter.targetsMetadata.asList()[ref.index];

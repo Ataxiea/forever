@@ -140,12 +140,14 @@ export const playerMetricsResult =
 		({
 			filter: {},
 			result: {
-				getRaidIndexedPlayers: () => [{
-					[getter]: () => actions,
-					getDamageActions: () => (getter === 'getDamageActions' ? actions : []),
-					getHealingActions: () => (getter === 'getHealingActions' ? actions : []),
-					pets: petActions.length ? [{ name: 'Wolf', [getter]: () => petActions }] : [],
-				}],
+				getRaidIndexedPlayers: () => [
+					{
+						[getter]: () => actions,
+						getDamageActions: () => (getter === 'getDamageActions' ? actions : []),
+						getHealingActions: () => (getter === 'getHealingActions' ? actions : []),
+						pets: petActions.length ? [{ name: 'Wolf', [getter]: () => petActions }] : [],
+					},
+				],
 			},
 		}) as unknown as SimResultData;
 

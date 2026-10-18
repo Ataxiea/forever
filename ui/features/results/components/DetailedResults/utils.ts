@@ -25,9 +25,7 @@ const ALL_DETAILED_RESULTS_TABS: ReadonlyArray<DetailedResultsTabConfig> = [
 	{ id: 'logTab', labelKey: 'results_tab.details.tabs.log' },
 ];
 
-export const DETAILED_RESULTS_TABS = ALL_DETAILED_RESULTS_TABS.filter(
-	tab => HEALING_SPELLS_RESULTS_ENABLED || tab.id !== 'healingSpellsTab',
-);
+export const DETAILED_RESULTS_TABS = ALL_DETAILED_RESULTS_TABS.filter(tab => HEALING_SPELLS_RESULTS_ENABLED || tab.id !== 'healingSpellsTab');
 
 export const DEFAULT_DETAILED_RESULTS_TAB = 'damageTab';
 export const HEALING_SPELLS_RESULTS_TAB = 'healingSpellsTab';

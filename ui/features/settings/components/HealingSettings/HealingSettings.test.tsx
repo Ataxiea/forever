@@ -18,9 +18,7 @@ type StoreState = {
 
 const setUp = (assignment: HealingAssignment, groupSize: number) => {
 	const store = createStore<StoreState>(() => ({ raid: { healingSettings: { assignment, groupSize }, targetDummies: 99 } }));
-	const setTargetDummies = vi.fn((targetDummies: number) =>
-		store.setState(state => ({ raid: { ...state.raid, targetDummies } })),
-	);
+	const setTargetDummies = vi.fn((targetDummies: number) => store.setState(state => ({ raid: { ...state.raid, targetDummies } })));
 	const setHealingSettings = vi.fn((healingSettings: StoreState['raid']['healingSettings']) =>
 		store.setState(state => ({ raid: { ...state.raid, healingSettings } })),
 	);

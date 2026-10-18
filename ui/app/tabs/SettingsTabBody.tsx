@@ -75,15 +75,14 @@ const BuffSections = ({ gearPlanner }: { gearPlanner: boolean }) => {
 					<RaidBuffs options={options.partyBuffs} miscOptions={[]} />
 				</BuffSection>
 			)}
-			{!gearPlanner &&
-				!config.hideDebuffs && (
-					<BuffSection
-						section="debuffs"
-						empty={!offersDebuffs}
-						filter={<StatFilterPopover {...debuffFilter} ariaLabel={i18n.t('stat_filters.triggers.debuffs')} testId="debuffs-filter" />}>
-						<RaidBuffs options={options.debuffs} miscOptions={options.debuffsMisc} />
-					</BuffSection>
-				)}
+			{!gearPlanner && !config.hideDebuffs && (
+				<BuffSection
+					section="debuffs"
+					empty={!offersDebuffs}
+					filter={<StatFilterPopover {...debuffFilter} ariaLabel={i18n.t('stat_filters.triggers.debuffs')} testId="debuffs-filter" />}>
+					<RaidBuffs options={options.debuffs} miscOptions={options.debuffsMisc} />
+				</BuffSection>
+			)}
 		</>
 	);
 };
