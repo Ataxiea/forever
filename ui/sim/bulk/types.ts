@@ -1,4 +1,5 @@
 import { DistributionMetrics } from '@generated/proto/api';
+import type { APLRotation } from '@generated/proto/apl';
 
 import type { EquippedItem } from '../proto/equipped_item';
 import { Gear } from '../proto/gear';
@@ -37,6 +38,11 @@ export interface BulkTalentSetup {
 	name: string;
 	talentsString: string;
 	isCurrent: boolean;
+}
+
+export interface BulkTalentsOverride {
+	talentsString: string;
+	rotation: APLRotation;
 }
 
 export interface BulkEncounterResults {
