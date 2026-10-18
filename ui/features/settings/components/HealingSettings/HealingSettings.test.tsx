@@ -1,7 +1,7 @@
 import { HealingSimSettings_Assignment as HealingAssignment } from '@generated/proto/ui';
 import { render, waitFor } from '@testing-library/react';
-import { createStore } from 'zustand/vanilla';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
 
 import { HealingSettings } from './HealingSettings';
 

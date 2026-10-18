@@ -36,9 +36,9 @@ import { DetailedResultsTabs } from './DetailedResultsTabs';
 import {
 	DEFAULT_DETAILED_RESULTS_TAB,
 	DETAILED_RESULTS_TABS,
+	type DetailedResultsTabConfig,
 	HEALING_SPELLS_RESULTS_ENABLED,
 	HEALING_SPELLS_RESULTS_TAB,
-	type DetailedResultsTabConfig,
 } from './utils';
 
 // The viewer's choice, shared by every spec page.

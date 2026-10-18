@@ -3,7 +3,6 @@ import i18n from '@i18n/config';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { useActionId } from '@sim/hooks/useActionId';
 import { ActionId } from '@sim/proto/action_id';
-import { ActionMetrics } from '@sim/proto/sim_result';
 import { formatToNumber } from '@sim/utils/format';
 import { Accordion, AccordionItem } from '@ui-kit/Accordion';
 import { Table, TableCell, TableHeaderCell, TableRow } from '@ui-kit/Table';
@@ -222,11 +221,11 @@ export const HealingSpellTableView = ({ spells, procUptimes = [], spellOrder = [
 export const HealingSpellTable = () => {
 	const host = useSimHost();
 	const resultData = useSimResult();
-	const procAuraIds = host.individualConfig.healingProcAuras ?? [];
+	const procAuraIds = host.individualConfig.healingProcAuras;
 	const procUptimes = useMemo(() => {
 		if (!resultData) return [];
 		const duration = resultData.result.result.avgIterationDuration || 1;
-		const procAuraIdSet = new Set(procAuraIds);
+		const procAuraIdSet = new Set(procAuraIds ?? []);
 		return (resultData.result.result.raidMetrics?.parties ?? [])
 			.flatMap(party => party.players)
 			.filter(player => player.name.startsWith('Target Dummy'))
