@@ -39,6 +39,7 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 	const header = useRef<HTMLElement>(null);
 	const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
 	const simReady = useSimStatus(sim).status === 'ready';
+	const lastSpecChange = specVersion(spec.simLink);
 
 	const [stuck, setStuck] = useState(false);
 	useEffect(() => {
@@ -87,12 +88,14 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 									{host && <SimWarnings warnings={host.warnings} ready={simReady} className="my-auto" />}
 									{host && <CharacterStats className="mt-auto" />}
 								</div>
-								<SpecReleaseInfo
-									info={BUILD_INFO}
-									specName={translatePlayerSpec(spec)}
-									specVersion={specVersion(spec.simLink)}
-									className="border-t border-border px-sidebar py-2 text-xs text-secondary"
-								/>
+								{host && (
+									<SpecReleaseInfo
+										info={BUILD_INFO}
+										specName={lastSpecChange ? translatePlayerSpec(spec) : ''}
+										specVersion={lastSpecChange}
+										className="border-t border-border px-sidebar py-2 text-xs text-secondary"
+									/>
+								)}
 							</aside>
 							<div
 								className="z-1 mx-auto flex w-full min-w-[calc(275px+1vw)] flex-4 flex-col pt-0 pr-page pb-page pl-page max-lg:min-h-auto"

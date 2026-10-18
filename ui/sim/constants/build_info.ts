@@ -28,7 +28,8 @@ export const BUILD_INFO: BuildInfo = {
 const SPEC_VERSIONS: Readonly<Record<string, SpecVersion>> = import.meta.env.VITE_SPEC_VERSIONS ?? {};
 
 /** The last change of the spec whose page is at `simLink` (`/forever/<class>/<spec>/`), if the build read it. */
-export const specVersion = (simLink: string): SpecVersion | undefined => SPEC_VERSIONS[simLink.replace(new RegExp(`^/${REPO_NAME}/`), '').replace(/\/$/, '')];
+export const specVersion = (simLink: string | undefined): SpecVersion | undefined =>
+	simLink ? SPEC_VERSIONS[simLink.replace(new RegExp(`^/${REPO_NAME}/`), '').replace(/\/$/, '')] : undefined;
 
 // The repository whose CI built the page, as for the issue links, so a fork's build links its own commit.
 export const commitUrl = (commit: string): string => `${ISSUES_REPO ? `https://github.com/${ISSUES_REPO}` : REPO_URL}/commit/${commit}`;
