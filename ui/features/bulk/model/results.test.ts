@@ -86,14 +86,15 @@ describe('rankEncounterResults', () => {
 		const rows = rankEncounterResults(
 			[
 				run(CURRENT_TALENT_SETUP, 1000, []),
-				run(ARMS_SETUP, 1000, [[set2, 1001, { backendRank: 0, pairedErrorToBaseline: 0.01, pairedErrorToNextResult: 0.01 }]]),
+				run(ARMS_SETUP, 900, [[set2, 1001, { backendRank: 0, pairedErrorToBaseline: 0.01, pairedErrorToNextResult: 0.01 }]]),
 			],
 			current,
 		).chains;
 		const row = rows.flat().find(r => r.talents === ARMS_SETUP && r.gear === set2)!;
 		expect([row.backendRank, row.pairedErrorToBaseline, row.pairedErrorToNextResult]).toEqual([undefined, undefined, undefined]);
-		// 1001 against 1000 at a spread of 10 over 100 iterations ties unpaired.
-		expect(rows).toHaveLength(1);
+		// Kept paired errors (0.01 against 1001) would split set2 from the reference, giving 3 chains. Dropped, 1001 against
+		// 1000 at a spread of 10 over 100 iterations ties unpaired, and the Arms reference at 900 stands apart: 2 chains.
+		expect(rows).toHaveLength(2);
 	});
 
 	it('takes the fewest iterations any of its talent runs reached', () => {

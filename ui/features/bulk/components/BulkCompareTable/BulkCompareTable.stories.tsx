@@ -127,7 +127,7 @@ const TALENT_ROWS = [
 		'Current talents',
 	),
 	row('set-1', 'S1', ['Slayer’s Crest'], [cell(9.4, true), cell(7.9, true), cell(6.8, true), cell(7.2, true)], 'Arms'),
-	row('set-2', 'S2', [], [cell(3.1), cell(2.6), cell(2.2), cell(2.5)], 'Arms'),
+	row('set-2', 'S2', ['No gear changes'], [cell(3.1), cell(2.6), cell(2.2), cell(2.5)], 'Arms'),
 	row('set-3', 'S3', ['Slayer’s Crest'], [cell(6.07), cell(4.85), cell(4.29), cell(4.63)], 'Current talents'),
 ];
 

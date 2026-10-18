@@ -87,7 +87,7 @@ describe('BulkCompareDialog', () => {
 		expect(rows.map(row => within(row).getByRole('rowheader').textContent)).toEqual([
 			'bulk_tab.results.current_gearbulk_tab.results.current_talents',
 			'bulk_tab.compare.short_setArmsHelm 2',
-			'bulk_tab.compare.short_setArms',
+			'bulk_tab.compare.short_setArmsbulk_tab.results.gear_unchanged',
 			'bulk_tab.compare.short_setbulk_tab.results.current_talentsHelm 3',
 		]);
 		expect(shown(rows[2])).toEqual(['+3.00%', 'gap']);

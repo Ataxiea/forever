@@ -30,8 +30,8 @@ export const checkedRefList = <E extends { ref: SavedRef }>(
 		});
 };
 
-// Every pickable ref, rows hidden as equal to the current value included, so the stored order follows the list, a hidden
-// row keeps its state, and refs to deleted entries go.
+// The checked refs, rebuilt from every pickable ref (rows hidden as equal to the current value included), so the stored
+// order follows the list, a hidden row keeps its state, and refs to deleted entries go.
 export const checkedRefsAfter = <R extends SavedRef>(stored: readonly R[], ref: R, checked: boolean, pickable: readonly R[]): R[] =>
 	pickable.filter(item => (sameRef(item, ref) ? checked : isRefChecked(stored, item)));
 
