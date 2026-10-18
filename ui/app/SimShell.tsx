@@ -1,5 +1,7 @@
 import { CharacterStats } from '@features/character-stats';
 import { SimWarnings } from '@features/results/components/SimResultsPanel';
+import { translatePlayerSpec } from '@i18n/localization';
+import { BUILD_INFO, specVersion } from '@sim/constants/build_info';
 import { useSimStatus } from '@sim/hooks/useSimStatus';
 import type { PlayerSpec } from '@sim/player/player_spec';
 import type { Sim } from '@sim/sim';
@@ -12,6 +14,7 @@ import { ForeverNotice } from './ForeverNotice';
 import { SimTitleDropdown } from './header/SimTitleDropdown';
 import { SimToolbar } from './header/SimToolbar';
 import type { SimHostObject } from './individual_sim_ui';
+import { SpecReleaseInfo } from './ReleaseInfo';
 import { simUiAttributes, simUiClasses } from './shell_classes';
 import { SimImportExport } from './SimImportExport';
 import { SimRunCard } from './SimRunCard';
@@ -84,6 +87,12 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 									{host && <SimWarnings warnings={host.warnings} ready={simReady} className="my-auto" />}
 									{host && <CharacterStats className="mt-auto" />}
 								</div>
+								<SpecReleaseInfo
+									info={BUILD_INFO}
+									specName={translatePlayerSpec(spec)}
+									specVersion={specVersion(spec.simLink)}
+									className="border-t border-border px-sidebar py-2 text-xs text-secondary"
+								/>
 							</aside>
 							<div
 								className="z-1 mx-auto flex w-full min-w-[calc(275px+1vw)] flex-4 flex-col pt-0 pr-page pb-page pl-page max-lg:min-h-auto"

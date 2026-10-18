@@ -445,7 +445,10 @@
 		"release_info": {
 			"game_version": "Game {{version}}",
 			"built": "Built {{date}}",
-			"commit_link": "View commit {{commit}} on GitHub"
+			"commit_link": "View commit {{commit}} on GitHub",
+			"sim": "Sim",
+			"changed": "Changed {{date}}",
+			"game_data": "Game data"
 		}
 	},
 	"sim": {

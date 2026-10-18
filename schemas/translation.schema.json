@@ -1618,10 +1618,19 @@
 						},
 						"commit_link": {
 							"type": "string"
+						},
+						"sim": {
+							"type": "string"
+						},
+						"changed": {
+							"type": "string"
+						},
+						"game_data": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["game_version", "built", "commit_link"]
+					"required": ["game_version", "built", "commit_link", "sim", "changed", "game_data"]
 				}
 			},
 			"additionalProperties": false,

@@ -1,37 +1,51 @@
-// The release a build is: the commit it is built from, the UTC date it is built on, and the game build of
-// the data it carries. vite.config.mts defines them into the page, so every build, the deploy's included,
-// states its own release with nothing written into the source tree.
+// The release a build is: the commit it is built from, the UTC date it is built on, the game build of
+// the data it carries, and the last commit that changed each spec. vite.config.mts defines them into the
+// page, so every build, the deploy's included, states its own release with nothing written into the
+// source tree.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
+
+export interface SpecVersion {
+	/** The full hash of the last commit that changed the spec. */
+	commit: string;
+	/** That commit's date, as YYYY-MM-DD. */
+	date: string;
+}
 
 export interface BuildInfo {
 	/** The UTC date of the build, as YYYY-MM-DD. */
 	date: string;
-	/** The full hash of the commit built, or empty when neither git nor GITHUB_SHA names it. */
+	/** The full hash of the commit built, or empty when nothing names it. */
 	commit: string;
 	/** The newest game build the spell store was generated from, such as 1.60.1.70450, or empty. */
 	gameVersion: string;
+	/** Each spec's last change, keyed `<class>/<spec>` as its page path is; empty in a shallow clone. */
+	specs: Record<string, SpecVersion>;
 }
 
 export const readBuildInfo = (root: string): BuildInfo => ({
 	date: new Date().toISOString().slice(0, 10),
-	commit: gitCommit(root),
+	commit: buildCommit(root),
 	gameVersion: gameVersion(root),
+	specs: specVersions(root),
 });
+
+const git = (root: string, args: string[]): string =>
+	execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] })
+		.toString()
+		.trim();
 
 // BUILD_COMMIT names the commit when the checkout is not it: a pull request's checkout is the merge
 // commit, and its preview names the head. Otherwise git names the checkout; GITHUB_SHA covers a tree
 // without .git.
-const gitCommit = (root: string): string => {
+const buildCommit = (root: string): string => {
 	if (process.env.BUILD_COMMIT) {
 		return process.env.BUILD_COMMIT;
 	}
 	try {
-		return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] })
-			.toString()
-			.trim();
+		return git(root, ['rev-parse', 'HEAD']);
 	} catch {
 		return process.env.GITHUB_SHA ?? '';
 	}
@@ -59,4 +73,46 @@ const compareBuilds = (a: string, b: string): number => {
 		}
 	}
 	return 0;
+};
+
+// A spec is its page folder, ui/specs/<class>/<spec>, the class's shared UI folder, and its sim code:
+// sim/<class>/<spec> with the class's own files beside it, or the whole sim/<class> for a class with one
+// sim folder. The expected results files are left out, since a core change rewrites them all. A shallow
+// clone has no history to read, so it reports no spec at all rather than its one commit for every spec.
+const specVersions = (root: string): Record<string, SpecVersion> => {
+	try {
+		if (git(root, ['rev-parse', '--is-shallow-repository']) === 'true') {
+			return {};
+		}
+	} catch {
+		return {};
+	}
+	const specs: Record<string, SpecVersion> = {};
+	const specsDir = path.join(root, 'ui/specs');
+	const folders = (dir: string): string[] =>
+		readdirSync(dir, { withFileTypes: true })
+			.filter(entry => entry.isDirectory())
+			.map(entry => entry.name);
+	for (const className of folders(specsDir)) {
+		const classDir = path.join(specsDir, className);
+		for (const specName of folders(classDir)) {
+			const specDir = path.join(classDir, specName);
+			if (!existsSync(path.join(specDir, 'spec.ts')) && !existsSync(path.join(specDir, 'spec.tsx'))) {
+				continue;
+			}
+			const sim = existsSync(path.join(root, 'sim', className, specName))
+				? [`:(glob)sim/${className}/*`, `sim/${className}/${specName}`]
+				: [`sim/${className}`];
+			const paths = [`ui/specs/${className}/${specName}`, `ui/specs/${className}/shared`, ...sim, ':(exclude,glob)**/*.results'];
+			try {
+				const [commit, date] = git(root, ['log', '-1', '--format=%H %cs', '--', ...paths]).split(' ');
+				if (commit) {
+					specs[`${className}/${specName}`] = { commit, date };
+				}
+			} catch {
+				// A spec git cannot read is left out.
+			}
+		}
+	}
+	return specs;
 };
