@@ -32,12 +32,18 @@
 						"description": {
 							"type": "string"
 						},
+						"heading": {
+							"type": "string"
+						},
+						"allSpecs": {
+							"type": "string"
+						},
 						"welcomeDescription": {
 							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["title", "description", "welcomeDescription"]
+					"required": ["title", "description", "heading", "allSpecs", "welcomeDescription"]
 				},
 				"header": {
 					"type": "object",
@@ -45,19 +51,57 @@
 						"wowsims": {
 							"type": "string"
 						},
-						"expansion": {
+						"subtitle": {
 							"type": "string"
 						},
-						"supportDevs": {
+						"discord": {
+							"type": "string"
+						},
+						"github": {
+							"type": "string"
+						},
+						"addon": {
+							"type": "string"
+						},
+						"patreon": {
 							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["wowsims", "expansion", "supportDevs"]
+					"required": ["wowsims", "subtitle", "discord", "github", "addon", "patreon"]
+				},
+				"actions": {
+					"type": "object",
+					"properties": {
+						"discord": {
+							"type": "string"
+						},
+						"github": {
+							"type": "string"
+						},
+						"addon": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["discord", "github", "addon"]
+				},
+				"footer": {
+					"type": "object",
+					"properties": {
+						"copyright": {
+							"type": "string"
+						},
+						"disclaimer": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["copyright", "disclaimer"]
 				}
 			},
 			"additionalProperties": false,
-			"required": ["navigation", "home", "header"]
+			"required": ["navigation", "home", "header", "actions", "footer"]
 		},
 		"common": {
 			"type": "object",
@@ -6882,7 +6926,7 @@
 									"required": ["label", "tooltip"],
 									"additionalProperties": false
 								},
-								"dot_crit_percent_increase": {
+								"dot_tick_rate_percent_increase": {
 									"type": "object",
 									"properties": {
 										"label": {
@@ -6895,7 +6939,7 @@
 									"required": ["label", "tooltip"],
 									"additionalProperties": false
 								},
-								"dot_tick_rate_percent_increase": {
+								"dot_expected_dps": {
 									"type": "object",
 									"properties": {
 										"label": {
@@ -7082,8 +7126,8 @@
 								"selected_conjured",
 								"offset",
 								"dot_base_duration",
-								"dot_crit_percent_increase",
 								"dot_tick_rate_percent_increase",
+								"dot_expected_dps",
 								"variable_ref",
 								"variable_placeholder",
 								"action_group_used",
@@ -9668,6 +9712,9 @@
 				},
 				"native_sim_outdated": {
 					"type": "string"
+				},
+				"forever_notice": {
+					"type": "string"
 				}
 			},
 			"additionalProperties": false,
@@ -9681,7 +9728,8 @@
 				"status",
 				"options",
 				"download_native_sim",
-				"native_sim_outdated"
+				"native_sim_outdated",
+				"forever_notice"
 			]
 		},
 		"sidebar": {

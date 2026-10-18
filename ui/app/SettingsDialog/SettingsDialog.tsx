@@ -10,12 +10,12 @@ import { Dialog } from '@ui-kit/Dialog';
 import { FieldGrid } from '@ui-kit/FieldGrid';
 import { HelpText } from '@ui-kit/FormControl';
 import { NumberField } from '@ui-kit/TextField';
-import { toastManager } from '@ui-kit/Toast';
 import { Tooltip, tooltipAnchorProps } from '@ui-kit/Tooltip';
 import { useEffect, useId, useMemo, useState } from 'react';
 
 import { trackEvent } from '../../tracking/utils';
 import type { SimHostObject } from '../individual_sim_ui';
+import { restoreDefaults } from '../restore_defaults';
 
 export interface SettingsDialogViewProps {
 	open: boolean;
@@ -258,12 +258,6 @@ export const SettingsDialog = ({ open, onOpenChange, host }: SettingsDialogProps
 		sim.setWasmConcurrency(workers);
 	};
 
-	const applyDefaults = () => {
-		trackEvent({ action: 'settings', category: 'restore-defaults', label: 'restore' });
-		host.applyDefaults();
-		toastManager.add({ variant: 'success', body: i18n.t('info.options.restore_defaults.success_message') });
-	};
-
 	return (
 		<SettingsDialogView
 			open={open}
@@ -288,7 +282,7 @@ export const SettingsDialog = ({ open, onOpenChange, host }: SettingsDialogProps
 			showConcurrency={isWasm}
 			maxWorkers={navigator.hardwareConcurrency}
 			firefox={navigator.userAgent.toLowerCase().includes('firefox')}
-			onApplyDefaults={applyDefaults}
+			onApplyDefaults={() => restoreDefaults(host)}
 		/>
 	);
 };
