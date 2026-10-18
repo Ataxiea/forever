@@ -1,6 +1,6 @@
 import i18n from '@i18n/config';
-import clsx from 'clsx';
 import { type BuildInfo, commitUrl } from '@sim/constants/build_info';
+import clsx from 'clsx';
 import { Fragment, type ReactNode } from 'react';
 
 export interface ReleaseInfoProps {
