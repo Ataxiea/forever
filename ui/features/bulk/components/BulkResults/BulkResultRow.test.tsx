@@ -76,12 +76,11 @@ describe('BulkResultRowView', () => {
 		expect(onEquip).toHaveBeenCalledOnce();
 	});
 
-	it('names the row’s talent setup above the gear and keeps its string on hover', () => {
+	it('names the row’s talent setup above the gear and as a talent preset', () => {
 		renderRow({ talents: { label: 'Arms', talentsString: '3030500130' } });
 
 		const line = screen.getByTestId('bulk-result-talents');
-		expect(line.textContent).toBe('Arms');
-		expect(screen.getByText('Arms').getAttribute('data-tooltip-content')).toBe('3030500130');
+		expect(line.textContent).toBe('bulk_tab.results.talent_preset');
 		expect(screen.getByTestId('bulk-gear-combo').firstElementChild).toBe(line);
 		expect(screen.getByTestId('gear-cells')).toBeTruthy();
 	});

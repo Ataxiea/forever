@@ -158,8 +158,7 @@ and `ReforgeSettings` share; keep the two apart in request shaping and serializa
   Only rows from the current-talents run keep the backend's paired errors, which are against that run's baseline;
   rows from other setups fall back to the unpaired test. The tie test uses the fewest iterations of any run, and a
   row's key (`bulkResultKey`) is its gear identity plus its talents string. The result side shows one ranking per
-  encounter across the talent setups. The talent line sits on rows and in Compare only when more than one setup ran; a row shows the setup's name only,
-  with its talents string in a tooltip on the name.
+  encounter across the talent setups. The talent line sits on rows and in Compare only when more than one setup ran; a row shows "Talent preset: <name>" and no talents string.
   Current gear under another setup is a row of its own, labelled "No gear changes". Equip writes the row's gear and
   talents, and the CSV has `talents` and `talents_string` columns. A row from another setup is compared with the
   reference by the unpaired test.

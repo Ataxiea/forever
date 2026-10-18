@@ -1295,6 +1295,7 @@
 			"encounters_caption": "The best set's DPS and its gain over your current gear, per encounter. Pick one to see its ranking.",
 			"current": "Current",
 			"current_talents": "Current talents",
+			"talent_preset": "Talent preset: {{name}}",
 			"export_csv": "Export CSV"
 		},
 		"compare": {

@@ -4650,6 +4650,9 @@
 						"current_talents": {
 							"type": "string"
 						},
+						"talent_preset": {
+							"type": "string"
+						},
 						"export_csv": {
 							"type": "string"
 						}
@@ -4668,6 +4671,7 @@
 						"encounters_caption",
 						"current",
 						"current_talents",
+						"talent_preset",
 						"export_csv"
 					]
 				},
