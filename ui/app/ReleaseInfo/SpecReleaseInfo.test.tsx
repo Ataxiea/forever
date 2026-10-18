@@ -22,7 +22,11 @@ describe('SpecReleaseInfo', () => {
 
 		fireEvent.mouseEnter(screen.getByRole('button', { name: 'Release details' }));
 		expect([...document.querySelectorAll('dt')].map(dt => dt.textContent)).toEqual(['Sim', 'Feral Cat', 'Game data']);
-		expect([...document.querySelectorAll('dd')].map(dd => dd.textContent)).toEqual(['Built 2026-10-18 · 2fe052c', 'Changed 2026-10-17 · 8109a4c', '1.60.1.70450']);
+		expect([...document.querySelectorAll('dd')].map(dd => dd.textContent)).toEqual([
+			'Built 2026-10-18 · 2fe052c',
+			'Changed 2026-10-17 · 8109a4c',
+			'1.60.1.70450',
+		]);
 		expect(screen.getByRole('link', { name: '8109a4c' }).getAttribute('href')).toBe(`https://github.com/wowsims/forever/commit/${specCommit}`);
 	});
 
