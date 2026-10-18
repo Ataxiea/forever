@@ -1,5 +1,6 @@
 import i18n from '@i18n/config';
 import { type BuildInfo, commitUrl } from '@sim/constants/build_info';
+import { Button } from '@ui-kit/Button';
 import clsx from 'clsx';
 import { Fragment, type ReactNode } from 'react';
 
@@ -23,14 +24,14 @@ export const ReleaseInfo = ({ info, className }: ReleaseInfoProps) => {
 		parts.push({
 			key: 'commit',
 			node: (
-				<a
+				<Button
 					href={commitUrl(info.commit)}
 					target="_blank"
-					rel="noopener noreferrer"
+					variant="unstyled"
 					className="text-link"
 					title={i18n.t('common.release_info.commit_link', { commit: short })}>
 					{short}
-				</a>
+				</Button>
 			),
 		});
 	}
