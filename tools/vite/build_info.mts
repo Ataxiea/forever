@@ -75,11 +75,12 @@ const compareBuilds = (a: string, b: string): number => {
 	return 0;
 };
 
-// A spec is its page folder, ui/specs/<class>/<spec>, the class's shared UI folder, and its sim code: the
-// class's own files in sim/<class>, plus sim/<class>/<spec> when the spec has a sim folder. The expected
-// results files are left out, since a core change rewrites them all. The log starts at the commit the
-// release names, so a pull request's preview never names its merge commit. A shallow clone has no
-// history to read, so it reports no spec at all rather than its one commit for every spec.
+// A spec's version is the last change to its presets (presets.ts and the apls, gear_sets and builds
+// folders in ui/specs/<class>/<spec>) or its sim code and expected results (the class's own files in
+// sim/<class>, plus sim/<class>/<spec> when the spec has a sim folder). Its page's other UI and the class's
+// shared UI do not count. The log starts at the commit the release names, so a pull request's preview
+// never names its merge commit. A shallow clone has no history to read, so it reports no spec at all
+// rather than its one commit for every spec.
 const specVersions = (root: string): Record<string, SpecVersion> => {
 	try {
 		if (git(root, ['rev-parse', '--is-shallow-repository']) === 'true') {
@@ -102,7 +103,8 @@ const specVersions = (root: string): Record<string, SpecVersion> => {
 				continue;
 			}
 			const sim = [`:(glob)sim/${className}/*`, ...(existsSync(path.join(root, 'sim', className, specName)) ? [`sim/${className}/${specName}`] : [])];
-			const paths = [`ui/specs/${className}/${specName}`, `ui/specs/${className}/shared`, ...sim, ':(exclude,glob)**/*.results'];
+			const presets = ['presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${className}/${specName}/${name}`);
+			const paths = [...presets, ...sim];
 			try {
 				const [commit, date] = git(root, ['log', '-1', '--format=%H %cs', process.env.BUILD_COMMIT || 'HEAD', '--', ...paths]).split(' ');
 				if (commit) {

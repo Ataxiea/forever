@@ -38,7 +38,7 @@ to the landing page, so getting the landing page means there is no `ui/specs/<cl
 
 `tools/vite/build_info.mts` reads the commit (`BUILD_COMMIT`, else `git rev-parse HEAD`, else `GITHUB_SHA`), the UTC
 build date, the newest game build in `assets/db_inputs/spell_store_inputs.json` and each spec's last change (`git log`
-over its page folder and sim code, `.results` files left out) when vite loads its config, and `vite.config.mts` defines
+over its presets, sim code and expected results) when vite loads its config, and `vite.config.mts` defines
 them as `import.meta.env.VITE_BUILD_*`, `VITE_GAME_VERSION` and `VITE_SPEC_VERSIONS`. A shallow clone has no spec
 versions, so the build workflows check out the full history. The landing page shows the release beside its title, and a
 spec page under the sidebar's stats, with the spec's last change on hover. The values are read at each
