@@ -51,10 +51,13 @@
     },
     "rotation": {
       "type": "TypeAPL",
-      "priorityList": [
+        "priorityList": [
+        {"action":{"condition":{"cmp":{"op":"OpLe","lhs":{"currentManaPercent":{}},"rhs":{"const":{"val":"50%"}}}},"castSpell":{"spellId":{"itemId":13444}}}},
+        {"action":{"condition":{"cmp":{"op":"OpLe","lhs":{"currentManaPercent":{}},"rhs":{"const":{"val":"50%"}}}},"castSpell":{"spellId":{"itemId":12662}}}},
         {"action":{"condition":{"auraIsInactive":{"sourceUnit":{"type":"Player","index":1},"auraId":{"spellId":10928,"rank":8},"includeReactionTime":true}},"castSpell":{"spellId":{"spellId":10928,"rank":8},"target":{"type":"Player","index":1}}}},
         {"action":{"condition":{"spellCanCast":{"spellId":{"spellId":1240827,"rank":3}}},"castSpell":{"spellId":{"spellId":1240827,"rank":3},"target":{"type":"Player","index":1}}}},
-        {"action":{"sequence":{"name":"Litany","actions":[{"castSpell":{"spellId":{"spellId":10915,"rank":5},"target":{"type":"Player","index":1}}},{"castSpell":{"spellId":{"spellId":6064,"rank":4},"target":{"type":"Player","index":1}}},{"castSpell":{"spellId":{"spellId":1240772,"rank":4}}}]}}}
+        {"action":{"sequence":{"name":"Litany","actions":[{"castSpell":{"spellId":{"spellId":10915,"rank":5},"target":{"type":"Player","index":1}}},{"castSpell":{"spellId":{"spellId":6064,"rank":4},"target":{"type":"Player","index":1}}},{"castSpell":{"spellId":{"spellId":1240772,"rank":4},"target":{"type":"Player","index":1}}},{"resetSequence":{"sequenceName":"Litany"}}]}}},
+        {"action":{"condition":{"sequenceIsComplete":{"sequenceName":"Litany"}},"resetSequence":{"sequenceName":"Litany"}}}
       ]
     },
     "reactionTimeMs": 100,
