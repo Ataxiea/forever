@@ -10,6 +10,7 @@ import { useBulkState } from '../../hooks/useBulkState';
 import { changedItemLabels, compareMatrix, gainTint, type MatrixCell } from '../../model/compare';
 import { encounterLabel, formatEncounterDuration } from '../../model/encounters';
 import { formatBulkDps } from '../../model/format';
+import { talentsLabel } from '../../model/talents';
 import { BulkCompareTable, type BulkCompareTableProps } from '../BulkCompareTable';
 
 const t = (key: string, options?: Record<string, unknown>) => i18n.t(`bulk_tab.compare.${key}`, options);
@@ -33,16 +34,17 @@ const cellTooltip = ({ result, rank, gainPct }: MatrixCell, entry: BulkEncounter
 };
 
 const tableProps = (entries: readonly BulkEncounterResults[], canDualWield: boolean): BulkCompareTableProps => {
-	const { columns, rows, scale, current } = compareMatrix(entries);
+	const { columns, rows, scale, current, showTalents } = compareMatrix(entries);
 	return {
 		// The column gives the length alone; the variation is on the encounter list.
 		columns: columns.map(entry => ({
 			label: encounterLabel(entry),
 			length: formatEncounterDuration({ duration: entry.duration, durationVariation: null }),
 		})),
-		rows: rows.map(({ key, set, cells }) => ({
+		rows: rows.map(({ key, set, talents, cells }) => ({
 			key,
 			label: set ? shortLabel(set.number) : currentLabel(),
+			talents: showTalents ? talentsLabel(talents) : null,
 			changes: set && current ? changedItemLabels(set.gear, current, canDualWield) : [],
 			cells: cells.map(
 				(cell, index) =>

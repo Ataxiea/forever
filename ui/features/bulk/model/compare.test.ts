@@ -4,7 +4,7 @@ import { UIEnchant, UIItem } from '@generated/proto/ui';
 import type { BulkEncounterResults, BulkRankedResult } from '@sim/bulk/types';
 import { EquippedItem } from '@sim/proto/equipped_item';
 import { Gear } from '@sim/proto/gear';
-import { CURRENT_TALENT_SETUP } from '@testing/storybook/fixtures/bulk-compare';
+import { BULK_COMPARE_TALENT_ENTRIES, CURRENT_TALENT_SETUP } from '@testing/storybook/fixtures/bulk-compare';
 import { describe, expect, it } from 'vitest';
 
 import { changedItemLabels, compareMatrix, gainTint, type MatrixRow } from './compare';
@@ -115,6 +115,31 @@ describe('compareMatrix', () => {
 		const [current, set] = compareMatrix([entry('Solo', 60, [[A, 990]])]).rows;
 
 		expect([current.cells[0]!.best, set.cells[0]!.best]).toEqual([true, false]);
+	});
+
+	it('keys a set by its gear and talents, so the current gear with another setup is a set of its own', () => {
+		const { rows } = compareMatrix(BULK_COMPARE_TALENT_ENTRIES);
+		const helm = (row: MatrixRow) => (row.set ? row.set.gear.getEquippedItem(ItemSlot.ItemSlotHead)!.id : null);
+
+		expect(rows.map(row => [row.set?.number ?? null, helm(row), row.talents.name])).toEqual([
+			[null, null, ''],
+			[1, 2, 'Arms'],
+			[2, 1, 'Arms'],
+			[3, 3, ''],
+		]);
+		expect(rows[0].talents).toBe(CURRENT_TALENT_SETUP);
+		expect(rows.map(row => row.cells.map(cell => (cell ? cell.rank : 'gap')))).toEqual([
+			[null, null],
+			[1, 2],
+			[2, 'gap'],
+			[3, 1],
+		]);
+	});
+
+	it('shows talents only when an encounter ran more than one setup', () => {
+		expect(compareMatrix(ENTRIES).showTalents).toBe(false);
+		expect(compareMatrix(BULK_COMPARE_TALENT_ENTRIES).showTalents).toBe(true);
+		expect(compareMatrix([...ENTRIES, BULK_COMPARE_TALENT_ENTRIES[0]]).showTalents).toBe(true);
 	});
 });
 

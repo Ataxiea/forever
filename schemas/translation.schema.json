@@ -4623,6 +4623,12 @@
 						"gear_equipped": {
 							"type": "string"
 						},
+						"gear_talents_equipped": {
+							"type": "string"
+						},
+						"gear_unchanged": {
+							"type": "string"
+						},
 						"current_gear": {
 							"type": "string"
 						},
@@ -4653,6 +4659,8 @@
 						"run_simulation",
 						"equip_button",
 						"gear_equipped",
+						"gear_talents_equipped",
+						"gear_unchanged",
 						"current_gear",
 						"margin_of_error",
 						"tied_group",

@@ -8,7 +8,9 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./BulkResultRow', () => ({
-	BulkResultRow: ({ iterations }: { iterations: number }) => <div data-testid="row" data-iterations={iterations} />,
+	BulkResultRow: ({ iterations, showTalents }: { iterations: number; showTalents: boolean }) => (
+		<div data-testid="row" data-iterations={iterations} data-show-talents={String(showTalents)} />
+	),
 }));
 
 const { BulkResults } = await import('./BulkResults');
@@ -18,14 +20,14 @@ const RUN_ITERATIONS = 30000;
 
 const result = (avg: number) => ({ gear: {}, dpsMetrics: { avg, stdev: 1 }, talents: CURRENT_TALENT_SETUP }) as unknown as BulkRankedResult;
 
-const entry = (iterations: number): BulkEncounterResults => {
+const entry = (iterations: number, talentSetups = 1): BulkEncounterResults => {
 	const baseline = result(1000);
 	return {
 		name: '',
 		isCurrent: true,
 		duration: 180,
 		durationVariation: 5,
-		results: { chains: [[result(1100)], [baseline]], originalGearResults: baseline, iterations, talentSetups: 1 },
+		results: { chains: [[result(1100)], [baseline]], originalGearResults: baseline, iterations, talentSetups },
 	};
 };
 
@@ -48,5 +50,14 @@ describe('BulkResults', () => {
 	it('gives every row the iteration count the run was scored with, not the sidebar value', () => {
 		mount([entry(RUN_ITERATIONS)]);
 		expect(rowIterations()).toEqual([String(RUN_ITERATIONS), String(RUN_ITERATIONS)]);
+	});
+
+	it.each([
+		[1, 'false'],
+		[2, 'true'],
+	])('has the rows name their talent setup only when the encounter ran more than one (%i setups)', (talentSetups, shown) => {
+		mount([entry(RUN_ITERATIONS, talentSetups)]);
+
+		expect(screen.getAllByTestId('row').map(row => row.getAttribute('data-show-talents'))).toEqual([shown, shown]);
 	});
 });

@@ -21,22 +21,25 @@ const CURRENT = compareGearSet(1);
 
 export const CURRENT_TALENT_SETUP: BulkTalentSetup = { name: '', talentsString: '0000000000', isCurrent: true };
 
-const result = (gear: Gear, avg: number): BulkRankedResult => ({
+const ARMS_TALENT_SETUP: BulkTalentSetup = { name: 'Arms', talentsString: '3030500130', isCurrent: false };
+
+const result = (gear: Gear, avg: number, talents = CURRENT_TALENT_SETUP): BulkRankedResult => ({
 	gear,
 	dpsMetrics: DistributionMetrics.create({ avg, stdev: 10 }),
-	talents: CURRENT_TALENT_SETUP,
+	talents,
 });
 
-// An encounter ranking the sets with the given helm ids at the given DPS, and the current gear at 1000, best first.
-const encounter = (name: string, duration: number | null, ranked: Array<[number, number]>): BulkEncounterResults => {
+// An encounter ranking the sets with the given helm ids at the given DPS, with the current talents unless a set names
+// others, and the current gear with the current talents at 1000, best first.
+const encounter = (name: string, duration: number | null, ranked: Array<[number, number, BulkTalentSetup?]>, talentSetups = 1): BulkEncounterResults => {
 	const base = result(CURRENT, 1000);
-	const results = [...ranked.map(([id, avg]) => result(compareGearSet(id), avg)), base].sort((a, b) => b.dpsMetrics.avg - a.dpsMetrics.avg);
+	const results = [...ranked.map(([id, avg, talents]) => result(compareGearSet(id), avg, talents)), base].sort((a, b) => b.dpsMetrics.avg - a.dpsMetrics.avg);
 	return {
 		name,
 		isCurrent: false,
 		duration,
 		durationVariation: duration === null ? null : 5,
-		results: { chains: results.map(ranking => [ranking]), originalGearResults: base, iterations: 100, talentSetups: 1 },
+		results: { chains: results.map(ranking => [ranking]), originalGearResults: base, iterations: 100, talentSetups },
 	};
 };
 
@@ -58,6 +61,30 @@ export const BULK_COMPARE_ENTRIES: BulkEncounterResults[] = [
 		[3, 1150],
 		[2, 1120],
 	]),
+];
+
+// Two encounters that each ran the current talents and Arms; display order Council, Patchwerk. Helm 2 with Arms ranks in
+// both, the current gear (helm 1) with Arms only in Council, helm 3 with the current talents in both.
+export const BULK_COMPARE_TALENT_ENTRIES: BulkEncounterResults[] = [
+	encounter(
+		'Patchwerk',
+		300,
+		[
+			[3, 1100],
+			[2, 1080, ARMS_TALENT_SETUP],
+		],
+		2,
+	),
+	encounter(
+		'Council',
+		90,
+		[
+			[2, 1060, ARMS_TALENT_SETUP],
+			[1, 1030, ARMS_TALENT_SETUP],
+			[3, 1020],
+		],
+		2,
+	),
 ];
 
 // A host whose batch results are `entries`, over a real store, for the comparison views. Its player cannot dual wield.
