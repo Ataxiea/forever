@@ -33,7 +33,13 @@ import { Timeline } from '../Timeline';
 import { DrStickySlotContext } from './context/DrStickySlotContext';
 import { DetailedResultsPane } from './DetailedResultsPane';
 import { DetailedResultsTabs } from './DetailedResultsTabs';
-import { DEFAULT_DETAILED_RESULTS_TAB, DETAILED_RESULTS_TABS, HEALING_SPELLS_RESULTS_TAB, type DetailedResultsTabConfig } from './utils';
+import {
+	DEFAULT_DETAILED_RESULTS_TAB,
+	DETAILED_RESULTS_TABS,
+	HEALING_SPELLS_RESULTS_ENABLED,
+	HEALING_SPELLS_RESULTS_TAB,
+	type DetailedResultsTabConfig,
+} from './utils';
 
 // The viewer's choice, shared by every spec page.
 const GROUP_RANKS_STORAGE_KEY = `${LOCAL_STORAGE_PREFIX}_results-group-ranks.v1`;
@@ -143,7 +149,7 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 	const visibleTabs = useMemo(
 		() =>
 			DETAILED_RESULTS_TABS.filter(tab => {
-				if (tab.id === HEALING_SPELLS_RESULTS_TAB) return isHealingSpec && hasResults;
+				if (tab.id === HEALING_SPELLS_RESULTS_TAB) return HEALING_SPELLS_RESULTS_ENABLED && isHealingSpec && hasResults;
 				if (tab.id === 'damageTab') return showDamage;
 				if (tab.id === 'healingTab') return showHealing;
 				if (tab.id === 'threatTab' || tab.id === 'damageTakenTab') return showThreat;
@@ -302,7 +308,7 @@ export const DetailedResults = ({ resultsManager }: DetailedResultsProps) => {
 					<HealingMetricsTable />
 				</DetailedResultsPane>
 			)}
-			{isHealingSpec && hasResults && (
+			{HEALING_SPELLS_RESULTS_ENABLED && isHealingSpec && hasResults && (
 				<DetailedResultsPane id={HEALING_SPELLS_RESULTS_TAB}>
 					<HealingSpellTable />
 				</DetailedResultsPane>

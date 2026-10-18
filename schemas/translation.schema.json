@@ -3369,6 +3369,29 @@
 					"additionalProperties": false,
 					"required": ["title", "filters", "potions", "elixirs", "food", "holiday", "engineering", "imbue", "weaponImbue", "scrolls", "miscellaneous"]
 				},
+				"healing_settings": {
+					"type": "object",
+					"properties": {
+						"title": { "type": "string" },
+						"assignment": { "type": "string" },
+						"tank_healing": { "type": "string" },
+						"raid_healing": { "type": "string" },
+						"group_size": { "type": "string" },
+						"dungeon_group": { "type": "string" },
+						"ten_player": { "type": "string" },
+						"twenty_player": { "type": "string" }
+					},
+					"additionalProperties": false,
+					"required": ["title", "assignment", "tank_healing", "raid_healing", "group_size", "dungeon_group", "ten_player", "twenty_player"]
+				},
+				"healing_inputs": {
+					"type": "object",
+					"properties": {
+						"title": { "type": "string" }
+					},
+					"additionalProperties": false,
+					"required": ["title"]
+				},
 				"encounter": {
 					"type": "object",
 					"properties": {
@@ -3981,6 +4004,8 @@
 				"debuffs",
 				"other",
 				"consumables",
+				"healing_settings",
+				"healing_inputs",
 				"encounter",
 				"player",
 				"saved_encounters",
@@ -8034,6 +8059,12 @@
 						"target_number": {
 							"type": "string"
 						},
+						"healer_target": {
+							"type": "string"
+						},
+						"heal_target_number": {
+							"type": "string"
+						},
 						"group_ranks": {
 							"type": "string"
 						},
@@ -8983,6 +9014,8 @@
 						"sim_1_death",
 						"all_targets",
 						"target_number",
+						"healer_target",
+						"heal_target_number",
 						"group_ranks",
 						"damage",
 						"timeline",

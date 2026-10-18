@@ -27,11 +27,16 @@ export const hasTarget = (result: SimResult, target: number): boolean =>
 
 /** Shows only healed targets in a healing sim; otherwise, all targets in encounter order. */
 export const targetOptions = (result: SimResult): Array<ChoiceOption<number>> => {
-	const healingSimulation = result.getRaidIndexedPlayers().some(player => player.spec?.isHealingSpec);
+	const healers = result.getRaidIndexedPlayers().filter(player => player.spec?.isHealingSpec);
+	const healingSimulation = healers.length > 0;
+	let healTargetNumber = 0;
+	const healerIndexes = new Set(healers.map(healer => healer.unitIndex));
 	const targets = healingSimulation
 		? healingTargetIndexes(result).map((index): ChoiceOption<number> => ({
 				value: index,
-				label: i18n.t('results_tab.details.target_number', { number: index + 1 }),
+				label: healerIndexes.has(index)
+					? i18n.t('results_tab.details.healer_target')
+					: i18n.t('results_tab.details.heal_target_number', { number: ++healTargetNumber }),
 			}))
 		: result.getTargets().map((unit): ChoiceOption<number> => ({
 				value: unit.index,

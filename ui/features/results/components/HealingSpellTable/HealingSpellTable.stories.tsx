@@ -13,7 +13,7 @@ const spells = [
 		normal: { min: 812, avg: 913.5, max: 1015 },
 		critical: { min: 1218, avg: 1370.25, max: 1522.5 },
 		critChance: 18.4,
-		divineAegis: { min: 243.6, avg: 274.05, max: 304.5 },
+		customMetrics: { example_absorb: { min: 243.6, avg: 274.05, max: 304.5 } },
 	},
 	{
 		id: ActionId.fromSpellId(139, 10),
@@ -40,7 +40,9 @@ const meta = {
 	title: 'Features/Results/HealingSpellTable',
 	component: HealingSpellTableView,
 	tags: ['autodocs'],
-	args: { spells },
+	args: {
+		spells,
+	},
 } satisfies Meta<typeof HealingSpellTableView>;
 
 export default meta;

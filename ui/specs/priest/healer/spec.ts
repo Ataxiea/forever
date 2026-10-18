@@ -21,6 +21,10 @@ export default defineSpec<Spec.SpecHealerPriest>({
 	enableHealing: true,
 	className: 'healer-priest-sim-ui',
 	cssScheme: PlayerClasses.getCssScheme(PlayerClasses.Priest),
+	knownIssues: [
+		'Healing sim is Experimental, all results should be taken with a grain of salt',
+		'Downranking Penalty is not implemented yet'
+	],
 
 	// All stats for which EP should be calculated.
 	epStats: [Stat.StatIntellect, Stat.StatSpirit, Stat.StatHealingPower, Stat.StatCritRating, Stat.StatHasteRating, Stat.StatMP5, Stat.StatMana],
@@ -112,14 +116,6 @@ export default defineSpec<Spec.SpecHealerPriest>({
 			}),
 		],
 	},
-	healingProcAuras: [
-		{ spellId: 14893, labelKey: 'results_tab.details.healing_spells.inspiration' },
-		{ spellId: 431624, labelKey: 'results_tab.details.healing_spells.divine_aegis' },
-	],
-	healingMetricsSourceActions: [
-		{ spellId: 15290, source: 'damage' },
-		{ spellId: 431624, source: 'healing' },
-	],
 	otherInputs: { inputs: [] },
 	settingsComponentUnderPlayer: HealingSettings,
 	hideDebuffs: true,

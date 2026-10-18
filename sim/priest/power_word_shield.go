@@ -12,7 +12,7 @@ func (priest *Priest) registerPowerWordShield() {
 	})
 
 	// Every rank puts up the same shield on a target, so a cast of any rank replaces the one up. The
-	// damage it absorbs is credited as shielding to the rank that cast it.
+	// applied shield is credited as shielding to the rank that cast it.
 	highest := spellData.PowerWordShield.Highest()
 	schools := core.SpellSchool(highest.AbsorbEffect().Misc)
 	absorbLabel := spelldata.Label(highest.Name + " - " + priest.Label)
