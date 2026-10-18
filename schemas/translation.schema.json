@@ -1606,6 +1606,22 @@
 				},
 				"close": {
 					"type": "string"
+				},
+				"release_info": {
+					"type": "object",
+					"properties": {
+						"game_version": {
+							"type": "string"
+						},
+						"built": {
+							"type": "string"
+						},
+						"commit_link": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["game_version", "built", "commit_link"]
 				}
 			},
 			"additionalProperties": false,
@@ -1646,7 +1662,8 @@
 				"significance",
 				"action_names",
 				"action_tags",
-				"close"
+				"close",
+				"release_info"
 			]
 		},
 		"sim": {

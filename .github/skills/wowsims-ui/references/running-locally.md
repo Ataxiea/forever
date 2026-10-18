@@ -1,6 +1,6 @@
 # Running the sim locally
 
-**Source of truth:** `vite.config.mts`, `vite.build-workers.mts`, `tools/vite/spec_pages.mts`, the `devserver` /
+**Source of truth:** `vite.config.mts`, `vite.build-workers.mts`, `tools/vite/spec_pages.mts`, `tools/vite/build_info.mts`, the `devserver` /
 `rundevserver` / `devmode` / `host` targets in the makefile, `ui/worker/local_worker.ts`, and for Storybook
 `.storybook/main.ts` and the `storybook:*` scripts in `package.json`. Read a target before copying a command from here:
 
@@ -32,6 +32,13 @@ A fresh worktree also needs the generated files (`verification.md`, last section
 `tools/vite/spec_pages.mts` serves every spec URL from `ui/index_template.html`, and redirects the bare
 `/forever/<class>/<spec>` to the trailing-slash form as the production host does. Only an unknown spec URL falls through
 to the landing page, so getting the landing page means there is no `ui/specs/<class>/<spec>/spec.ts(x)` for that URL.
+
+## The release a page shows
+
+`tools/vite/build_info.mts` reads the commit (`git rev-parse HEAD`, else `GITHUB_SHA`), the UTC build date and the newest
+game build in `assets/db_inputs/spell_store_inputs.json` when vite loads its config, and `vite.config.mts` defines them as
+`import.meta.env.VITE_BUILD_*` and `VITE_GAME_VERSION`. Every build, the dev server's included, carries its own; vitest
+and Storybook do not load that config, so `BUILD_INFO` is empty there and `ReleaseInfo` renders nothing.
 
 ## Running real sims
 

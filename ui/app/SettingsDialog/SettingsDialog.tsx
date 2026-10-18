@@ -1,5 +1,6 @@
 import i18n from '@i18n/config';
 import { setLang, supportedLanguages } from '@i18n/locale_service';
+import { BUILD_INFO } from '@sim/constants/build_info';
 import { useSim } from '@sim/context/SimHostContext';
 import { useSimStore } from '@sim/hooks/useSimStore';
 import { useUiStore } from '@sim/hooks/useUiStore';
@@ -15,6 +16,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 
 import { trackEvent } from '../../tracking/utils';
 import type { SimHostObject } from '../individual_sim_ui';
+import { ReleaseInfo } from '../ReleaseInfo';
 import { restoreDefaults } from '../restore_defaults';
 
 export interface SettingsDialogViewProps {
@@ -98,6 +100,7 @@ export const SettingsDialogView = ({
 			title={i18n.t('info.options.title')}
 			footer={
 				<>
+					<ReleaseInfo info={BUILD_INFO} className="me-auto text-xs text-secondary" />
 					<Button variant="primary" data-testid="restore-defaults" {...tooltipAnchorProps(restoreTooltipId)} onClick={onApplyDefaults}>
 						{i18n.t('info.options.restore_defaults.button')}
 					</Button>

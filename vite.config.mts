@@ -11,6 +11,7 @@ import { watchAndRun } from 'vite-plugin-watch-and-run';
 import { checker } from 'vite-plugin-checker';
 import i18nextLoader from 'vite-plugin-i18next-loader';
 
+import { readBuildInfo } from './tools/vite/build_info.mjs';
 import { SPEC_PAGE_TEMPLATE, specPages } from './tools/vite/spec_pages.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -130,6 +131,7 @@ export const getBaseConfig = ({ command, mode }: ConfigEnv) =>
 
 export default defineConfig(({ command, mode }) => {
 	const baseConfig = getBaseConfig({ command, mode });
+	const buildInfo = readBuildInfo(__dirname);
 	const watchedBackendFiles = [
 		path.resolve(__dirname, 'sim/core/character_constants.go'),
 		path.resolve(__dirname, 'sim/core/bulk/candidates.go'),
@@ -169,9 +171,13 @@ export default defineConfig(({ command, mode }) => {
 			}),
 		],
 		// GitHub Actions sets GITHUB_REPOSITORY in every job, so the issue links point at whichever
-		// repository built this page. A fork's build files its issues on the fork.
+		// repository built this page. A fork's build files its issues on the fork. The build date, commit
+		// and game build are the release the landing page and the options dialog show (tools/vite/build_info.mts).
 		define: {
 			'import.meta.env.VITE_GITHUB_REPOSITORY': JSON.stringify(process.env.GITHUB_REPOSITORY ?? ''),
+			'import.meta.env.VITE_BUILD_DATE': JSON.stringify(buildInfo.date),
+			'import.meta.env.VITE_BUILD_COMMIT': JSON.stringify(buildInfo.commit),
+			'import.meta.env.VITE_GAME_VERSION': JSON.stringify(buildInfo.gameVersion),
 		},
 		oxc: {
 			jsx: {
