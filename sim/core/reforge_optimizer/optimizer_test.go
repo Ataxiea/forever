@@ -24,11 +24,13 @@ const (
 	plainArmorEnchantID
 	armorNoModsEnchantID
 	armorScalingNeckID
+	rangedHitShoulderID
 )
 
 const (
-	attackPowerShoulderAP = 30
-	critShoulderAP        = 26 // Below the plain shoulder's, so the 1% crit has to carry it.
+	attackPowerShoulderAP    = 30
+	critShoulderAP           = 26 // Below the plain shoulder's, so the 1% crit has to carry it.
+	rangedHitShoulderPercent = 3
 )
 
 func addFixtureEnchants() {
@@ -40,6 +42,8 @@ func addFixtureEnchants() {
 	crit := make([]float64, len(proto.PseudoStat_name))
 	crit[proto.PseudoStat_PseudoStatMeleeCritPercent] = 1
 	crit[proto.PseudoStat_PseudoStatRangedCritPercent] = 1
+	rangedHit := make([]float64, len(proto.PseudoStat_name))
+	rangedHit[proto.PseudoStat_PseudoStatRangedHitPercent] = rangedHitShoulderPercent
 	core.AddToDatabase(&proto.SimDatabase{Enchants: []*proto.SimEnchant{
 		{EffectId: agilityWristID, Type: proto.ItemType_ItemTypeWrist, Stats: stat(proto.Stat_StatAgility, 7)},
 		{EffectId: strengthWristID, Type: proto.ItemType_ItemTypeWrist, Stats: stat(proto.Stat_StatStrength, 7)},
@@ -48,6 +52,7 @@ func addFixtureEnchants() {
 		{EffectId: agilityWeaponID, Type: proto.ItemType_ItemTypeWeapon, Stats: stat(proto.Stat_StatAgility, 15)},
 		{EffectId: attackPowerShoulderID, Type: proto.ItemType_ItemTypeShoulder, Stats: stat(proto.Stat_StatAttackPower, attackPowerShoulderAP)},
 		{EffectId: critShoulderID, Type: proto.ItemType_ItemTypeShoulder, Stats: stat(proto.Stat_StatAttackPower, critShoulderAP), PseudoStats: crit},
+		{EffectId: rangedHitShoulderID, Type: proto.ItemType_ItemTypeShoulder, PseudoStats: rangedHit},
 	}})
 }
 
@@ -182,6 +187,52 @@ func TestOptimizeValuesAPercentEnchantThroughItsRating(t *testing.T) {
 	}
 	if got, want := result.GetScore(), critShoulderAP+core.CritRatingPerCritPercent*critRatingEP; math.Abs(got-want) > 1e-9 {
 		t.Errorf("score %v, want %v", got, want)
+	}
+}
+
+// A percent's pre-cap weight and post-cap EP are per point of its rating, so a ranged hit percent
+// weight values a 3% ranged hit enchant as the same weight on hit rating does, which outweighs the
+// plain shoulder's attack power.
+func TestOptimizeReadsPercentWeightsPerRatingPoint(t *testing.T) {
+	addFixtureEnchants()
+	const hitEP, postCapEP = 2, 0.5
+	rangedHitPercent := proto.PseudoStat_PseudoStatRangedHitPercent
+	shoulder := &proto.BulkEnchantSlotOptions{Slot: proto.ItemSlot_ItemSlotShoulder, EffectIds: []int32{attackPowerShoulderID, rangedHitShoulderID}}
+	percentRequest := func() *proto.ReforgeOptimizeRequest {
+		request := enchantRequest(protectionWarriorRaid("preraid"), map[proto.Stat]float64{proto.Stat_StatAttackPower: 1}, shoulder)
+		request.PreCapEpWeights.PseudoStats[rangedHitPercent] = hitEP
+		return request
+	}
+
+	for name, request := range map[string]*proto.ReforgeOptimizeRequest{
+		"hit rating":         enchantRequest(protectionWarriorRaid("preraid"), map[proto.Stat]float64{proto.Stat_StatAttackPower: 1, proto.Stat_StatHitRating: hitEP}, shoulder),
+		"ranged hit percent": percentRequest(),
+	} {
+		result := optimize(t, request)
+		if got := slotEnchant(result, proto.ItemSlot_ItemSlotShoulder); got != rangedHitShoulderID {
+			t.Errorf("%s: shoulder enchant %d, want %d (ranged hit)", name, got, rangedHitShoulderID)
+		}
+		if got, want := result.GetScore(), rangedHitShoulderPercent*core.HitRatingPerHitPercent*hitEP; math.Abs(got-want) > 1e-9 {
+			t.Errorf("%s: score %v, want %v", name, got, want)
+		}
+	}
+
+	// A breakpoint 1% above the sheet, which the enchant passes, so its ranged hit counts at the post-cap EP.
+	capped := percentRequest()
+	capped.Settings.UseSoftCapBreakpoints = true
+	sheetRangedHit := getUnitStat(sheetStats(t, protectionWarriorRaid("preraid")), stats.UnitStatFromPseudoStat(rangedHitPercent))
+	capped.SoftCaps = []*proto.StatCapConfig{{
+		UnitStat:    &proto.UIStat{UnitStat: &proto.UIStat_PseudoStat{PseudoStat: rangedHitPercent}},
+		Breakpoints: []float64{sheetRangedHit + 1},
+		CapType:     proto.StatCapType_TypeSoftCap,
+		PostCap_EPs: []float64{postCapEP},
+	}}
+	result := optimize(t, capped)
+	if result.GetPassesDone() <= 1 {
+		t.Errorf("soft cap: %d passes, want more than 1", result.GetPassesDone())
+	}
+	if got, want := result.GetScore(), rangedHitShoulderPercent*core.HitRatingPerHitPercent*postCapEP; math.Abs(got-want) > 1e-9 {
+		t.Errorf("soft cap: score %v, want %v", got, want)
 	}
 }
 

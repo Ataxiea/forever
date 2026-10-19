@@ -33,7 +33,7 @@ func ratingWeight(stat stats.Stat, ep float64) core.UnitStats {
 	return weights
 }
 
-func TestReforgeWeightsKeepPercentWeightsPerPercent(t *testing.T) {
+func TestReforgeWeightsReadPercentWeightsAsTheyAre(t *testing.T) {
 	weights := protoToCoreUnitStats(pseudoStatsProto(map[proto.PseudoStat]float64{
 		proto.PseudoStat_PseudoStatBlockPercent:     5,
 		proto.PseudoStat_PseudoStatMeleeHitPercent:  2,
@@ -41,7 +41,7 @@ func TestReforgeWeightsKeepPercentWeightsPerPercent(t *testing.T) {
 	}))
 
 	if got := computeCoeffScore(map[string]float64{pseudoStatCoeffKey(proto.PseudoStat_PseudoStatBlockPercent): 1}, weights); got != 5 {
-		t.Errorf("one Block%% scores %v, want the 5 per percent the EP values state", got)
+		t.Errorf("one Block%% scores %v, want the 5 the EP values state", got)
 	}
 	if got := getUnitStat(weights, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatRangedHitPercent)); got != 3 {
 		t.Errorf("ranged hit weight %v, want 3", got)

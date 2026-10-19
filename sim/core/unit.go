@@ -2,6 +2,7 @@ package core
 
 import (
 	"math"
+	"slices"
 	"time"
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
@@ -838,6 +839,30 @@ var RatingConversions = append(channelConversions(), []RatingConversion{
 	{stats.DefenseRating, stats.ParryPercent, DefenseRatingPerAvoidancePercent, 0},
 	{stats.DefenseRating, stats.BlockPercent, DefenseRatingPerAvoidancePercent, 0},
 }...)
+
+// The rating points one percent of a percent pseudo stat costs in the rating that converts into it,
+// and whether one does. Defense is no percent's own rating, and the off hand's percents have none.
+func RatingPerPseudoStatPercent(pseudoStat proto.PseudoStat) (float64, bool) {
+	for _, channels := range RatingChannelTable {
+		if slices.Contains(channels.Channels(), pseudoStat) {
+			return channels.RatingPerPercent, true
+		}
+	}
+	if slices.Contains(SchoolHitPseudoStats[stats.SchoolIndexArcane:], pseudoStat) {
+		return HitRatingPerHitPercent, true
+	}
+	for _, pair := range stats.PercentPseudoStats {
+		if pair.PseudoStat != pseudoStat {
+			continue
+		}
+		for _, conversion := range RatingConversions {
+			if conversion.Percent == pair.Stat && conversion.Rating != stats.DefenseRating {
+				return conversion.RatingPerPercent, true
+			}
+		}
+	}
+	return 0, false
+}
 
 func AddRatingConversions(sdm *stats.StatDependencyManager) {
 	for _, conversion := range RatingConversions {

@@ -9,9 +9,10 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Reads weights, caps and sheet stats alike. The percent pseudo stats stay in PseudoStats in the
-// sheet's percent, the unit GetPseudoStatsProto writes: a cap is compared there and a weight is
-// read there, so a Block% weight or cap stays per percent and ranged hit and crit stay totals.
+// Reads weights, caps and sheet stats alike, each value as the message states it. A percent pseudo
+// stat's cap or sheet value is in the sheet's percent, the unit GetPseudoStatsProto writes, with
+// ranged hit and crit as totals; its weight is per rating point, which weightPerPercent turns into
+// the weight per percent the optimizer counts.
 func protoToCoreUnitStats(protoStats *proto.UnitStats) core.UnitStats {
 	if protoStats == nil {
 		return core.NewUnitStats()
@@ -20,6 +21,17 @@ func protoToCoreUnitStats(protoStats *proto.UnitStats) core.UnitStats {
 		Stats:       stats.FromProtoArray(protoStats.Stats),
 		PseudoStats: slices.Clone(protoStats.PseudoStats),
 	}
+}
+
+// A weight per percent from the weight per rating point the stat weights give a percent with a rating.
+// Any other stat's weight is returned as it is.
+func weightPerPercent(unitStat stats.UnitStat, weight float64) float64 {
+	if unitStat.IsPseudoStat() {
+		if ratingPerPercent, ok := core.RatingPerPseudoStatPercent(proto.PseudoStat(unitStat.PseudoStatIdx())); ok {
+			return weight * ratingPerPercent
+		}
+	}
+	return weight
 }
 
 func getUnitStat(unitStats core.UnitStats, unitStat stats.UnitStat) float64 {

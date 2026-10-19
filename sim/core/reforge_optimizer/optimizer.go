@@ -148,7 +148,11 @@ func (o *reforgeOptimizer) optimizeReforges() (*proto.EquipmentSpec, float64, in
 		softCapConfigs = o.request.GetSoftCaps()
 	}
 	reforgeSoftCaps := computeReforgeSoftCaps(o.baseStats, softCapConfigs)
-	weights := checkWeights(protoToCoreUnitStats(o.request.GetPreCapEpWeights()), reforgeCaps, reforgeSoftCaps)
+	preCapWeights := protoToCoreUnitStats(o.request.GetPreCapEpWeights())
+	for idx, weight := range preCapWeights.PseudoStats {
+		preCapWeights.PseudoStats[idx] = weightPerPercent(stats.UnitStatFromPseudoStat(proto.PseudoStat(idx)), weight)
+	}
+	weights := checkWeights(preCapWeights, reforgeCaps, reforgeSoftCaps)
 
 	variables, constraints := o.buildEnchantModel(weights)
 	selected, score, passes, err := o.solveModel(weights, reforgeCaps, reforgeSoftCaps, variables, constraints, optimizerTimeout.Seconds())

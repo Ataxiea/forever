@@ -79,6 +79,11 @@ change.
   or haste channels share counted once and a rating's fallbacks counted once, as the largest; flat weapon damage as
   main-hand, off-hand or ranged DPS at the weapon's speed. The cap coefficients push the raw stat delta through
   the baseline's stat dependency manager (`resolveStatDelta`), so Agility counts toward Crit% and Dodge%.
+- The EP weight of a percent pseudo-stat that has a rating (hit, crit, haste, expertise, dodge, parry, block and
+  the school hit percents) is per rating point, in the request as in the stat weights, and so are the post-cap EPs
+  of a soft cap on one. Enchants state the percent, so `Stats.computeEP` converts a percent to its rating
+  before it applies the weight. Go converts both to per percent at its entry: `optimizeReforges` the pre-cap
+  weights and `computeReforgeSoftCaps` the post-cap EPs, through `weightPerPercent` (`reforge_stats.go`).
 - `enchantTieBreak` (twice for the slot's input enchant, none where the input enchant stays in the baseline) keeps
   the input enchant on an EP tie and fills a slot whose candidates are all worth 0. The solve passes an explicit
   `mipRelGap` far below HiGHS's default, which would otherwise swamp the tie-break.

@@ -266,8 +266,8 @@ func FromPseudoStatsProto(pseudoStats []float64) Stats {
 	return simStats
 }
 
-// The weights a UnitStats message carries, per point of whatever each stat counts: a percent's weight
-// is copied as it is, so Block% stays per percent and ranged hit and crit keep their own weight.
+// The weights a UnitStats message carries, each copied as it is: a percent with a rating stays per
+// rating point, as the stat weights report it, and ranged hit and crit keep their own weight.
 func WeightsFromUnitStatsProto(weights *proto.UnitStats) Stats {
 	simStats := FromProtoArray(weights.Stats)
 	for _, pair := range PercentPseudoStats {

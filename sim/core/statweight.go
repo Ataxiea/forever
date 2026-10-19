@@ -198,16 +198,8 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 		// Scale down the stat increment depending on the type of PseudoStat
 		statMod := defaultStatMod
 
-		if stat.EqualsPseudoStat(proto.PseudoStat_PseudoStatMeleeHitPercent) ||
-			stat.EqualsPseudoStat(proto.PseudoStat_PseudoStatRangedHitPercent) ||
-			stat.EqualsPseudoStat(proto.PseudoStat_PseudoStatSpellHitPercent) {
-			statMod /= HitRatingPerHitPercent
-		} else if stat.EqualsPseudoStat(proto.PseudoStat_PseudoStatExpertisePercent) {
-			statMod /= ExpertiseRatingPerExpertisePercent
-		} else if strings.Contains(statName, "SchoolHit") {
-			statMod /= HitRatingPerHitPercent
-		} else if strings.Contains(statName, "Crit") {
-			statMod /= CritRatingPerCritPercent
+		if ratingPerPercent, ok := RatingPerPseudoStatPercent(s); ok {
+			statMod /= ratingPerPercent
 		} else if strings.Contains(statName, "Dps") {
 			statMod *= 0.5
 		} else {
@@ -341,11 +333,11 @@ func calcStatWeights(swcr *proto.StatWeightsCalcRequest) (*StatWeightsResult, *p
 		}
 
 		modLow, modHigh := statPairs.StatData.ModLow, statPairs.StatData.ModHigh
+		// A percent with a rating is weighed per point of that rating, so it reads beside the rating's own weight.
 		if stat.IsPseudoStat() {
-			statName := proto.PseudoStat_name[int32(stat.PseudoStatIdx())]
-			if strings.Contains(statName, "SchoolHit") {
-				modLow *= HitRatingPerHitPercent
-				modHigh *= HitRatingPerHitPercent
+			if ratingPerPercent, ok := RatingPerPseudoStatPercent(proto.PseudoStat(stat.PseudoStatIdx())); ok {
+				modLow *= ratingPerPercent
+				modHigh *= ratingPerPercent
 			}
 		}
 

@@ -83,7 +83,7 @@ func addStatWeightPass(calc *proto.StatWeightsCalcRequest, baseline statWeightRu
 const syntheticBaselineDps = 1000.0
 
 // Builds the stat weight requests and answers each sub-sim with the DPS a point of its stat is worth
-// in dpsPerPoint, then computes the weights.
+// in dpsPerPoint, a point of a percent being one percent, then computes the weights.
 func runSyntheticStatWeights(t *testing.T, statsToWeigh []proto.Stat, pseudoStatsToWeigh []proto.PseudoStat, dpsPerPoint map[stats.UnitStat]float64) (*proto.StatWeightRequestsData, *proto.StatWeightsResult) {
 	t.Helper()
 	requests := buildStatWeightRequests(&proto.StatWeightsRequest{
@@ -137,7 +137,8 @@ var (
 
 // A spec weighing melee and ranged hit percent, or a hunter weighing ranged hit percent alone, still
 // simulates hit rating, and its weight is that sim's answer. Each percent sub-sim measures its own
-// channel, so the rating is simulated directly to value all of its channels at once.
+// channel, so the rating is simulated directly to value all of its channels at once. A percent's
+// weight is per point of hit rating: 25 DPS per melee hit percent weighs 2.5.
 func TestStatWeightsSimulateHitRatingBesideItsPercents(t *testing.T) {
 	for _, c := range []struct {
 		name        string
@@ -147,7 +148,7 @@ func TestStatWeightsSimulateHitRatingBesideItsPercents(t *testing.T) {
 	}{
 		{"melee and ranged hit", []proto.PseudoStat{proto.PseudoStat_PseudoStatMeleeHitPercent, proto.PseudoStat_PseudoStatRangedHitPercent},
 			map[stats.UnitStat]float64{agilityUnitStat: 1, hitRatingUnitStat: 3, meleeHitUnitStat: 25, rangedHitUnitStat: 10},
-			map[string]float64{"hit rating weight": 3, "hit rating EP": 3, "melee hit percent weight": 25, "ranged hit percent weight": 10}},
+			map[string]float64{"hit rating weight": 3, "hit rating EP": 3, "melee hit percent weight": 2.5, "ranged hit percent weight": 1}},
 		{"ranged hit alone", []proto.PseudoStat{proto.PseudoStat_PseudoStatRangedHitPercent},
 			map[stats.UnitStat]float64{agilityUnitStat: 1, hitRatingUnitStat: 2, rangedHitUnitStat: 18},
 			map[string]float64{"hit rating weight": 2}},
@@ -170,6 +171,47 @@ func TestStatWeightsSimulateHitRatingBesideItsPercents(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A percent with a rating is probed by the 10 points of rating a rating's sub-sim adds and weighed per
+// point of that rating. Dodge counts dodge rating, which defense also moves at another rate.
+func TestStatWeightsWeighPercentsPerRatingPoint(t *testing.T) {
+	const dpsPerPercent = 60.0
+	percents := []struct {
+		pseudoStat       proto.PseudoStat
+		ratingPerPercent float64
+	}{
+		{proto.PseudoStat_PseudoStatRangedCritPercent, CritRatingPerCritPercent},
+		{proto.PseudoStat_PseudoStatSpellHastePercent, HasteRatingPerHastePercent},
+		{proto.PseudoStat_PseudoStatSchoolHitPercentFire, HitRatingPerHitPercent},
+		{proto.PseudoStat_PseudoStatExpertisePercent, ExpertiseRatingPerExpertisePercent},
+		{proto.PseudoStat_PseudoStatDodgePercent, DodgeRatingPerDodgePercent},
+	}
+	dpsPerPoint := map[stats.UnitStat]float64{agilityUnitStat: 1}
+	var pseudoStats []proto.PseudoStat
+	for _, percent := range percents {
+		dpsPerPoint[stats.UnitStatFromPseudoStat(percent.pseudoStat)] = dpsPerPercent
+		pseudoStats = append(pseudoStats, percent.pseudoStat)
+	}
+
+	requests, result := runSyntheticStatWeights(t, []proto.Stat{proto.Stat_StatAgility}, pseudoStats, dpsPerPoint)
+	for _, percent := range percents {
+		unitStat := stats.UnitStatFromPseudoStat(percent.pseudoStat)
+		for _, request := range requests.StatSimRequests {
+			if request.StatData.UnitStat == int32(unitStat) && math.Abs(request.StatData.ModHigh*percent.ratingPerPercent-10) > 1e-9 {
+				t.Errorf("%s probes %v percent, want the 10 rating's worth", percent.pseudoStat, request.StatData.ModHigh)
+			}
+		}
+		if got, want := protoUnitStat(result.Dps.Weights, unitStat), dpsPerPercent/percent.ratingPerPercent; math.Abs(got-want) > 1e-9 {
+			t.Errorf("%s weight = %v, want %v per rating point", percent.pseudoStat, got, want)
+		}
+	}
+
+	for _, pseudoStat := range []proto.PseudoStat{proto.PseudoStat_PseudoStatOffHandHitPercent, proto.PseudoStat_PseudoStatReducedCritTakenPercent} {
+		if ratingPerPercent, ok := RatingPerPseudoStatPercent(pseudoStat); ok {
+			t.Errorf("%s costs %v rating per percent, want no rating", pseudoStat, ratingPerPercent)
+		}
 	}
 }
 
