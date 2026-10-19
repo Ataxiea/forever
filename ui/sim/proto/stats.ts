@@ -314,13 +314,21 @@ export class UnitStat {
 	}
 }
 
+// The percents outside the rating channels that a rating of the character's converts into, with that
+// rating. The target's percents the sheet shows (crit suppression, the main hand's dodge and parry)
+// have a root stat for display, but no rating moves them. percentRootRating in
+// sim/core/reforge_optimizer/enchants.go reads the same set from the core rating conversions.
 const RATING_WEIGHTED_PERCENT_PSEUDO_STATS = new Map<PseudoStat, { root: Stat; perPercent: number }>(
-	(getEnumValues(PseudoStat) as PseudoStat[]).flatMap(pseudoStat => {
-		const root = UnitStat.getRootStat(pseudoStat);
-		if (root === null || root === Stat.StatBlockValue) {
-			return [];
-		}
-		return [[pseudoStat, { root, perPercent: UnitStat.fromStat(root).convertPercentToRating(1)! }]];
+	[
+		PseudoStat.PseudoStatOffHandHitPercent,
+		PseudoStat.PseudoStatOffHandCritPercent,
+		PseudoStat.PseudoStatExpertisePercent,
+		PseudoStat.PseudoStatDodgePercent,
+		PseudoStat.PseudoStatParryPercent,
+		PseudoStat.PseudoStatBlockPercent,
+	].map(pseudoStat => {
+		const root = UnitStat.getRootStat(pseudoStat)!;
+		return [pseudoStat, { root, perPercent: UnitStat.fromStat(root).convertPercentToRating(1)! }];
 	}),
 );
 
@@ -564,7 +572,8 @@ export class Stats {
 				addPercent(rated.root, idx, value, rated.perPercent, rated.perPercent * epWeights.stats[rated.root]);
 			} else {
 				// A school hit percent converts to hit rating; the rest have no rating and count as they are.
-				total += (UnitStat.fromPseudoStat(idx).convertPercentToRating(value) ?? value) * epWeights.pseudoStats[idx];
+				const rating = SCHOOL_HIT_PERCENT_PSEUDO_STATS.includes(idx) ? value * Mechanics.HIT_RATING_PER_HIT_PERCENT : value;
+				total += rating * epWeights.pseudoStats[idx];
 			}
 		});
 

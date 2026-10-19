@@ -177,6 +177,16 @@ describe('Player.computeEnchantEP on percent pseudo stats', () => {
 		expect(enchantEP(1, { [PseudoStat.PseudoStatSchoolHitPercentHoly]: 1 }, holyHitWeights)).toBeCloseTo(Mechanics.HIT_RATING_PER_HIT_PERCENT * 2.32);
 	});
 
+	it("values the target's crit suppression and main-hand dodge at their own weights as they are, since no rating moves them", () => {
+		const targetWeights = Stats.fromMap(
+			{ [Stat.StatCritRating]: 3, [Stat.StatDodgeRating]: 2 },
+			{ [PseudoStat.PseudoStatMeleeCritSuppressionPercent]: 2, [PseudoStat.PseudoStatMainHandDodgePercent]: 3 },
+		);
+		expect(
+			enchantEP(1, { [PseudoStat.PseudoStatMeleeCritSuppressionPercent]: 1, [PseudoStat.PseudoStatMainHandDodgePercent]: 1 }, targetWeights),
+		).toBeCloseTo(2 + 3);
+	});
+
 	it('counts melee and spell hit once, as the largest, since one hit rating raises both', () => {
 		expect(enchantEP(1, { [PseudoStat.PseudoStatMeleeHitPercent]: 1, [PseudoStat.PseudoStatSpellHitPercent]: 2 }, ratingWeights)).toBeCloseTo(
 			2 * Mechanics.HIT_RATING_PER_HIT_PERCENT * 5,
