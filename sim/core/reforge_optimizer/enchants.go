@@ -169,11 +169,11 @@ func applyPseudoStats(coeffs map[string]float64, pseudoStats []float64, weights 
 
 	for idx, value := range pseudoStats {
 		pseudoStat := proto.PseudoStat(idx)
-		if value == 0 || isChannelPseudoStat(pseudoStat) {
+		if _, channel := core.RatingChannelsOfPercent(pseudoStat); value == 0 || channel {
 			continue
 		}
-		if entry, ok := percentRootRating(pseudoStat); ok {
-			addPercent(entry.rating, pseudoStat, value, entry.ratingPerPercent*weights.Stats[entry.rating])
+		if entry, ok := core.RatingPercentOf(pseudoStat); ok && entry.Root {
+			addPercent(entry.Rating, pseudoStat, value, entry.RatingPerPercent*weights.Stats[entry.Rating])
 		} else {
 			coeffs[pseudoStatCoeffKey(pseudoStat)] += value
 		}
@@ -186,24 +186,6 @@ func applyPseudoStats(coeffs map[string]float64, pseudoStats []float64, weights 
 			coeffs[statCoeffKey(proto.Stat(rating))] += ep / weights.Stats[rating]
 		}
 	}
-}
-
-func isChannelPseudoStat(pseudoStat proto.PseudoStat) bool {
-	return slices.ContainsFunc(core.RatingChannelTable, func(channels core.RatingChannels) bool {
-		return slices.Contains(channels.Channels(), pseudoStat)
-	})
-}
-
-// The conversion from the rating a percent outside the rating channels belongs to, as
-// UnitStat.getRootStat gives it: hit and crit rating for the off hand's percents, and the expertise,
-// dodge, parry and block ratings for theirs.
-func percentRootRating(pseudoStat proto.PseudoStat) (ratingPercent, bool) {
-	for _, entry := range ratingPercents {
-		if entry.root && entry.percent == pseudoStat {
-			return entry, true
-		}
-	}
-	return ratingPercent{}, false
 }
 
 var weaponDpsPseudoStat = map[proto.ItemSlot]proto.PseudoStat{

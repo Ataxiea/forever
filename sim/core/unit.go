@@ -761,8 +761,8 @@ func (channels RatingChannels) Channels() []proto.PseudoStat {
 	return []proto.PseudoStat{channels.Melee, channels.Ranged, channels.Spell}
 }
 
-// The channels of the hit, crit and haste ratings. RATING_CHANNELS in ui/sim/proto/stats.ts is the UI's
-// copy of the same channels; the two are kept in sync by hand.
+// The channels of the hit, crit and haste ratings. gen_db -gen=go-to-ts writes them to the UI as
+// RATING_CHANNELS, and RatingPercentOf as PSEUDO_STAT_RATINGS.
 var RatingChannelTable = []RatingChannels{
 	{
 		Rating:           stats.HitRating,
@@ -803,6 +803,16 @@ func RatingChannelsOf(rating stats.Stat) (RatingChannels, bool) {
 	return RatingChannels{}, false
 }
 
+// The channels holding a percent pseudo stat, and whether RatingChannelTable lists it.
+func RatingChannelsOfPercent(pseudoStat proto.PseudoStat) (RatingChannels, bool) {
+	for _, channels := range RatingChannelTable {
+		if slices.Contains(channels.Channels(), pseudoStat) {
+			return channels, true
+		}
+	}
+	return RatingChannels{}, false
+}
+
 // The pseudo stat each magic school's hit percent travels as. None and Physical have none and hold
 // the zero value, PseudoStatMainHandDps, so read from SchoolIndexArcane on.
 var SchoolHitPseudoStats = [stats.SchoolLen]proto.PseudoStat{
@@ -813,6 +823,9 @@ var SchoolHitPseudoStats = [stats.SchoolLen]proto.PseudoStat{
 	stats.SchoolIndexNature: proto.PseudoStat_PseudoStatSchoolHitPercentNature,
 	stats.SchoolIndexShadow: proto.PseudoStat_PseudoStatSchoolHitPercentShadow,
 }
+
+// The school hit percents, Arcane to Shadow.
+var SchoolHitPercents = SchoolHitPseudoStats[stats.SchoolIndexArcane:]
 
 // The melee and spell percent of each channel table rating with back-end percent Stats. The ranged Stat
 // holds only what exceeds the melee percent, so no rating converts into it.
@@ -846,34 +859,75 @@ var OffHandPercents = map[stats.Stat]proto.PseudoStat{
 	stats.PhysicalCritPercent: proto.PseudoStat_PseudoStatOffHandCritPercent,
 }
 
-// The rating points one percent of a percent pseudo stat costs in the rating that converts into it,
-// and whether one does. Defense is no percent's own rating.
-func RatingPerPseudoStatPercent(pseudoStat proto.PseudoStat) (float64, bool) {
-	for _, channels := range RatingChannelTable {
-		if slices.Contains(channels.Channels(), pseudoStat) {
-			return channels.RatingPerPercent, true
-		}
+// The pseudo stats the character sheet shows a back-end percent stat in: its own, the ranged total
+// it is the melee share of, the off hand's for physical hit and crit, and for spell hit the
+// per-school percentages.
+func sheetPseudoStats(percent stats.Stat) []proto.PseudoStat {
+	if percent == stats.ReducedCritTakenPercent {
+		return []proto.PseudoStat{proto.PseudoStat_PseudoStatReducedCritTakenPercent}
 	}
-	if slices.Contains(SchoolHitPseudoStats[stats.SchoolIndexArcane:], pseudoStat) {
-		return HitRatingPerHitPercent, true
-	}
-	var percents []stats.Stat
+	var pseudoStats []proto.PseudoStat
 	for _, pair := range stats.PercentPseudoStats {
-		if pair.PseudoStat == pseudoStat {
-			percents = append(percents, pair.Stat)
+		if pair.Stat == percent || (pair.MeleeShare != nil && pair.MeleeShare.Stat == percent) {
+			pseudoStats = append(pseudoStats, pair.PseudoStat)
 		}
 	}
-	for percent, offHand := range OffHandPercents {
-		if offHand == pseudoStat {
-			percents = append(percents, percent)
-		}
+	if offHand, ok := OffHandPercents[percent]; ok {
+		pseudoStats = append(pseudoStats, offHand)
 	}
+	if percent == stats.SpellHitPercent {
+		pseudoStats = append(pseudoStats, SchoolHitPercents...)
+	}
+	return pseudoStats
+}
+
+// One sheet percent a rating moves through a rating conversion.
+type RatingPercent struct {
+	Rating           stats.Stat
+	Percent          proto.PseudoStat
+	RatingPerPercent float64
+	Root             bool // The rating is the percent's root stat, as UnitStat.getRootStat gives it, so an unweighed percent falls back to the rating's weight.
+}
+
+// Every rating conversion's sheet percents, in the order RatingConversions lists them.
+var RatingPercents = buildRatingPercents()
+
+// Defense is no percent's root: dodge, parry and block have their own ratings, and reduced crit
+// taken has none. The school hit percents convert from hit rating but have no root either.
+func buildRatingPercents() []RatingPercent {
+	var lookup []RatingPercent
 	for _, conversion := range RatingConversions {
-		if slices.Contains(percents, conversion.Percent) && conversion.Rating != stats.DefenseRating {
-			return conversion.RatingPerPercent, true
+		for _, percent := range sheetPseudoStats(conversion.Percent) {
+			lookup = append(lookup, RatingPercent{
+				Rating:           conversion.Rating,
+				Percent:          percent,
+				RatingPerPercent: conversion.RatingPerPercent,
+				Root:             conversion.Rating != stats.DefenseRating && !slices.Contains(SchoolHitPercents, percent),
+			})
 		}
 	}
-	return 0, false
+	return lookup
+}
+
+// The rating that converts into a percent pseudo stat, and whether one does: the channel table's
+// rating for a channel, else the first of RatingPercents. Defense is no percent's own rating.
+func RatingPercentOf(pseudoStat proto.PseudoStat) (RatingPercent, bool) {
+	if channels, ok := RatingChannelsOfPercent(pseudoStat); ok {
+		return RatingPercent{Rating: channels.Rating, Percent: pseudoStat, RatingPerPercent: channels.RatingPerPercent, Root: true}, true
+	}
+	for _, entry := range RatingPercents {
+		if entry.Percent == pseudoStat && entry.Rating != stats.DefenseRating {
+			return entry, true
+		}
+	}
+	return RatingPercent{}, false
+}
+
+// The rating points one percent of a percent pseudo stat costs in the rating that converts into it,
+// and whether one does.
+func RatingPerPseudoStatPercent(pseudoStat proto.PseudoStat) (float64, bool) {
+	rating, ok := RatingPercentOf(pseudoStat)
+	return rating.RatingPerPercent, ok
 }
 
 func AddRatingConversions(sdm *stats.StatDependencyManager) {

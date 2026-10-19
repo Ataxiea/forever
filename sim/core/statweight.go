@@ -241,7 +241,7 @@ func pseudoStatProbeStep(pseudoStat proto.PseudoStat, ratingStep float64) (float
 	case proto.PseudoStat_PseudoStatReducedCritTakenPercent:
 		return ratingStep / CritRatingPerCritPercent, true
 	}
-	readFromBonusStats := slices.Contains(SchoolHitPseudoStats[stats.SchoolIndexArcane:], pseudoStat) ||
+	readFromBonusStats := slices.Contains(SchoolHitPercents, pseudoStat) ||
 		slices.ContainsFunc(stats.PercentPseudoStats, func(pair stats.PercentPseudoStat) bool { return pair.PseudoStat == pseudoStat })
 	if ratingPerPercent, ok := RatingPerPseudoStatPercent(pseudoStat); ok && readFromBonusStats {
 		return ratingStep / ratingPerPercent, true

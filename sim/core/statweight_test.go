@@ -211,9 +211,6 @@ func TestStatWeightsWeighPercentsPerRatingPoint(t *testing.T) {
 	if ratingPerPercent, ok := RatingPerPseudoStatPercent(proto.PseudoStat_PseudoStatOffHandHitPercent); !ok || ratingPerPercent != HitRatingPerHitPercent {
 		t.Errorf("off-hand hit costs %v rating per percent (%v), want the hit rating's %v", ratingPerPercent, ok, HitRatingPerHitPercent)
 	}
-	if ratingPerPercent, ok := RatingPerPseudoStatPercent(proto.PseudoStat_PseudoStatReducedCritTakenPercent); ok {
-		t.Errorf("reduced crit taken costs %v rating per percent, want no rating", ratingPerPercent)
-	}
 }
 
 // Only a pseudo stat the character reads from its bonus stats can be weighed. Reduced crit taken has

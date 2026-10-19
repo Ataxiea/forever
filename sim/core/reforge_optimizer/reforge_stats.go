@@ -11,8 +11,8 @@ import (
 
 // Reads weights, caps and sheet stats alike, each value as the message states it. A percent pseudo
 // stat's cap or sheet value is in the sheet's percent, the unit GetPseudoStatsProto writes, with
-// ranged hit and crit as totals; its weight is per rating point, which weightPerPercent turns into
-// the weight per percent the optimizer counts.
+// ranged hit and crit as totals; its weight stays per rating point, and the callers that read
+// weights turn it into the weight per percent the optimizer counts.
 func protoToCoreUnitStats(protoStats *proto.UnitStats) core.UnitStats {
 	if protoStats == nil {
 		return core.NewUnitStats()
@@ -34,12 +34,13 @@ func weightPerPercent(unitStat stats.UnitStat, weight float64) float64 {
 	return weight
 }
 
-// Rewrites the pseudo stat weights in place.
+// A copy of the weights with each pseudo stat's weight per percent.
 func weightsPerPercent(weights core.UnitStats) core.UnitStats {
+	perPercent := core.UnitStats{Stats: weights.Stats, PseudoStats: make([]float64, len(weights.PseudoStats))}
 	for idx, weight := range weights.PseudoStats {
-		weights.PseudoStats[idx] = weightPerPercent(stats.UnitStatFromPseudoStat(proto.PseudoStat(idx)), weight)
+		perPercent.PseudoStats[idx] = weightPerPercent(stats.UnitStatFromPseudoStat(proto.PseudoStat(idx)), weight)
 	}
-	return weights
+	return perPercent
 }
 
 func getUnitStat(unitStats core.UnitStats, unitStat stats.UnitStat) float64 {
@@ -134,7 +135,7 @@ func resolveStatDelta(sdm *stats.StatDependencyManager, baseStats core.UnitStats
 		writeUnitStat(&delta, stats.UnitStatFromPseudoStat(offHand), delta.Stats[percent])
 	}
 	spellHitDelta := delta.Stats[stats.SpellHitPercent]
-	for _, schoolHitPS := range schoolHitPercents {
+	for _, schoolHitPS := range core.SchoolHitPercents {
 		writeUnitStat(&delta, stats.UnitStatFromPseudoStat(schoolHitPS), spellHitDelta)
 	}
 	writeUnitStat(&delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatReducedCritTakenPercent),
@@ -166,65 +167,13 @@ func eachUnitStat(vec core.UnitStats, fn func(unitStat stats.UnitStat, value flo
 	}
 }
 
-var schoolHitPercents = core.SchoolHitPseudoStats[stats.SchoolIndexArcane:]
-
-// The pseudo-stats the character sheet shows a back-end percent stat in: its own, the ranged total
-// it is the melee share of, the off hand's for physical hit and crit, and for spell hit the
-// per-school percentages.
-func sheetPseudoStats(percent stats.Stat) []proto.PseudoStat {
-	if percent == stats.ReducedCritTakenPercent {
-		return []proto.PseudoStat{proto.PseudoStat_PseudoStatReducedCritTakenPercent}
-	}
-	var pseudoStats []proto.PseudoStat
-	for _, pair := range stats.PercentPseudoStats {
-		if pair.Stat == percent || (pair.MeleeShare != nil && pair.MeleeShare.Stat == percent) {
-			pseudoStats = append(pseudoStats, pair.PseudoStat)
-		}
-	}
-	if offHand, ok := core.OffHandPercents[percent]; ok {
-		pseudoStats = append(pseudoStats, offHand)
-	}
-	if percent == stats.SpellHitPercent {
-		pseudoStats = append(pseudoStats, schoolHitPercents...)
-	}
-	return pseudoStats
-}
-
-// One sheet percent a rating moves through a core rating conversion.
-type ratingPercent struct {
-	rating           stats.Stat
-	percent          proto.PseudoStat
-	ratingPerPercent float64
-	root             bool // The rating is the percent's root stat, as UnitStat.getRootStat gives it.
-}
-
-// Every core rating conversion's sheet percents, in the order core.RatingConversions lists them.
-var ratingPercents = buildRatingPercents()
-
-// Defense is no percent's root: dodge, parry and block have their own ratings, and reduced crit
-// taken has none. The per-school hit percents have no root either.
-func buildRatingPercents() []ratingPercent {
-	var lookup []ratingPercent
-	for _, conversion := range core.RatingConversions {
-		for _, percent := range sheetPseudoStats(conversion.Percent) {
-			lookup = append(lookup, ratingPercent{
-				rating:           conversion.Rating,
-				percent:          percent,
-				ratingPerPercent: conversion.RatingPerPercent,
-				root:             conversion.Rating != stats.DefenseRating && !slices.Contains(schoolHitPercents, percent),
-			})
-		}
-	}
-	return lookup
-}
-
 // The percent pseudo-stats a rating moves, from the core rating conversions in the order
 // core.RatingConversions lists them, then the channels without a back-end percent Stat.
 func childPseudoStats(parent stats.Stat) []proto.PseudoStat {
 	var children []proto.PseudoStat
-	for _, entry := range ratingPercents {
-		if entry.rating == parent {
-			children = append(children, entry.percent)
+	for _, entry := range core.RatingPercents {
+		if entry.Rating == parent {
+			children = append(children, entry.Percent)
 		}
 	}
 	if channels, ok := core.RatingChannelsOf(parent); ok && !channels.HasPercentStats {
@@ -235,9 +184,9 @@ func childPseudoStats(parent stats.Stat) []proto.PseudoStat {
 
 // The points of the parent rating one percent of a child percent costs, Defense included.
 func parentRatingPerChildPercent(child proto.PseudoStat, parent stats.Stat) float64 {
-	for _, entry := range ratingPercents {
-		if entry.rating == parent && entry.percent == child {
-			return entry.ratingPerPercent
+	for _, entry := range core.RatingPercents {
+		if entry.Rating == parent && entry.Percent == child {
+			return entry.RatingPerPercent
 		}
 	}
 	if channels, ok := core.RatingChannelsOf(parent); ok && slices.Contains(channels.Channels(), child) {
