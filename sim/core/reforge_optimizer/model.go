@@ -94,10 +94,10 @@ func (o *reforgeOptimizer) applyReforgeStat(coeffs map[string]float64, stat stat
 		if getUnitStat(preCapEPs, stats.UnitStatFromPseudoStat(child)) == 0 {
 			continue
 		}
-		// ratingPerPseudoStatPercent encodes the per-parent conversion (including Defense, which
+		// parentRatingPerChildPercent encodes the per-parent conversion (including Defense, which
 		// parents Dodge, Parry, Block and ReducedCritTakenPercent), so dividing by it reproduces the
 		// reference's convertStatToChildPseudoStat exactly.
-		if ratingPerPercent := ratingPerPseudoStatPercent(child, stat); ratingPerPercent != 0 {
+		if ratingPerPercent := parentRatingPerChildPercent(child, stat); ratingPerPercent != 0 {
 			coeffs[pseudoStatCoeffKey(child)] += amount / ratingPerPercent
 		}
 	}

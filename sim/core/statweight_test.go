@@ -183,7 +183,7 @@ func TestStatWeightsWeighPercentsPerRatingPoint(t *testing.T) {
 		ratingPerPercent float64
 	}{
 		{proto.PseudoStat_PseudoStatRangedCritPercent, CritRatingPerCritPercent},
-		{proto.PseudoStat_PseudoStatSpellHastePercent, HasteRatingPerHastePercent},
+		{proto.PseudoStat_PseudoStatBlockPercent, BlockRatingPerBlockPercent},
 		{proto.PseudoStat_PseudoStatSchoolHitPercentFire, HitRatingPerHitPercent},
 		{proto.PseudoStat_PseudoStatExpertisePercent, ExpertiseRatingPerExpertisePercent},
 		{proto.PseudoStat_PseudoStatDodgePercent, DodgeRatingPerDodgePercent},
@@ -208,10 +208,38 @@ func TestStatWeightsWeighPercentsPerRatingPoint(t *testing.T) {
 		}
 	}
 
-	for _, pseudoStat := range []proto.PseudoStat{proto.PseudoStat_PseudoStatOffHandHitPercent, proto.PseudoStat_PseudoStatReducedCritTakenPercent} {
-		if ratingPerPercent, ok := RatingPerPseudoStatPercent(pseudoStat); ok {
-			t.Errorf("%s costs %v rating per percent, want no rating", pseudoStat, ratingPerPercent)
-		}
+	if ratingPerPercent, ok := RatingPerPseudoStatPercent(proto.PseudoStat_PseudoStatOffHandHitPercent); !ok || ratingPerPercent != HitRatingPerHitPercent {
+		t.Errorf("off-hand hit costs %v rating per percent (%v), want the hit rating's %v", ratingPerPercent, ok, HitRatingPerHitPercent)
+	}
+	if ratingPerPercent, ok := RatingPerPseudoStatPercent(proto.PseudoStat_PseudoStatReducedCritTakenPercent); ok {
+		t.Errorf("reduced crit taken costs %v rating per percent, want no rating", ratingPerPercent)
+	}
+}
+
+// Only a pseudo stat the character reads from its bonus stats can be weighed. Reduced crit taken has
+// no rating, so it is weighed per percent; a haste or off-hand percent would leave its sub-sim at the
+// baseline, so a request for one panics.
+func TestStatWeightsWeighOnlyPseudoStatsTheCharacterReads(t *testing.T) {
+	const dpsPerPercent = 60.0
+	reducedCritTaken := stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatReducedCritTakenPercent)
+	requests, result := runSyntheticStatWeights(t, []proto.Stat{proto.Stat_StatAgility}, []proto.PseudoStat{proto.PseudoStat_PseudoStatReducedCritTakenPercent},
+		map[stats.UnitStat]float64{agilityUnitStat: 1, reducedCritTaken: dpsPerPercent})
+	if !simulatesStat(requests, reducedCritTaken) {
+		t.Fatal("no sub-sim for reduced crit taken")
+	}
+	if got := protoUnitStat(result.Dps.Weights, reducedCritTaken); math.Abs(got-dpsPerPercent) > 1e-9 {
+		t.Errorf("reduced crit taken weight = %v, want %v per percent", got, dpsPerPercent)
+	}
+
+	for _, pseudoStat := range []proto.PseudoStat{proto.PseudoStat_PseudoStatSpellHastePercent, proto.PseudoStat_PseudoStatOffHandHitPercent} {
+		t.Run(pseudoStat.String(), func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("a request weighing %s built its sub-sims, want a panic", pseudoStat)
+				}
+			}()
+			runSyntheticStatWeights(t, []proto.Stat{proto.Stat_StatAgility}, []proto.PseudoStat{pseudoStat}, map[stats.UnitStat]float64{agilityUnitStat: 1})
+		})
 	}
 }
 

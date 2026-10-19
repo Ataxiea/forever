@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/wowsims/forever/sim/core/proto"
@@ -193,17 +192,9 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 
 	for _, s := range swr.PseudoStatsToWeigh {
 		stat := stats.UnitStatFromPseudoStat(s)
-		statName := proto.PseudoStat_name[int32(s)]
-
-		// Scale down the stat increment depending on the type of PseudoStat
-		statMod := defaultStatMod
-
-		if ratingPerPercent, ok := RatingPerPseudoStatPercent(s); ok {
-			statMod /= ratingPerPercent
-		} else if strings.Contains(statName, "Dps") {
-			statMod *= 0.5
-		} else {
-			panic(fmt.Sprintf("Unsupported PseudoStat in stat weights request: %s", statName))
+		statMod, ok := pseudoStatProbeStep(s, defaultStatMod)
+		if !ok {
+			panic(fmt.Sprintf("Unsupported PseudoStat in stat weights request: %s", proto.PseudoStat_name[int32(s)]))
 		}
 
 		statModsHigh[stat] = statMod
@@ -237,6 +228,25 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 	}
 
 	return swBaseResponse
+}
+
+// The step a stat weights sub-sim adds of a pseudo stat, and whether the pseudo stat can be weighed:
+// only those NewCharacter reads from the bonus stats move a sub-sim off the baseline. A percent with a
+// rating steps by ratingStep points of that rating. Reduced crit taken, which has no rating of its own,
+// steps by the percent ratingStep crit rating gives, and weapon DPS by half of ratingStep.
+func pseudoStatProbeStep(pseudoStat proto.PseudoStat, ratingStep float64) (float64, bool) {
+	switch pseudoStat {
+	case proto.PseudoStat_PseudoStatMainHandDps, proto.PseudoStat_PseudoStatOffHandDps, proto.PseudoStat_PseudoStatRangedDps:
+		return ratingStep * 0.5, true
+	case proto.PseudoStat_PseudoStatReducedCritTakenPercent:
+		return ratingStep / CritRatingPerCritPercent, true
+	}
+	readFromBonusStats := slices.Contains(SchoolHitPseudoStats[stats.SchoolIndexArcane:], pseudoStat) ||
+		slices.ContainsFunc(stats.PercentPseudoStats, func(pair stats.PercentPseudoStat) bool { return pair.PseudoStat == pseudoStat })
+	if ratingPerPercent, ok := RatingPerPseudoStatPercent(pseudoStat); ok && readFromBonusStats {
+		return ratingStep / ratingPerPercent, true
+	}
+	return 0, false
 }
 
 // gen_db -gen=go-to-ts writes these to the UI as STAT_WEIGHT_*, which the stat sweep's Target ± also runs by.

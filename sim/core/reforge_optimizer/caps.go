@@ -104,7 +104,7 @@ func checkWeights(weights core.UnitStats, reforgeCaps core.UnitStats, reforgeSof
 			if !pseudoStatHasCap(child, reforgeCaps, reforgeSoftCaps) {
 				continue
 			}
-			if ratingPerPercent := ratingPerPseudoStatPercent(child, parent); ratingPerPercent != 0 {
+			if ratingPerPercent := parentRatingPerChildPercent(child, parent); ratingPerPercent != 0 {
 				childUnitStat := stats.UnitStatFromPseudoStat(child)
 				rescaled := validated.Stats[parent] * ratingPerPercent
 				validated = setUnitStat(validated, childUnitStat, getUnitStat(validated, childUnitStat)+rescaled)

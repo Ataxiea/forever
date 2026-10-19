@@ -840,8 +840,14 @@ var RatingConversions = append(channelConversions(), []RatingConversion{
 	{stats.DefenseRating, stats.BlockPercent, DefenseRatingPerAvoidancePercent, 0},
 }...)
 
+// The off hand's percent the character sheet shows beside each physical percent, which moves with it.
+var OffHandPercents = map[stats.Stat]proto.PseudoStat{
+	stats.PhysicalHitPercent:  proto.PseudoStat_PseudoStatOffHandHitPercent,
+	stats.PhysicalCritPercent: proto.PseudoStat_PseudoStatOffHandCritPercent,
+}
+
 // The rating points one percent of a percent pseudo stat costs in the rating that converts into it,
-// and whether one does. Defense is no percent's own rating, and the off hand's percents have none.
+// and whether one does. Defense is no percent's own rating.
 func RatingPerPseudoStatPercent(pseudoStat proto.PseudoStat) (float64, bool) {
 	for _, channels := range RatingChannelTable {
 		if slices.Contains(channels.Channels(), pseudoStat) {
@@ -851,14 +857,20 @@ func RatingPerPseudoStatPercent(pseudoStat proto.PseudoStat) (float64, bool) {
 	if slices.Contains(SchoolHitPseudoStats[stats.SchoolIndexArcane:], pseudoStat) {
 		return HitRatingPerHitPercent, true
 	}
+	var percents []stats.Stat
 	for _, pair := range stats.PercentPseudoStats {
-		if pair.PseudoStat != pseudoStat {
-			continue
+		if pair.PseudoStat == pseudoStat {
+			percents = append(percents, pair.Stat)
 		}
-		for _, conversion := range RatingConversions {
-			if conversion.Percent == pair.Stat && conversion.Rating != stats.DefenseRating {
-				return conversion.RatingPerPercent, true
-			}
+	}
+	for percent, offHand := range OffHandPercents {
+		if offHand == pseudoStat {
+			percents = append(percents, percent)
+		}
+	}
+	for _, conversion := range RatingConversions {
+		if slices.Contains(percents, conversion.Percent) && conversion.Rating != stats.DefenseRating {
+			return conversion.RatingPerPercent, true
 		}
 	}
 	return 0, false

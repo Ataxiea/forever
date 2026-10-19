@@ -34,6 +34,14 @@ func weightPerPercent(unitStat stats.UnitStat, weight float64) float64 {
 	return weight
 }
 
+// Rewrites the pseudo stat weights in place.
+func weightsPerPercent(weights core.UnitStats) core.UnitStats {
+	for idx, weight := range weights.PseudoStats {
+		weights.PseudoStats[idx] = weightPerPercent(stats.UnitStatFromPseudoStat(proto.PseudoStat(idx)), weight)
+	}
+	return weights
+}
+
 func getUnitStat(unitStats core.UnitStats, unitStat stats.UnitStat) float64 {
 	if unitStat.IsStat() {
 		return unitStats.Stats[unitStat.StatIdx()]
@@ -122,7 +130,7 @@ func resolveStatDelta(sdm *stats.StatDependencyManager, baseStats core.UnitStats
 		}
 		writeUnitStat(&delta, stats.UnitStatFromPseudoStat(pair.PseudoStat), value)
 	}
-	for percent, offHand := range offHandPercents {
+	for percent, offHand := range core.OffHandPercents {
 		writeUnitStat(&delta, stats.UnitStatFromPseudoStat(offHand), delta.Stats[percent])
 	}
 	spellHitDelta := delta.Stats[stats.SpellHitPercent]
@@ -160,13 +168,6 @@ func eachUnitStat(vec core.UnitStats, fn func(unitStat stats.UnitStat, value flo
 
 var schoolHitPercents = core.SchoolHitPseudoStats[stats.SchoolIndexArcane:]
 
-// The off hand's percent moves with the physical percent. The per-attack ratings on the sheet are left
-// out: a rating's children are counted in percent.
-var offHandPercents = map[stats.Stat]proto.PseudoStat{
-	stats.PhysicalHitPercent:  proto.PseudoStat_PseudoStatOffHandHitPercent,
-	stats.PhysicalCritPercent: proto.PseudoStat_PseudoStatOffHandCritPercent,
-}
-
 // The pseudo-stats the character sheet shows a back-end percent stat in: its own, the ranged total
 // it is the melee share of, the off hand's for physical hit and crit, and for spell hit the
 // per-school percentages.
@@ -180,7 +181,7 @@ func sheetPseudoStats(percent stats.Stat) []proto.PseudoStat {
 			pseudoStats = append(pseudoStats, pair.PseudoStat)
 		}
 	}
-	if offHand, ok := offHandPercents[percent]; ok {
+	if offHand, ok := core.OffHandPercents[percent]; ok {
 		pseudoStats = append(pseudoStats, offHand)
 	}
 	if percent == stats.SpellHitPercent {
@@ -232,13 +233,14 @@ func childPseudoStats(parent stats.Stat) []proto.PseudoStat {
 	return children
 }
 
-func ratingPerPseudoStatPercent(pseudoStat proto.PseudoStat, parent stats.Stat) float64 {
+// The points of the parent rating one percent of a child percent costs, Defense included.
+func parentRatingPerChildPercent(child proto.PseudoStat, parent stats.Stat) float64 {
 	for _, entry := range ratingPercents {
-		if entry.rating == parent && entry.percent == pseudoStat {
+		if entry.rating == parent && entry.percent == child {
 			return entry.ratingPerPercent
 		}
 	}
-	if channels, ok := core.RatingChannelsOf(parent); ok && slices.Contains(channels.Channels(), pseudoStat) {
+	if channels, ok := core.RatingChannelsOf(parent); ok && slices.Contains(channels.Channels(), child) {
 		return channels.RatingPerPercent
 	}
 	return 1
