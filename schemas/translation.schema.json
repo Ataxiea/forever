@@ -1636,16 +1636,7 @@
 						}
 					},
 					"additionalProperties": false,
-					"required": [
-						"game_version",
-						"built",
-						"commit_link",
-						"sim_build",
-						"changed",
-						"details",
-						"presets",
-						"engine"
-					]
+					"required": ["game_version", "built", "commit_link", "sim_build", "changed", "details", "presets", "engine"]
 				}
 			},
 			"additionalProperties": false,
