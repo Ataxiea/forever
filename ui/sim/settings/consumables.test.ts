@@ -374,12 +374,12 @@ describe('orderedByEp', () => {
 	const anywhere = (consumables: Array<Consumable>, weights: Stats) => orderedIds(consumables, weights, undefined, 0);
 
 	it('orders by the EP the stats and percents add, highest first', () => {
-		const weights = Stats.fromMap({ [Stat.StatStrength]: 1 }, { [PseudoStat.PseudoStatMeleeCritPercent]: 20 });
+		const weights = Stats.fromMap({ [Stat.StatStrength]: 1 }, { [PseudoStat.PseudoStatMeleeCritPercent]: 2 });
 		expect(anywhere([strong, critical], weights)).toEqual([2, 1]);
 	});
 
 	it('orders again by other weights', () => {
-		const weights = Stats.fromMap({ [Stat.StatStrength]: 3 }, { [PseudoStat.PseudoStatMeleeCritPercent]: 20 });
+		const weights = Stats.fromMap({ [Stat.StatStrength]: 3 }, { [PseudoStat.PseudoStatMeleeCritPercent]: 2 });
 		expect(anywhere([critical, strong], weights)).toEqual([1, 2]);
 	});
 

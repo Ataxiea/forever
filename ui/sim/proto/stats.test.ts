@@ -88,11 +88,16 @@ describe('UnitStat', () => {
 		expect(UnitStat.fromStat(Stat.StatStrength).isPercentRating()).toBe(false);
 	});
 
+	it('turns an EP per percentage point into the EP per rating point the percent costs', () => {
+		expect(UnitStat.fromPseudoStat(PseudoStat.PseudoStatRangedHitPercent).convertEpToRatingScale(9.28)).toBeCloseTo(
+			9.28 / Mechanics.HIT_RATING_PER_HIT_PERCENT,
+		);
+		expect(UnitStat.fromStat(Stat.StatHitRating).convertEpToRatingScale(0.928)).toBe(0.928);
+	});
+
 	// The inverse of the parentStat case below: convertRatingToPercent has no branch for
-	// ReducedCritTakenPercent either, so it returns null. convertEpToRatingScale declares
-	// `number` and asserted that null away with `!`, handing callers a null that only blew up
-	// once something did arithmetic on it - the Prot Paladin soft-cap tooltip called .toFixed()
-	// on it and took the sidebar down on hover.
+	// ReducedCritTakenPercent either, so it returns null, and the EP has to come back as a
+	// number a caller can format.
 	it('falls back to the raw EP value when a stat has no percent conversion', () => {
 		const unitStat = UnitStat.fromPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent);
 		expect(unitStat.convertRatingToPercent(1)).toBeNull();

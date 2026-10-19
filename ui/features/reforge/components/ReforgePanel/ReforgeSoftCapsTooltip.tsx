@@ -48,9 +48,7 @@ export const ReforgeSoftCapsTooltip = ({ playerClass, softCaps, additionalInform
 								<TableRow key={breakpoint}>
 									<TableCell className="text-right">{breakpointValueToDisplayPercentage(breakpoint, unitStat)}</TableCell>
 									<TableCell colSpan={2} className="text-right">
-										{unitStat
-											.convertEpToRatingScale(capType === StatCapType.TypeThreshold ? postCapEPs[0] : postCapEPs[breakpointIndex])
-											.toFixed(2)}
+										{(capType === StatCapType.TypeThreshold ? postCapEPs[0] : postCapEPs[breakpointIndex]).toFixed(2)}
 									</TableCell>
 								</TableRow>
 							))}

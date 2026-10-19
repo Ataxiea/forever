@@ -14,9 +14,7 @@ const critTaken = () =>
 	});
 
 describe('ReforgeSoftCapsTooltip', () => {
-	// Prot Paladin's only soft cap is ReducedCritTakenPercent, which has no single rating
-	// conversion, so the post-cap EP cell gets null here; a .toFixed() on it would take the whole
-	// sidebar down when the Suggest Reforges button is hovered.
+	// Prot Paladin's only soft cap is ReducedCritTakenPercent, which has no single rating conversion.
 	it('renders a soft cap whose stat has no percent conversion', () => {
 		const { container } = render(<ReforgeSoftCapsTooltip playerClass={Class.ClassPaladin} softCaps={[critTaken()]} additionalInformation={{}} />);
 
@@ -37,5 +35,17 @@ describe('ReforgeSoftCapsTooltip', () => {
 		expect(screen.getAllByTestId('table')).toHaveLength(2);
 		expect(hitTable.querySelectorAll('tbody tr')).toHaveLength(3);
 		expect(critTable.querySelectorAll('tbody tr')).toHaveLength(2);
+	});
+
+	it('shows the post-cap EP of a percent as the spec gives it, per rating point', () => {
+		const hit = StatCap.fromPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, {
+			breakpoints: [8, 27],
+			capType: StatCapType.TypeSoftCap,
+			postCapEPs: [0.57, 0],
+		});
+
+		render(<ReforgeSoftCapsTooltip playerClass={Class.ClassWarrior} softCaps={[hit]} additionalInformation={{}} />);
+
+		expect(screen.getByTestId('table').textContent).toContain('0.57');
 	});
 });

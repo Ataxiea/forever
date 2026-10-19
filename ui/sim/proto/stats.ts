@@ -185,6 +185,8 @@ export class UnitStat {
 		}
 	}
 
+	// An EP per percentage point of a percent pseudo stat as the EP per rating point that percent costs.
+	// Any other stat, and a percent with no rating, keeps the value as it is.
 	convertEpToRatingScale(epValue: number): number {
 		if (this.isPseudoStat() && PseudoStat[this.pseudoStat!].includes('Percent')) {
 			return this.convertRatingToPercent(epValue) ?? epValue;
@@ -514,10 +516,11 @@ export class Stats {
 		);
 	}
 
-	// The part of a rating's melee, ranged and spell percents every channel holds is worth the rating's
-	// weight, or, where the weights leave the rating at 0, the sum of the channel weights they give.
-	// What a channel holds beyond it is worth that percent's own weight. A channel the weights leave at
-	// 0 falls back to what the rating is worth past the channels they weigh, and any other percent to
+	// The weight of a percent pseudo stat is per rating point, so a percent value counts as the rating it
+	// costs. The part of a rating's melee, ranged and spell percents every channel holds is worth the
+	// rating's weight, or, where the weights leave the rating at 0, the sum of the channel weights they
+	// give. What a channel holds beyond it is worth that percent's own weight. A channel the weights leave
+	// at 0 falls back to what the rating is worth past the channels they weigh, and any other percent to
 	// its rating's weight. The fallbacks of one rating count once, as the largest, since the one rating
 	// raises them all.
 	computeEP(epWeights: Stats): number {
@@ -527,13 +530,13 @@ export class Stats {
 		});
 
 		let fallbacks: Map<Stat, number> | undefined;
-		const addPercent = (rating: Stat, pseudoStat: PseudoStat, value: number, fallbackPerPercent: number) => {
+		const addPercent = (rating: Stat, pseudoStat: PseudoStat, value: number, ratingPerPercent: number, fallbackPerPercent: number) => {
 			if (value === 0) {
 				return;
 			}
 			const weight = epWeights.pseudoStats[pseudoStat];
 			if (weight !== 0) {
-				total += value * weight;
+				total += value * ratingPerPercent * weight;
 				return;
 			}
 			fallbacks ??= new Map<Stat, number>();
@@ -545,11 +548,11 @@ export class Stats {
 		RATING_CHANNELS.forEach(({ channels, perPercent: ratingPerPercent }, rating) => {
 			const values = channels.map(pseudoStat => this.pseudoStats[pseudoStat]);
 			const perPercent = ratingPerPercent * epWeights.stats[rating];
-			const weighted = channels.map(pseudoStat => epWeights.pseudoStats[pseudoStat]).reduce((sum, weight) => sum + weight);
+			const weighted = ratingPerPercent * channels.map(pseudoStat => epWeights.pseudoStats[pseudoStat]).reduce((sum, weight) => sum + weight);
 			const common = Math.max(0, Math.min(...values));
 			total += common * (perPercent || weighted);
 			const residual = Math.max(0, perPercent - weighted);
-			channels.forEach((pseudoStat, i) => addPercent(rating, pseudoStat, values[i] - common, residual));
+			channels.forEach((pseudoStat, i) => addPercent(rating, pseudoStat, values[i] - common, ratingPerPercent, residual));
 		});
 
 		this.pseudoStats.forEach((value, idx) => {
@@ -558,9 +561,10 @@ export class Stats {
 			}
 			const rated = RATING_WEIGHTED_PERCENT_PSEUDO_STATS.get(idx);
 			if (rated) {
-				addPercent(rated.root, idx, value, rated.perPercent * epWeights.stats[rated.root]);
+				addPercent(rated.root, idx, value, rated.perPercent, rated.perPercent * epWeights.stats[rated.root]);
 			} else {
-				total += value * epWeights.pseudoStats[idx];
+				// A school hit percent converts to hit rating; the rest have no rating and count as they are.
+				total += (UnitStat.fromPseudoStat(idx).convertPercentToRating(value) ?? value) * epWeights.pseudoStats[idx];
 			}
 		});
 
