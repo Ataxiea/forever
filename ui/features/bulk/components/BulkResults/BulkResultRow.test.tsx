@@ -77,12 +77,18 @@ describe('BulkResultRowView', () => {
 	});
 
 	it('names the row’s talent setup above the gear and as a talent preset', () => {
-		renderRow({ talents: { label: 'Arms', talentsString: '3030500130' } });
+		renderRow({ talents: { label: 'Arms', talentsString: '3030500130', isCurrent: false } });
 
 		const line = screen.getByTestId('bulk-result-talents');
 		expect(line.textContent).toBe('bulk_tab.results.talent_preset');
 		expect(screen.getByTestId('bulk-gear-combo').firstElementChild).toBe(line);
 		expect(screen.getByTestId('gear-cells')).toBeTruthy();
+	});
+
+	it('names the current talents plainly, without the talent preset wording', () => {
+		renderRow({ talents: { label: 'bulk_tab.results.current_talents', talentsString: '3030500130', isCurrent: true } });
+
+		expect(screen.getByTestId('bulk-result-talents').textContent).toBe('bulk_tab.results.current_talents');
 	});
 
 	it('shows no talent line when the encounter ran one setup', () => {
@@ -92,7 +98,7 @@ describe('BulkResultRowView', () => {
 	});
 
 	it('says the gear is unchanged for the current gear with another talent setup, and offers Equip', () => {
-		renderRow({ gearUnchanged: true, talents: { label: 'Arms', talentsString: '3030500130' } });
+		renderRow({ gearUnchanged: true, talents: { label: 'Arms', talentsString: '3030500130', isCurrent: false } });
 
 		expect(screen.getByTestId('bulk-result-gear-unchanged').textContent).toBe('bulk_tab.results.gear_unchanged');
 		expect(screen.queryByTestId('gear-cells')).toBeNull();

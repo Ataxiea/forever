@@ -30,7 +30,7 @@ export interface BulkResultRowViewProps {
 	delta: DeltaText;
 	significance: string;
 	/** The row's talent setup, named when the encounter ran more than one; null shows none. */
-	talents: { label: string; talentsString: string } | null;
+	talents: { label: string; talentsString: string; isCurrent: boolean } | null;
 	/** The current gear with another talent setup: says so in place of the gear cells. */
 	gearUnchanged: boolean;
 	onEquip: () => void;
@@ -78,7 +78,7 @@ export const BulkResultRowView = ({
 			<div className="flex min-w-0 flex-1 flex-wrap gap-1 max-md:order-last max-md:basis-full" data-testid="bulk-gear-combo">
 				{talents && (
 					<div className="basis-full text-sm wrap-break-word" data-testid="bulk-result-talents">
-						{i18n.t('bulk_tab.results.talent_preset', { name: talents.label })}
+						{talents.isCurrent ? talents.label : i18n.t('bulk_tab.results.talent_preset', { name: talents.label })}
 					</div>
 				)}
 				{gearUnchanged ? (
@@ -132,7 +132,15 @@ export const BulkResultRow = ({ result, baseResult, iterations, showTalents, onA
 			isBase={isBaseResult}
 			delta={delta}
 			significance={formatSignificance(test)}
-			talents={showTalents ? { label: talentsLabel(result.talents), talentsString: formatTalentsSummary(result.talents.talentsString) } : null}
+			talents={
+				showTalents
+					? {
+							label: talentsLabel(result.talents),
+							talentsString: formatTalentsSummary(result.talents.talentsString),
+							isCurrent: result.talents.isCurrent,
+						}
+					: null
+			}
 			gearUnchanged={gearUnchanged}
 			onEquip={() => {
 				const talentsChanged = equipBulkResult(host.player, result);
