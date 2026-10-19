@@ -1,5 +1,6 @@
 import i18n from '@i18n/config';
-import { type BuildInfo, commitUrl, type SpecVersion } from '@sim/constants/build_info';
+import { translateClass } from '@i18n/localization';
+import { type BuildInfo, commitUrl, type SpecVersion, type SpellDataVersion } from '@sim/constants/build_info';
 import { Button } from '@ui-kit/Button';
 import { Icon } from '@ui-kit/Icon';
 import { Tooltip, tooltipAnchorProps } from '@ui-kit/Tooltip';
@@ -12,8 +13,10 @@ export interface SpecReleaseInfoProps {
 	info: BuildInfo;
 	/** The spec's name, as the details list it. */
 	specName: string;
-	/** The spec's last change, when the build read it. */
+	/** The spec's last preset change, when the build read it. */
 	specVersion?: SpecVersion;
+	/** The spell data the spec's sim reads: its class, racials, items and shared, as the store stamps each part. */
+	spellData: { part: string; version: SpellDataVersion }[];
 	className?: string;
 }
 
@@ -23,14 +26,28 @@ const CommitLink = ({ commit }: { commit: string }) => (
 	</Button>
 );
 
+const spellDataLabel = (part: string): string => {
+	switch (part) {
+		case 'racials':
+			return i18n.t('common.release_info.racial_data');
+		case 'items':
+			return i18n.t('common.release_info.item_data');
+		case 'shared':
+			return i18n.t('common.release_info.shared_data');
+		default:
+			return i18n.t('common.release_info.class_data', { class: translateClass(part) });
+	}
+};
+
 const joined = (parts: ReactNode[]) => parts.filter(Boolean).flatMap((part, index) => (index > 0 ? [' · ', part] : [part]));
 
 // The page's release, under the sidebar's stats: the game build, the build date and the commit. The info
-// button beside it, on hover or focus, lists the sim's build, the spec's last change and the game data, each
-// left out when the build could not read it. The caller sets the text size and colour.
-export const SpecReleaseInfo = ({ info, specName, specVersion, className }: SpecReleaseInfoProps) => {
+// button beside it, on hover or focus, lists the sim's build, the spec's last preset change and the game
+// build and hotfix of each part of the spell data the spec reads, each left out when the build could not
+// read it. The caller sets the text size and colour.
+export const SpecReleaseInfo = ({ info, specName, specVersion, spellData, className }: SpecReleaseInfoProps) => {
 	const id = useId();
-	if (!info.gameVersion && !info.date && !info.commit && !specVersion) {
+	if (!info.gameVersion && !info.date && !info.commit && !specVersion && spellData.length === 0) {
 		return null;
 	}
 	const rows: { label: string; value: ReactNode[] }[] = [];
@@ -45,12 +62,12 @@ export const SpecReleaseInfo = ({ info, specName, specVersion, className }: Spec
 	}
 	if (specVersion) {
 		rows.push({
-			label: specName,
+			label: i18n.t('common.release_info.presets', { spec: specName }),
 			value: joined([i18n.t('common.release_info.changed', { date: specVersion.date }), <CommitLink key="commit" commit={specVersion.commit} />]),
 		});
 	}
-	if (info.gameVersion) {
-		rows.push({ label: i18n.t('common.release_info.game_data'), value: [info.gameVersion] });
+	for (const { part, version } of spellData) {
+		rows.push({ label: spellDataLabel(part), value: [i18n.t('common.release_info.data_version', { build: version.build, hotfix: version.hotfix })] });
 	}
 	return (
 		<div className={clsx('flex items-center gap-2', className)}>

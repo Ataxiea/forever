@@ -11,7 +11,13 @@ export interface BuildInfo {
 	gameVersion: string;
 }
 
-/** The last commit that changed a spec's page or sim code. */
+/** The game build and hotfix push one part of the spell store was generated from. */
+export interface SpellDataVersion {
+	build: string;
+	hotfix: number;
+}
+
+/** The last commit that changed a spec's presets. */
 export interface SpecVersion {
 	commit: string;
 	/** The commit's date, as YYYY-MM-DD. */
@@ -24,11 +30,19 @@ export const BUILD_INFO: BuildInfo = {
 	gameVersion: import.meta.env.VITE_GAME_VERSION ?? '',
 };
 
+// Keyed by part: each class, `items`, `racials` and `shared`, as the spell store stamps them.
+const SPELL_DATA: Readonly<Record<string, SpellDataVersion>> = import.meta.env.VITE_SPELL_DATA ?? {};
 // Keyed `<class>/<spec>`; a build made from a shallow clone carries none.
 const SPEC_VERSIONS: Readonly<Record<string, SpecVersion>> = import.meta.env.VITE_SPEC_VERSIONS ?? {};
 
-/** The last change of the spec whose page is at `simLink` (`/forever/<class>/<spec>/`), if the build read it. */
-export const specVersion = (simLink: string): SpecVersion | undefined => SPEC_VERSIONS[simLink.replace(new RegExp(`^/${REPO_NAME}/`), '').replace(/\/$/, '')];
+const specKey = (simLink: string): string => simLink.replace(new RegExp(`^/${REPO_NAME}/`), '').replace(/\/$/, '');
+
+/** The last preset change of the spec whose page is at `simLink` (`/forever/<class>/<spec>/`), if the build read it. */
+export const specVersion = (simLink: string): SpecVersion | undefined => SPEC_VERSIONS[specKey(simLink)];
+
+/** The spell data parts a spec's sim reads, in the order the page lists them: its class, racials, items and shared. */
+export const specSpellData = (simLink: string): { part: string; version: SpellDataVersion }[] =>
+	[specKey(simLink).split('/')[0], 'racials', 'items', 'shared'].flatMap(part => (SPELL_DATA[part] ? [{ part, version: SPELL_DATA[part] }] : []));
 
 // The repository whose CI built the page, as for the issue links, so a fork's build links its own commit.
 export const commitUrl = (commit: string): string => `${ISSUES_REPO ? `https://github.com/${ISSUES_REPO}` : REPO_URL}/commit/${commit}`;

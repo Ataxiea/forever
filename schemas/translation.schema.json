@@ -1625,15 +1625,43 @@
 						"changed": {
 							"type": "string"
 						},
-						"game_data": {
+						"details": {
 							"type": "string"
 						},
-						"details": {
+						"presets": {
+							"type": "string"
+						},
+						"class_data": {
+							"type": "string"
+						},
+						"racial_data": {
+							"type": "string"
+						},
+						"item_data": {
+							"type": "string"
+						},
+						"shared_data": {
+							"type": "string"
+						},
+						"data_version": {
 							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["game_version", "built", "commit_link", "sim", "changed", "game_data", "details"]
+					"required": [
+						"game_version",
+						"built",
+						"commit_link",
+						"sim",
+						"changed",
+						"details",
+						"presets",
+						"class_data",
+						"racial_data",
+						"item_data",
+						"shared_data",
+						"data_version"
+					]
 				}
 			},
 			"additionalProperties": false,

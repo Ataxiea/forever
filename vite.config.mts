@@ -178,6 +178,7 @@ export default defineConfig(({ command, mode }) => {
 			'import.meta.env.VITE_BUILD_DATE': JSON.stringify(buildInfo.date),
 			'import.meta.env.VITE_BUILD_COMMIT': JSON.stringify(buildInfo.commit),
 			'import.meta.env.VITE_GAME_VERSION': JSON.stringify(buildInfo.gameVersion),
+			'import.meta.env.VITE_SPELL_DATA': JSON.stringify(buildInfo.spellData),
 			'import.meta.env.VITE_SPEC_VERSIONS': JSON.stringify(buildInfo.specs),
 		},
 		oxc: {

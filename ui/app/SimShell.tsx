@@ -1,7 +1,7 @@
 import { CharacterStats } from '@features/character-stats';
 import { SimWarnings } from '@features/results/components/SimResultsPanel';
 import { translatePlayerSpec } from '@i18n/localization';
-import { BUILD_INFO, specVersion } from '@sim/constants/build_info';
+import { BUILD_INFO, specSpellData, specVersion } from '@sim/constants/build_info';
 import { useSimStatus } from '@sim/hooks/useSimStatus';
 import type { PlayerSpec } from '@sim/player/player_spec';
 import type { Sim } from '@sim/sim';
@@ -93,6 +93,7 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 										info={BUILD_INFO}
 										specName={lastSpecChange ? translatePlayerSpec(spec) : ''}
 										specVersion={lastSpecChange}
+										spellData={specSpellData(spec.simLink)}
 										className="border-t border-border px-sidebar py-2 text-xs text-white/65"
 									/>
 								)}

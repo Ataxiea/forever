@@ -448,8 +448,13 @@
 			"commit_link": "View commit {{commit}} on GitHub",
 			"sim": "Sim",
 			"changed": "Changed {{date}}",
-			"game_data": "Game data",
-			"details": "Release details"
+			"details": "Release details",
+			"presets": "{{spec}} presets",
+			"class_data": "{{class}} spell data",
+			"racial_data": "Racial spell data",
+			"item_data": "Item data",
+			"shared_data": "Shared spell data",
+			"data_version": "{{build}}, hotfix {{hotfix}}"
 		}
 	},
 	"sim": {

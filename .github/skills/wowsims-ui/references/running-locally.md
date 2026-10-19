@@ -37,14 +37,14 @@ to the landing page, so getting the landing page means there is no `ui/specs/<cl
 ## The release a page shows
 
 `tools/vite/build_info.mts` reads the commit (`BUILD_COMMIT`, else `git rev-parse HEAD`, else `GITHUB_SHA`), the UTC
-build date, the newest game build in `assets/db_inputs/spell_store_inputs.json` and each spec's last change (`git log`
-over its presets, sim code and expected results) when vite loads its config, and `vite.config.mts` defines
-them as `import.meta.env.VITE_BUILD_*`, `VITE_GAME_VERSION` and `VITE_SPEC_VERSIONS`. A shallow clone has no spec
-versions, so the build workflows check out the full history. The landing page shows the release beside its title, and a
-spec page under the sidebar's stats, with the spec's last change on hover. The values are read at each
-`vite build` and dev server start; an incremental `make` with no change to its prerequisites keeps the last build's.
-vitest and Storybook use their own configs, which do not define these values, so `BUILD_INFO` is empty there and
-`ReleaseInfo` renders nothing.
+build date, the game build and hotfix stamped on each part of `assets/db_inputs/spell_store_inputs.json` (each class,
+items, racials, shared) and each spec's last preset change (`git log` over its `presets.ts`, `apls/`, `gear_sets/` and
+`builds/`) when vite loads its config, and `vite.config.mts` defines them as `import.meta.env.VITE_BUILD_*`,
+`VITE_GAME_VERSION`, `VITE_SPELL_DATA` and `VITE_SPEC_VERSIONS`. A shallow clone has no preset versions, so the build
+workflows check out the full history. The landing page shows the release beside its title, and a spec page under the
+sidebar's stats, with the details on its info button. The values are read at each `vite build` and dev server start;
+an incremental `make` with no change to its prerequisites keeps the last build's. vitest and Storybook use their own
+configs, which do not define these values, so `BUILD_INFO` is empty there and `ReleaseInfo` renders nothing.
 
 ## Running real sims
 

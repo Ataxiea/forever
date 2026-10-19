@@ -14,6 +14,12 @@ export interface SpecVersion {
 	date: string;
 }
 
+/** The game build and hotfix push one part of the spell store was generated from. */
+export interface SpellDataVersion {
+	build: string;
+	hotfix: number;
+}
+
 export interface BuildInfo {
 	/** The UTC date of the build, as YYYY-MM-DD. */
 	date: string;
@@ -21,16 +27,26 @@ export interface BuildInfo {
 	commit: string;
 	/** The newest game build the spell store was generated from, such as 1.60.1.70450, or empty. */
 	gameVersion: string;
-	/** Each spec's last change, keyed `<class>/<spec>` as its page path is; empty in a shallow clone. */
+	/** Each part of the spell store (a class, items, racials, shared) and the game build and hotfix it is from. */
+	spellData: Record<string, SpellDataVersion>;
+	/** Each spec's last preset change, keyed `<class>/<spec>` as its page path is; empty in a shallow clone. */
 	specs: Record<string, SpecVersion>;
 }
 
-export const readBuildInfo = (root: string): BuildInfo => ({
-	date: new Date().toISOString().slice(0, 10),
-	commit: buildCommit(root),
-	gameVersion: gameVersion(root),
-	specs: specVersions(root),
-});
+export const readBuildInfo = (root: string): BuildInfo => {
+	const spellData = spellDataVersions(root);
+	return {
+		date: new Date().toISOString().slice(0, 10),
+		commit: buildCommit(root),
+		gameVersion:
+			Object.values(spellData)
+				.map(version => version.build)
+				.sort(compareBuilds)
+				.at(-1) ?? '',
+		spellData,
+		specs: specVersions(root),
+	};
+};
 
 const git = (root: string, args: string[]): string =>
 	execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] })
@@ -51,15 +67,18 @@ const buildCommit = (root: string): string => {
 	}
 };
 
-// assets/db_inputs/spell_store_inputs.json is gzipped despite its name. Its Builds map names the game
-// build each part of the store was taken from; the newest is the build the data is current to.
-const gameVersion = (root: string): string => {
+// assets/db_inputs/spell_store_inputs.json is gzipped despite its name. Its Builds and Hotfixes maps stamp
+// each part of the store, a class, items, racials or shared, with the game build and hotfix push it was
+// generated from. The parts are regenerated one at a time, so they need not agree; the newest build is
+// the one the page's line shows.
+const spellDataVersions = (root: string): Record<string, SpellDataVersion> => {
 	try {
 		const inputs = JSON.parse(gunzipSync(readFileSync(path.join(root, 'assets/db_inputs/spell_store_inputs.json'))).toString());
-		const builds = Object.values<string>(inputs.Builds ?? {});
-		return builds.sort(compareBuilds).at(-1) ?? '';
+		const builds: Record<string, string> = inputs.Builds ?? {};
+		const hotfixes: Record<string, number> = inputs.Hotfixes ?? {};
+		return Object.fromEntries(Object.entries(builds).map(([part, build]) => [part, { build, hotfix: hotfixes[part] ?? 0 }]));
 	} catch {
-		return '';
+		return {};
 	}
 };
 
@@ -75,12 +94,10 @@ const compareBuilds = (a: string, b: string): number => {
 	return 0;
 };
 
-// A spec's version is the last change to its presets (presets.ts and the apls, gear_sets and builds
-// folders in ui/specs/<class>/<spec>) or its sim code and expected results (the class's own files in
-// sim/<class>, plus sim/<class>/<spec> when the spec has a sim folder). Its page's other UI and the class's
-// shared UI do not count. The log starts at the commit the release names, so a pull request's preview
-// never names its merge commit. A shallow clone has no history to read, so it reports no spec at all
-// rather than its one commit for every spec.
+// A spec's preset version is the last change to presets.ts and the apls, gear_sets and builds folders in
+// ui/specs/<class>/<spec>. Its sim code is versioned by the spell data stamps above. The log starts at the
+// commit the release names, so a pull request's preview never names its merge commit. A shallow clone
+// has no history to read, so it reports no spec at all rather than its one commit for every spec.
 const specVersions = (root: string): Record<string, SpecVersion> => {
 	try {
 		if (git(root, ['rev-parse', '--is-shallow-repository']) === 'true') {
@@ -102,9 +119,7 @@ const specVersions = (root: string): Record<string, SpecVersion> => {
 			if (!existsSync(path.join(specDir, 'spec.ts')) && !existsSync(path.join(specDir, 'spec.tsx'))) {
 				continue;
 			}
-			const sim = [`:(glob)sim/${className}/*`, ...(existsSync(path.join(root, 'sim', className, specName)) ? [`sim/${className}/${specName}`] : [])];
-			const presets = ['presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${className}/${specName}/${name}`);
-			const paths = [...presets, ...sim];
+			const paths = ['presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${className}/${specName}/${name}`);
 			try {
 				const [commit, date] = git(root, ['log', '-1', '--format=%H %cs', process.env.BUILD_COMMIT || 'HEAD', '--', ...paths]).split(' ');
 				if (commit) {
