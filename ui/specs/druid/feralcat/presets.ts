@@ -95,7 +95,7 @@ export const ENERGIZED_APL = PresetUtils.makePresetAPLRotation('Monocat, Energiz
 export const JVMES_APL = {
 	...PresetUtils.makePresetAPLRotation('Monocat, adaptive racials and Sapper', JvmesApl),
 	tooltip:
-		'Maintains Rip and Rake, saves Bite for fight end, and uses available racial abilities and optional Sapper. Opens from Prowl with Berserk followed by Ravage.',
+		'Opens with Berserk and Ravage, maintains bleeds, and saves Bite for fight end. Later Berserks pool to 60 energy or Clearcasting when time permits. Named conditions explain racial abilities, optional Sapper and resource use.',
 };
 export const RAVAGE_APL = PresetUtils.makePresetAPLRotation('Ravage opener', RavageApl);
 export const POUNCE_APL = PresetUtils.makePresetAPLRotation('Pounce opener', PounceApl);

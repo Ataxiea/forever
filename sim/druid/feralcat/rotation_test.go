@@ -442,3 +442,45 @@ func TestJVMESManaBudgetAccountsForFightEndAndWisdom(t *testing.T) {
 		})
 	}
 }
+
+func TestJVMESBerserkImmediatelyPrecedesACatAttack(t *testing.T) {
+	for _, race := range []proto.Race{proto.Race_RaceTauren, proto.Race_RaceNightElf, proto.Race_RaceHighOrderSkyborne, proto.Race_RaceWindshaperSkyborne} {
+		t.Run(race.String(), func(t *testing.T) {
+			rotation := core.GetAplRotation("../../../ui/specs/druid/feralcat/apls", "jvmes").Rotation
+			request := sweepRequest(powershiftTalents, rotation, false, 1)
+			request.Encounter.Duration = 210
+			request.Raid.Parties[0].Players[0].Race = race
+			request.SimOptions.Debug = true
+			result := core.RunSim(request, nil, simsignals.CreateSignals())
+			if result.Error != nil {
+				t.Fatal(result.Error.Message)
+			}
+			lines := strings.Split(result.Logs, "\n")
+			uses := 0
+			for i, line := range lines {
+				if !strings.Contains(line, "Casting {SpellID: 417141}") {
+					continue
+				}
+				uses++
+				at := line[:strings.Index(line, "]")+1]
+				found := false
+				for _, next := range lines[i+1:] {
+					if !strings.Contains(next, "Casting ") || strings.Contains(next, "GCD = 0s") {
+						continue
+					}
+					found = strings.HasPrefix(next, at) && (strings.Contains(next, "Casting {SpellID: 9867}") || strings.Contains(next, "Casting {SpellID: 9904}") || strings.Contains(next, "Casting {SpellID: 9830}"))
+					if !found {
+						t.Errorf("Berserk at %s was followed by %s", at, next)
+					}
+					break
+				}
+				if !found {
+					t.Error("Berserk was not immediately followed by a Cat builder")
+				}
+			}
+			if uses < 2 {
+				t.Fatal("the fixture did not exercise a later Berserk activation")
+			}
+		})
+	}
+}

@@ -66,7 +66,7 @@
 			}
 		},
 		{
-			"name": "Shifting Power is ready below the energy ceiling",
+			"name": "Shifting Power is ready at 45 energy or below",
 			"value": {
 				"and": {
 					"vals": [
@@ -702,7 +702,7 @@
 			}
 		},
 		{
-			"name": "Elune's Light fits outside Berserk",
+			"name": "Elune\u2019s Light is available, outside Berserk and away from its next use",
 			"value": {
 				"and": {
 					"vals": [
@@ -746,79 +746,94 @@
 			}
 		},
 		{
-			"name": "Shadowmeld can fund a Ravage",
+			"name": "Shadowmeld is ready: Ravage without spending reserved bleed or Berserk energy",
 			"value": {
 				"and": {
 					"vals": [
 						{
-							"spellIsKnown": {
-								"spellId": {
-									"spellId": 20580
-								}
-							}
-						},
-						{
-							"cmp": {
-								"op": "OpLe",
-								"lhs": {
-									"gcdTimeToReady": {}
-								},
-								"rhs": {
-									"const": {
-										"val": "0s"
+							"and": {
+								"vals": [
+									{
+										"spellIsKnown": {
+											"spellId": {
+												"spellId": 20580
+											}
+										}
+									},
+									{
+										"cmp": {
+											"op": "OpLe",
+											"lhs": {
+												"gcdTimeToReady": {}
+											},
+											"rhs": {
+												"const": {
+													"val": "0s"
+												}
+											}
+										}
+									},
+									{
+										"auraIsActive": {
+											"auraId": {
+												"spellId": 768
+											}
+										}
+									},
+									{
+										"spellIsReady": {
+											"spellId": {
+												"spellId": 20580
+											}
+										}
+									},
+									{
+										"not": {
+											"val": {
+												"variableRef": {
+													"name": "Save energy for the next bleed refresh"
+												}
+											}
+										}
+									},
+									{
+										"or": {
+											"vals": [
+												{
+													"auraIsActive": {
+														"auraId": {
+															"spellId": 16870
+														}
+													}
+												},
+												{
+													"cmp": {
+														"op": "OpGe",
+														"lhs": {
+															"currentEnergy": {}
+														},
+														"rhs": {
+															"spellCurrentCost": {
+																"spellId": {
+																	"spellId": 9867
+																}
+															}
+														}
+													}
+												}
+											]
+										}
 									}
-								}
-							}
-						},
-						{
-							"auraIsActive": {
-								"auraId": {
-									"spellId": 768
-								}
-							}
-						},
-						{
-							"spellIsReady": {
-								"spellId": {
-									"spellId": 20580
-								}
+								]
 							}
 						},
 						{
 							"not": {
 								"val": {
 									"variableRef": {
-										"name": "Save energy for the next bleed refresh"
+										"name": "Pool energy for a later Berserk"
 									}
 								}
-							}
-						},
-						{
-							"or": {
-								"vals": [
-									{
-										"auraIsActive": {
-											"auraId": {
-												"spellId": 16870
-											}
-										}
-									},
-									{
-										"cmp": {
-											"op": "OpGe",
-											"lhs": {
-												"currentEnergy": {}
-											},
-											"rhs": {
-												"spellCurrentCost": {
-													"spellId": {
-														"spellId": 9867
-													}
-												}
-											}
-										}
-									}
-								]
 							}
 						}
 					]
@@ -826,7 +841,7 @@
 			}
 		},
 		{
-			"name": "Read Ley Line can restore needed mana",
+			"name": "Read Ley Line is ready: restore needed mana in a free utility window",
 			"value": {
 				"and": {
 					"vals": [
@@ -909,7 +924,7 @@
 			}
 		},
 		{
-			"name": "The final second has spare combo points",
+			"name": "Final second: Bite with at least 2 combo points",
 			"value": {
 				"and": {
 					"vals": [
@@ -951,7 +966,7 @@
 			}
 		},
 		{
-			"name": "Prowl allows a Ravage opener",
+			"name": "Prowl is active: open with Ravage",
 			"value": {
 				"auraIsActive": {
 					"auraId": {
@@ -961,7 +976,7 @@
 			}
 		},
 		{
-			"name": "Innervate is needed outside Cat Form",
+			"name": "Outside form with too little mana: Innervate",
 			"value": {
 				"and": {
 					"vals": [
@@ -1039,7 +1054,7 @@
 			}
 		},
 		{
-			"name": "Return to Cat after utility casts",
+			"name": "Outside Cat Form: return after utility casts",
 			"value": {
 				"not": {
 					"val": {
@@ -1068,7 +1083,7 @@
 							"not": {
 								"val": {
 									"variableRef": {
-										"name": "Shifting Power is ready below the energy ceiling"
+										"name": "Shifting Power is ready at 45 energy or below"
 									}
 								}
 							}
@@ -1127,7 +1142,7 @@
 							"not": {
 								"val": {
 									"variableRef": {
-										"name": "Shifting Power is ready below the energy ceiling"
+										"name": "Shifting Power is ready at 45 energy or below"
 									}
 								}
 							}
@@ -1190,7 +1205,7 @@
 			}
 		},
 		{
-			"name": "Thistle Tea can refill low energy",
+			"name": "Cat Form at 20 energy or below: use Thistle Tea",
 			"value": {
 				"and": {
 					"vals": [
@@ -1219,7 +1234,7 @@
 			}
 		},
 		{
-			"name": "Cat Form can use the offensive potion",
+			"name": "In Cat Form: use the selected offensive potion",
 			"value": {
 				"auraIsActive": {
 					"auraId": {
@@ -1229,7 +1244,7 @@
 			}
 		},
 		{
-			"name": "A finishing Bite is worthwhile in Cat Form",
+			"name": "Less than 6 seconds left: Bite with 4+ combo points and at most 55 energy",
 			"value": {
 				"and": {
 					"vals": [
@@ -1250,21 +1265,36 @@
 			}
 		},
 		{
-			"name": "Clearcasting should pay for Shred",
+			"name": "Clearcasting is active: Shred before refreshing bleeds",
 			"value": {
 				"and": {
 					"vals": [
 						{
-							"auraIsActive": {
-								"auraId": {
-									"spellId": 768
-								}
+							"and": {
+								"vals": [
+									{
+										"auraIsActive": {
+											"auraId": {
+												"spellId": 768
+											}
+										}
+									},
+									{
+										"auraIsActive": {
+											"auraId": {
+												"spellId": 16870
+											}
+										}
+									}
+								]
 							}
 						},
 						{
-							"auraIsActive": {
-								"auraId": {
-									"spellId": 16870
+							"not": {
+								"val": {
+									"variableRef": {
+										"name": "Pool energy for a later Berserk"
+									}
 								}
 							}
 						}
@@ -1273,7 +1303,7 @@
 			}
 		},
 		{
-			"name": "Rip is due in Cat Form",
+			"name": "Rip is missing: apply with 4+ combo points and at least 6 seconds left",
 			"value": {
 				"and": {
 					"vals": [
@@ -1294,7 +1324,7 @@
 			}
 		},
 		{
-			"name": "Rake is due in Cat Form",
+			"name": "Rake is missing: apply with more than 6 seconds left",
 			"value": {
 				"and": {
 					"vals": [
@@ -1315,22 +1345,37 @@
 			}
 		},
 		{
-			"name": "Shred will not spend reserved bleed energy",
+			"name": "Shred without spending energy reserved for bleeds or later Berserk",
 			"value": {
 				"and": {
 					"vals": [
 						{
-							"auraIsActive": {
-								"auraId": {
-									"spellId": 768
-								}
+							"and": {
+								"vals": [
+									{
+										"auraIsActive": {
+											"auraId": {
+												"spellId": 768
+											}
+										}
+									},
+									{
+										"not": {
+											"val": {
+												"variableRef": {
+													"name": "Save energy for the next bleed refresh"
+												}
+											}
+										}
+									}
+								]
 							}
 						},
 						{
 							"not": {
 								"val": {
 									"variableRef": {
-										"name": "Save energy for the next bleed refresh"
+										"name": "Pool energy for a later Berserk"
 									}
 								}
 							}
@@ -1340,7 +1385,7 @@
 			}
 		},
 		{
-			"name": "Sapper is available and fits a safe utility window",
+			"name": "Sapper is ready and fits a free utility window",
 			"value": {
 				"and": {
 					"vals": [
@@ -1403,7 +1448,7 @@
 			}
 		},
 		{
-			"name": "Innervate is needed in a low-energy window",
+			"name": "Mana is low: leave Cat to Innervate with 15+ seconds left",
 			"value": {
 				"and": {
 					"vals": [
@@ -1732,19 +1777,272 @@
 			}
 		},
 		{
-			"name": "Berserk can empower the Ravage opener",
+			"name": "Berserk is ready for a builder; later uses have 60 energy or Clearcasting",
 			"value": {
 				"and": {
 					"vals": [
 						{
-							"variableRef": {
-								"name": "Prowl allows a Ravage opener"
+							"and": {
+								"vals": [
+									{
+										"cmp": {
+											"op": "OpLe",
+											"lhs": {
+												"gcdTimeToReady": {}
+											},
+											"rhs": {
+												"const": {
+													"val": "0s"
+												}
+											}
+										}
+									},
+									{
+										"spellIsKnown": {
+											"spellId": {
+												"spellId": 417141
+											}
+										}
+									},
+									{
+										"auraIsActive": {
+											"auraId": {
+												"spellId": 768
+											}
+										}
+									},
+									{
+										"cmp": {
+											"op": "OpLe",
+											"lhs": {
+												"spellTimeToReady": {
+													"spellId": {
+														"spellId": 417141
+													}
+												}
+											},
+											"rhs": {
+												"const": {
+													"val": "0s"
+												}
+											}
+										}
+									},
+									{
+										"spellCanCast": {
+											"spellId": {
+												"spellId": 417141
+											}
+										}
+									},
+									{
+										"not": {
+											"val": {
+												"and": {
+													"vals": [
+														{
+															"variableRef": {
+																"name": "Final second: Bite with at least 2 combo points"
+															}
+														},
+														{
+															"spellCanCast": {
+																"spellId": {
+																	"spellId": 22829
+																}
+															}
+														}
+													]
+												}
+											}
+										}
+									},
+									{
+										"or": {
+											"vals": [
+												{
+													"and": {
+														"vals": [
+															{
+																"variableRef": {
+																	"name": "Prowl is active: open with Ravage"
+																}
+															},
+															{
+																"spellCanCast": {
+																	"spellId": {
+																		"spellId": 9867
+																	}
+																}
+															}
+														]
+													}
+												},
+												{
+													"and": {
+														"vals": [
+															{
+																"not": {
+																	"val": {
+																		"variableRef": {
+																			"name": "Prowl is active: open with Ravage"
+																		}
+																	}
+																}
+															},
+															{
+																"or": {
+																	"vals": [
+																		{
+																			"variableRef": {
+																				"name": "Ready for Berserk followed by Rake"
+																			}
+																		},
+																		{
+																			"variableRef": {
+																				"name": "Ready for Berserk followed by Shred"
+																			}
+																		}
+																	]
+																}
+															}
+														]
+													}
+												}
+											]
+										}
+									},
+									{
+										"not": {
+											"val": {
+												"and": {
+													"vals": [
+														{
+															"variableRef": {
+																"name": "Less than 6 seconds left: Bite with 4+ combo points and at most 55 energy"
+															}
+														},
+														{
+															"spellCanCast": {
+																"spellId": {
+																	"spellId": 22829
+																}
+															}
+														}
+													]
+												}
+											}
+										}
+									}
+								]
 							}
 						},
 						{
-							"spellCanCast": {
-								"spellId": {
-									"spellId": 417141
+							"not": {
+								"val": {
+									"variableRef": {
+										"name": "Pool energy for a later Berserk"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "Pool energy for a later Berserk",
+			"value": {
+				"and": {
+					"vals": [
+						{
+							"cmp": {
+								"op": "OpGt",
+								"lhs": {
+									"currentTime": {}
+								},
+								"rhs": {
+									"const": {
+										"val": "30s"
+									}
+								}
+							}
+						},
+						{
+							"cmp": {
+								"op": "OpLe",
+								"lhs": {
+									"spellTimeToReady": {
+										"spellId": {
+											"spellId": 417141
+										}
+									}
+								},
+								"rhs": {
+									"const": {
+										"val": "0s"
+									}
+								}
+							}
+						},
+						{
+							"not": {
+								"val": {
+									"auraIsActive": {
+										"auraId": {
+											"spellId": 417141
+										}
+									}
+								}
+							}
+						},
+						{
+							"cmp": {
+								"op": "OpGt",
+								"lhs": {
+									"remainingTime": {}
+								},
+								"rhs": {
+									"const": {
+										"val": "15s"
+									}
+								}
+							}
+						},
+						{
+							"cmp": {
+								"op": "OpLt",
+								"lhs": {
+									"remainingTime": {}
+								},
+								"rhs": {
+									"const": {
+										"val": "180s"
+									}
+								}
+							}
+						},
+						{
+							"cmp": {
+								"op": "OpLt",
+								"lhs": {
+									"currentEnergy": {}
+								},
+								"rhs": {
+									"const": {
+										"val": "60"
+									}
+								}
+							}
+						},
+						{
+							"not": {
+								"val": {
+									"auraIsActive": {
+										"auraId": {
+											"spellId": 16870
+										}
+									}
 								}
 							}
 						}
@@ -1755,54 +2053,26 @@
 	],
 	"priorityList": [
 		{
-			"notes": "Final-second Bite",
+			"notes": "Use Berserk before a builder; on later uses, pool to 60 energy or Clearcasting",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "The final second has spare combo points"
+						"name": "Berserk is ready for a builder; later uses have 60 energy or Clearcasting"
 					}
 				},
 				"castSpell": {
 					"spellId": {
-						"spellId": 22829
+						"spellId": 417141
 					}
 				}
 			}
 		},
 		{
-			"notes": "Ravage opener",
+			"notes": "Open with Ravage from Prowl, even without Clearcasting",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Berserk can empower the Ravage opener"
-					}
-				},
-				"strictSequence": {
-					"actions": [
-						{
-							"castSpell": {
-								"spellId": {
-									"spellId": 417141
-								}
-							}
-						},
-						{
-							"castSpell": {
-								"spellId": {
-									"spellId": 9867
-								}
-							}
-						}
-					]
-				}
-			}
-		},
-		{
-			"notes": "Ravage opener when Berserk is unavailable",
-			"action": {
-				"condition": {
-					"variableRef": {
-						"name": "Prowl allows a Ravage opener"
+						"name": "Prowl is active: open with Ravage"
 					}
 				},
 				"castSpell": {
@@ -1816,7 +2086,7 @@
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Innervate is needed outside Cat Form"
+						"name": "Outside form with too little mana: Innervate"
 					}
 				},
 				"castSpell": {
@@ -1824,13 +2094,14 @@
 						"spellId": 29166
 					}
 				}
-			}
+			},
+			"notes": "Cast Innervate when outside form and mana is needed"
 		},
 		{
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Return to Cat after utility casts"
+						"name": "Outside Cat Form: return after utility casts"
 					}
 				},
 				"castSpell": {
@@ -1838,12 +2109,29 @@
 						"spellId": 768
 					}
 				}
+			},
+			"notes": "Return to Cat after utility casts"
+		},
+		{
+			"notes": "Bite in the final second with at least 2 combo points",
+			"action": {
+				"condition": {
+					"variableRef": {
+						"name": "Final second: Bite with at least 2 combo points"
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 22829
+					}
+				}
 			}
 		},
 		{
 			"action": {
 				"autocastOtherCooldowns": {}
-			}
+			},
+			"notes": "Use other available cooldowns"
 		},
 		{
 			"action": {
@@ -1872,70 +2160,14 @@
 					}
 				}
 			},
-			"notes": "Major Mana Potion: reserve room for its base restore and use it only when the remaining mana budget needs it."
+			"notes": "Use Major Mana Potion when it fits and the remaining fight needs mana"
 		},
 		{
-			"notes": "Berserk with Rake",
+			"notes": "Use Elune\u2019s Light outside Berserk, away from its next use",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Ready for Berserk followed by Rake"
-					}
-				},
-				"strictSequence": {
-					"actions": [
-						{
-							"castSpell": {
-								"spellId": {
-									"spellId": 417141
-								}
-							}
-						},
-						{
-							"castSpell": {
-								"spellId": {
-									"spellId": 9904
-								}
-							}
-						}
-					]
-				}
-			}
-		},
-		{
-			"notes": "Berserk with Shred",
-			"action": {
-				"condition": {
-					"variableRef": {
-						"name": "Ready for Berserk followed by Shred"
-					}
-				},
-				"strictSequence": {
-					"actions": [
-						{
-							"castSpell": {
-								"spellId": {
-									"spellId": 417141
-								}
-							}
-						},
-						{
-							"castSpell": {
-								"spellId": {
-									"spellId": 9830
-								}
-							}
-						}
-					]
-				}
-			}
-		},
-		{
-			"notes": "Elune's Light outside Berserk",
-			"action": {
-				"condition": {
-					"variableRef": {
-						"name": "Elune's Light fits outside Berserk"
+						"name": "Elune\u2019s Light is available, outside Berserk and away from its next use"
 					}
 				},
 				"castSpell": {
@@ -1946,11 +2178,11 @@
 			}
 		},
 		{
-			"notes": "Shift below ceiling",
+			"notes": "Use Shifting Power at 45 energy or below",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Shifting Power is ready below the energy ceiling"
+						"name": "Shifting Power is ready at 45 energy or below"
 					}
 				},
 				"castSpell": {
@@ -1961,11 +2193,11 @@
 			}
 		},
 		{
-			"notes": "Tea threshold",
+			"notes": "Use Thistle Tea at 20 energy or below",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Thistle Tea can refill low energy"
+						"name": "Cat Form at 20 energy or below: use Thistle Tea"
 					}
 				},
 				"castSpell": {
@@ -1976,11 +2208,11 @@
 			}
 		},
 		{
-			"notes": "Mighty Rage Potion",
+			"notes": "Use the selected offensive potion in Cat Form",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Cat Form can use the offensive potion"
+						"name": "In Cat Form: use the selected offensive potion"
 					}
 				},
 				"castSpell": {
@@ -1991,11 +2223,11 @@
 			}
 		},
 		{
-			"notes": "Terminal Bite",
+			"notes": "Bite with less than 6 seconds left, at least 4 combo points and 55 energy or below",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "A finishing Bite is worthwhile in Cat Form"
+						"name": "Less than 6 seconds left: Bite with 4+ combo points and at most 55 energy"
 					}
 				},
 				"castSpell": {
@@ -2006,11 +2238,11 @@
 			}
 		},
 		{
-			"notes": "Spend Clearcasting on Shred",
+			"notes": "Spend Clearcasting on Shred before refreshing bleeds",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Clearcasting should pay for Shred"
+						"name": "Clearcasting is active: Shred before refreshing bleeds"
 					}
 				},
 				"castSpell": {
@@ -2021,11 +2253,11 @@
 			}
 		},
 		{
-			"notes": "Maintain Rip",
+			"notes": "Apply missing Rip with at least 4 combo points and 6 seconds remaining",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Rip is due in Cat Form"
+						"name": "Rip is missing: apply with 4+ combo points and at least 6 seconds left"
 					}
 				},
 				"castSpell": {
@@ -2036,11 +2268,11 @@
 			}
 		},
 		{
-			"notes": "Maintain Rake",
+			"notes": "Apply missing Rake with more than 6 seconds remaining",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Rake is due in Cat Form"
+						"name": "Rake is missing: apply with more than 6 seconds left"
 					}
 				},
 				"castSpell": {
@@ -2051,11 +2283,11 @@
 			}
 		},
 		{
-			"notes": "Shadowmeld into Ravage",
+			"notes": "Use Shadowmeld into Ravage when available and bleed energy is covered",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Shadowmeld can fund a Ravage"
+						"name": "Shadowmeld is ready: Ravage without spending reserved bleed or Berserk energy"
 					}
 				},
 				"strictSequence": {
@@ -2079,11 +2311,11 @@
 			}
 		},
 		{
-			"notes": "Shred",
+			"notes": "Shred unless saving energy for bleeds or a later Berserk",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Shred will not spend reserved bleed energy"
+						"name": "Shred without spending energy reserved for bleeds or later Berserk"
 					}
 				},
 				"castSpell": {
@@ -2094,11 +2326,11 @@
 			}
 		},
 		{
-			"notes": "Sapper in a free global",
+			"notes": "Use Sapper and return to Cat in a free utility window",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Sapper is available and fits a safe utility window"
+						"name": "Sapper is ready and fits a free utility window"
 					}
 				},
 				"strictSequence": {
@@ -2129,11 +2361,11 @@
 			}
 		},
 		{
-			"notes": "Read Ley Line in a free global",
+			"notes": "Use Read Ley Line for needed mana in a free utility window",
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Read Ley Line can restore needed mana"
+						"name": "Read Ley Line is ready: restore needed mana in a free utility window"
 					}
 				},
 				"castSpell": {
@@ -2147,7 +2379,7 @@
 			"action": {
 				"condition": {
 					"variableRef": {
-						"name": "Innervate is needed in a low-energy window"
+						"name": "Mana is low: leave Cat to Innervate with 15+ seconds left"
 					}
 				},
 				"cancelAura": {
@@ -2155,7 +2387,9 @@
 						"spellId": 768
 					}
 				}
-			}
+			},
+			"notes": "Leave Cat to Innervate when mana is low and at least 15 seconds remain"
 		}
-	]
+	],
+	"groups": []
 }
