@@ -95,7 +95,7 @@ jobs:
             - name: Build 🔧
               env:
                   # The release the page shows names the commit the preview comment names, not the merge commit.
-                  BUILD_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+                  BUILD_COMMIT: ${{ github.event.pull_request.head.sha }}
               run: |
                   make dist/forever/.dirstamp
 

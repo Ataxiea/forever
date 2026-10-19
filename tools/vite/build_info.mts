@@ -1,23 +1,29 @@
-// The release a build is: the commit it is built from, the UTC date it is built on, the game build of
-// the data it carries, and the last commit that changed each spec. vite.config.mts defines them into the
-// page, so every build, the deploy's included, states its own release with nothing written into the
-// source tree.
+// The release a build is: the commit it is built from, the UTC date it is built on, and for each spec the
+// game build of the data its sim reads and the last commits that changed its presets and its engine.
+// vite.config.mts defines it into the page, so every build, the deploy's included, states its own release
+// with nothing written into the source tree. ui/sim/constants/build_info.ts reads it with these types.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
-export interface SpecVersion {
-	/** The full hash of the last commit that changed the spec. */
+import { discoverSpecPages } from './spec_pages.mjs';
+
+export interface Change {
+	/** The full hash of the commit. */
 	commit: string;
-	/** That commit's date, as YYYY-MM-DD. */
+	/** The commit's UTC date, as YYYY-MM-DD. */
 	date: string;
 }
 
-/** The game build and hotfix push one part of the spell store was generated from. */
-export interface SpellDataVersion {
-	build: string;
-	hotfix: number;
+/** One spec's release, each part left out when the build cannot read it. */
+export interface SpecRelease {
+	/** The newest game build among the spell data parts its sim reads: its class, racials, items and shared. */
+	gameVersion?: string;
+	/** The last change to its presets: presets.ts, the apls, gear_sets and builds folders, and the class's shared presets. */
+	presets?: Change;
+	/** The last change to its engine: its class's sim code and spell data, its own sim folder and expected results, and the racials. */
+	engine?: Change;
 }
 
 export interface BuildInfo {
@@ -27,29 +33,23 @@ export interface BuildInfo {
 	commit: string;
 	/** The newest game build the spell store was generated from, such as 1.60.1.70450, or empty. */
 	gameVersion: string;
-	/** Each part of the spell store (a class, items, racials, shared) and the game build and hotfix it is from. */
-	spellData: Record<string, SpellDataVersion>;
-	/** Each spec's last preset change, keyed `<class>/<spec>` as its page path is; empty in a shallow clone. */
-	specs: Record<string, SpecVersion>;
+	/** Each spec's release, keyed `<class>/<spec>` as its page path is. */
+	specs: Record<string, SpecRelease>;
 }
 
 export const readBuildInfo = (root: string): BuildInfo => {
-	const spellData = spellDataVersions(root);
+	const builds = spellDataBuilds(root);
 	return {
 		date: new Date().toISOString().slice(0, 10),
 		commit: buildCommit(root),
-		gameVersion:
-			Object.values(spellData)
-				.map(version => version.build)
-				.sort(compareBuilds)
-				.at(-1) ?? '',
-		spellData,
-		specs: specVersions(root),
+		gameVersion: newest(Object.values(builds)),
+		specs: specReleases(root, builds),
 	};
 };
 
+// Dates are UTC, as the build date is, whatever the committer's or the builder's time zone.
 const git = (root: string, args: string[]): string =>
-	execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] })
+	execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], env: { ...process.env, TZ: 'UTC' } })
 		.toString()
 		.trim();
 
@@ -67,20 +67,19 @@ const buildCommit = (root: string): string => {
 	}
 };
 
-// assets/db_inputs/spell_store_inputs.json is gzipped despite its name. Its Builds and Hotfixes maps stamp
-// each part of the store, a class, items, racials or shared, with the game build and hotfix push it was
-// generated from. The parts are regenerated one at a time, so they need not agree; the newest build is
-// the one the page's line shows.
-const spellDataVersions = (root: string): Record<string, SpellDataVersion> => {
+// assets/db_inputs/spell_store_inputs.json is gzipped despite its name. Its Builds map stamps each part
+// of the store, a class, items, racials or shared, with the game build it was generated from. The parts
+// are regenerated one at a time, so they need not agree.
+const spellDataBuilds = (root: string): Record<string, string> => {
 	try {
 		const inputs = JSON.parse(gunzipSync(readFileSync(path.join(root, 'assets/db_inputs/spell_store_inputs.json'))).toString());
-		const builds: Record<string, string> = inputs.Builds ?? {};
-		const hotfixes: Record<string, number> = inputs.Hotfixes ?? {};
-		return Object.fromEntries(Object.entries(builds).map(([part, build]) => [part, { build, hotfix: hotfixes[part] ?? 0 }]));
+		return inputs.Builds ?? {};
 	} catch {
 		return {};
 	}
 };
+
+const newest = (builds: string[]): string => [...builds].sort(compareBuilds).at(-1) ?? '';
 
 const compareBuilds = (a: string, b: string): number => {
 	const left = a.split('.').map(Number);
@@ -94,41 +93,47 @@ const compareBuilds = (a: string, b: string): number => {
 	return 0;
 };
 
-// A spec's preset version is the last change to presets.ts and the apls, gear_sets and builds folders in
-// ui/specs/<class>/<spec>. Its sim code is versioned by the spell data stamps above. The log starts at the
-// commit the release names, so a pull request's preview never names its merge commit. A shallow clone
-// has no history to read, so it reports no spec at all rather than its one commit for every spec.
-const specVersions = (root: string): Record<string, SpecVersion> => {
+// A spec's presets and engine are each the last commit over a set of paths:
+//   - presets: presets.ts and the apls, gear_sets and builds folders in ui/specs/<class>/<spec>, and
+//     ui/specs/<class>/shared/presets.ts, which the warrior specs take their default buffs from;
+//   - engine: the files directly in sim/<class>, its generated spell data and expected results among
+//     them, sim/<class>/<spec> with its expected results when the spec has a sim folder, and
+//     sim/core/racials.go. The racials' generated spell data shares one file with every other part's, so
+//     a racials-only regeneration is not counted.
+// The log starts at the checkout, which is what the bundle is built from: a pull request's preview is
+// built from its merge commit, so a master change its branch lacks is still dated. A shallow clone has
+// no history to read, so it reports no change rather than its one commit for every spec.
+const specReleases = (root: string, builds: Record<string, string>): Record<string, SpecRelease> => {
+	let shallow = true;
 	try {
-		if (git(root, ['rev-parse', '--is-shallow-repository']) === 'true') {
-			return {};
-		}
+		shallow = git(root, ['rev-parse', '--is-shallow-repository']) === 'true';
 	} catch {
-		return {};
+		// Not a git tree: no changes to read.
 	}
-	const specs: Record<string, SpecVersion> = {};
-	const specsDir = path.join(root, 'ui/specs');
-	const folders = (dir: string): string[] =>
-		readdirSync(dir, { withFileTypes: true })
-			.filter(entry => entry.isDirectory())
-			.map(entry => entry.name);
-	for (const className of folders(specsDir)) {
-		const classDir = path.join(specsDir, className);
-		for (const specName of folders(classDir)) {
-			const specDir = path.join(classDir, specName);
-			if (!existsSync(path.join(specDir, 'spec.ts')) && !existsSync(path.join(specDir, 'spec.tsx'))) {
-				continue;
-			}
-			const paths = ['presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${className}/${specName}/${name}`);
-			try {
-				const [commit, date] = git(root, ['log', '-1', '--format=%H %cs', process.env.BUILD_COMMIT || 'HEAD', '--', ...paths]).split(' ');
-				if (commit) {
-					specs[`${className}/${specName}`] = { commit, date };
-				}
-			} catch {
-				// A spec git cannot read is left out.
-			}
+	const lastChange = (paths: string[]): Change | undefined => {
+		if (shallow) {
+			return undefined;
 		}
+		try {
+			const [commit, date] = git(root, ['log', '-1', '--format=%H %cd', '--date=format-local:%Y-%m-%d', 'HEAD', '--', ...paths]).split(' ');
+			return commit ? { commit, date } : undefined;
+		} catch {
+			return undefined;
+		}
+	};
+	const specs: Record<string, SpecRelease> = {};
+	for (const key of discoverSpecPages(path.join(root, 'ui'))) {
+		const [className, specName] = key.split('/');
+		const specSim = `sim/${className}/${specName}`;
+		const release: SpecRelease = {
+			gameVersion: newest([className, 'racials', 'items', 'shared'].flatMap(part => (builds[part] ? [builds[part]] : []))) || undefined,
+			presets: lastChange([
+				...['presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${key}/${name}`),
+				`ui/specs/${className}/shared/presets.ts`,
+			]),
+			engine: lastChange([`:(glob)sim/${className}/*`, ...(existsSync(path.join(root, specSim)) ? [specSim] : []), 'sim/core/racials.go']),
+		};
+		specs[key] = release;
 	}
 	return specs;
 };

@@ -1619,7 +1619,7 @@
 						"commit_link": {
 							"type": "string"
 						},
-						"sim": {
+						"sim_build": {
 							"type": "string"
 						},
 						"changed": {
@@ -1631,19 +1631,7 @@
 						"presets": {
 							"type": "string"
 						},
-						"class_data": {
-							"type": "string"
-						},
-						"racial_data": {
-							"type": "string"
-						},
-						"item_data": {
-							"type": "string"
-						},
-						"shared_data": {
-							"type": "string"
-						},
-						"data_version": {
+						"engine": {
 							"type": "string"
 						}
 					},
@@ -1652,15 +1640,11 @@
 						"game_version",
 						"built",
 						"commit_link",
-						"sim",
+						"sim_build",
 						"changed",
 						"details",
 						"presets",
-						"class_data",
-						"racial_data",
-						"item_data",
-						"shared_data",
-						"data_version"
+						"engine"
 					]
 				}
 			},

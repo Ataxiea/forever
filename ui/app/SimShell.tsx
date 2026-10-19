@@ -1,7 +1,5 @@
 import { CharacterStats } from '@features/character-stats';
 import { SimWarnings } from '@features/results/components/SimResultsPanel';
-import { translatePlayerSpec } from '@i18n/localization';
-import { BUILD_INFO, specSpellData, specVersion } from '@sim/constants/build_info';
 import { useSimStatus } from '@sim/hooks/useSimStatus';
 import type { PlayerSpec } from '@sim/player/player_spec';
 import type { Sim } from '@sim/sim';
@@ -39,7 +37,6 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 	const header = useRef<HTMLElement>(null);
 	const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
 	const simReady = useSimStatus(sim).status === 'ready';
-	const lastSpecChange = specVersion(spec.simLink);
 
 	const [stuck, setStuck] = useState(false);
 	useEffect(() => {
@@ -88,15 +85,7 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 									{host && <SimWarnings warnings={host.warnings} ready={simReady} className="my-auto" />}
 									{host && <CharacterStats className="mt-auto" />}
 								</div>
-								{host && (
-									<SpecReleaseInfo
-										info={BUILD_INFO}
-										specName={lastSpecChange ? translatePlayerSpec(spec) : ''}
-										specVersion={lastSpecChange}
-										spellData={specSpellData(spec.simLink)}
-										className="border-t border-border px-sidebar py-2 text-xs text-white/65"
-									/>
-								)}
+								{host && <SpecReleaseInfo spec={spec} className="border-t border-border px-sidebar py-2 text-xs text-white/65" />}
 							</aside>
 							<div
 								className="z-1 mx-auto flex w-full min-w-[calc(275px+1vw)] flex-4 flex-col pt-0 pr-page pb-page pl-page max-lg:min-h-auto"

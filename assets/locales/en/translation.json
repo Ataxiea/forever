@@ -446,15 +446,11 @@
 			"game_version": "Game {{version}}",
 			"built": "Built {{date}}",
 			"commit_link": "View commit {{commit}} on GitHub",
-			"sim": "Sim",
+			"sim_build": "Sim build",
 			"changed": "Changed {{date}}",
 			"details": "Release details",
 			"presets": "{{spec}} presets",
-			"class_data": "{{class}} spell data",
-			"racial_data": "Racial spell data",
-			"item_data": "Item data",
-			"shared_data": "Shared spell data",
-			"data_version": "{{build}}, hotfix {{hotfix}}"
+			"engine": "{{spec}} engine"
 		}
 	},
 	"sim": {

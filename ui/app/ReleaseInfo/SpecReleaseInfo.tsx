@@ -1,6 +1,7 @@
 import i18n from '@i18n/config';
-import { translateClass } from '@i18n/localization';
-import { type BuildInfo, commitUrl, type SpecVersion, type SpellDataVersion } from '@sim/constants/build_info';
+import { translatePlayerSpec } from '@i18n/localization';
+import { BUILD_INFO, type Change, commitUrl, specRelease } from '@sim/constants/build_info';
+import type { PlayerSpec } from '@sim/player/player_spec';
 import { Button } from '@ui-kit/Button';
 import { Icon } from '@ui-kit/Icon';
 import { Tooltip, tooltipAnchorProps } from '@ui-kit/Tooltip';
@@ -10,13 +11,8 @@ import { type ReactNode, useId } from 'react';
 import { ReleaseInfo } from './ReleaseInfo';
 
 export interface SpecReleaseInfoProps {
-	info: BuildInfo;
-	/** The spec's name, as the details list it. */
-	specName: string;
-	/** The spec's last preset change, when the build read it. */
-	specVersion?: SpecVersion;
-	/** The spell data the spec's sim reads: its class, racials, items and shared, as the store stamps each part. */
-	spellData: { part: string; version: SpellDataVersion }[];
+	/** The spec the page sims. */
+	spec: PlayerSpec<any>;
 	className?: string;
 }
 
@@ -26,71 +22,64 @@ const CommitLink = ({ commit }: { commit: string }) => (
 	</Button>
 );
 
-const spellDataLabel = (part: string): string => {
-	switch (part) {
-		case 'racials':
-			return i18n.t('common.release_info.racial_data');
-		case 'items':
-			return i18n.t('common.release_info.item_data');
-		case 'shared':
-			return i18n.t('common.release_info.shared_data');
-		default:
-			return i18n.t('common.release_info.class_data', { class: translateClass(part) });
-	}
-};
-
 const joined = (parts: ReactNode[]) => parts.filter(Boolean).flatMap((part, index) => (index > 0 ? [' · ', part] : [part]));
 
-// The page's release, under the sidebar's stats: the game build, the build date and the commit. The info
-// button beside it, on hover or focus, lists the sim's build, the spec's last preset change and the game
-// build and hotfix of each part of the spell data the spec reads, each left out when the build could not
-// read it. The caller sets the text size and colour.
-export const SpecReleaseInfo = ({ info, specName, specVersion, spellData, className }: SpecReleaseInfoProps) => {
+const changed = (change: Change) => joined([i18n.t('common.release_info.changed', { date: change.date }), <CommitLink key="commit" commit={change.commit} />]);
+
+// The page's release, under the sidebar's stats: the game build of the spell data the spec reads, the
+// build date and the commit. The info button beside it opens the details: the sim's build, and the last
+// changes to the spec's presets and to its engine, each left out when the build could not read it. They
+// open on click, so the links in them are reachable by keyboard and on a touch screen. The caller sets
+// the text size and colour.
+export const SpecReleaseInfo = ({ spec, className }: SpecReleaseInfoProps) => {
 	const id = useId();
-	if (!info.gameVersion && !info.date && !info.commit && !specVersion && spellData.length === 0) {
-		return null;
-	}
+	const release = specRelease(spec.simLink);
 	const rows: { label: string; value: ReactNode[] }[] = [];
-	if (info.date || info.commit) {
+	if (BUILD_INFO.date || BUILD_INFO.commit) {
 		rows.push({
-			label: i18n.t('common.release_info.sim'),
+			label: i18n.t('common.release_info.sim_build'),
 			value: joined([
-				info.date && i18n.t('common.release_info.built', { date: info.date }),
-				info.commit && <CommitLink key="commit" commit={info.commit} />,
+				BUILD_INFO.date && i18n.t('common.release_info.built', { date: BUILD_INFO.date }),
+				BUILD_INFO.commit && <CommitLink key="commit" commit={BUILD_INFO.commit} />,
 			]),
 		});
 	}
-	if (specVersion) {
-		rows.push({
-			label: i18n.t('common.release_info.presets', { spec: specName }),
-			value: joined([i18n.t('common.release_info.changed', { date: specVersion.date }), <CommitLink key="commit" commit={specVersion.commit} />]),
-		});
+	if (release.presets) {
+		rows.push({ label: i18n.t('common.release_info.presets', { spec: translatePlayerSpec(spec) }), value: changed(release.presets) });
 	}
-	for (const { part, version } of spellData) {
-		rows.push({ label: spellDataLabel(part), value: [i18n.t('common.release_info.data_version', { build: version.build, hotfix: version.hotfix })] });
+	if (release.engine) {
+		rows.push({ label: i18n.t('common.release_info.engine', { spec: translatePlayerSpec(spec) }), value: changed(release.engine) });
+	}
+	if (rows.length === 0 && !release.gameVersion) {
+		return null;
 	}
 	return (
 		<div className={clsx('flex items-center gap-2', className)}>
-			<ReleaseInfo info={info} />
-			<Button variant="unstyled" aria-label={i18n.t('common.release_info.details')} {...tooltipAnchorProps(id)}>
-				<Icon name="circle-info" />
-			</Button>
-			<Tooltip
-				id={id}
-				place="top"
-				align="start"
-				clickable
-				content={
-					<dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-						{rows.map(row => (
-							<div key={row.label} className="contents">
-								<dt className="font-bold">{row.label}</dt>
-								<dd className="m-0">{row.value}</dd>
-							</div>
-						))}
-					</dl>
-				}
-			/>
+			<ReleaseInfo gameVersion={release.gameVersion ?? ''} />
+			{rows.length > 0 && (
+				<>
+					<Button variant="unstyled" aria-label={i18n.t('common.release_info.details')} {...tooltipAnchorProps(id)}>
+						<Icon name="circle-info" />
+					</Button>
+					<Tooltip
+						id={id}
+						place="top"
+						align="start"
+						openOnClick
+						clickable
+						content={
+							<dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+								{rows.map(row => (
+									<div key={row.label} className="contents">
+										<dt className="font-bold">{row.label}</dt>
+										<dd className="m-0">{row.value}</dd>
+									</div>
+								))}
+							</dl>
+						}
+					/>
+				</>
+			)}
 		</div>
 	);
 };
