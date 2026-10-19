@@ -9,7 +9,7 @@ const meta = {
 	tags: ['autodocs'],
 	parameters: { spec: 'none' },
 	args: { className: 'text-sm text-white/65' },
-	beforeEach: () => withRelease(RELEASE),
+	beforeEach: ({ parameters }) => withRelease(parameters.release ?? RELEASE),
 } satisfies Meta<typeof ReleaseInfo>;
 
 export default meta;
@@ -20,5 +20,5 @@ export const Default: Story = {};
 
 // A build that could not read its commit, such as one made from a source archive.
 export const WithoutCommit: Story = {
-	beforeEach: () => withRelease({ ...RELEASE, commit: '' }),
+	parameters: { release: { ...RELEASE, commit: '' } },
 };

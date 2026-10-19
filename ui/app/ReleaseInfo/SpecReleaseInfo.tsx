@@ -1,7 +1,8 @@
 import i18n from '@i18n/config';
-import { translatePlayerSpec } from '@i18n/localization';
+import { translatePlayerClass, translatePlayerSpec } from '@i18n/localization';
 import { BUILD_INFO, type Change, commitUrl, specRelease } from '@sim/constants/build_info';
 import type { PlayerSpec } from '@sim/player/player_spec';
+import { PlayerSpecs } from '@sim/player/specs/index';
 import { Button } from '@ui-kit/Button';
 import { Icon } from '@ui-kit/Icon';
 import { Tooltip, tooltipAnchorProps } from '@ui-kit/Tooltip';
@@ -24,12 +25,18 @@ const CommitLink = ({ commit }: { commit: string }) => (
 
 const joined = (parts: ReactNode[]) => parts.filter(Boolean).flatMap((part, index) => (index > 0 ? [' · ', part] : [part]));
 
+// A class with one spec has no spec name of its own, so its rows take the class's, as its page title does.
+const specLabel = (spec: PlayerSpec<any>): string => {
+	const playerClass = PlayerSpecs.getPlayerClass(spec);
+	return Object.keys(playerClass.specs).length === 1 ? translatePlayerClass(playerClass) : translatePlayerSpec(spec);
+};
+
 const changed = (change: Change) => joined([i18n.t('common.release_info.changed', { date: change.date }), <CommitLink key="commit" commit={change.commit} />]);
 
 // The page's release, under the sidebar's stats: the game build of the spell data the spec reads, the
 // build date and the commit. The info button beside it opens the details: the sim's build, and the last
 // changes to the spec's presets and to its engine, each left out when the build could not read it. They
-// open on click, so the links in them are reachable by keyboard and on a touch screen. The caller sets
+// open on click, tap or Enter rather than on hover, so a touch screen can open them too. The caller sets
 // the text size and colour.
 export const SpecReleaseInfo = ({ spec, className }: SpecReleaseInfoProps) => {
 	const id = useId();
@@ -45,10 +52,10 @@ export const SpecReleaseInfo = ({ spec, className }: SpecReleaseInfoProps) => {
 		});
 	}
 	if (release.presets) {
-		rows.push({ label: i18n.t('common.release_info.presets', { spec: translatePlayerSpec(spec) }), value: changed(release.presets) });
+		rows.push({ label: i18n.t('common.release_info.presets', { spec: specLabel(spec) }), value: changed(release.presets) });
 	}
 	if (release.engine) {
-		rows.push({ label: i18n.t('common.release_info.engine', { spec: translatePlayerSpec(spec) }), value: changed(release.engine) });
+		rows.push({ label: i18n.t('common.release_info.engine', { spec: specLabel(spec) }), value: changed(release.engine) });
 	}
 	if (rows.length === 0 && !release.gameVersion) {
 		return null;

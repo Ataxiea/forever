@@ -96,12 +96,14 @@ const compareBuilds = (a: string, b: string): number => {
 // A spec's presets and engine are each the last commit over a set of paths:
 //   - presets: presets.ts and the apls, gear_sets and builds folders in ui/specs/<class>/<spec>, and
 //     ui/specs/<class>/shared/presets.ts, which the warrior specs take their default buffs from;
-//   - engine: the files directly in sim/<class>, its generated spell data and expected results among
-//     them, sim/<class>/<spec> with its expected results when the spec has a sim folder, and
+//   - engine: the files directly in sim/<class>, its generated spell data among them and the expected
+//     results of a class with no spec folders, sim/<class>/<spec> with its expected results when the
+//     spec has a sim folder, and
 //     sim/core/racials.go. The racials' generated spell data shares one file with every other part's, so
 //     a racials-only regeneration is not counted.
 // The log starts at the checkout, which is what the bundle is built from: a pull request's preview is
-// built from its merge commit, so a master change its branch lacks is still dated. A shallow clone has
+// built from its merge commit, so a master change its branch lacks is still dated; where both sides
+// touched the paths, the row names that merge commit, which lives only on refs/pull/<n>/merge. A shallow clone has
 // no history to read, so it reports no change rather than its one commit for every spec.
 const specReleases = (root: string, builds: Record<string, string>): Record<string, SpecRelease> => {
 	let shallow = true;

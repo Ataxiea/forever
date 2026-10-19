@@ -41,8 +41,8 @@ build date, the game build stamped on each part of `assets/db_inputs/spell_store
 racials, shared) and, for each spec page, two last changes when vite loads its config:
 
 - presets: `git log` over its `presets.ts`, `apls/`, `gear_sets/` and `builds/`, and its class's `shared/presets.ts`;
-- engine: `git log` over the files directly in `sim/<class>` (the generated spell data and expected results among
-  them), `sim/<class>/<spec>` when it exists, and `sim/core/racials.go`.
+- engine: `git log` over the files directly in `sim/<class>` (its generated spell data, and the expected results of a
+  class with no spec folders), `sim/<class>/<spec>` when it exists, and `sim/core/racials.go`.
 
 `vite.config.mts` defines the lot as `import.meta.env.VITE_BUILD_INFO`, whose types `ui/sim/constants/build_info.ts`
 takes from the tool. Both logs start at the checkout, and dates are UTC. A shallow clone has no changes to read, so the

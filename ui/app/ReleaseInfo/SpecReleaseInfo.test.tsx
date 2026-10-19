@@ -1,5 +1,5 @@
 import i18n from '@i18n/config';
-import { translatePlayerSpec } from '@i18n/localization';
+import { translatePlayerClass, translatePlayerSpec } from '@i18n/localization';
 import { PlayerSpecs } from '@sim/player/specs/index';
 import { RELEASE, withRelease } from '@testing/build_info';
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -44,6 +44,12 @@ describe('SpecReleaseInfo', () => {
 		expect(values).toEqual(['Built 2026-10-18 · 2fe052c', 'Changed 2026-10-17 · 8109a4c', 'Changed 2026-10-16 · 474c498']);
 		const engine = RELEASE.specs['druid/feralcat'].engine!.commit;
 		expect(screen.getByRole('link', { name: '474c498' }).getAttribute('href')).toBe(`https://github.com/wowsims/forever/commit/${engine}`);
+	});
+
+	it("names a one-spec class's rows after the class", () => {
+		restore = withRelease(RELEASE);
+		render(<SpecReleaseInfo spec={PlayerSpecs.Mage} />);
+		expect(details().labels).toEqual(['Sim build', `${translatePlayerClass(PlayerSpecs.getPlayerClass(PlayerSpecs.Mage))} presets`]);
 	});
 
 	it('lists only the sim build when the build read no change for the spec', () => {
