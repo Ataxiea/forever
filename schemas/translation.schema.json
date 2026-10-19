@@ -1658,6 +1658,12 @@
 				"description": {
 					"type": "string"
 				},
+				"title_class": {
+					"type": "string"
+				},
+				"description_class": {
+					"type": "string"
+				},
 				"basic_bis_disclaimer": {
 					"type": "string"
 				},
@@ -1795,6 +1801,8 @@
 			"required": [
 				"title",
 				"description",
+				"title_class",
+				"description_class",
 				"basic_bis_disclaimer",
 				"notice_native_download",
 				"crash_modal",
@@ -4140,9 +4148,6 @@
 				"title": {
 					"type": "string"
 				},
-				"description": {
-					"type": "string"
-				},
 				"download_native": {
 					"type": "string"
 				},
@@ -4244,12 +4249,63 @@
 								"enchants": {
 									"type": "string"
 								},
+								"encounters": {
+									"type": "string"
+								},
 								"frozen_slots": {
 									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["enchants", "frozen_slots"]
+							"required": ["encounters", "enchants", "frozen_slots"]
+						},
+						"encounters": {
+							"type": "object",
+							"properties": {
+								"description": {
+									"type": "string"
+								},
+								"current": {
+									"type": "string"
+								},
+								"presets": {
+									"type": "string"
+								},
+								"saved": {
+									"type": "string"
+								},
+								"empty": {
+									"type": "string"
+								},
+								"duplicate": {
+									"type": "string"
+								},
+								"count": {
+									"type": "string"
+								},
+								"health_summary": {
+									"type": "string"
+								},
+								"targets_one": {
+									"type": "string"
+								},
+								"targets_other": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": [
+								"description",
+								"current",
+								"presets",
+								"saved",
+								"empty",
+								"duplicate",
+								"count",
+								"health_summary",
+								"targets_one",
+								"targets_other"
+							]
 						},
 						"iterations": {
 							"type": "string"
@@ -4388,6 +4444,7 @@
 						"total_iterations",
 						"total_iterations_tooltip",
 						"groups",
+						"encounters",
 						"iterations",
 						"freeze_ring",
 						"freeze_trinket",
@@ -4532,10 +4589,63 @@
 						},
 						"tied_group": {
 							"type": "string"
+						},
+						"encounters": {
+							"type": "string"
+						},
+						"encounters_caption": {
+							"type": "string"
+						},
+						"current": {
+							"type": "string"
+						},
+						"export_csv": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["run_simulation", "equip_button", "gear_equipped", "current_gear", "margin_of_error", "tied_group"]
+					"required": [
+						"run_simulation",
+						"equip_button",
+						"gear_equipped",
+						"current_gear",
+						"margin_of_error",
+						"tied_group",
+						"encounters",
+						"encounters_caption",
+						"current",
+						"export_csv"
+					]
+				},
+				"compare": {
+					"type": "object",
+					"properties": {
+						"button": { "type": "string" },
+						"title": { "type": "string" },
+						"short_set": { "type": "string" },
+						"readout_rank": { "type": "string" },
+						"readout_current": { "type": "string" },
+						"readout_spread": { "type": "string" },
+						"not_ranked": { "type": "string" },
+						"table_caption": { "type": "string" },
+						"table_set": { "type": "string" },
+						"table_legend_best": { "type": "string" },
+						"table_legend_gap": { "type": "string" }
+					},
+					"additionalProperties": false,
+					"required": [
+						"button",
+						"title",
+						"short_set",
+						"readout_rank",
+						"readout_current",
+						"readout_spread",
+						"not_ranked",
+						"table_caption",
+						"table_set",
+						"table_legend_best",
+						"table_legend_gap"
+					]
 				},
 				"import_modal": {
 					"type": "object",
@@ -4557,7 +4667,6 @@
 			"additionalProperties": false,
 			"required": [
 				"title",
-				"description",
 				"download_native",
 				"tabs",
 				"actions",
@@ -4568,6 +4677,7 @@
 				"warning",
 				"picker",
 				"results",
+				"compare",
 				"import_modal"
 			]
 		},
@@ -5351,6 +5461,19 @@
 										"move_duration_tooltip"
 									]
 								},
+								"pet_attack": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip"]
+								},
 								"custom_rotation": {
 									"type": "object",
 									"properties": {
@@ -5431,6 +5554,7 @@
 								"trigger_icd",
 								"item_swap",
 								"move",
+								"pet_attack",
 								"custom_rotation",
 								"warlock_cast_assigned_curse",
 								"group_reference"
@@ -6315,6 +6439,19 @@
 									"additionalProperties": false,
 									"required": ["label", "tooltip"]
 								},
+								"spell_expected_dpet": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip"]
+								},
 								"aura_known": {
 									"type": "object",
 									"properties": {
@@ -6935,19 +7072,6 @@
 									"required": ["label", "tooltip"],
 									"additionalProperties": false
 								},
-								"dot_expected_dps": {
-									"type": "object",
-									"properties": {
-										"label": {
-											"type": "string"
-										},
-										"tooltip": {
-											"type": "string"
-										}
-									},
-									"required": ["label", "tooltip"],
-									"additionalProperties": false
-								},
 								"variable_ref": {
 									"type": "object",
 									"properties": {
@@ -7079,6 +7203,7 @@
 								"channel_clip_delay",
 								"input_delay",
 								"spell_in_flight",
+								"spell_expected_dpet",
 								"aura_known",
 								"aura_active",
 								"aura_active_with_reaction_time",
@@ -7123,7 +7248,6 @@
 								"offset",
 								"dot_base_duration",
 								"dot_tick_rate_percent_increase",
-								"dot_expected_dps",
 								"variable_ref",
 								"variable_placeholder",
 								"action_group_used",
@@ -7498,6 +7622,9 @@
 										"expected_dot_spells": {
 											"type": "string"
 										},
+										"expected_damage_spells": {
+											"type": "string"
+										},
 										"spells_with_travelTime": {
 											"type": "string"
 										}
@@ -7517,6 +7644,7 @@
 										"non_instant_spells",
 										"friendly_spells",
 										"expected_dot_spells",
+										"expected_damage_spells",
 										"spells_with_travelTime"
 									]
 								},
@@ -10961,7 +11089,13 @@
 						"bonus_prefix": {
 							"type": "string"
 						},
+						"rating_suffix": {
+							"type": "string"
+						},
 						"points_suffix": {
+							"type": "string"
+						},
+						"percent_label": {
 							"type": "string"
 						},
 						"percent_suffix": {
@@ -10980,7 +11114,9 @@
 						"crit_cap",
 						"tank_caps",
 						"bonus_prefix",
+						"rating_suffix",
 						"points_suffix",
+						"percent_label",
 						"percent_suffix"
 					]
 				}

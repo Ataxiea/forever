@@ -3,7 +3,7 @@ import { HealingSimSettings_Assignment as HealingAssignment } from '@generated/p
 import { Player } from '@sim/player/player';
 import { MAX_PARTY_SIZE } from '@sim/raid/party';
 
-export type UNIT_SET = 'aura_sources' | 'aura_sources_targets_first' | 'targets' | 'players';
+export type UNIT_SET = 'aura_sources' | 'aura_sources_targets_first' | 'self_and_pets' | 'targets' | 'players';
 
 export const healingTargetIndices = (player: Player<any>): Array<number> => {
 	if (!player.getPlayerSpec().isHealingSpec) return [];
@@ -68,6 +68,18 @@ export const unitSets: Record<
 					.asList()
 					.map((petMetadata, i) => UnitReference.create({ type: UnitType.Pet, index: i, owner: UnitReference.create({ type: UnitType.Self }) })),
 				healingTargetIndices(player).map(index => UnitReference.create({ type: UnitType.Player, index })),
+			].flat();
+		},
+	},
+	// A pet without the resource the value reads gets the sim's validation warning.
+	self_and_pets: {
+		getUnits: player => {
+			return [
+				undefined,
+				player
+					.getPetMetadatas()
+					.asList()
+					.map((_petMetadata, i) => UnitReference.create({ type: UnitType.Pet, index: i, owner: UnitReference.create({ type: UnitType.Self }) })),
 			].flat();
 		},
 	},
