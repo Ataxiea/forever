@@ -5,6 +5,7 @@ import { translatePseudoStat, translateStat } from '@i18n/localization';
 import * as Mechanics from '../constants/mechanics';
 import { CURRENT_API_VERSION } from '../constants/other';
 import { getEnumValues } from '../utils/collections';
+import { PSEUDO_STAT_RATINGS, RATING_CHANNELS } from './sim_tables_auto_gen';
 
 const STATS_LEN = getEnumValues(Stat).length;
 const PSEUDOSTATS_LEN = getEnumValues(PseudoStat).length;
@@ -314,52 +315,7 @@ export class UnitStat {
 	}
 }
 
-// The percents outside the rating channels that a rating of the character's converts into, with that
-// rating. The target's percents the sheet shows (crit suppression, the main hand's dodge and parry)
-// have a root stat for display, but no rating moves them. percentRootRating in
-// sim/core/reforge_optimizer/enchants.go reads the same set from the core rating conversions.
-const RATING_WEIGHTED_PERCENT_PSEUDO_STATS = new Map<PseudoStat, { root: Stat; perPercent: number }>(
-	[
-		PseudoStat.PseudoStatOffHandHitPercent,
-		PseudoStat.PseudoStatOffHandCritPercent,
-		PseudoStat.PseudoStatExpertisePercent,
-		PseudoStat.PseudoStatDodgePercent,
-		PseudoStat.PseudoStatParryPercent,
-		PseudoStat.PseudoStatBlockPercent,
-	].map(pseudoStat => {
-		const root = UnitStat.getRootStat(pseudoStat)!;
-		return [pseudoStat, { root, perPercent: UnitStat.fromStat(root).convertPercentToRating(1)! }];
-	}),
-);
-
-// The melee, ranged and spell percents one hit, crit or haste rating raises together, at perPercent rating
-// per percent point. Each percent's weight measures its own channel alone: melee attacks, ranged attacks or
-// spells. RatingChannelTable in sim/core/unit.go is the back end's copy of the same channels; the two are
-// kept in sync by hand.
-const RATING_CHANNELS = new Map<Stat, { channels: [PseudoStat, PseudoStat, PseudoStat]; perPercent: number }>([
-	[
-		Stat.StatHitRating,
-		{
-			channels: [PseudoStat.PseudoStatMeleeHitPercent, PseudoStat.PseudoStatRangedHitPercent, PseudoStat.PseudoStatSpellHitPercent],
-			perPercent: Mechanics.HIT_RATING_PER_HIT_PERCENT,
-		},
-	],
-	[
-		Stat.StatCritRating,
-		{
-			channels: [PseudoStat.PseudoStatMeleeCritPercent, PseudoStat.PseudoStatRangedCritPercent, PseudoStat.PseudoStatSpellCritPercent],
-			perPercent: Mechanics.CRIT_RATING_PER_CRIT_PERCENT,
-		},
-	],
-	[
-		Stat.StatHasteRating,
-		{
-			channels: [PseudoStat.PseudoStatMeleeHastePercent, PseudoStat.PseudoStatRangedHastePercent, PseudoStat.PseudoStatSpellHastePercent],
-			perPercent: Mechanics.HASTE_RATING_PER_HASTE_PERCENT,
-		},
-	],
-]);
-const CHANNEL_PSEUDO_STATS = new Set([...RATING_CHANNELS.values()].flatMap(({ channels }) => channels));
+const CHANNEL_PSEUDO_STATS = new Set(RATING_CHANNELS.flatMap(({ channels }) => channels));
 
 const displayStatOrder: Array<UnitStat> = [
 	UnitStat.fromStat(Stat.StatHealth),
@@ -553,7 +509,7 @@ export class Stats {
 			fallbacks.set(rating, counted === undefined ? ep : Math.max(counted, ep));
 		};
 
-		RATING_CHANNELS.forEach(({ channels, perPercent: ratingPerPercent }, rating) => {
+		RATING_CHANNELS.forEach(({ rating, channels, perPercent: ratingPerPercent }) => {
 			const values = channels.map(pseudoStat => this.pseudoStats[pseudoStat]);
 			const perPercent = ratingPerPercent * epWeights.stats[rating];
 			const weighted = ratingPerPercent * channels.map(pseudoStat => epWeights.pseudoStats[pseudoStat]).reduce((sum, weight) => sum + weight);
@@ -567,13 +523,11 @@ export class Stats {
 			if (value === 0 || CHANNEL_PSEUDO_STATS.has(idx)) {
 				return;
 			}
-			const rated = RATING_WEIGHTED_PERCENT_PSEUDO_STATS.get(idx);
-			if (rated) {
-				addPercent(rated.root, idx, value, rated.perPercent, rated.perPercent * epWeights.stats[rated.root]);
+			const rated = PSEUDO_STAT_RATINGS[idx as PseudoStat];
+			if (rated?.fallback) {
+				addPercent(rated.rating, idx, value, rated.perPercent, rated.perPercent * epWeights.stats[rated.rating]);
 			} else {
-				// A school hit percent converts to hit rating; the rest have no rating and count as they are.
-				const rating = SCHOOL_HIT_PERCENT_PSEUDO_STATS.includes(idx) ? value * Mechanics.HIT_RATING_PER_HIT_PERCENT : value;
-				total += rating * epWeights.pseudoStats[idx];
+				total += value * (rated?.perPercent ?? 1) * epWeights.pseudoStats[idx];
 			}
 		});
 

@@ -84,7 +84,8 @@ change.
   rating point, in the request as in the stat weights, and so are the post-cap EPs of a soft cap on one. The
   target's percents on the sheet (crit suppression, the main hand's dodge and parry) have no rating and keep a
   weight per percent. Enchants state the percent, so `Stats.computeEP` converts a percent to its rating before it
-  applies the weight. Go converts both to per percent at its entry: `optimizeReforges` the pre-cap weights through
+  applies the weight, through `PSEUDO_STAT_RATINGS`, which `make go-to-ts` generates from `core.RatingPercentOf`
+  (`core.RatingPercents`, built from `core.RatingConversions`). Go converts both to per percent at its entry: `optimizeReforges` the pre-cap weights through
   `weightsPerPercent` and `computeReforgeSoftCaps` the post-cap EPs through `weightPerPercent` (`reforge_stats.go`).
 - `enchantTieBreak` (twice for the slot's input enchant, none where the input enchant stays in the baseline) keeps
   the input enchant on an EP tie and fills a slot whose candidates are all worth 0. The solve passes an explicit
