@@ -145,15 +145,16 @@ func spellPlaceholder(name, label string) placeholder {
 }
 
 var (
-	// The thresholds is_execute_phase takes, in the enum's order, Unknown left out.
+	// The thresholds is_execute_phase takes, in the enum's order, Unknown left out; the lowest is the default.
 	thresholdPlaceholder = func() placeholder {
-		p := placeholder{Name: "threshold", Label: "Execute below", Kind: "choice", Default: "E20"}
+		p := placeholder{Name: "threshold", Label: "Execute below", Kind: "choice"}
 		values := proto.APLValueIsExecutePhase_Unknown.Descriptor().Values()
 		for i := range values.Len() {
 			if v := values.Get(i); v.Number() != 0 {
 				p.Options = append(p.Options, string(v.Name()))
 			}
 		}
+		p.Default = p.Options[0]
 		return p
 	}()
 	resourcePlaceholder = func() placeholder {

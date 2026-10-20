@@ -1,5 +1,6 @@
 siml 1
 spec feral_cat_druid
+// Naturalist in place of Natural Shapeshifter.
 talents "050022-35200032121131212051-052"
 use "gear_sets/pre_raid.gear.siml"
 

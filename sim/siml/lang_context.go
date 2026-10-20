@@ -122,7 +122,7 @@ func (d *Doc) cursorAt(offset int) *cursorContext {
 		return slices.ContainsFunc(ctx.wants, func(w want) bool { return slices.Contains(ts, w.t) })
 	}
 	// A variable or placeholder being written is one wherever it stands.
-	if at != nil && at.kind == tokVar && has("value", "time") {
+	if at != nil && at.kind == tokVar && has("value", "time", "ref") {
 		ctx.wants = []want{{t: "variables"}}
 	}
 	if at != nil && at.kind == tokPlaceholder {

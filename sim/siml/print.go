@@ -554,7 +554,7 @@ func (p *printer) ref(v protoreflect.Message, ns Namespace, sc scope) text {
 	if len(set) == 0 {
 		return word("none")
 	}
-	if actionIDVariable != nil && len(set) == 1 && set[0].desc == actionIDVariable {
+	if actionIDVariable != nil && len(set) == 1 && set[0].desc == actionIDVariable && v.Get(actionIDVariable).String() != "" {
 		return p.variableRef(v.Get(actionIDVariable).String(), sc)
 	}
 	only := func(names ...string) bool {

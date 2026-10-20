@@ -285,6 +285,10 @@ func TestDefCompletion(t *testing.T) {
 	if _, ok := find(completionsIn(t, names, nil, hunterPath, plainPreface+"prepull:\n  |\n"), "when"); ok {
 		t.Error("a prepull row offers when")
 	}
+	// A variable written where a name goes offers the variables.
+	if _, ok := find(completionsIn(t, names, nil, hunterPath, plainPreface+"var $weave = true\n\npriority:\n  cast $we|\n"), "$weave"); !ok {
+		t.Error("cast $… does not offer the variables")
+	}
 	if _, ok := find(completionsIn(t, names, nil, hunterPath, plainPreface+"|\n"), "def"); !ok {
 		t.Error("a top line does not offer def")
 	}
