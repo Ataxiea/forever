@@ -57,7 +57,7 @@ dps_results: {
  key: "TestHunter-AllItems-Admiral'sHat-10030"
  value: {
   dps: 747.06395
-  tps: 542.91185
+  tps: 542.69796
   dtps: 7.33934
   hps: 12.48806
  }

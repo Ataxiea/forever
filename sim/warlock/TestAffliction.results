@@ -66,7 +66,7 @@ dps_results: {
  key: "TestAffliction-AllItems-Admiral'sHat-10030"
  value: {
   dps: 614.53546
-  tps: 359.60099
+  tps: 359.58164
   dtps: 8.21388
   hps: 7.0649
  }

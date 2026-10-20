@@ -65,7 +65,7 @@ dps_results: {
  key: "TestFeralCat-AllItems-Admiral'sHat-10030"
  value: {
   dps: 595.07427
-  tps: 318.81941
+  tps: 318.66755
   hps: 46.15667
  }
 }

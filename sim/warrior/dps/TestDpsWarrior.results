@@ -66,7 +66,7 @@ dps_results: {
  key: "TestDpsWarrior-AllItems-Admiral'sHat-10030"
  value: {
   dps: 450.68211
-  tps: 266.73552
+  tps: 266.56441
   dtps: 3.05866
   hps: 41.785
  }
@@ -722,10 +722,10 @@ dps_results: {
 dps_results: {
  key: "TestDpsWarrior-AllItems-HibernationCrystal-20636"
  value: {
-  dps: 455.28659
-  tps: 269.09108
+  dps: 455.88433
+  tps: 269.48796
   dtps: 3.05866
-  hps: 41.88667
+  hps: 41.785
  }
 }
 dps_results: {

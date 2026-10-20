@@ -56,9 +56,9 @@ character_stats_results: {
 dps_results: {
  key: "TestRetribution-AllItems-Admiral'sHat-10030"
  value: {
-  dps: 777.10217
-  tps: 669.15276
-  dtps: 7.12947
+  dps: 776.94633
+  tps: 668.8581
+  dtps: 7.12549
   hps: 22.37971
  }
 }

@@ -57,7 +57,7 @@ dps_results: {
  key: "TestRogue-AllItems-Admiral'sHat-10030"
  value: {
   dps: 607.95272
-  tps: 302.30436
+  tps: 302.1525
   hps: 50.90111
  }
 }
