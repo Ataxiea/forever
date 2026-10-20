@@ -120,7 +120,18 @@ var (
 	actionMessage   = (&proto.APLAction{}).ProtoReflect().Descriptor()
 	valueMessage    = (&proto.APLValue{}).ProtoReflect().Descriptor()
 	actionIDMessage = (&proto.ActionID{}).ProtoReflect().Descriptor()
-	unitMessage     = (&proto.UnitReference{}).ProtoReflect().Descriptor()
+	// The string member of ActionID's raw_id oneof: the name of the variable that holds a spell, written `$x` where a
+	// name goes (SPEC.md §7.2). Nil while the protos have none.
+	actionIDVariable = func() protoreflect.FieldDescriptor {
+		fields := actionIDMessage.Oneofs().ByName("raw_id").Fields()
+		for i := range fields.Len() {
+			if fields.Get(i).Kind() == protoreflect.StringKind {
+				return fields.Get(i)
+			}
+		}
+		return nil
+	}()
+	unitMessage = (&proto.UnitReference{}).ProtoReflect().Descriptor()
 )
 
 type builder struct {

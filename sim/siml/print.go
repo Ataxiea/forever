@@ -464,7 +464,7 @@ func (p *printer) single(f *field, v protoreflect.Value, sc scope) text {
 	case "action":
 		return p.inlineAction(v.Message(), sc)
 	case "action_id":
-		return p.ref(v.Message(), p.kind.namespace(f))
+		return p.ref(v.Message(), p.kind.namespace(f), sc)
 	case "unit":
 		return word(p.unitText(v.Message()))
 	case "bool":
@@ -547,11 +547,15 @@ func (p *printer) zero(f *field) string {
 	return "none"
 }
 
-// An ActionID: the name of its spell id and tag in ns, item.<name>, other.<short>, none, or raw JSON (SPEC.md §7.4).
-func (p *printer) ref(v protoreflect.Message, ns Namespace) text {
+// An ActionID: the name of its spell id and tag in ns, item.<name>, other.<short>, $x for a variable, none, or raw
+// JSON (SPEC.md §7.4).
+func (p *printer) ref(v protoreflect.Message, ns Namespace, sc scope) text {
 	set := p.setFields(v)
 	if len(set) == 0 {
 		return word("none")
+	}
+	if actionIDVariable != nil && len(set) == 1 && set[0].desc == actionIDVariable {
+		return p.variableRef(v.Get(actionIDVariable).String(), sc)
 	}
 	only := func(names ...string) bool {
 		return !slices.ContainsFunc(set, func(f *field) bool { return !slices.Contains(names, f.Name) })
@@ -948,7 +952,7 @@ func (p *printer) shortAction(k *aplKind, body protoreflect.Message, sc scope) t
 		if !ok || !p.only(body, fields...) {
 			return nil
 		}
-		out = cat(out, p.ref(spell.Message(), NamespaceSpell))
+		out = cat(out, p.ref(spell.Message(), NamespaceSpell, sc))
 		if target, ok := p.get(body, "target"); ok {
 			out = cat(out, word(" on "+p.unitText(target.Message())))
 		}

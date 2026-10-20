@@ -87,10 +87,10 @@ func (t *typer) checkReferences(declarations []*variableDecl, groups []nameUse, 
 		t.site = use.site
 		n := use.node
 		res := resolveVariable(n.name, n.braced, declaredIn(visible, use.scope))
-		use.ref.Name = n.name
+		use.name(n.name)
 		switch {
 		case res.found:
-			use.ref.Name = res.name
+			use.name(res.name)
 			targets[use] = declarationOf(declarations, res.name, use.scope)
 		case t.reportAmbiguous(n, res):
 		default:

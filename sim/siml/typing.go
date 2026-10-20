@@ -39,7 +39,7 @@ type variableDecl struct {
 // `$x` or `${X}`, whose name the checks fill in once every declaration is known (SPEC.md §7.5).
 type variableUse struct {
 	node  *varNode
-	ref   *proto.APLValueVariableRef
+	name  func(string) // Writes the declared name it refers to.
 	scope scope
 	site  *expansion // The def call it is read in, if any.
 }
@@ -242,6 +242,15 @@ func (t *typer) valueIn(n node, keys ...any) *proto.APLValue {
 	return t.value(n)
 }
 
+// Records n, whose declared name the checks write through name.
+func (t *typer) useVariable(n *varNode, name func(string)) {
+	use := &variableUse{node: n, name: name, scope: t.scope, site: t.site}
+	t.variableUses = append(t.variableUses, use)
+	if t.decl != nil {
+		t.decl.uses = append(t.decl.uses, use)
+	}
+}
+
 func (t *typer) valueOf(n node) *proto.APLValue {
 	switch n := n.(type) {
 	case *literalNode:
@@ -253,12 +262,9 @@ func (t *typer) valueOf(n node) *proto.APLValue {
 	case *noneNode:
 		return &proto.APLValue{}
 	case *varNode:
-		use := &variableUse{node: n, ref: &proto.APLValueVariableRef{}, scope: t.scope, site: t.site}
-		t.variableUses = append(t.variableUses, use)
-		if t.decl != nil {
-			t.decl.uses = append(t.decl.uses, use)
-		}
-		return &proto.APLValue{Value: &proto.APLValue_VariableRef{VariableRef: use.ref}}
+		ref := &proto.APLValueVariableRef{}
+		t.useVariable(n, func(name string) { ref.Name = name })
+		return &proto.APLValue{Value: &proto.APLValue_VariableRef{VariableRef: ref}}
 	case *placeholderNode:
 		names := t.placeholders[t.scope]
 		if names == nil {
@@ -1049,6 +1055,15 @@ func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
 			t.mark(n.span)
 			return &proto.ActionID{RawId: &proto.ActionID_ItemId{ItemId: r.id}}
 		}
+	case *varNode:
+		if actionIDVariable == nil {
+			t.report("spell-variable", "a variable holds no spell: ActionID has no field to name one", n.span)
+			return nil
+		}
+		id := &proto.ActionID{}
+		t.useVariable(n, func(name string) { id.ProtoReflect().Set(actionIDVariable, protoreflect.ValueOfString(name)) })
+		t.mark(n.span)
+		return id
 	case *callNode:
 		if n.args != nil {
 			break

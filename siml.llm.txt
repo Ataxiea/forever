@@ -93,6 +93,8 @@ Spell-like names are the file's class's, else shared (gear, consumables, encount
 `item.<name>` (`cast item.major_mana_potion`); `other.<name>` is an OtherAction (`other.offensive_potion`). Ranks
 and duplicates carry suffixes: `frostbolt_rank10`, `heroic_strike_tag1`, `fireball_18082`. A name the table lacks is
 `unknown-name` with a did-you-mean; `make siml-names` adds new registered spells.
+`$var` where a name goes (`cast $filler`, `aura($curse)`) is the spell the variable holds, once ActionID has a string
+member to name a variable in; until then it is `spell-variable`.
 
 ## Actions (generated from proto/apl.proto; every kind also takes the generic kind(field=value, …))
 

@@ -1503,11 +1503,14 @@ func (p *parser) groupStep() node {
 	return s
 }
 
-// A name, item.<name>, other.<value>, none or raw JSON.
+// A name, item.<name>, other.<value>, a variable, none or raw JSON.
 func (p *parser) ref() node {
 	t := p.peek(0)
-	if t.kind == tokRaw {
+	switch t.kind {
+	case tokRaw:
 		return p.raw()
+	case tokVar:
+		return p.variable()
 	}
 	if t.kind != tokIdent || stopWords[t.text] {
 		p.expected("a spell name, item.<name> or other.<name>", "parse")
