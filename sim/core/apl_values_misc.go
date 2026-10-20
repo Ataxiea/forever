@@ -71,7 +71,7 @@ func (value *APLValueMultipleCdUsages) GetBool(sim *Simulation) bool {
 	canGetFullDurationAtEncounterEnd := remainingTime <= targetSpellDuration
 
 	if !hasBaseSpell {
-		return canGetFullDurationAtEncounterEnd || remainingTime > targetSpellCD+targetSpellDuration/2
+		return ShouldCastForEncounterEnd(remainingTime, targetSpellCD, targetSpellDuration)
 	}
 
 	castOffset := value.offset.GetDuration(sim)
