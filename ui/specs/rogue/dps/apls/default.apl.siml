@@ -26,6 +26,13 @@ var ${Gnome Eureka - Should Cast} =
     spell(eureka).is_known
     and spell(eureka).is_ready
     and (not spell(adrenaline_rush).is_known or aura(adrenaline_rush).is_active(include_reaction_time=true) or spell(adrenaline_rush).time_to_ready > spell(eureka).full_cooldown or remaining_time < spell(adrenaline_rush).time_to_ready)
+// Whether a builder fits before Slice and Dice needs its energy, or no longer matters.
+def affords(builder) =
+    not $snd_fall_imminent
+    or current_energy > spell(slice_and_dice).current_cost + spell(builder).current_cost and not $snd_fall_imminent
+    or not $above_snd_point_threshold
+    or $in_danger_of_energy_capping
+    or $expose_low_duration
 
 prepull:
   -2s cast blade_flurry
@@ -117,23 +124,23 @@ priority:
       if not aura(cutthroat).is_active(include_reaction_time=true)
       and $use_backstab
       and $current_points_less_than_5
-      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(backstab).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and affords(backstab)
       and $gnome_eureka_active_or_not_ready
   cast mutilate
       if $current_points_less_than_5
-      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(mutilate).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and affords(mutilate)
       and $gnome_eureka_active_or_not_ready
   cast hemorrhage
       if not $use_backstab
       and $current_points_less_than_5
-      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(hemorrhage).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and affords(hemorrhage)
       and $gnome_eureka_active_or_not_ready
   cast sinister_strike
       if not spell(mutilate).is_known
       and not spell(hemorrhage).is_known
       and not $use_backstab
       and $current_points_less_than_5
-      and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(sinister_strike).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and affords(sinister_strike)
       and $gnome_eureka_active_or_not_ready
 
 group "Maintain Expose":
