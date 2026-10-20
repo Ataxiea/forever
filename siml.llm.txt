@@ -141,7 +141,7 @@ current_time
 current_time_percent
 remaining_time
 remaining_time_percent
-is_execute_phase(e20|e25|e35|e45|e90)
+is_execute_phase(e20|e35)
 number_targets
 encounter_in_area(forest_grassland|mountainous|snowy|desert|swamp|wasteland|haunted|cavernous|…)
 [unit.]boss_current_target
@@ -199,6 +199,6 @@ selected_conjured(name)
 
 [unit.]aura(x): is_known, is_active(include_reaction_time: bool), is_inactive(include_reaction_time: bool), remaining_time, num_stacks(include_reaction_time: bool), internal_cooldown, icd_is_ready(include_reaction_time: bool), should_refresh(max_overlap: value), duration
 [unit.]dot(x): is_active, is_active_on_all_targets, remaining_time, lowest_remaining_time, tick_frequency, time_to_next_tick, base_duration, percent_increase(use_base_value: bool), tick_rate_percent_increase(use_base_value: bool)
-[unit.]spell(x): is_known, can_cast, is_ready, time_to_ready, cast_time, travel_time, cpm, is_channeling, channeled_ticks, current_cost, num_charges, time_to_charge, gcd_hasted_duration, full_cooldown, in_flight, expected_dpet
+[unit.]spell(x): is_known, can_cast, is_ready, time_to_ready, cast_time, travel_time, cpm, is_channeling, channeled_ticks, current_cost, num_charges, time_to_charge, gcd_hasted_duration, full_cooldown, in_flight, expected_dpet, is_hit_capped, is_expertise_capped
 [unit.]boss_spell(x): time_to_ready, is_casting
 sequence(x): is_complete, is_ready, time_to_ready

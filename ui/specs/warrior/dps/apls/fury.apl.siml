@@ -32,10 +32,13 @@ priority:
   group "Sunder Armor" if number_targets == 1
   # group "Sunder Armor: Refresh" if number_targets == 1
   cast other.offensive_potion
+      if multiple_cd_usages(target_spell_id=other.offensive_potion, offset=0ms, align_cd_end=true)
   cast other.resource_potion
   group "CD: Racials"
-  cast death_wish
-  cast recklessness if and(action_group_used("Recklessness ON/OFF"))
+  cast death_wish if multiple_cd_usages(target_spell_id=death_wish, offset=0ms, align_cd_end=true)
+  cast recklessness
+      if action_group_used("Recklessness ON/OFF")
+      and multiple_cd_usages(target_spell_id=recklessness, offset=0ms, align_cd_end=true)
   cast sweeping_strikes if and(number_targets > 1)
   cast whirlwind if number_targets > 1
   cast bloodthirst
@@ -86,10 +89,11 @@ group "Engineering":
   cast item.ez_thro_dynamite_ii
 
 group "CD: Racials":
-  cast blood_fury
-  cast berserking
-  cast eureka
+  cast blood_fury if multiple_cd_usages(target_spell_id=blood_fury, offset=0ms, align_cd_end=true)
+  cast berserking if multiple_cd_usages(target_spell_id=berserking, offset=0ms, align_cd_end=true)
+  cast eureka if multiple_cd_usages(target_spell_id=eureka, offset=0ms, align_cd_end=true)
   cast elunes_light
+      if multiple_cd_usages(target_spell_id=elunes_light, offset=0ms, align_cd_end=true)
 
 group "Sunder Armor":
   cast sunder_armor if target.aura(sunder_armor).num_stacks(include_reaction_time=true) < 5

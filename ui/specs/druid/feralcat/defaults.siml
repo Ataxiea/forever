@@ -1,6 +1,6 @@
 siml 1
 spec feral_cat_druid
-talents "050022-35200032121131212051-05002"
+talents "050022-35200032121131212051-052"
 use "gear_sets/pre_raid.gear.siml"
 
 settings:
@@ -35,10 +35,7 @@ encounter:
   duration 180
   duration_variation 5
   execute_proportion_20 0.2
-  execute_proportion_25 0.25
   execute_proportion_35 0.35
-  execute_proportion_45 0.45
-  execute_proportion_90 0.9
   targets(id=31146,
       name="Raid Target",
       level=63,

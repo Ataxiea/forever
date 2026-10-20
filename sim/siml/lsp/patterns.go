@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/siml"
 )
 
@@ -144,8 +145,18 @@ func spellPlaceholder(name, label string) placeholder {
 }
 
 var (
-	thresholdPlaceholder = placeholder{Name: "threshold", Label: "Execute below", Kind: "choice", Options: []string{"E20", "E25", "E35", "E45", "E90"}, Default: "E20"}
-	resourcePlaceholder  = func() placeholder {
+	// The thresholds is_execute_phase takes, in the enum's order, Unknown left out.
+	thresholdPlaceholder = func() placeholder {
+		p := placeholder{Name: "threshold", Label: "Execute below", Kind: "choice", Default: "E20"}
+		values := proto.APLValueIsExecutePhase_Unknown.Descriptor().Values()
+		for i := range values.Len() {
+			if v := values.Get(i); v.Number() != 0 {
+				p.Options = append(p.Options, string(v.Name()))
+			}
+		}
+		return p
+	}()
+	resourcePlaceholder = func() placeholder {
 		p := placeholder{Name: "resource", Label: "Resource", Kind: "choice", Default: "currentManaPercent"}
 		for _, r := range resources {
 			p.Options = append(p.Options, r.key)

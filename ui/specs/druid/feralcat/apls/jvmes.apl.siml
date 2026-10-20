@@ -17,47 +17,52 @@ def free_global(n, t) =
     and not clearcast
     and spell(shifting_power).time_to_ready >= t
     and current_energy + n < cost(shred)
-    and (not $rake_due or current_energy + n < cost(rake))
-    and (not $rip_due or current_energy + n < cost(rip))
-    and (not $bite_allowed or current_energy + n < cost(ferocious_bite))
+    and (not $rake_is_missing_and_has_time_to_tick or current_energy + n < cost(rake))
+    and (not $rip_is_missing_and_has_time_to_tick or current_energy + n < cost(rip))
+    and (not $a_finishing_bite_is_worthwhile or current_energy + n < cost(ferocious_bite))
     and (not dot(rip).is_active or dot(rip).remaining_time > t or current_energy + n < cost(rip))
     and (not dot(rake).is_active or dot(rake).remaining_time > t or current_energy + n < cost(rake))
 
-var ${Shift Energy ceiling} = 50
-var ${Bite minimum CP} = 4
-var ${Bite Energy ceiling} = 55
-var ${Rip minimum CP} = 4
-var ${Terminal window} = remaining_time < 6s
-var ${Shift now} =
+var ${The fight is ending} = remaining_time < 6s
+var ${Shifting Power is ready at or below its energy ceiling} =
     in_cat
-    and current_energy <= $shift_energy_ceiling
+    and current_energy <= 50
     and spell(shifting_power).can_cast
-var ${Rake due} = not dot(rake).is_active and remaining_time > 6s
-var ${Rip due} =
-    current_combo_points >= $rip_minimum_cp
+var ${Rake is missing and has time to tick} = not dot(rake).is_active and remaining_time > 6s
+var ${There is energy and time for Shred then Rip next global} =
+    current_energy >= cost(shred) + cost(rip) - 10
+    and remaining_time >= 7s
+var ${Use the Rip fallback when building first would delay it} =
+    current_combo_points >= 4
+    and not $there_is_energy_and_time_for_shred_then_rip_next_global
+var ${Rip has enough combo points, including the fallback} =
+    current_combo_points >= 5
+    or $use_the_rip_fallback_when_building_first_would_delay_it
+var ${Rip is missing and has time to tick} =
+    $rip_has_enough_combo_points_including_the_fallback
     and not dot(rip).is_active
-    and not $terminal_window
-var ${Bite allowed} =
-    current_combo_points >= $bite_minimum_cp
-    and current_energy <= $bite_energy_ceiling
-    and $terminal_window
-var ${Reserve refresh Energy} =
-    current_combo_points >= $rip_minimum_cp and dot(rip).is_active and dot(rip).remaining_time <= 2s and not $terminal_window and shred_leaves_short_for(rip)
+    and not $the_fight_is_ending
+var ${A finishing Bite is worthwhile} =
+    current_combo_points >= 5
+    and current_energy <= 55
+    and $the_fight_is_ending
+var ${Save energy for the next bleed refresh} =
+    $rip_has_enough_combo_points_including_the_fallback and dot(rip).is_active and dot(rip).remaining_time <= 2s and not $the_fight_is_ending and shred_leaves_short_for(rip)
     or dot(rake).is_active and dot(rake).remaining_time <= 2s and shred_leaves_short_for(rake)
-var ${Free global 1.0s} = free_global(10, 1.0s)
-var ${Free global 1.5s} = free_global(15, 1.5s)
-var ${Elune's Light now} =
+var ${A utility cast will not delay Cat attacks} = free_global(15, 1.5s)
+var ${Elune’s Light is available, outside Berserk and away from its next use} =
     spell(elunes_light).is_known
     and not aura(berserk).is_active
     and spell(berserk).time_to_ready > 15s
-var ${Shadowmeld into Ravage} =
+var ${Shadowmeld on Clearcasting: Ravage before other builders or bleeds} =
     spell(spell_20580).is_known
-    and gcd_ready
-    and in_cat
     and spell(spell_20580).is_ready
-    and not $reserve_refresh_energy
-    and (clearcast or current_energy >= cost(ravage))
-var ${Energized now} =
+    and in_cat
+    and clearcast
+    and not aura(prowl).is_active
+    and current_time > 0s
+    and gcd_ready
+var ${Read Ley Line is ready: restore needed mana in a free utility window} =
     spell(read_leyline).is_known
     and in_cat
     and spell(read_leyline).is_ready
@@ -65,73 +70,132 @@ var ${Energized now} =
     and not aura(berserk).is_active
     and current_energy <= 30
     and current_mana < 1400
-    and $free_global_1_5s
+    and $a_utility_cast_will_not_delay_cat_attacks
+var ${Bite in the final window with enough combo points} =
+    in_cat
+    and remaining_time <= 1s
+    and current_combo_points >= 2
+var ${Prowl is active: open with Ravage} = aura(prowl).is_active
+var ${Outside Cat Form: return after utility casts} = not in_cat
+var ${Ready for Berserk followed by Rake} =
+    in_cat
+    and not $shifting_power_is_ready_at_or_below_its_energy_ceiling
+    and not ($rip_is_missing_and_has_time_to_tick and spell(rip).can_cast)
+    and $rake_is_missing_and_has_time_to_tick
+    and spell(rake).can_cast
+var ${Ready for Berserk followed by Shred} =
+    in_cat
+    and not $shifting_power_is_ready_at_or_below_its_energy_ceiling
+    and not ($rip_is_missing_and_has_time_to_tick and spell(rip).can_cast)
+    and (not $rake_is_missing_and_has_time_to_tick and not $save_energy_for_the_next_bleed_refresh)
+    and spell(shred).can_cast
+var ${Use Thistle Tea at or below its energy ceiling} = in_cat and current_energy <= 20
+var ${In Cat Form: use the selected offensive potion} = in_cat
+var ${Bite near fight end when Rip is no longer worthwhile} =
+    in_cat
+    and $a_finishing_bite_is_worthwhile
+var ${Clearcasting is active: Shred before refreshing bleeds} =
+    (in_cat and clearcast)
+    and not $pool_energy_for_a_later_berserk
+var ${Rip when missing: build to the target CP if the next-global Rip is funded} =
+    in_cat
+    and $rip_is_missing_and_has_time_to_tick
+var ${Rake when missing and enough fight time remains} =
+    in_cat
+    and $rake_is_missing_and_has_time_to_tick
+var ${Shred without spending energy reserved for bleeds or later Berserk} =
+    (in_cat and not $save_energy_for_the_next_bleed_refresh)
+    and not $pool_energy_for_a_later_berserk
+var ${Sapper is ready and fits a free utility window} =
+    spell(item.goblin_sapper_charge).is_known
+    and $a_utility_cast_will_not_delay_cat_attacks
+    and spell(item.goblin_sapper_charge).is_ready
+    and current_mana >= cost(cat_form)
+    and not aura(berserk).is_active
+    and not $save_energy_for_the_next_bleed_refresh
+var ${Innervate when mana is low and enough fight time remains} =
+    in_cat
+    and spell(innervate).is_ready
+    and mana_short
+    and gcd_ready
+    and current_energy <= 30
+    and not clearcast
+    and not aura(berserk).is_active
+    and remaining_time >= 15s
+var ${Major Mana Potion has room for its base restore} =
+    selected_potion(item.major_mana_potion)
+    and spell(item.major_mana_potion).is_known
+    and gcd_ready
+    and spell(item.major_mana_potion).time_to_ready <= 0s
+    and max_mana - current_mana >= 2250 + current_mana_regen * 5
+var ${Current mana may not last until the next potion opportunity} =
+    not $judgement_of_wisdom_is_supporting_mana
+    or current_mana < min(remaining_time, 120s) / 1s * 20 + cost(shifting_power) * 1
+var ${Judgement of Wisdom is supporting mana} =
+    target.aura(judgement_of_wisdom).is_known
+    and target.aura(judgement_of_wisdom).is_active
+var ${Berserk before a builder; pool energy or use Clearcasting for later uses} =
+    (gcd_ready and spell(berserk).is_known and in_cat and spell(berserk).time_to_ready <= 0s and spell(berserk).can_cast and not ($bite_in_the_final_window_with_enough_combo_points and spell(ferocious_bite).can_cast) and ($prowl_is_active_open_with_ravage and spell(ravage).can_cast or not $prowl_is_active_open_with_ravage and ($ready_for_berserk_followed_by_rake or $ready_for_berserk_followed_by_shred)) and not ($bite_near_fight_end_when_rip_is_no_longer_worthwhile and spell(ferocious_bite).can_cast))
+    and not $pool_energy_for_a_later_berserk
+var ${Pool energy for a later Berserk} =
+    current_time > 30s
+    and spell(berserk).time_to_ready <= 0s
+    and not aura(berserk).is_active
+    and remaining_time > 15s
+    and remaining_time < 180s
+    and current_energy < 60
+    and not clearcast
+var ${Throw EZ-Thro Thorium Grenade in a free window after the opener} =
+    spell(item.ez_thro_thorium_grenade).is_known
+    and not aura(prowl).is_active
+    and $a_utility_cast_will_not_delay_cat_attacks
+    and spell(item.ez_thro_thorium_grenade).is_ready
 
 prepull:
-  -1s group "Prepull opener"
+  -1s cast prowl
 
 priority:
-  /// Ravage opener
-  cast ravage if aura(prowl).is_active and clearcast
-  cast innervate
-      if not in_cat
-      and not aura(dire_bear_form).is_active
-      and mana_short
-      and spell(innervate).can_cast
-  cast cat_form if not in_cat
+  /// Berserk before a builder; pool energy or use Clearcasting for later uses
+  cast berserk if $berserk_before_a_builder_pool_energy_or_use_clearcasting_for_later_uses
+  /// Prowl is active: open with Ravage
+  cast ravage if $prowl_is_active_open_with_ravage
+  /// Shadowmeld on Clearcasting: Ravage before other builders or bleeds
+  strict_sequence(cast spell_20580, cast ravage)
+      if $shadowmeld_on_clearcasting_ravage_before_other_builders_or_bleeds
+  /// Outside Cat Form: return after utility casts
+  cast cat_form if $outside_cat_form_return_after_utility_casts
+  /// Bite in the final window with enough combo points
+  cast ferocious_bite if $bite_in_the_final_window_with_enough_combo_points
+  /// Use other available cooldowns
   autocast_other_cooldowns
-  /// Return to Cat
-  cast cat_form if not in_cat and not aura(dire_bear_form).is_active
-  when in_cat and not $shift_now and not ($rip_due and spell(rip).can_cast):
-    /// Berserk with Rake
-    strict_sequence(cast berserk, cast rake) if $rake_due and spell(rake).can_cast
-    /// Berserk with Shred
-    strict_sequence(cast berserk, cast shred)
-        if (not $rake_due and not $reserve_refresh_energy)
-        and spell(shred).can_cast
-  /// Elune's Light outside Berserk
-  cast elunes_light if $elunes_light_now
-  /// Shift below ceiling
-  cast shifting_power if $shift_now
-  when in_cat:
-    /// Tea threshold
-    cast item.thistle_tea if current_energy <= 20
-    /// Mighty Rage Potion
-    cast other.offensive_potion
-    /// Terminal Bite
-    cast ferocious_bite if $bite_allowed
-    /// Maintain Rip
-    cast rip if $rip_due
-    /// Maintain Rake
-    cast rake if $rake_due
-  /// Shadowmeld into Ravage
-  strict_sequence(cast spell_20580, cast ravage) if $shadowmeld_into_ravage
-  /// Shred
-  cast shred if in_cat and not $reserve_refresh_energy
-  /// Sapper in a free global
-  strict_sequence(cancel_aura(cat_form), cast item.goblin_sapper_charge, cast cat_form)
-      if spell(item.goblin_sapper_charge).is_known
-      and $free_global_1_5s
-      and spell(item.goblin_sapper_charge).is_ready
-      and current_mana >= cost(cat_form)
-      and not aura(berserk).is_active
-      and not $reserve_refresh_energy
-  /// Read Ley Line in a free global
-  cast read_leyline if $energized_now
-  /// Faerie Fire filler
-  cast faerie_fire
-      if $free_global_1_0s
-      and aura(omen_of_clarity).icd_is_ready
-      and (not spell(item.goblin_sapper_charge).is_known or not spell(item.goblin_sapper_charge).is_ready or not $free_global_1_5s)
-  cancel_aura(cat_form)
-      if in_cat
-      and spell(innervate).is_ready
-      and mana_short
-      and gcd_ready
-      and current_energy <= 30
-      and not clearcast
-      and not aura(berserk).is_active
-      and remaining_time >= 15s
-
-group "Prepull opener":
-  cast prowl if clearcast
+  /// Use Major Mana Potion when it fits and the remaining fight needs mana
+  cast item.major_mana_potion on self
+      if $major_mana_potion_has_room_for_its_base_restore
+      and $current_mana_may_not_last_until_the_next_potion_opportunity
+  /// Elune’s Light is available, outside Berserk and away from its next use
+  cast elunes_light if $elunes_light_is_available_outside_berserk_and_away_from_its_next_use
+  /// Shifting Power is ready at or below its energy ceiling
+  cast shifting_power if $shifting_power_is_ready_at_or_below_its_energy_ceiling
+  /// Use Thistle Tea at or below its energy ceiling
+  cast item.thistle_tea if $use_thistle_tea_at_or_below_its_energy_ceiling
+  /// In Cat Form: use the selected offensive potion
+  cast other.offensive_potion if $in_cat_form_use_the_selected_offensive_potion
+  /// Bite near fight end when Rip is no longer worthwhile
+  cast ferocious_bite if $bite_near_fight_end_when_rip_is_no_longer_worthwhile
+  /// Clearcasting is active: Shred before refreshing bleeds
+  cast shred if $clearcasting_is_active_shred_before_refreshing_bleeds
+  /// Rip when missing: build to the target CP if the next-global Rip is funded
+  cast rip if $rip_when_missing_build_to_the_target_cp_if_the_next_global_rip_is_funded
+  /// Rake when missing and enough fight time remains
+  cast rake if $rake_when_missing_and_enough_fight_time_remains
+  /// Shred without spending energy reserved for bleeds or later Berserk
+  cast shred if $shred_without_spending_energy_reserved_for_bleeds_or_later_berserk
+  /// Sapper is ready and fits a free utility window
+  cast item.goblin_sapper_charge if $sapper_is_ready_and_fits_a_free_utility_window
+  /// Throw EZ-Thro Thorium Grenade in a free window after the opener
+  cast item.ez_thro_thorium_grenade
+      if $throw_ez_thro_thorium_grenade_in_a_free_window_after_the_opener
+  /// Read Ley Line is ready: restore needed mana in a free utility window
+  cast read_leyline if $read_ley_line_is_ready_restore_needed_mana_in_a_free_utility_window
+  /// Innervate when mana is low and enough fight time remains
+  cast innervate if $innervate_when_mana_is_low_and_enough_fight_time_remains

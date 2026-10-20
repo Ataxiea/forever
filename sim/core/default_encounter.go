@@ -12,10 +12,7 @@ func SiteDefaultEncounter() *proto.Encounter {
 		Duration:             180,
 		DurationVariation:    5,
 		ExecuteProportion_20: 0.2,
-		ExecuteProportion_25: 0.25,
 		ExecuteProportion_35: 0.35,
-		ExecuteProportion_45: 0.45,
-		ExecuteProportion_90: 0.9,
 		Targets:              []*proto.Target{SiteDefaultTarget()},
 	}
 }

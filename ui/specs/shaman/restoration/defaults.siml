@@ -26,10 +26,7 @@ encounter:
   duration 180
   duration_variation 5
   execute_proportion_20 0.2
-  execute_proportion_25 0.25
   execute_proportion_35 0.35
-  execute_proportion_45 0.45
-  execute_proportion_90 0.9
   targets(id=31146,
       name="Raid Target",
       level=63,
