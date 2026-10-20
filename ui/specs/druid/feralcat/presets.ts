@@ -105,8 +105,8 @@ export const POUNCE_APL = PresetUtils.makePresetAPLRotation('Pounce opener', Pou
 // of the fight do not need. Needs the Primal Bite talent.
 export const BEARWEAVE_APL = PresetUtils.makePresetAPLRotation('Bearweave', BearweaveApl);
 
-export const CatTalents = PresetUtils.makePresetTalents('Cat', SavedTalents.create({ talentsString: '050022-35200032121131212051-05002' }));
-export const HybridTalents = PresetUtils.makePresetTalents('Hybrid', SavedTalents.create({ talentsString: '050022-05230332121131212051-04' }));
+export const CatTalents = PresetUtils.makePresetTalents('Cat', SavedTalents.create({ talentsString: '050022-35200032121131212051-052' }));
+export const HybridTalents = PresetUtils.makePresetTalents('Hybrid', SavedTalents.create({ talentsString: '050022-35230332121132212051-' }));
 
 export const BearweaveBuild = PresetUtils.makePresetBuild('Bearweave (45s fights)', {
 	talents: CatTalents,
