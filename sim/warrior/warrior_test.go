@@ -533,8 +533,15 @@ const (
 func TestAlignOnUseItems(t *testing.T) {
 	align := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_WarriorAlignOnUseItems{
 		WarriorAlignOnUseItems: &proto.APLActionWarriorAlignOnUseItems{}}}}
-	castKiss := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{
-		SpellId: &proto.ActionID{RawId: &proto.ActionID_ItemId{ItemId: kissOfTheSpider}}}}}}
+	castKissFromMinuteOne := &proto.APLListItem{Action: &proto.APLAction{
+		Condition: &proto.APLValue{Value: &proto.APLValue_Cmp{Cmp: &proto.APLValueCompare{
+			Op:  proto.APLValueCompare_OpGe,
+			Lhs: &proto.APLValue{Value: &proto.APLValue_CurrentTime{CurrentTime: &proto.APLValueCurrentTime{}}},
+			Rhs: &proto.APLValue{Value: &proto.APLValue_Const{Const: &proto.APLValueConst{Val: "60s"}}},
+		}}},
+		Action: &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{
+			SpellId: &proto.ActionID{RawId: &proto.ActionID_ItemId{ItemId: kissOfTheSpider}}}},
+	}}
 	attackPowerAndHaste := &proto.UnitStats{Stats: stats.Stats{stats.AttackPower: 1, stats.HasteRating: 1}.ToProtoArray()}
 
 	request := func(trinket1, trinket2 int32, epWeights *proto.UnitStats, swapTrinket1 int32, list ...*proto.APLListItem) *proto.RaidSimRequest {
@@ -638,11 +645,28 @@ func TestAlignOnUseItems(t *testing.T) {
 		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 5*s, 125*s)
 	})
 
-	// Kiss goes on cooldown from its own cast, so the action's plan holds the Crest around Kiss's lockout.
+	validations := func(req *proto.RaidSimRequest, line int) []*proto.APLValidation {
+		return core.ComputeStats(&proto.ComputeStatsRequest{Raid: req.Raid, Encounter: req.Encounter}).
+			RaidStats.Parties[0].Players[0].RotationStats.PriorityList[line].Validations
+	}
+
+	// The APL holds Kiss until 60 s, while the action, had it taken Kiss too, would cast it at 5 s.
 	t.Run("an item the APL casts itself is not the action's", func(t *testing.T) {
-		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, 0, castKiss, align))
-		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 0, 120*s)
+		req := request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, 0, castKissFromMinuteOne, align)
+		casts := castTimes(t, req)
+		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 60*s)
 		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 20*s, 140*s)
+
+		pool := validations(req, 1)
+		listed := false
+		for _, v := range pool {
+			if v.LogLevel == proto.LogLevel_Information && strings.Contains(v.Validation, "will cast the following items") {
+				listed = strings.Contains(v.Validation, "ItemID: 23041") && !strings.Contains(v.Validation, "ItemID: 22954")
+			}
+		}
+		if !listed {
+			t.Errorf("the action does not list Slayer's Crest alone: %v", pool)
+		}
 	})
 
 	// The Crest is out for the whole fight, so Kiss is planned alone.
@@ -653,15 +677,13 @@ func TestAlignOnUseItems(t *testing.T) {
 	})
 
 	t.Run("with no on-use item the action warns", func(t *testing.T) {
-		req := request(0, 0, attackPowerAndHaste, 0, align)
-		rotationStats := core.ComputeStats(&proto.ComputeStatsRequest{Raid: req.Raid, Encounter: req.Encounter}).
-			RaidStats.Parties[0].Players[0].RotationStats
+		empty := validations(request(0, 0, attackPowerAndHaste, 0, align), 0)
 		warned := false
-		for _, v := range rotationStats.PriorityList[0].Validations {
+		for _, v := range empty {
 			warned = warned || (v.LogLevel == proto.LogLevel_Warning && strings.Contains(v.Validation, "will not cast any items"))
 		}
 		if !warned {
-			t.Errorf("the action raised no empty-pool warning: %v", rotationStats.PriorityList[0].Validations)
+			t.Errorf("the action raised no empty-pool warning: %v", empty)
 		}
 	})
 }

@@ -96,7 +96,7 @@ func (action *APLActionWarriorAlignOnUseItems) collectItems() {
 		groupOf[timer].items = append(groupOf[timer].items, item)
 	}
 
-	// With no EP weights, the item listed first is the strongest.
+	// With no EP value for any item in the group, the item listed first is the strongest.
 	for _, group := range action.groups {
 		if slices.ContainsFunc(group.items, func(item *alignedItem) bool { return item.value != 0 }) {
 			continue
