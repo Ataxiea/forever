@@ -24,8 +24,8 @@ const specLabel = (spec: PlayerSpec<any>): string => translatePlayerSpec(spec) |
 const changed = (change: Change) =>
 	joinParts([i18n.t('common.release_info.changed', { date: change.date }), <CommitLink key="commit" commit={change.commit} />]);
 
-// The page's release, under the sidebar's stats: the game build of the spell data the spec reads, the
-// build date and the commit. The info button beside it opens the details: the sim's build, and the last
+// The page's release, under the sidebar's stats: the game build of the spell data the spec reads and the
+// build date. The info button beside it opens the details: the sim's build, and the last
 // changes to the spec's presets and to its engine, each left out when git could not read it. They
 // open on click, tap or Enter rather than on hover, so a touch screen can open them too. The caller sets
 // the text size and colour.
@@ -49,7 +49,7 @@ export const SpecReleaseInfo = ({ spec, className }: SpecReleaseInfoProps) => {
 	}
 	return (
 		<div className={clsx('flex items-center gap-2', className)}>
-			<ReleaseInfo gameVersion={release.gameVersion ?? ''} />
+			<ReleaseInfo gameVersion={release.gameVersion ?? ''} withCommit={false} />
 			<Button variant="unstyled" aria-label={i18n.t('common.release_info.details')} {...tooltipAnchorProps(id)}>
 				<Icon name="circle-info" />
 			</Button>

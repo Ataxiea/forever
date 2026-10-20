@@ -30,10 +30,11 @@ const details = () => {
 };
 
 describe('SpecReleaseInfo', () => {
-	it("names the game build of the spec's own spell data", () => {
+	it("names the game build of the spec's own spell data and the build date, leaving the commit to the details", () => {
 		restore = withRelease(RELEASE);
 		render(<SpecReleaseInfo spec={PlayerSpecs.FeralCatDruid} />);
-		expect(screen.getByRole('paragraph').textContent).toBe('Game 1.60.1.70425 · Built 2026-10-18 · 2fe052c');
+		expect(screen.getByRole('paragraph').textContent).toBe('Game 1.60.1.70425 · Built 2026-10-18');
+		expect(screen.queryByRole('link')).toBeNull();
 	});
 
 	it('lists the sim build and the last preset and engine changes on clicking its info button', () => {

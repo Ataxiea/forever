@@ -42,8 +42,8 @@ to the landing page, so getting the landing page means there is no `ui/specs/<cl
 above `specReleases`. A shallow clone has no changes to read, so the build workflows check out the full history.
 
 `vite.config.mts` defines the lot as `import.meta.env.VITE_BUILD_INFO`. The landing page shows the game build, the build
-date and the commit beside its title; a spec page shows them under the sidebar's stats, and its info button opens the
-sim build and the spec's presets and engine changes. The makefile's bundle target depends on the checkout's `HEAD` and
+date and the commit beside its title; a spec page shows the game build and the date under the sidebar's stats, and its
+info button opens the sim build with the commit and the spec's presets and engine changes. The makefile's bundle target depends on the checkout's `HEAD` and
 `index`, so a commit or checkout rebuilds it. vitest and Storybook define no `VITE_BUILD_INFO`; the stories and tests
 fill `BUILD_INFO` from `ui/testing/build_info.ts`.
 
