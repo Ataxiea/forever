@@ -18,11 +18,12 @@ func (warrior *Warrior) NewAPLAction(rot *core.APLRotation, config *proto.APLAct
 }
 
 type plannedItem struct {
-	spell       *core.Spell
-	value       float64         // What the buff is worth per second it is up.
-	starts      []time.Duration // Planned starts not yet cast, for an item in a group.
-	wasSwapped  bool            // Whether the item was swapped out when its group was planned.
-	readyToCast bool
+	spell          *core.Spell
+	shouldActivate core.CooldownActivationCondition // The item's own check, e.g. Barbaric Belt's room in the bar for its rage.
+	value          float64                          // What the buff is worth per second it is up.
+	starts         []time.Duration                  // Planned starts not yet cast, for an item in a group.
+	wasSwapped     bool                             // Whether the item was swapped out when its group was planned.
+	readyToCast    bool
 }
 
 func (item *plannedItem) isSwapped() bool {
@@ -79,7 +80,7 @@ func (action *APLActionWarriorPlanOnUseItems) collectItems() {
 		for stat, weight := range action.warrior.EPWeights {
 			value += weight * mcd.AverageStats[stat]
 		}
-		action.items = append(action.items, &plannedItem{spell: mcd.Spell, value: value})
+		action.items = append(action.items, &plannedItem{spell: mcd.Spell, shouldActivate: mcd.ShouldActivate, value: value})
 	}
 
 	groupOf := map[*core.Timer]*plannedGroup{}
@@ -147,10 +148,12 @@ func (group *plannedGroup) slipped(sim *core.Simulation) bool {
 }
 
 // The same timing a cast of the spell from the rotation has: a major cooldown goes right before the next
-// global cooldown ability.
+// global cooldown ability. An item its own check holds back stays ready, so its group waits for it as
+// for the global cooldown and is not planned again.
 func (action *APLActionWarriorPlanOnUseItems) canCast(sim *core.Simulation, item *plannedItem) bool {
 	return !item.isSwapped() && item.spell.CanCastOrQueue(sim, action.warrior.CurrentTarget) &&
-		(item.spell.Flags.Matches(core.SpellFlagReactive) || action.warrior.GCD.IsReady(sim))
+		(item.spell.Flags.Matches(core.SpellFlagReactive) || action.warrior.GCD.IsReady(sim)) &&
+		item.shouldActivate(sim, &action.warrior.Character)
 }
 
 func (action *APLActionWarriorPlanOnUseItems) GetInnerActions() []*core.APLAction { return nil }

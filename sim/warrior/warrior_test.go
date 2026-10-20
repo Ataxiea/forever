@@ -522,6 +522,7 @@ const (
 	slayersCrest      = 23041
 	kissOfTheSpider   = 22954
 	drakeFangTalisman = 19406
+	barbaricBelt      = 4264
 )
 
 // Plan On-Use Items aligned to the encounter end plans Slayer's Crest (120 s cooldown, 260 attack power
@@ -530,7 +531,8 @@ const (
 // and Kiss the 15 s before it, each one cooldown earlier too, and the shared trinket lockout costs neither
 // a use. Without EP weights the item listed first is the strongest. A trinket the APL casts itself or that
 // is swapped out is not the action's, and with neither trinket worn the action warns. Not aligned, each
-// use goes as early as the same plan allows.
+// use goes as early as the same plan allows. An item whose own check fails, Barbaric Belt with a full
+// rage bar, is not cast.
 func TestPlanOnUseItems(t *testing.T) {
 	align := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_WarriorPlanOnUseItems{
 		WarriorPlanOnUseItems: &proto.APLActionWarriorPlanOnUseItems{AlignCdEnd: true}}}}
@@ -588,7 +590,7 @@ func TestPlanOnUseItems(t *testing.T) {
 		sim.Reset()
 		character := sim.Raid.Parties[0].Players[0].GetCharacter()
 		spells := map[int32]*core.Spell{}
-		for _, itemID := range []int32{slayersCrest, kissOfTheSpider} {
+		for _, itemID := range []int32{slayersCrest, kissOfTheSpider, barbaricBelt} {
 			if spell := character.GetSpell(core.ActionID{ItemID: itemID}); spell != nil {
 				spells[itemID] = spell
 			}
@@ -684,6 +686,22 @@ func TestPlanOnUseItems(t *testing.T) {
 		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, drakeFangTalisman, align))
 		expectCasts(t, "Slayer's Crest", casts[slayersCrest])
 		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 25*s, 145*s)
+	})
+
+	// With nothing in the rotation to spend rage, a full bar stays full, so the belt's own check, room
+	// for its 30 rage, holds it for the whole fight. From an empty bar it goes at the pull.
+	t.Run("an item its own check holds back is not cast", func(t *testing.T) {
+		belted := func(startingRage float64) *proto.RaidSimRequest {
+			req := request(0, 0, attackPowerAndHaste, 0, frontLoad)
+			player := req.Raid.Parties[0].Players[0]
+			player.Equipment.Items[proto.ItemSlot_ItemSlotWaist].Id = barbaricBelt
+			player.Spec = &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{
+				ClassOptions: &proto.WarriorOptions{StartingRage: startingRage, DefaultStance: proto.WarriorStance_WarriorStanceBerserker},
+			}}}
+			return req
+		}
+		expectCasts(t, "Barbaric Belt from an empty bar", castTimes(t, belted(0))[barbaricBelt], 0)
+		expectCasts(t, "Barbaric Belt from a full bar", castTimes(t, belted(100))[barbaricBelt])
 	})
 
 	t.Run("with no on-use item the action warns", func(t *testing.T) {

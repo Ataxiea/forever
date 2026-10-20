@@ -84,24 +84,26 @@ func PlanSharedCooldownUses(items []PlannedCooldown, now, end time.Duration, ali
 	for j, use := range uses {
 		aligned[j] = use.start
 	}
-	nextSameItem := make([]time.Duration, len(items))
-	for i := range nextSameItem {
-		nextSameItem[i] = -1
-	}
-	for j := len(uses) - 1; alignToEnd && j >= 0; j-- {
-		use := uses[j]
-		item := items[use.item]
-		if item.Buff > 0 {
-			latest := end - min(item.Buff, end-use.start)
-			if j+1 < len(uses) {
-				latest = min(latest, aligned[j+1]-item.Lockout)
-			}
-			if nextSameItem[use.item] >= 0 {
-				latest = min(latest, nextSameItem[use.item]-item.Cooldown)
-			}
-			aligned[j] = max(use.start, latest)
+	if alignToEnd {
+		nextSameItem := make([]time.Duration, len(items))
+		for i := range nextSameItem {
+			nextSameItem[i] = -1
 		}
-		nextSameItem[use.item] = aligned[j]
+		for j := len(uses) - 1; j >= 0; j-- {
+			use := uses[j]
+			item := items[use.item]
+			if item.Buff > 0 {
+				latest := end - min(item.Buff, end-use.start)
+				if j+1 < len(uses) {
+					latest = min(latest, aligned[j+1]-item.Lockout)
+				}
+				if nextSameItem[use.item] >= 0 {
+					latest = min(latest, nextSameItem[use.item]-item.Cooldown)
+				}
+				aligned[j] = max(use.start, latest)
+			}
+			nextSameItem[use.item] = aligned[j]
+		}
 	}
 
 	plan := make([][]time.Duration, len(items))
