@@ -42,6 +42,12 @@ type MajorCooldown struct {
 	// Associated buff aura that is activated when the above spell is cast.
 	BuffAura *StatBuffAura
 
+	// The item this cooldown comes from; filled from the spell's item action id when zero.
+	ItemID int32
+
+	// The stats the buff gives on average over its duration; zero for a cooldown with no stat buff.
+	AverageStats stats.Stats
+
 	// Cooldowns with higher priority get used first. This is important when some
 	// cooldowns have a non-zero cast time, which should go before an instant one.
 	Priority int32
@@ -259,8 +265,11 @@ func (mcdm *majorCooldownManager) AddMajorCooldown(mcd MajorCooldown) {
 		panic("Major cooldown must have a Spell!")
 	}
 
-	if mcd.Spell.ActionID.ItemID != 0 {
-		mcdm.character.ItemSwap.RegisterActive(mcd.Spell.ActionID.ItemID)
+	if mcd.ItemID == 0 {
+		mcd.ItemID = mcd.Spell.ActionID.ItemID
+	}
+	if mcd.ItemID != 0 {
+		mcdm.character.ItemSwap.RegisterActiveSpell(mcd.ItemID, mcd.Spell)
 	}
 
 	mcd.Spell.Flags |= SpellFlagAPL | SpellFlagMCD
@@ -295,7 +304,11 @@ func (mcdm *majorCooldownManager) GetInitialMajorCooldown(actionID ActionID) Maj
 	return MajorCooldown{}
 }
 
-func (mcdm *majorCooldownManager) removeInitialMajorCooldown(actionID ActionID) {
+func (mcdm *majorCooldownManager) GetInitialMajorCooldowns() []MajorCooldown {
+	return slices.Clone(mcdm.initialMajorCooldowns)
+}
+
+func (mcdm *majorCooldownManager) RemoveInitialMajorCooldown(actionID ActionID) {
 	// First, find and remove the exact match.
 	removedIdx := -1
 	var removedTimer *Timer
@@ -436,9 +449,10 @@ func RegisterTemporaryStatsOnUseCD(character *Character, auraLabel string, tempS
 	spell.RelatedSelfBuff = aura.Aura
 
 	character.AddMajorCooldown(MajorCooldown{
-		Spell:    spell,
-		Type:     cdType,
-		BuffAura: aura,
+		Spell:        spell,
+		Type:         cdType,
+		BuffAura:     aura,
+		AverageStats: tempStats,
 	})
 
 	return aura

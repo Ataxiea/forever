@@ -224,12 +224,21 @@ func (swap *ItemSwap) RegisterEnchantBuffWithSlots(buffAura *Aura, enchantID int
 
 // Helper for handling Item On Use effects to set a 30s cd on the related spell.
 func (swap *ItemSwap) RegisterActive(itemID int32) {
-	slots := swap.EligibleSlotsForItem(itemID)
 	itemActionID := ActionID{ItemID: itemID}
+	swap.registerActive(itemID, func() *Spell { return swap.character.GetSpell(itemActionID) })
+}
+
+// Same as RegisterActive for an item whose spell is not keyed by the item action id.
+func (swap *ItemSwap) RegisterActiveSpell(itemID int32, spell *Spell) {
+	swap.registerActive(itemID, func() *Spell { return spell })
+}
+
+func (swap *ItemSwap) registerActive(itemID int32, getSpell func() *Spell) {
+	slots := swap.EligibleSlotsForItem(itemID)
 	character := swap.character
 
 	character.RegisterItemSwapCallback(slots, func(sim *Simulation, _ proto.ItemSlot) {
-		spell := character.GetSpell(itemActionID)
+		spell := getSpell()
 		if spell == nil {
 			return
 		}

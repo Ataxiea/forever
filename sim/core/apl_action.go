@@ -185,9 +185,9 @@ func newAPLActionEntry(condition APLValue, impl APLActionImpl) *APLAction {
 
 func removeFromMajorCooldowns(action APLActionImpl, character *Character) {
 	if castSpellAction, ok := action.(*APLActionCastSpell); ok {
-		character.removeInitialMajorCooldown(castSpellAction.spell.ActionID)
+		character.RemoveInitialMajorCooldown(castSpellAction.spell.ActionID)
 	} else if castFriendlySpellAction, ok := action.(*APLActionCastFriendlySpell); ok {
-		character.removeInitialMajorCooldown(castFriendlySpellAction.spell.ActionID)
+		character.RemoveInitialMajorCooldown(castFriendlySpellAction.spell.ActionID)
 	}
 }
 

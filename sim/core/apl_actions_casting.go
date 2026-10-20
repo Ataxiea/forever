@@ -513,7 +513,7 @@ func (action *APLActionCastAllStatBuffCooldowns) processMajorCooldowns() {
 		// before the filtered spells are irreversibly removed from the MCD
 		// manager.
 		for _, buffSpell := range matchingSpells {
-			action.character.removeInitialMajorCooldown(buffSpell.ActionID)
+			action.character.RemoveInitialMajorCooldown(buffSpell.ActionID)
 		}
 	})
 }

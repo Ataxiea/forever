@@ -12,6 +12,11 @@ import (
 const (
 	fakeDefensiveID int32 = 993001
 	fakeOffensiveID int32 = 993002
+
+	fakeItemID           int32 = 993003
+	fakeSpellKeyedID     int32 = 993004
+	fakeSpellKeyedItemID int32 = 993005
+	fakeBuffID           int32 = 993006
 )
 
 func init() {
@@ -43,6 +48,21 @@ func (m *fakeCooldownMage) OnEncounterStart(_ *Simulation) {}
 func (m *fakeCooldownMage) Initialize() {
 	m.registerCooldown(fakeDefensiveID, CooldownTypeSurvival)
 	m.registerCooldown(fakeOffensiveID, CooldownTypeDPS)
+
+	m.AddMajorCooldown(MajorCooldown{Spell: m.RegisterSpell(SpellConfig{
+		ActionID: ActionID{ItemID: fakeItemID},
+		Flags:    SpellFlagNoOnCastComplete,
+		Cast:     CastConfig{CD: Cooldown{Timer: m.NewTimer(), Duration: 10 * time.Second}},
+	})})
+	m.AddMajorCooldown(MajorCooldown{ItemID: fakeSpellKeyedItemID, Spell: m.RegisterSpell(SpellConfig{
+		ActionID: ActionID{SpellID: fakeSpellKeyedID},
+		Flags:    SpellFlagNoOnCastComplete,
+		Cast:     CastConfig{CD: Cooldown{Timer: m.NewTimer(), Duration: 10 * time.Second}},
+	})})
+	RegisterTemporaryStatsOnUseCD(&m.Character, "Fake Buff", stats.Stats{stats.AttackPower: 260}, 20*time.Second, SpellConfig{
+		ActionID: ActionID{SpellID: fakeBuffID},
+		Cast:     CastConfig{CD: Cooldown{Timer: m.NewTimer(), Duration: 2 * time.Minute}},
+	})
 }
 
 func (m *fakeCooldownMage) registerCooldown(id int32, cdType CooldownType) {
@@ -172,5 +192,47 @@ func TestInferCDTypeFromTheBuffedStats(t *testing.T) {
 		if got := (&StatBuffAura{BuffedStatTypes: tc.stats}).InferCDType(); got != tc.want {
 			t.Errorf("%v: type %v, want %v", tc.stats, got, tc.want)
 		}
+	}
+}
+
+// A cooldown keeps the item id it was added with, and takes it from the spell's item action id when
+// none is given.
+func TestMajorCooldownItemID(t *testing.T) {
+	mcds := runCooldownMages(t, nil, autocastRotation())[0].GetInitialMajorCooldowns()
+	want := map[ActionID]int32{
+		{ItemID: fakeItemID}:        fakeItemID,
+		{SpellID: fakeSpellKeyedID}: fakeSpellKeyedItemID,
+		{SpellID: fakeOffensiveID}:  0,
+	}
+	for actionID, itemID := range want {
+		found := false
+		for _, mcd := range mcds {
+			if mcd.Spell.ActionID == actionID {
+				found = true
+				if mcd.ItemID != itemID {
+					t.Errorf("%v: ItemID %d, want %d", actionID, mcd.ItemID, itemID)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("%v: no major cooldown", actionID)
+		}
+	}
+}
+
+// A stat buff cooldown carries the stats its buff gives.
+func TestTemporaryStatsOnUseAverageStats(t *testing.T) {
+	mcds := runCooldownMages(t, nil, autocastRotation())[0].GetInitialMajorCooldowns()
+	count := 0
+	for _, mcd := range mcds {
+		if mcd.Spell.ActionID == (ActionID{SpellID: fakeBuffID}) {
+			count++
+			if got := mcd.AverageStats[stats.AttackPower]; got != 260 {
+				t.Errorf("AverageStats attack power %v, want 260", got)
+			}
+		}
+	}
+	if count != 1 {
+		t.Errorf("%d buff cooldowns, want 1", count)
 	}
 }
