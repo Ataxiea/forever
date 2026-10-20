@@ -29,7 +29,7 @@ import {
 	APLActionTriggerICD,
 	APLActionWait,
 	APLActionWaitUntil,
-	APLActionWarriorAlignOnUseItems,
+	APLActionWarriorPlanOnUseItems,
 } from '@generated/proto/apl';
 import { Class, Spec } from '@generated/proto/common';
 import i18n from '@i18n/config';
@@ -443,13 +443,17 @@ export const actionKinds: { [f in NonNullable<APLActionKind>]: ActionKindModel<A
 		newValue: () => APLActionCastWarlockAssignedCurse.create({}),
 		fields: [unitFieldConfig('target', 'targets')],
 	}),
-	['warriorAlignOnUseItems']: inputBuilder({
-		label: i18n.t('rotation_tab.apl.actions.warrior_align_on_use_items.label'),
+	['warriorPlanOnUseItems']: inputBuilder({
+		label: i18n.t('rotation_tab.apl.actions.warrior_plan_on_use_items.label'),
 		submenu: ['warrior'],
-		shortDescription: i18n.t('rotation_tab.apl.actions.warrior_align_on_use_items.short_description'),
-		fullDescription: i18n.t('rotation_tab.apl.actions.warrior_align_on_use_items.tooltip'),
+		shortDescription: i18n.t('rotation_tab.apl.actions.warrior_plan_on_use_items.short_description'),
+		fullDescription: i18n.t('rotation_tab.apl.actions.warrior_plan_on_use_items.tooltip'),
 		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getClass() == Class.ClassWarrior,
-		newValue: () => APLActionWarriorAlignOnUseItems.create({}),
-		fields: [],
+		newValue: () => APLActionWarriorPlanOnUseItems.create({}),
+		fields: [
+			booleanFieldConfig('alignCdEnd', i18n.t('rotation_tab.apl.actions.warrior_plan_on_use_items.align_cd_end'), {
+				labelTooltip: i18n.t('rotation_tab.apl.actions.warrior_plan_on_use_items.align_cd_end_tooltip'),
+			}),
+		],
 	}),
 };

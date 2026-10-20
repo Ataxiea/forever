@@ -524,15 +524,18 @@ const (
 	drakeFangTalisman = 19406
 )
 
-// Align On-Use Items plans Slayer's Crest (120 s cooldown, 260 attack power for 20 s) and Kiss of the
-// Spider (120 s, 200 haste rating for 15 s) backward from the end of a 160 s fight. With equal weights
-// for attack power and haste the Crest is worth more, so it takes the last 20 s and Kiss the 15 s before
-// it, each one cooldown earlier too, and the shared trinket lockout costs neither a use. Without EP
-// weights the item listed first is the strongest. A trinket the APL casts itself or that is swapped out
-// is not the action's, and with neither trinket worn the action warns.
-func TestAlignOnUseItems(t *testing.T) {
-	align := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_WarriorAlignOnUseItems{
-		WarriorAlignOnUseItems: &proto.APLActionWarriorAlignOnUseItems{}}}}
+// Plan On-Use Items aligned to the encounter end plans Slayer's Crest (120 s cooldown, 260 attack power
+// for 20 s) and Kiss of the Spider (120 s, 200 haste rating for 15 s) backward from the end of a 160 s
+// fight. With equal weights for attack power and haste the Crest is worth more, so it takes the last 20 s
+// and Kiss the 15 s before it, each one cooldown earlier too, and the shared trinket lockout costs neither
+// a use. Without EP weights the item listed first is the strongest. A trinket the APL casts itself or that
+// is swapped out is not the action's, and with neither trinket worn the action warns. Not aligned, each
+// use goes as early as the same plan allows.
+func TestPlanOnUseItems(t *testing.T) {
+	align := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_WarriorPlanOnUseItems{
+		WarriorPlanOnUseItems: &proto.APLActionWarriorPlanOnUseItems{AlignCdEnd: true}}}}
+	frontLoad := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_WarriorPlanOnUseItems{
+		WarriorPlanOnUseItems: &proto.APLActionWarriorPlanOnUseItems{}}}}
 	castKissFromMinuteOne := &proto.APLListItem{Action: &proto.APLAction{
 		Condition: &proto.APLValue{Value: &proto.APLValue_Cmp{Cmp: &proto.APLValueCompare{
 			Op:  proto.APLValueCompare_OpGe,
@@ -637,6 +640,13 @@ func TestAlignOnUseItems(t *testing.T) {
 		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, 0, align))
 		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 20*s, 140*s)
 		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 5*s, 125*s)
+	})
+
+	// The plan the search picks for this pair leads with Kiss, and the Crest follows its lockout.
+	t.Run("not aligned, each use goes as early as the plan allows", func(t *testing.T) {
+		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, 0, frontLoad))
+		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 0, 120*s)
+		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 15*s, 135*s)
 	})
 
 	t.Run("without EP weights the first item listed is the strongest", func(t *testing.T) {

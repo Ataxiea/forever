@@ -10,14 +10,14 @@ import (
 
 func (warrior *Warrior) NewAPLAction(rot *core.APLRotation, config *proto.APLAction) core.APLActionImpl {
 	switch config.Action.(type) {
-	case *proto.APLAction_WarriorAlignOnUseItems:
-		return warrior.newActionAlignOnUseItems()
+	case *proto.APLAction_WarriorPlanOnUseItems:
+		return warrior.newActionPlanOnUseItems(config.GetWarriorPlanOnUseItems())
 	default:
 		return nil
 	}
 }
 
-type alignedItem struct {
+type plannedItem struct {
 	spell       *core.Spell
 	value       float64         // What the buff is worth per second it is up.
 	starts      []time.Duration // Planned starts not yet cast, for an item in a group.
@@ -25,11 +25,11 @@ type alignedItem struct {
 	readyToCast bool
 }
 
-func (item *alignedItem) isSwapped() bool {
+func (item *plannedItem) isSwapped() bool {
 	return item.spell.Flags.Matches(core.SpellFlagSwapped)
 }
 
-func (item *alignedItem) buff() time.Duration {
+func (item *plannedItem) buff() time.Duration {
 	if item.spell.RelatedSelfBuff == nil {
 		return 0
 	}
@@ -37,20 +37,21 @@ func (item *alignedItem) buff() time.Duration {
 }
 
 // Items that share one cooldown category lockout and are planned together.
-type alignedGroup struct {
-	items []*alignedItem
+type plannedGroup struct {
+	items []*plannedItem
 	stale bool
 }
 
-type APLActionWarriorAlignOnUseItems struct {
-	warrior *Warrior
-	items   []*alignedItem
-	groups  []*alignedGroup
-	loose   []*alignedItem // Items with no shared lockout to plan around.
+type APLActionWarriorPlanOnUseItems struct {
+	warrior    *Warrior
+	alignToEnd bool
+	items      []*plannedItem
+	groups     []*plannedGroup
+	loose      []*plannedItem // Items with no shared lockout to plan around.
 }
 
-func (warrior *Warrior) newActionAlignOnUseItems() core.APLActionImpl {
-	action := &APLActionWarriorAlignOnUseItems{warrior: warrior}
+func (warrior *Warrior) newActionPlanOnUseItems(config *proto.APLActionWarriorPlanOnUseItems) core.APLActionImpl {
+	action := &APLActionWarriorPlanOnUseItems{warrior: warrior, alignToEnd: config.AlignCdEnd}
 
 	// After the rotation's own casts have taken their items out of the major cooldowns.
 	warrior.Env.RegisterPostFinalizeEffect(func() {
@@ -68,7 +69,7 @@ func (warrior *Warrior) newActionAlignOnUseItems() core.APLActionImpl {
 }
 
 // On-use DPS items, without potions, conjured items and explosives.
-func (action *APLActionWarriorAlignOnUseItems) collectItems() {
+func (action *APLActionWarriorPlanOnUseItems) collectItems() {
 	for _, mcd := range action.warrior.GetInitialMajorCooldowns() {
 		if mcd.ItemID == 0 || !mcd.Type.Matches(core.CooldownTypeDPS) || mcd.Type.Matches(core.CooldownTypeExplosive) ||
 			mcd.Spell.Flags.Matches(core.SpellFlagPotion|core.SpellFlagConjured) {
@@ -78,10 +79,10 @@ func (action *APLActionWarriorAlignOnUseItems) collectItems() {
 		for stat, weight := range action.warrior.EPWeights {
 			value += weight * mcd.AverageStats[stat]
 		}
-		action.items = append(action.items, &alignedItem{spell: mcd.Spell, value: value})
+		action.items = append(action.items, &plannedItem{spell: mcd.Spell, value: value})
 	}
 
-	groupOf := map[*core.Timer]*alignedGroup{}
+	groupOf := map[*core.Timer]*plannedGroup{}
 	for _, item := range action.items {
 		timer := item.spell.SharedCD.Timer
 		// The planner never finishes for an item that locks out nothing and has no cooldown.
@@ -90,7 +91,7 @@ func (action *APLActionWarriorAlignOnUseItems) collectItems() {
 			continue
 		}
 		if groupOf[timer] == nil {
-			groupOf[timer] = &alignedGroup{}
+			groupOf[timer] = &plannedGroup{}
 			action.groups = append(action.groups, groupOf[timer])
 		}
 		groupOf[timer].items = append(groupOf[timer].items, item)
@@ -98,7 +99,7 @@ func (action *APLActionWarriorAlignOnUseItems) collectItems() {
 
 	// With no EP value for any item in the group, the item listed first is the strongest.
 	for _, group := range action.groups {
-		if slices.ContainsFunc(group.items, func(item *alignedItem) bool { return item.value != 0 }) {
+		if slices.ContainsFunc(group.items, func(item *plannedItem) bool { return item.value != 0 }) {
 			continue
 		}
 		for _, item := range group.items {
@@ -107,9 +108,9 @@ func (action *APLActionWarriorAlignOnUseItems) collectItems() {
 	}
 }
 
-func (action *APLActionWarriorAlignOnUseItems) plan(sim *core.Simulation, group *alignedGroup) {
+func (action *APLActionWarriorPlanOnUseItems) plan(sim *core.Simulation, group *plannedGroup) {
 	var planned []core.PlannedCooldown
-	var plannedItems []*alignedItem
+	var plannedItems []*plannedItem
 	for _, item := range group.items {
 		item.starts = nil
 		item.wasSwapped = item.isSwapped()
@@ -125,7 +126,7 @@ func (action *APLActionWarriorAlignOnUseItems) plan(sim *core.Simulation, group 
 		})
 		plannedItems = append(plannedItems, item)
 	}
-	for i, starts := range core.PlanSharedCooldownUses(planned, sim.CurrentTime, sim.Duration) {
+	for i, starts := range core.PlanSharedCooldownUses(planned, sim.CurrentTime, sim.Duration, action.alignToEnd) {
 		plannedItems[i].starts = starts
 	}
 	group.stale = false
@@ -133,7 +134,7 @@ func (action *APLActionWarriorAlignOnUseItems) plan(sim *core.Simulation, group 
 
 // A group is planned again once a planned start has passed with its item still on cooldown or locked
 // out, or once an item was swapped in or out.
-func (group *alignedGroup) slipped(sim *core.Simulation) bool {
+func (group *plannedGroup) slipped(sim *core.Simulation) bool {
 	for _, item := range group.items {
 		if item.isSwapped() != item.wasSwapped {
 			return true
@@ -147,29 +148,29 @@ func (group *alignedGroup) slipped(sim *core.Simulation) bool {
 
 // The same timing a cast of the spell from the rotation has: a major cooldown goes right before the next
 // global cooldown ability.
-func (action *APLActionWarriorAlignOnUseItems) canCast(sim *core.Simulation, item *alignedItem) bool {
+func (action *APLActionWarriorPlanOnUseItems) canCast(sim *core.Simulation, item *plannedItem) bool {
 	return !item.isSwapped() && item.spell.CanCastOrQueue(sim, action.warrior.CurrentTarget) &&
 		(item.spell.Flags.Matches(core.SpellFlagReactive) || action.warrior.GCD.IsReady(sim))
 }
 
-func (action *APLActionWarriorAlignOnUseItems) GetInnerActions() []*core.APLAction { return nil }
-func (action *APLActionWarriorAlignOnUseItems) GetAPLValues() []core.APLValue      { return nil }
-func (action *APLActionWarriorAlignOnUseItems) Finalize(*core.APLRotation)         {}
-func (action *APLActionWarriorAlignOnUseItems) PostFinalize(rot *core.APLRotation) {
+func (action *APLActionWarriorPlanOnUseItems) GetInnerActions() []*core.APLAction { return nil }
+func (action *APLActionWarriorPlanOnUseItems) GetAPLValues() []core.APLValue      { return nil }
+func (action *APLActionWarriorPlanOnUseItems) Finalize(*core.APLRotation)         {}
+func (action *APLActionWarriorPlanOnUseItems) PostFinalize(rot *core.APLRotation) {
 	if len(action.items) == 0 {
 		rot.ValidationMessage(proto.LogLevel_Warning, "%s will not cast any items! There are either no on-use DPS items equipped, or all of them are cast elsewhere in the APL.", action)
 		return
 	}
-	actionIDs := core.MapSlice(action.items, func(item *alignedItem) core.ActionID { return item.spell.ActionID })
+	actionIDs := core.MapSlice(action.items, func(item *plannedItem) core.ActionID { return item.spell.ActionID })
 	rot.ValidationMessage(proto.LogLevel_Information, "%s will cast the following items: %s", action, core.StringFromActionIDs(actionIDs))
 }
-func (action *APLActionWarriorAlignOnUseItems) GetNextAction(*core.Simulation) *core.APLAction {
+func (action *APLActionWarriorPlanOnUseItems) GetNextAction(*core.Simulation) *core.APLAction {
 	return nil
 }
-func (action *APLActionWarriorAlignOnUseItems) ReResolveVariableRefs(*core.APLRotation, map[string]*proto.APLValue) {
+func (action *APLActionWarriorPlanOnUseItems) ReResolveVariableRefs(*core.APLRotation, map[string]*proto.APLValue) {
 }
 
-func (action *APLActionWarriorAlignOnUseItems) Reset(*core.Simulation) {
+func (action *APLActionWarriorPlanOnUseItems) Reset(*core.Simulation) {
 	for _, group := range action.groups {
 		group.stale = true
 	}
@@ -178,7 +179,7 @@ func (action *APLActionWarriorAlignOnUseItems) Reset(*core.Simulation) {
 	}
 }
 
-func (action *APLActionWarriorAlignOnUseItems) IsReady(sim *core.Simulation) bool {
+func (action *APLActionWarriorPlanOnUseItems) IsReady(sim *core.Simulation) bool {
 	ready := false
 	for _, group := range action.groups {
 		if group.stale || group.slipped(sim) {
@@ -191,14 +192,15 @@ func (action *APLActionWarriorAlignOnUseItems) IsReady(sim *core.Simulation) boo
 	}
 	for _, item := range action.loose {
 		buff := item.buff()
-		item.readyToCast = (buff == 0 || core.ShouldCastForEncounterEnd(sim.Duration-sim.CurrentTime, item.spell.CD.Duration, buff)) &&
+		item.readyToCast = (!action.alignToEnd || buff == 0 ||
+			core.ShouldCastForEncounterEnd(sim.Duration-sim.CurrentTime, item.spell.CD.Duration, buff)) &&
 			action.canCast(sim, item)
 		ready = ready || item.readyToCast
 	}
 	return ready
 }
 
-func (action *APLActionWarriorAlignOnUseItems) Execute(sim *core.Simulation) {
+func (action *APLActionWarriorPlanOnUseItems) Execute(sim *core.Simulation) {
 	for _, group := range action.groups {
 		for _, item := range group.items {
 			if item.readyToCast {
@@ -214,6 +216,6 @@ func (action *APLActionWarriorAlignOnUseItems) Execute(sim *core.Simulation) {
 	}
 }
 
-func (action *APLActionWarriorAlignOnUseItems) String() string {
-	return "Align On-Use Items"
+func (action *APLActionWarriorPlanOnUseItems) String() string {
+	return "Plan On-Use Items"
 }

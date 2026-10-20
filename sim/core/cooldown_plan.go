@@ -52,10 +52,11 @@ type cooldownPlanner struct {
 // category and each item are next free, since any use in the rest starts after every earlier use of its item,
 // so it is memoised on those times.
 //
-// The chosen sequence is then pushed as late as it goes, walking backward from the end: a buffed use starts
-// as late as keeps its buff inside the encounter (or as clipped as its earliest start allows), its lockout
-// clear of the next use and its cooldown clear of its item's next use. A damage item's use stays on cooldown.
-func PlanSharedCooldownUses(items []PlannedCooldown, now, end time.Duration) [][]time.Duration {
+// With alignToEnd, the chosen sequence is then pushed as late as it goes, walking backward from the end: a
+// buffed use starts as late as keeps its buff inside the encounter (or as clipped as its earliest start
+// allows), its lockout clear of the next use and its cooldown clear of its item's next use. A damage item's use
+// stays on cooldown. Without it, every use starts as soon as the category and its item are free.
+func PlanSharedCooldownUses(items []PlannedCooldown, now, end time.Duration, alignToEnd bool) [][]time.Duration {
 	planner := &cooldownPlanner{
 		items:    items,
 		end:      end,
@@ -80,14 +81,16 @@ func PlanSharedCooldownUses(items []PlannedCooldown, now, end time.Duration) [][
 	}
 
 	aligned := make([]time.Duration, len(uses))
+	for j, use := range uses {
+		aligned[j] = use.start
+	}
 	nextSameItem := make([]time.Duration, len(items))
 	for i := range nextSameItem {
 		nextSameItem[i] = -1
 	}
-	for j := len(uses) - 1; j >= 0; j-- {
+	for j := len(uses) - 1; alignToEnd && j >= 0; j-- {
 		use := uses[j]
 		item := items[use.item]
-		aligned[j] = use.start
 		if item.Buff > 0 {
 			latest := end - min(item.Buff, end-use.start)
 			if j+1 < len(uses) {

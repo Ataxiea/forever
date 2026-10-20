@@ -5491,7 +5491,7 @@
 									"additionalProperties": false,
 									"required": ["label", "tooltip", "short_description"]
 								},
-								"warrior_align_on_use_items": {
+								"warrior_plan_on_use_items": {
 									"type": "object",
 									"properties": {
 										"label": {
@@ -5502,10 +5502,16 @@
 										},
 										"short_description": {
 											"type": "string"
+										},
+										"align_cd_end": {
+											"type": "string"
+										},
+										"align_cd_end_tooltip": {
+											"type": "string"
 										}
 									},
 									"additionalProperties": false,
-									"required": ["label", "tooltip", "short_description"]
+									"required": ["label", "tooltip", "short_description", "align_cd_end", "align_cd_end_tooltip"]
 								},
 								"group_reference": {
 									"type": "object",
@@ -5561,7 +5567,7 @@
 								"pet_attack",
 								"custom_rotation",
 								"warlock_cast_assigned_curse",
-								"warrior_align_on_use_items",
+								"warrior_plan_on_use_items",
 								"group_reference"
 							]
 						},

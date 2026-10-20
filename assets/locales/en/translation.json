@@ -1545,10 +1545,12 @@
 					"tooltip": "Casts the Curse that warlock is assigned",
 					"short_description": "Casts the Warlock's Assigned Curse"
 				},
-				"warrior_align_on_use_items": {
-					"label": "Align On-Use Items",
-					"tooltip": "Casts every on-use item that is not cast elsewhere in the APL, on a schedule planned back from the end of the fight: the strongest item by your EP weights takes the last window, and no use is lost to the cooldown that on-use trinkets share.",
-					"short_description": "Casts on-use items lined up with the end of the fight"
+				"warrior_plan_on_use_items": {
+					"label": "Plan On-Use Items",
+					"tooltip": "Casts every on-use item that is not cast elsewhere in the APL, on a planned schedule: the strongest item by your EP weights goes last, and no use is lost to the cooldown that on-use trinkets share.",
+					"short_description": "Casts on-use items on a plan that loses no use to the shared trinket cooldown",
+					"align_cd_end": "Align to encounter end",
+					"align_cd_end_tooltip": "Off, each item is cast as early as the plan allows. On, the last uses are held so they end with the encounter."
 				},
 				"group_reference": {
 					"label": "Group Reference",

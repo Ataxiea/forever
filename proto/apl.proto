@@ -89,7 +89,7 @@ message APLAction {
         // Class or Spec-specific actions
         APLActionGuardianHotwDpsRotation guardian_hotw_dps_rotation = 27;
 		APLActionCastWarlockAssignedCurse cast_warlock_assigned_curse = 29;
-        APLActionWarriorAlignOnUseItems warrior_align_on_use_items = 31;
+        APLActionWarriorPlanOnUseItems warrior_plan_on_use_items = 31;
 
         // Internal use only, not exposed in UI.
         APLActionCustomRotation custom_rotation = 19;
@@ -401,7 +401,9 @@ message APLActionCastWarlockAssignedCurse{
 	UnitReference target = 1;
 }
 
-message APLActionWarriorAlignOnUseItems {}
+message APLActionWarriorPlanOnUseItems {
+	bool align_cd_end = 1; // Holds the last uses so they end with the encounter.
+}
 
 ///////////////////////////////////////////////////////////////////////////
 //                                  VALUES

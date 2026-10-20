@@ -33,7 +33,12 @@ func kissLike(readyAt time.Duration) PlannedCooldown {
 
 func checkPlan(t *testing.T, items []PlannedCooldown, now, end time.Duration, expected [][]time.Duration) {
 	t.Helper()
-	if got := PlanSharedCooldownUses(items, now, end); !reflect.DeepEqual(got, expected) {
+	checkPlanAligned(t, items, now, end, true, expected)
+}
+
+func checkPlanAligned(t *testing.T, items []PlannedCooldown, now, end time.Duration, alignToEnd bool, expected [][]time.Duration) {
+	t.Helper()
+	if got := PlanSharedCooldownUses(items, now, end, alignToEnd); !reflect.DeepEqual(got, expected) {
 		t.Errorf("expected plan %v, got %v", expected, got)
 	}
 }
@@ -64,11 +69,9 @@ func TestPlanRebuildAfterLateCast(t *testing.T) {
 		[][]time.Duration{seconds(160, 280)})
 }
 
-func TestPlanFallbackValues(t *testing.T) {
-	slayer := slayerLike(0)
-	kiss := kissLike(0)
-	slayer.ValuePerSecond = 2
-	kiss.ValuePerSecond = 1
-	checkPlan(t, []PlannedCooldown{kiss, slayer}, 0, 160*time.Second,
-		[][]time.Duration{seconds(5, 125), seconds(20, 140)})
+// Unaligned, the search's own sequence stands. Both orders fit two whole uses of each item; the tie goes to
+// the latest last use of the stronger Slayer, so Kiss leads: Kiss 0 s, Slayer 15 s, Kiss 120 s, Slayer 135 s.
+func TestPlanFrontLoaded(t *testing.T) {
+	checkPlanAligned(t, []PlannedCooldown{slayerLike(0), kissLike(0)}, 0, 160*time.Second, false,
+		[][]time.Duration{seconds(15, 135), seconds(0, 120)})
 }
