@@ -49,20 +49,12 @@ type TextEdit struct {
 
 // The typed x.apl.siml the panel reads and edits, or why the text is none.
 func (d *Doc) aplFile() (*typedFile, error) {
-	if d.typed != nil && d.typed.kind.Section != sectionAPL {
-		return nil, errors.New("the panel edits the rotation of an x.apl.siml file")
-	}
-	return d.rotationFile()
-}
-
-// The typed file whose own text writes its rotation, an x.apl.siml or a full x.siml, or why the text is none.
-func (d *Doc) rotationFile() (*typedFile, error) {
 	f := d.typed
 	switch {
 	case f == nil:
 		return nil, cmp.Or(d.err, errors.New("the text reads as no file"))
-	case f.kind.Section != sectionAPL && f.kind.Section != "":
-		return nil, errors.New("only an x.apl.siml or a full x.siml writes a rotation")
+	case f.kind.Section != sectionAPL:
+		return nil, errors.New("the panel edits the rotation of an x.apl.siml file")
 	case hasError(f.diags):
 		return nil, errors.New("the text has errors; fix them to edit the rotation")
 	}
@@ -83,11 +75,6 @@ func (d *Doc) Splice(edits []AplEdit) ([]TextEdit, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d.splice(f, edits)
-}
-
-// Splice's edits for the file f the text reads as.
-func (d *Doc) splice(f *typedFile, edits []AplEdit) ([]TextEdit, error) {
 	if len(edits) == 1 && (edits[0].Op == "defSet" || edits[0].Op == "defRename") {
 		return d.editDef(edits[0])
 	}

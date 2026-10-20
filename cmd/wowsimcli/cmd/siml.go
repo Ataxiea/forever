@@ -35,7 +35,6 @@ func init() {
 		simlSubcommand("print -kind apl|gear|siml [-spec <field>] [-categories <letters>] <file.json>", "print a rotation, gear set or settings JSON file as SIML", simlPrint),
 		simlSubcommand("fmt [-check | -w] <files or folders>", "format .siml files, or check that they are in canonical form", simlFmt),
 		simlSubcommand("verify <old.json> <new.siml>", "check that a .siml file reads back as the JSON file it was printed from", simlVerify),
-		simlSubcommand("port [-keep] <files or folders>", "write .apl.json, .gear.json and .build.json presets as their .siml twins, splicing rotations and builds into the lines they change", simlPort),
 		simlSubcommand("sim < request.json", "sim the text of an .apl.siml for the APL editor: a JSON request on stdin, a JSON result on stdout", simlSim),
 		simlSubcommand("serve [-names <names.json>]", "read .siml texts for the Vite plugin: one JSON request a line on stdin, one JSON response a line on stdout", simlServe),
 		simlSubcommand("lsp", "serve the SIML language server on stdin and stdout", simlLSP),
