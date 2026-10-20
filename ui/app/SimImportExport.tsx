@@ -39,8 +39,8 @@ export const SimImportExport = () => {
 			<ImportExportMenu kind={ImportExportKind.Import} icon="download" title={i18n.t('import.title')}>
 				{ready && (
 					<>
-						<ImportExportItem label="JSON" dialog={JsonImporterDialog} />
 						<ImportExportItem label="SIML" dialog={SimlImporterDialog} />
+						<ImportExportItem label="JSON" dialog={JsonImporterDialog} />
 						<ImportExportItem label="60U" dialog={SixtyUpgradesImporterDialog} />
 						<ImportExportItem label="WoWHead" dialog={WowheadImporterDialog} />
 						<ImportExportItem label={i18n.t('import.menu.addon')} dialog={AddonImporterDialog} />
@@ -50,9 +50,9 @@ export const SimImportExport = () => {
 			<ImportExportMenu kind={ImportExportKind.Export} icon="right-from-bracket" title={i18n.t('export.title')}>
 				{ready && (
 					<>
+						<ImportExportItem label="SIML" dialog={SimlExporterDialog} />
 						<ImportExportItem label={i18n.t('export.menu.link')} dialog={LinkExporterDialog} />
 						<ImportExportItem label="JSON" dialog={JsonExporterDialog} />
-						<ImportExportItem label="SIML" dialog={SimlExporterDialog} />
 						<ImportExportItem label="WoWHead" dialog={WowheadExporterDialog} />
 						<ImportExportItem label={i18n.t('export.menu.sixty_upgrades_ep')} dialog={SixtyUpgradesExporterDialog} />
 						<ImportExportItem label={i18n.t('export.menu.pawn_ep')} dialog={PawnExporterDialog} />
