@@ -270,6 +270,15 @@ func TestDefCompletion(t *testing.T) {
 	if _, ok := find(ref, "x"); !ok {
 		t.Errorf("a ref in the def's value does not offer the parameter: %v", labelsOf(ref))
 	}
+	// A def with no parameters that is a name is offered where a name goes, and one with parameters is not.
+	named := strings.Replace(defsText, "\npriority:", "def opener = steady\n\npriority:", 1)
+	cast := completionsIn(t, names, nil, hunterPath, strings.Replace(named, "cast steady if", "cast | if", 1))
+	if c, ok := find(cast, "opener"); !ok || c.Detail != "def opener = steady" {
+		t.Errorf("an action's spell offers the def as %+v (%v): %v", c, ok, labelsOf(cast))
+	}
+	if _, ok := find(cast, "fits"); ok {
+		t.Errorf("an action's spell offers a def with parameters: %v", labelsOf(cast))
+	}
 	if _, ok := find(completionsIn(t, names, nil, hunterPath, defsText+"  |\n"), "when"); !ok {
 		t.Error("a priority row does not offer when")
 	}

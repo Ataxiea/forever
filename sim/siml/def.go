@@ -195,6 +195,41 @@ func (t *typer) expand(c *callNode, d *defStmt) *proto.APLValue {
 	return v
 }
 
+// What a bare call of a def with no parameters stands for where a name goes, a spell's or an aura's (SPEC.md §6.10):
+// the def's value, read as if written at the call, and what ends the call. ok is false when n is no such call; value is
+// nil when the def takes parameters, def-arity, or calls itself, which readDefs reports.
+func (t *typer) named(n node) (value node, done func(), ok bool) {
+	c, isCall := n.(*callNode)
+	if !isCall || c.args != nil {
+		return nil, nil, false
+	}
+	d := t.defs.byName[c.name.text]
+	if d == nil {
+		return nil, nil, false
+	}
+	t.defs.used[d] = true
+	if len(d.params) > 0 {
+		t.report("def-arity", d.name.text+" takes arguments, so it stands for no name", c.span)
+		return nil, func() {}, true
+	}
+	if t.defs.cyclic[d] {
+		return nil, func() {}, true
+	}
+	t.site = &expansion{def: d, call: c.span, outer: t.site}
+	return d.value, func() { t.site = t.site.outer }, true
+}
+
+// Whether n is written as a name alone: a word, item.<name> or other.<name>.
+func writesName(n node) bool {
+	switch x := n.(type) {
+	case *callNode:
+		return x.args == nil
+	case *memberNode:
+		return x.object.text == "item" || x.object.text == "other"
+	}
+	return false
+}
+
 // n with each parameter replaced by its argument, in a ref, unit, operand or argument position. A unit written before
 // a dot takes a unit word only; false, and wrong-type, when its argument is something else.
 func (t *typer) substitute(n node, args map[string]node) (node, bool) {

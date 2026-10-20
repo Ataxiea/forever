@@ -271,6 +271,73 @@
 					"and": {
 						"vals": [
 							{
+								"spellIsReady": {
+									"spellId": {
+										"spellId": 20904,
+										"rank": 6
+									}
+								}
+							},
+							{
+								"or": {
+									"vals": [
+										{
+											"cmp": {
+												"op": "OpLe",
+												"lhs": {
+													"math": {
+														"op": "OpAdd",
+														"lhs": {
+															"spellCastTime": {
+																"spellId": {
+																	"spellId": 20904,
+																	"rank": 6
+																}
+															}
+														},
+														"rhs": {
+															"variableRef": {
+																"name": "Move duration"
+															}
+														}
+													}
+												},
+												"rhs": {
+													"const": {
+														"val": "2s"
+													}
+												}
+											}
+										},
+										{
+											"not": {
+												"val": {
+													"variableRef": {
+														"name": "weave"
+													}
+												}
+											}
+										}
+									]
+								}
+							}
+						]
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 20904,
+						"rank": 6
+					}
+				}
+			}
+		},
+		{
+			"action": {
+				"condition": {
+					"and": {
+						"vals": [
+							{
 								"cmp": {
 									"op": "OpLt",
 									"lhs": {

@@ -2,6 +2,7 @@ package siml
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -475,6 +476,14 @@ func (b *completer) refs(ns Namespace) {
 			from, rank = ", from gear, consumables or encounters", 2
 		}
 		b.add(n.Name, CompletionConstant, ranked(rank).with("", fmt.Sprintf("%s(%d%s)%s", game, n.Entry.SpellID, tag, from)))
+	}
+	if b.d.typed != nil {
+		defs := b.d.typed.typer.defs.byName
+		for _, name := range slices.Sorted(maps.Keys(defs)) {
+			if d := defs[name]; len(d.params) == 0 && writesName(d.value) {
+				b.add(name, CompletionFunction, ranked(1).with("", "def "+name+" = "+nodeText(d.value, b.d.src)))
+			}
+		}
 	}
 	b.add("item.", CompletionKeyword, ranked(6).with("", "an item"))
 	b.add("other.", CompletionKeyword, ranked(6).with("", "another action, such as other.offensive_potion"))

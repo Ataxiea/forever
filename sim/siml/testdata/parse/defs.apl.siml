@@ -9,6 +9,8 @@ def early = current_time < 10s
 def below(u, p) = u.current_health_percent < p
 def active(u, a) = u.aura(a).is_active
 def both(c) = c and current_time > 1s
+// A def with no parameters whose value is a name stands for that name where a name goes.
+def opener = aimed_shot
 // A call in a var line's value.
 var $early_weave = early and $weave
 
@@ -25,6 +27,8 @@ priority:
   cast hunters_mark if not active(target, hunters_mark)
   // An argument written as an or keeps its precedence.
   cast x if both($weave or early)
+  // A def that is a name, as an action's spell, a ref, and an argument a parameter passes on.
+  cast opener if spell(opener).is_ready and fits(opener)
   // A call in a when line's condition.
   when early:
     cast aimed_shot if fits(aimed_shot)

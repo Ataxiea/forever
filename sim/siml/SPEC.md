@@ -683,7 +683,26 @@ reaches the proto.
 **Forms.** `def name(p1, p2, …) = <expr>` declares a def with parameters, each an ident, and `def name = <expr>` (or
 `def name() = <expr>`) one with none. `name(a1, a2, …)` and bare `name` call it where a value goes (§6.5): in a row,
 a `var` value, a `when` condition, a `with` value and another def's value. A word that names a def reads as the def in
-a value position only, before the kinds of §8.3; in step position it is `unknown-kind`.
+a value position, before the kinds of §8.3, and where a name goes as below; in step position it is `unknown-kind`.
+
+**A def for a name.** A def with no parameters whose value is a name alone, a word of the table, `item.<name>` or
+`other.<name>`, also stands for that name where a name goes: the spell of an action (`cast filler`), the subject of a
+head (`spell(filler)`, `aura(filler)`, `dot(filler)`) and any other field that takes a name. One line then picks a
+spell that every row casting or reading it follows, and a def with parameters may be passed it:
+
+```
+def filler = shadow_bolt
+def main_dot = corruption
+def short(x) = dot(x).remaining_time < 2s
+
+priority:
+  cast main_dot if short(main_dot)
+  cast filler if spell(filler).cast_time < 3s
+```
+
+The name is read as if written at the call, so a diagnostic about it is at the call, as in a value. A def with
+parameters written bare where a name goes is `def-arity`, at the call ("fits takes arguments, so it stands for no
+name"). A def whose value is not a name gets there what its value gets where a name goes.
 
 **Where.** At top level or under `apl:`, where a rotation `var` line goes. Anywhere else it is `misplaced-def`, at
 `def`, and the line is still read. A def may be called anywhere in its file, before or after its line.

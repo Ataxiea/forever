@@ -847,6 +847,13 @@ func (t *typer) enumValue(enumName string, n node, f *field, stat bool) (protore
 
 // An item, enchant or suffix ref field: a name of that namespace, written as the id.
 func (t *typer) ref(f *field, n node) (protoreflect.Value, bool) {
+	if value, done, ok := t.named(n); ok {
+		defer done()
+		if value == nil {
+			return protoreflect.Value{}, false
+		}
+		return t.ref(f, value)
+	}
 	ns := Namespace(f.Ref)
 	c, ok := n.(*callNode)
 	if !ok || c.args != nil {
@@ -1005,6 +1012,13 @@ func (t *typer) indexed(f *field, n node) (protoreflect.Value, bool) {
 
 // An ActionID: a name of ns, item.<name>, other.<short>, none or raw JSON.
 func (t *typer) actionID(n node, ns Namespace) *proto.ActionID {
+	if value, done, ok := t.named(n); ok {
+		defer done()
+		if value == nil {
+			return nil
+		}
+		return t.actionID(value, ns)
+	}
 	switch n := n.(type) {
 	case *noneNode:
 		t.mark(n.span)
