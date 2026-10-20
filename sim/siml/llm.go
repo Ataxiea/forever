@@ -35,14 +35,12 @@ func LLMText() (string, error) {
 	b.WriteString("\n## Accessors (generated): [unit.]head(subject).property(arguments)\n\n")
 	for _, head := range ix.heads {
 		var props []string
-		for _, k := range ix.valueKindList {
-			if a := k.Accessor; k.Form == "accessor" && a.Head == head {
-				props = append(props, a.Prop+ix.llmArgs(k, a.Subject, a.Unit))
-			}
-		}
 		unit := ""
-		if slices.ContainsFunc(ix.valueKindList, func(k *aplKind) bool { return k.Accessor != nil && k.Accessor.Head == head && k.Accessor.Unit != "" }) {
-			unit = "[unit.]"
+		for _, k := range ix.headKinds(head) {
+			props = append(props, k.Accessor.Prop+ix.llmArgs(k, k.Accessor.Subject, k.Accessor.Unit))
+			if k.Accessor.Unit != "" {
+				unit = "[unit.]"
+			}
 		}
 		fmt.Fprintf(&b, "%s%s(x): %s\n", unit, head, strings.Join(props, ", "))
 	}
@@ -73,13 +71,11 @@ func (ix *schemaIndex) llmArgs(k *aplKind, leave ...string) string {
 		if slices.Contains(leave, f.Name) {
 			continue
 		}
-		part := f.Siml + ": " + ix.llmType(f)
 		if f.Name == k.Positional {
-			part = ix.llmType(f)
-			parts = slices.Insert(parts, 0, part)
+			parts = slices.Insert(parts, 0, ix.llmType(f))
 			continue
 		}
-		parts = append(parts, part)
+		parts = append(parts, f.Siml+": "+ix.llmType(f))
 	}
 	if len(parts) == 0 {
 		return ""

@@ -29,11 +29,16 @@ func simlGrammar(out, errOut io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	if *output == "" {
-		_, err = out.Write(text)
+	return writeOutput(out, *output, text)
+}
+
+// Writes text to the file path, or to out when path is empty.
+func writeOutput(out io.Writer, path string, text []byte) error {
+	if path == "" {
+		_, err := out.Write(text)
 		return err
 	}
-	return os.WriteFile(*output, text, 0o644)
+	return os.WriteFile(path, text, 0o644)
 }
 
 var (

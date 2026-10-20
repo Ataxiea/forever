@@ -480,7 +480,7 @@ func (b *completer) refs(ns Namespace) {
 	if b.d.typed != nil {
 		defs := b.d.typed.typer.defs.byName
 		for _, name := range slices.Sorted(maps.Keys(defs)) {
-			if d := defs[name]; len(d.params) == 0 && writesName(d.value) {
+			if d := defs[name]; len(d.params) == 0 && b.names(d.value, ns) {
 				b.add(name, CompletionFunction, ranked(1).with("", "def "+name+" = "+nodeText(d.value, b.d.src)))
 			}
 		}
@@ -488,6 +488,23 @@ func (b *completer) refs(ns Namespace) {
 	b.add("item.", CompletionKeyword, ranked(6).with("", "an item"))
 	b.add("other.", CompletionKeyword, ranked(6).with("", "another action, such as other.offensive_potion"))
 	b.add("none", CompletionKeyword, ranked(7))
+}
+
+// Whether n is a name of ns for the file, item.<name> or other.<name>: what a def with no parameters that stands for a
+// name may be (SPEC.md §6.10).
+func (b *completer) names(n node, ns Namespace) bool {
+	switch x := n.(type) {
+	case *callNode:
+		_, ok := b.d.names.Spell(b.d.class(), ns, x.name.text)
+		return x.args == nil && ok
+	case *memberNode:
+		if x.object.text == "item" {
+			_, ok := b.d.names.Item(x.name.text)
+			return ok
+		}
+		return x.object.text == "other" && b.d.ix.enums[otherEnum].byName[x.name.text] != nil
+	}
+	return false
 }
 
 // The name of an item in the catalog, "" for none.

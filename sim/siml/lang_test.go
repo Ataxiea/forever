@@ -279,6 +279,10 @@ func TestDefCompletion(t *testing.T) {
 	if _, ok := find(cast, "fits"); ok {
 		t.Errorf("an action's spell offers a def with parameters: %v", labelsOf(cast))
 	}
+	valued := strings.Replace(named, "def opener = steady", "def opener = steady\ndef late = current_time", 1)
+	if _, ok := find(completionsIn(t, names, nil, hunterPath, strings.Replace(valued, "cast steady if", "cast | if", 1)), "late"); ok {
+		t.Error("an action's spell offers a def whose value is no name")
+	}
 	if _, ok := find(completionsIn(t, names, nil, hunterPath, defsText+"  |\n"), "when"); !ok {
 		t.Error("a priority row does not offer when")
 	}

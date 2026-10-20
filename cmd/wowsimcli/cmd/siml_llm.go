@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"io"
-	"os"
 
 	"github.com/wowsims/forever/sim/siml"
 )
@@ -22,9 +21,5 @@ func simlLLM(out, errOut io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	if *output == "" {
-		_, err = io.WriteString(out, text)
-		return err
-	}
-	return os.WriteFile(*output, []byte(text), 0o644)
+	return writeOutput(out, *output, []byte(text))
 }

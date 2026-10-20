@@ -145,6 +145,12 @@ func (t *typer) checkDefsUsed() {
 	}
 }
 
+// Reads what follows as d's value at the call c, so a diagnostic in it moves to the call; gives what ends the call.
+func (t *typer) callSite(d *defStmt, c *callNode) func() {
+	t.site = &expansion{def: d, call: c.span, outer: t.site}
+	return func() { t.site = t.site.outer }
+}
+
 // A call of d: its value with each parameter replaced by the call's argument for it, typed where the call is.
 func (t *typer) expand(c *callNode, d *defStmt) *proto.APLValue {
 	var args []arg
@@ -182,8 +188,7 @@ func (t *typer) expand(c *callNode, d *defStmt) *proto.APLValue {
 			bound[p.text] = args[i].value
 		}
 	}
-	t.site = &expansion{def: d, call: c.span, outer: t.site}
-	defer func() { t.site = t.site.outer }()
+	defer t.callSite(d, c)()
 	body, ok := t.substitute(d.value, bound)
 	if !ok {
 		return nil
@@ -215,19 +220,7 @@ func (t *typer) named(n node) (value node, done func(), ok bool) {
 	if t.defs.cyclic[d] {
 		return nil, func() {}, true
 	}
-	t.site = &expansion{def: d, call: c.span, outer: t.site}
-	return d.value, func() { t.site = t.site.outer }, true
-}
-
-// Whether n is written as a name alone: a word, item.<name> or other.<name>.
-func writesName(n node) bool {
-	switch x := n.(type) {
-	case *callNode:
-		return x.args == nil
-	case *memberNode:
-		return x.object.text == "item" || x.object.text == "other"
-	}
-	return false
+	return d.value, t.callSite(d, c), true
 }
 
 // n with each parameter replaced by its argument, in a ref, unit, operand or argument position. A unit written before
