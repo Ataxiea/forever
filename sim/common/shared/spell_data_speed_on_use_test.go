@@ -10,6 +10,7 @@ import (
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
 // Mind Quickening Gem 19339 casts 23723, Scrolls of Blinding Light 19343 casts 23733 and Kiss of the
@@ -152,4 +153,26 @@ func TestOnUseSpeedBuffRunsOnTheItemsCooldownAndCategory(t *testing.T) {
 	if got := gem.CD.ReadyAt(); got != start+5*time.Minute {
 		t.Errorf("the gem is ready again at %v, want 5 min after its use at %v", got, start)
 	}
+}
+
+// A speed buff averages as the haste rating its melee percent equals: Kiss of the Spider's 20% melee
+// haste is 200 rating, and its ranged haste adds nothing to it.
+func TestOnUseSpeedBuffAveragesAsMeleeHasteRating(t *testing.T) {
+	const itemID int32 = 991149
+	_, caster := newSpeedOnUseSim(t, proto.Class_ClassWarrior, proto.Race_RaceOrc, map[int32]onUseTrinket{
+		itemID: {testOnUse(kissOfSpider, 120000, 1141, 15000), NewSpellDataSpeedOnUse}})
+
+	percent := spelldata.MustFind(kissOfSpider).FirstAura(dbcenums.A_MOD_MELEE_HASTE_3).BasePoints
+	needAmount(t, "28866's melee haste", percent)
+	want := percent * core.HasteRatingPerHastePercent
+	for _, mcd := range caster.GetInitialMajorCooldowns() {
+		if mcd.ItemID != itemID {
+			continue
+		}
+		if got := mcd.AverageStats[stats.HasteRating]; got != want {
+			t.Errorf("average haste rating %v, want %v", got, want)
+		}
+		return
+	}
+	t.Fatalf("no major cooldown for item %d", itemID)
 }

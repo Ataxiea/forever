@@ -47,8 +47,9 @@ func init() {
 		})
 
 		spell := character.RegisterSpell(core.SpellConfig{
-			ActionID: actionID,
-			Flags:    core.SpellFlagNoOnCastComplete,
+			ActionID:        actionID,
+			Flags:           core.SpellFlagNoOnCastComplete,
+			RelatedSelfBuff: jomGabbarAura,
 			Cast: core.CastConfig{
 				CD: core.Cooldown{
 					Timer:    character.NewTimer(),
@@ -65,8 +66,11 @@ func init() {
 		})
 
 		character.AddMajorCooldown(core.MajorCooldown{
-			Spell: spell,
-			Type:  core.CooldownTypeDPS,
+			Spell:  spell,
+			Type:   core.CooldownTypeDPS,
+			ItemID: 23570,
+			// A stack on use and one every 2 s after, up to ten, each held for 2 s: 5.5 stacks over the buff.
+			AverageStats: bonusPerStack.Multiply(float64(jomGabbarAura.MaxStacks+1) / 2),
 		})
 	})
 
@@ -121,7 +125,7 @@ func init() {
 		})
 
 		buff := &core.StatBuffAura{Aura: aura, BuffedStatTypes: []stats.Stat{stats.Health}}
-		registerItemOnUse(character, 19341, core.CooldownTypeSurvival, buff, func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		registerItemOnUse(character, 19341, core.CooldownTypeSurvival, buff, stats.Stats{}, func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 			aura.Activate(sim)
 		})
 	})
@@ -236,7 +240,7 @@ func init() {
 			return mark
 		})
 
-		registerItemOnUse(character, 274760, core.CooldownTypeDPS, nil, func(sim *core.Simulation, target *core.Unit, _ *core.Spell) {
+		registerItemOnUse(character, 274760, core.CooldownTypeDPS, nil, stats.Stats{}, func(sim *core.Simulation, target *core.Unit, _ *core.Spell) {
 			marks.Get(target).Activate(sim)
 		})
 	})
@@ -362,7 +366,8 @@ func registerCountdownOnUse(character *core.Character, itemID int32, row *spelld
 	}
 	buff.AttachProcTriggerCallback(&character.Unit, trigger)
 
-	registerItemOnUse(character, itemID, cdType, buff, func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+	// The stacks count down from all of them to none, so the buff averages half of them.
+	registerItemOnUse(character, itemID, cdType, buff, perStack.Multiply(float64(stacks)/2), func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 		buff.Activate(sim)
 		buff.SetStacks(sim, stacks)
 	})
@@ -370,7 +375,7 @@ func registerCountdownOnUse(character *core.Character, itemID int32, row *spelld
 
 // The item's use as a major cooldown, on the cooldowns its on-use effect states. The use completes no
 // cast, so a buff that counts casts does not count the use that applied it.
-func registerItemOnUse(character *core.Character, itemID int32, cdType core.CooldownType, buff *core.StatBuffAura, apply core.ApplySpellResults) {
+func registerItemOnUse(character *core.Character, itemID int32, cdType core.CooldownType, buff *core.StatBuffAura, averageStats stats.Stats, apply core.ApplySpellResults) {
 	effects := core.GetItemByID(itemID).ItemEffects
 	i := slices.IndexFunc(effects, func(effect *proto.ItemEffect) bool { return effect.GetOnUse() != nil })
 	if i < 0 {
@@ -388,8 +393,9 @@ func registerItemOnUse(character *core.Character, itemID int32, cdType core.Cool
 	}
 
 	character.AddMajorCooldown(core.MajorCooldown{
-		Spell:    character.RegisterSpell(config),
-		Type:     cdType,
-		BuffAura: buff,
+		Spell:        character.RegisterSpell(config),
+		Type:         cdType,
+		BuffAura:     buff,
+		AverageStats: averageStats,
 	})
 }

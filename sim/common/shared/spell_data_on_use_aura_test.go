@@ -288,3 +288,29 @@ func TestAdaptiveCombatAssistantDealsDamageWhenItsShieldBreaks(t *testing.T) {
 		t.Errorf("breaking the shield dealt %v, want %v to %v", got, low, high)
 	}
 }
+
+// A stacking on-use averages as half its full stacks: a buff that climbs from none to six stacks of 200
+// armor penetration, as Badge of the Swarmguard's does, averages 600.
+func TestStackingOnUseAveragesAsHalfItsFullStacks(t *testing.T) {
+	const itemID int32 = 992791
+	withAuraItem(itemID, proto.ItemType_ItemTypeTrinket, &proto.ItemEffect{
+		BuffId: 26480, BuffName: "Test Swarmguard", EffectDurationMs: 30000, MaxCumulativeStacks: 6,
+		Effect: &proto.ItemEffect_OnUse{OnUse: &proto.OnUseEffect{CooldownMs: 180000}},
+		ScalingOptions: map[int32]*proto.ScalingItemEffectProperties{0: {Stats: map[int32]float64{
+			int32(proto.Stat_StatArmorPenetration): 200}}},
+	})
+	NewStackingStatBonusCD(StackingStatBonusCD{Name: "Test Swarmguard", ID: itemID, CD: 3 * time.Minute,
+		Callback: core.CallbackOnSpellHitDealt, ProcMask: core.ProcMaskMelee})
+
+	sim := newAuraSim(shaman("Wearer", map[proto.ItemSlot]int32{proto.ItemSlot_ItemSlotTrinket1: itemID}))
+	for _, mcd := range auraTesterAt(sim, 0).GetInitialMajorCooldowns() {
+		if mcd.ItemID != itemID {
+			continue
+		}
+		if got := mcd.AverageStats[stats.ArmorPenetration]; got != 600 {
+			t.Errorf("average armor penetration %v, want 600", got)
+		}
+		return
+	}
+	t.Fatalf("no major cooldown for item %d", itemID)
+}

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -22,6 +23,12 @@ func trinketWarrior(t *testing.T, trinketID int32) (*core.Simulation, *core.Char
 
 func trinketWarriorWielding(t *testing.T, trinketID int32, mainHand int32, neck int32) (*core.Simulation, *core.Character) {
 	t.Helper()
+	return trinketWarriorSwapping(t, trinketID, mainHand, neck, nil)
+}
+
+// The same, with the given items as the item swap set when it is not nil.
+func trinketWarriorSwapping(t *testing.T, trinketID int32, mainHand int32, neck int32, swapped []*proto.ItemSpec) (*core.Simulation, *core.Character) {
+	t.Helper()
 	items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotMainHand+1)
 	for i := range items {
 		items[i] = &proto.ItemSpec{}
@@ -29,21 +36,23 @@ func trinketWarriorWielding(t *testing.T, trinketID int32, mainHand int32, neck 
 	items[proto.ItemSlot_ItemSlotTrinket1].Id = trinketID
 	items[proto.ItemSlot_ItemSlotMainHand].Id = mainHand
 	items[proto.ItemSlot_ItemSlotNeck].Id = neck
+	player := &proto.Player{
+		Name: "Wearer", Class: proto.Class_ClassWarrior, Race: proto.Race_RaceOrc,
+		Spec: &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{
+			ClassOptions: &proto.WarriorOptions{DefaultStance: proto.WarriorStance_WarriorStanceBerserker}}}},
+		Equipment:   &proto.EquipmentSpec{Items: items},
+		Consumables: &proto.ConsumesSpec{},
+		Buffs:       &proto.IndividualBuffs{},
+		Rotation:    &proto.APLRotation{},
+	}
+	if swapped != nil {
+		player.EnableItemSwap = true
+		player.ItemSwap = &proto.ItemSwap{Items: swapped}
+	}
 	sim := core.NewSim(&proto.RaidSimRequest{
 		SimOptions: &proto.SimOptions{RandomSeed: 1},
-		Raid: &proto.Raid{Parties: []*proto.Party{{
-			Players: []*proto.Player{{
-				Name: "Wearer", Class: proto.Class_ClassWarrior, Race: proto.Race_RaceOrc,
-				Spec: &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{
-					ClassOptions: &proto.WarriorOptions{DefaultStance: proto.WarriorStance_WarriorStanceBerserker}}}},
-				Equipment:   &proto.EquipmentSpec{Items: items},
-				Consumables: &proto.ConsumesSpec{},
-				Buffs:       &proto.IndividualBuffs{},
-				Rotation:    &proto.APLRotation{},
-			}},
-			Buffs: &proto.PartyBuffs{},
-		}}},
-		Encounter: &proto.Encounter{Targets: []*proto.Target{{Name: "target", Level: 60}}, Duration: 180},
+		Raid:       &proto.Raid{Parties: []*proto.Party{{Players: []*proto.Player{player}, Buffs: &proto.PartyBuffs{}}}},
+		Encounter:  &proto.Encounter{Targets: []*proto.Target{{Name: "target", Level: 60}}, Duration: 180},
 	}, simsignals.CreateSignals())
 	sim.Reset()
 	return sim, sim.Raid.Parties[0].Players[0].GetCharacter()
@@ -470,5 +479,77 @@ func TestDormantHeartOfTheMountainAnswersTheFourHeals(t *testing.T) {
 			t.Errorf("rank %d raised no buff", rank)
 		}
 		buff.Deactivate(sim)
+	}
+}
+
+// The average stats a major cooldown records, read by its item.
+func averageStatsOf(t *testing.T, character *core.Character, itemID int32) core.MajorCooldown {
+	t.Helper()
+	for _, mcd := range character.GetInitialMajorCooldowns() {
+		if mcd.ItemID == itemID {
+			return mcd
+		}
+	}
+	t.Fatalf("no major cooldown for item %d", itemID)
+	return core.MajorCooldown{}
+}
+
+// Jom Gabbar 23570 gains 65 attack power and ranged attack power every 2 s for 20 s, ten stacks that
+// average 5.5 of them over the buff. Its action stays 29602.
+func TestJomGabbarRecordsItsItemBuffAndAverageStats(t *testing.T) {
+	_, character := trinketWarrior(t, 23570)
+	mcd := averageStatsOf(t, character, 23570)
+	if mcd.Spell.ActionID != (core.ActionID{SpellID: 29602}) {
+		t.Errorf("Jom Gabbar's action is %v, want spell 29602", mcd.Spell.ActionID)
+	}
+	if buff := mcd.Spell.RelatedSelfBuff; buff == nil || buff.Duration != 20*time.Second {
+		t.Errorf("Jom Gabbar's related buff is %v, want an aura of 20s", buff)
+	}
+	for _, stat := range []stats.Stat{stats.AttackPower, stats.RangedAttackPower} {
+		if got := mcd.AverageStats[stat]; got != 357.5 {
+			t.Errorf("average %v %v, want 357.5", stat, got)
+		}
+	}
+}
+
+// Jom Gabbar's spell is flagged swapped while the trinket is out of its slot, and not once it is back.
+// A trinket swaps before the pull only, so the swaps are made at a time before it.
+func TestJomGabbarSpellFollowsItemSwaps(t *testing.T) {
+	swapped := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotMainHand+1)
+	swapped[proto.ItemSlot_ItemSlotTrinket1] = &proto.ItemSpec{Id: 23041}
+	sim, character := trinketWarriorSwapping(t, 23570, 0, 0, swapped)
+	sim.CurrentTime = -time.Second
+	spell := averageStatsOf(t, character, 23570).Spell
+	if spell.Flags.Matches(core.SpellFlagSwapped) {
+		t.Fatalf("Jom Gabbar is flagged swapped while worn")
+	}
+	character.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Swap1, false)
+	if !spell.Flags.Matches(core.SpellFlagSwapped) {
+		t.Errorf("Jom Gabbar is not flagged swapped with the trinket out of its slot")
+	}
+	character.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Main, false)
+	if spell.Flags.Matches(core.SpellFlagSwapped) {
+		t.Errorf("Jom Gabbar is still flagged swapped with the trinket back")
+	}
+}
+
+// Zandalarian Hero Medallion's 20 stacks of 2 damage count down, so they average 10 stacks, and Slayer's
+// Crest's attack power is the whole of its buff.
+func TestOnUseTrinketsRecordTheirAverageStats(t *testing.T) {
+	for _, tc := range []struct {
+		itemID int32
+		stat   stats.Stat
+		want   float64
+	}{
+		{19949, stats.PhysicalDamage, 20},
+		{23041, stats.AttackPower, 260},
+	} {
+		if tc.itemID == 23041 {
+			shared.NewSimpleStatActive(tc.itemID)
+		}
+		_, character := trinketWarrior(t, tc.itemID)
+		if got := averageStatsOf(t, character, tc.itemID).AverageStats[tc.stat]; got != tc.want {
+			t.Errorf("%d's average %v is %v, want %v", tc.itemID, tc.stat, got, tc.want)
+		}
 	}
 }

@@ -1289,7 +1289,13 @@ func AbsorbLinkedDamage(absorb *spelldata.Spell) []int32 {
 // An on-use item whose spell raises the wearer's melee, ranged or cast speed. Every speed the row
 // states is on one aura, up for the row's duration.
 func NewSpellDataSpeedOnUse(itemID int32) {
-	registerSpellDataOnUse(itemID, core.CooldownTypeDPS, spellDataOnUseSpeedSpell)
+	registerSpellDataOnUseCooldown(itemID, func(character *core.Character, row *spelldata.Spell) (core.SpellConfig, core.MajorCooldown, bool) {
+		meleeHaste := stats.PseudoStatValue(row.SpeedPseudoStats(), proto.PseudoStat_PseudoStatMeleeHastePercent)
+		return spellDataOnUseSpeedSpell(character, row), core.MajorCooldown{
+			Type:         core.CooldownTypeDPS,
+			AverageStats: stats.Stats{stats.HasteRating: meleeHaste * core.HasteRatingPerHastePercent}, // Melee speed alone: a ranged or cast speed is a different haste.
+		}, true
+	})
 }
 
 func spellDataOnUseSpeedSpell(character *core.Character, row *spelldata.Spell) core.SpellConfig {
@@ -1570,6 +1576,8 @@ func NewStackingStatBonusCD(config StackingStatBonusCD) {
 				Spell:    spell,
 				Type:     core.CooldownTypeDPS,
 				BuffAura: statAura,
+				// The stacks build from none to the most, so the buff averages half of them.
+				AverageStats: stats.FromProtoMap(stacks.perStack).Multiply(float64(stacks.maxStacks) / 2),
 			})
 
 			// The stat aura and not the window: the stacks are what an APL keys off. This is the
