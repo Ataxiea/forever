@@ -1545,6 +1545,11 @@
 					"tooltip": "Casts the Curse that warlock is assigned",
 					"short_description": "Casts the Warlock's Assigned Curse"
 				},
+				"warrior_align_on_use_items": {
+					"label": "Align On-Use Items",
+					"tooltip": "Casts every on-use item that is not cast elsewhere in the APL, on a schedule planned back from the end of the fight: the strongest item by your EP weights takes the last window, and no use is lost to the cooldown that on-use trinkets share.",
+					"short_description": "Casts on-use items lined up with the end of the fight"
+				},
 				"group_reference": {
 					"label": "Group Reference",
 					"tooltip": "References an action group defined in the Groups section.",
@@ -2102,6 +2107,7 @@
 				"feral_druid": "Feral Druid",
 				"shaman": "Shaman",
 				"warlock": "Warlock",
+				"warrior": "Warrior",
 				"mage": "Mage",
 				"tank": "Tank",
 				"health": "Health",

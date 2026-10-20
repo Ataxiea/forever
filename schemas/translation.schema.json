@@ -5491,6 +5491,22 @@
 									"additionalProperties": false,
 									"required": ["label", "tooltip", "short_description"]
 								},
+								"warrior_align_on_use_items": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										},
+										"short_description": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip", "short_description"]
+								},
 								"group_reference": {
 									"type": "object",
 									"properties": {
@@ -5545,6 +5561,7 @@
 								"pet_attack",
 								"custom_rotation",
 								"warlock_cast_assigned_curse",
+								"warrior_align_on_use_items",
 								"group_reference"
 							]
 						},
@@ -7457,6 +7474,9 @@
 								"warlock": {
 									"type": "string"
 								},
+								"warrior": {
+									"type": "string"
+								},
 								"mage": {
 									"type": "string"
 								},
@@ -7545,6 +7565,7 @@
 								"feral_druid",
 								"shaman",
 								"warlock",
+								"warrior",
 								"mage",
 								"tank",
 								"health",

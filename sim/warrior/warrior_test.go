@@ -1,6 +1,7 @@
 package warrior_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -515,4 +516,152 @@ func TestShieldHitsNeverProcMainHandWeaponEffects(t *testing.T) {
 	if !windfury.IsActive() {
 		t.Error("200 main-hand specials never procced Windfury Totem, so the check above proves nothing")
 	}
+}
+
+const (
+	slayersCrest      = 23041
+	kissOfTheSpider   = 22954
+	drakeFangTalisman = 19406
+)
+
+// Align On-Use Items plans Slayer's Crest (120 s cooldown, 260 attack power for 20 s) and Kiss of the
+// Spider (120 s, 200 haste rating for 15 s) backward from the end of a 160 s fight. With equal weights
+// for attack power and haste the Crest is worth more, so it takes the last 20 s and Kiss the 15 s before
+// it, each one cooldown earlier too, and the shared trinket lockout costs neither a use. Without EP
+// weights the item listed first is the strongest. A trinket the APL casts itself or that is swapped out
+// is not the action's, and with neither trinket worn the action warns.
+func TestAlignOnUseItems(t *testing.T) {
+	align := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_WarriorAlignOnUseItems{
+		WarriorAlignOnUseItems: &proto.APLActionWarriorAlignOnUseItems{}}}}
+	castKiss := &proto.APLListItem{Action: &proto.APLAction{Action: &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{
+		SpellId: &proto.ActionID{RawId: &proto.ActionID_ItemId{ItemId: kissOfTheSpider}}}}}}
+	attackPowerAndHaste := &proto.UnitStats{Stats: stats.Stats{stats.AttackPower: 1, stats.HasteRating: 1}.ToProtoArray()}
+
+	request := func(trinket1, trinket2 int32, epWeights *proto.UnitStats, swapTrinket1 int32, list ...*proto.APLListItem) *proto.RaidSimRequest {
+		items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotMainHand+1)
+		for i := range items {
+			items[i] = &proto.ItemSpec{}
+		}
+		items[proto.ItemSlot_ItemSlotTrinket1].Id = trinket1
+		items[proto.ItemSlot_ItemSlotTrinket2].Id = trinket2
+		player := &proto.Player{
+			Name:          "Aligner",
+			Race:          proto.Race_RaceOrc,
+			Class:         proto.Class_ClassWarrior,
+			Equipment:     &proto.EquipmentSpec{Items: items},
+			TalentsString: furyTalents,
+			Spec:          dpsOptions,
+			Consumables:   &proto.ConsumesSpec{},
+			Buffs:         &proto.IndividualBuffs{},
+			EpWeights:     epWeights,
+			Rotation:      &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: list},
+		}
+		if swapTrinket1 != 0 {
+			swapped := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotMainHand+1)
+			swapped[proto.ItemSlot_ItemSlotTrinket1] = &proto.ItemSpec{Id: swapTrinket1}
+			player.EnableItemSwap = true
+			player.ItemSwap = &proto.ItemSwap{Items: swapped}
+		}
+		return &proto.RaidSimRequest{
+			Raid:       core.SinglePlayerRaidProto(player, &proto.PartyBuffs{}, &proto.RaidBuffs{}, &proto.Debuffs{}),
+			Encounter:  &proto.Encounter{Duration: 160, Targets: []*proto.Target{{Name: "target", Level: 63}}},
+			SimOptions: &proto.SimOptions{RandomSeed: 1},
+		}
+	}
+
+	// Runs one iteration and returns the times each trinket was used: the times its cooldown starts a
+	// full run, since an item swap sets a shorter one. With item swap on, the swap set goes on before the
+	// pull, the one time a trinket swaps.
+	castTimes := func(t *testing.T, req *proto.RaidSimRequest) map[int32][]time.Duration {
+		t.Helper()
+		sim := core.NewSim(req, simsignals.CreateSignals())
+		sim.Reset()
+		character := sim.Raid.Parties[0].Players[0].GetCharacter()
+		spells := map[int32]*core.Spell{}
+		for _, itemID := range []int32{slayersCrest, kissOfTheSpider} {
+			if spell := character.GetSpell(core.ActionID{ItemID: itemID}); spell != nil {
+				spells[itemID] = spell
+			}
+		}
+		if crest, kiss := spells[slayersCrest], spells[kissOfTheSpider]; crest != nil && kiss != nil &&
+			(crest.SharedCD.Timer == nil || crest.SharedCD.Timer != kiss.SharedCD.Timer) {
+			t.Fatal("Slayer's Crest and Kiss of the Spider share no trinket lockout")
+		}
+
+		lastReady := map[int32]time.Duration{}
+		for itemID, spell := range spells {
+			lastReady[itemID] = spell.CD.ReadyAt()
+		}
+		casts := map[int32][]time.Duration{}
+		if character.ItemSwap.IsEnabled() {
+			sim.CurrentTime = -time.Second
+			character.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Swap1, false)
+		}
+		sim.PrePull()
+		for !sim.Step() {
+			for itemID, spell := range spells {
+				if ready := spell.CD.ReadyAt(); ready != lastReady[itemID] {
+					lastReady[itemID] = ready
+					if ready == sim.CurrentTime+spell.CD.Duration {
+						casts[itemID] = append(casts[itemID], sim.CurrentTime)
+					}
+				}
+			}
+		}
+		return casts
+	}
+
+	expectCasts := func(t *testing.T, name string, got []time.Duration, want ...time.Duration) {
+		t.Helper()
+		if len(got) != len(want) {
+			t.Errorf("%s was used at %v, want %v", name, got, want)
+			return
+		}
+		for i := range want {
+			if got[i] < want[i] || got[i] > want[i]+core.GCDDefault {
+				t.Errorf("%s was used at %v, want %v, each within one global cooldown", name, got, want)
+				return
+			}
+		}
+	}
+
+	s := time.Second
+	t.Run("the strongest item by EP weights takes the last window", func(t *testing.T) {
+		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, 0, align))
+		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 20*s, 140*s)
+		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 5*s, 125*s)
+	})
+
+	t.Run("without EP weights the first item listed is the strongest", func(t *testing.T) {
+		casts := castTimes(t, request(kissOfTheSpider, slayersCrest, nil, 0, align))
+		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 25*s, 145*s)
+		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 5*s, 125*s)
+	})
+
+	// Kiss goes on cooldown from its own cast, so the action's plan holds the Crest around Kiss's lockout.
+	t.Run("an item the APL casts itself is not the action's", func(t *testing.T) {
+		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, 0, castKiss, align))
+		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 0, 120*s)
+		expectCasts(t, "Slayer's Crest", casts[slayersCrest], 20*s, 140*s)
+	})
+
+	// The Crest is out for the whole fight, so Kiss is planned alone.
+	t.Run("a swapped out item is left out of the plan", func(t *testing.T) {
+		casts := castTimes(t, request(slayersCrest, kissOfTheSpider, attackPowerAndHaste, drakeFangTalisman, align))
+		expectCasts(t, "Slayer's Crest", casts[slayersCrest])
+		expectCasts(t, "Kiss of the Spider", casts[kissOfTheSpider], 25*s, 145*s)
+	})
+
+	t.Run("with no on-use item the action warns", func(t *testing.T) {
+		req := request(0, 0, attackPowerAndHaste, 0, align)
+		rotationStats := core.ComputeStats(&proto.ComputeStatsRequest{Raid: req.Raid, Encounter: req.Encounter}).
+			RaidStats.Parties[0].Players[0].RotationStats
+		warned := false
+		for _, v := range rotationStats.PriorityList[0].Validations {
+			warned = warned || (v.LogLevel == proto.LogLevel_Warning && strings.Contains(v.Validation, "will not cast any items"))
+		}
+		if !warned {
+			t.Errorf("the action raised no empty-pool warning: %v", rotationStats.PriorityList[0].Validations)
+		}
+	})
 }

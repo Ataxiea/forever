@@ -49,7 +49,7 @@ message APLGroup {
 	repeated APLValueVariable variables = 3; // Variables that can be used in this group
 }
 
-// NextIndex: 31
+// NextIndex: 32
 message APLAction {
     APLValue condition = 1; // If set, action will only execute if value is true or != 0.
 
@@ -89,6 +89,7 @@ message APLAction {
         // Class or Spec-specific actions
         APLActionGuardianHotwDpsRotation guardian_hotw_dps_rotation = 27;
 		APLActionCastWarlockAssignedCurse cast_warlock_assigned_curse = 29;
+        APLActionWarriorAlignOnUseItems warrior_align_on_use_items = 31;
 
         // Internal use only, not exposed in UI.
         APLActionCustomRotation custom_rotation = 19;
@@ -399,6 +400,8 @@ message APLActionCustomRotation {
 message APLActionCastWarlockAssignedCurse{
 	UnitReference target = 1;
 }
+
+message APLActionWarriorAlignOnUseItems {}
 
 ///////////////////////////////////////////////////////////////////////////
 //                                  VALUES
