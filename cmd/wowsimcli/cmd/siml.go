@@ -40,6 +40,7 @@ func init() {
 		simlSubcommand("serve [-names <names.json>]", "read .siml texts for the Vite plugin: one JSON request a line on stdin, one JSON response a line on stdout", simlServe),
 		simlSubcommand("lsp", "serve the SIML language server on stdin and stdout", simlLSP),
 		simlSubcommand("grammar -o <file>", "write the TextMate grammar of SIML, built from the schema", simlGrammar),
+		simlSubcommand("llm [-o <file>]", "write siml.llm.txt, a short guide to SIML with every kind the protos give", simlLLM),
 	)
 }
 

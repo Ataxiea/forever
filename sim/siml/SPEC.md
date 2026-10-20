@@ -563,16 +563,17 @@ An accessor is a value kind named `<head>_<prop>` (§8.3). It is written:
 
 Arguments written inside the head's parentheses are `args-on-head`.
 
-The accessors the v1 protos derive. The list is not normative: §8.3 is, so a new `aura_foo` kind is
-`aura(x).foo` with no edit.
+The heads the v1 protos derive, each with a few of its properties. The list is not normative: §8.3 is, so a new
+`aura_foo` kind is `aura(x).foo` with no edit. `siml.llm.txt` at the repository root lists every property with its
+arguments, written from the schema (`wowsimcli siml llm`, which `make siml` runs).
 
-| Head         | Subject                    | Unit prefix fills | Properties (the kind is `<head>_<prop>`), with extra arguments                                                                                                                                                                                                                              |
-| ------------ | -------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `aura`       | `aura_id`                  | `source_unit`     | `is_known`; `is_active(include_reaction_time)`; `is_inactive(include_reaction_time)`; `remaining_time`; `num_stacks(include_reaction_time)`; `internal_cooldown`; `icd_is_ready(include_reaction_time)`; `should_refresh(max_overlap)`; `duration`                                          |
-| `dot`        | `spell_id`                 | `target_unit`     | `is_active`; `is_active_on_all_targets`; `remaining_time`; `lowest_remaining_time`; `tick_frequency`; `time_to_next_tick`; `base_duration`; `percent_increase(use_base_value)`; `tick_rate_percent_increase(use_base_value)`                                                                |
-| `spell`      | `spell_id`                 | (none)            | `is_known`; `can_cast`; `is_ready`; `time_to_ready`; `cast_time`; `travel_time`; `cpm`; `is_channeling`; `channeled_ticks`; `current_cost`; `num_charges`; `time_to_charge`; `gcd_hasted_duration`; `full_cooldown`; `in_flight`; `expected_dpet` (the unit prefix fills its `target_unit`) |
-| `boss_spell` | `spell_id`                 | `target_unit`     | `time_to_ready`; `is_casting`                                                                                                                                                                                                                                                               |
-| `sequence`   | `sequence_name` (a string) | (none)            | `is_complete`; `is_ready`; `time_to_ready`                                                                                                                                                                                                                                                  |
+| Head         | Subject                    | Unit prefix fills                     | Properties, such as (the kind is `<head>_<prop>`)                                   |
+| ------------ | -------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------- |
+| `aura`       | `aura_id`                  | `source_unit`                         | `is_active(include_reaction_time)`; `remaining_time`; `num_stacks`; `duration`      |
+| `dot`        | `spell_id`                 | `target_unit`                         | `is_active`; `remaining_time`; `tick_frequency`; `percent_increase(use_base_value)` |
+| `spell`      | `spell_id`                 | `target_unit`, where the kind has one | `is_ready`; `time_to_ready`; `cast_time`; `current_cost`; `expected_dpet`           |
+| `boss_spell` | `spell_id`                 | `target_unit`                         | `time_to_ready`; `is_casting`                                                       |
+| `sequence`   | `sequence_name` (a string) | (none)                                | `is_complete`; `is_ready`; `time_to_ready`                                          |
 
 **Example.** In a hunter's file, `target.aura(hunters_mark).is_active` is
 `{"auraIsActive": {"sourceUnit": {"type": "CurrentTarget"}, "auraId": {"spellId": 14325}}}`: the hunter's

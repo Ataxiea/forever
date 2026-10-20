@@ -129,6 +129,13 @@ go run --tags=with_db ./cmd/wowsimcli siml parse [-json] x.apl.siml             
 go run --tags=with_db ./cmd/wowsimcli siml print -kind apl -spec hunter x.apl.json # print a JSON file as SIML
 go run --tags=with_db ./cmd/wowsimcli siml fmt -check ui/specs                    # list files not canonical or failing the check (SPEC.md §7.4)
 go run --tags=with_db ./cmd/wowsimcli siml verify x.apl.json x.apl.siml           # check a print reads back as its JSON
+# Write the .apl.json, .gear.json and .build.json files under a folder as their .siml twins, and delete the JSON
+# (-keep keeps it). A rotation, an x.apl.siml's or a build's own, is spliced in, so its defs, when blocks and comments
+# stay where the rows did not change; a build's other sections are printed again where they differ; a category a build
+# takes from a used file or its spec's defaults is listed, and its JSON kept, for a hand edit. After merging master,
+# with each modify/delete conflict resolved to master's JSON, port ui/specs; the twins of the JSON master deleted are
+# git diff --name-only --diff-filter=D $(git merge-base HEAD MERGE_HEAD) MERGE_HEAD -- 'ui/specs/**/*.json'
+go run --tags=with_db ./cmd/wowsimcli siml port ui/specs
 
 # Sim the text of an .apl.siml for the APL editor: a JSON request on stdin, DPS, row counts, spells and a timeline
 # as JSON on stdout (the request and result are described in cmd/wowsimcli/cmd/siml_sim.go)
@@ -139,10 +146,13 @@ echo '{"siml": "...", "path": "ui/specs/hunter/dps/apls/default.apl.siml"}' | go
 go run --tags=with_db ./cmd/wowsimcli siml lsp
 # Write the extension's TextMate grammar, which make vscode-apl does
 go run ./cmd/wowsimcli siml grammar -o .vscode/extensions/wowsims-apl/syntaxes/siml.tmLanguage.json
+# Write siml.llm.txt, the short guide with every action, value and accessor from proto/apl.proto, which make siml does
+go run ./cmd/wowsimcli siml llm -o siml.llm.txt
 
 # Add names for newly registered spells and new database rows to the SIML name table; commit it with the change
 make siml-names
-# Before committing: the name table as above, then siml fmt -check over ui/specs
+# Before committing, and after a change to proto/apl.proto: the name table as above, siml.llm.txt, then siml fmt -check
+# over ui/specs
 make siml
 # The wowsimcli vite reads .siml imports with (tools/vite/siml.mts); make builds it, and rebuilds it after a Go change
 make bin/wowsimcli

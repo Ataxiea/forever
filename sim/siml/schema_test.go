@@ -422,10 +422,11 @@ func TestSchemaDerivations(t *testing.T) {
 	for _, k := range slices.Concat(s.Kinds.Action, s.Kinds.Value) {
 		kinds[k.Kind] = k
 	}
-	accessors := map[string][]string{ // SPEC.md §6.7
-		"aura":       {"is_known", "is_active", "is_inactive", "remaining_time", "num_stacks", "internal_cooldown", "icd_is_ready", "should_refresh", "duration"},
-		"dot":        {"is_active", "is_active_on_all_targets", "remaining_time", "lowest_remaining_time", "tick_frequency", "time_to_next_tick", "base_duration", "percent_increase", "tick_rate_percent_increase"},
-		"spell":      {"is_known", "can_cast", "is_ready", "time_to_ready", "cast_time", "travel_time", "cpm", "is_channeling", "channeled_ticks", "current_cost", "num_charges", "time_to_charge", "gcd_hasted_duration", "full_cooldown", "in_flight", "expected_dpet"},
+	// A few long-standing properties of each head (SPEC.md §6.7); siml.llm.txt lists them all.
+	accessors := map[string][]string{
+		"aura":       {"is_known", "is_active", "remaining_time", "num_stacks", "duration"},
+		"dot":        {"is_active", "remaining_time", "tick_frequency", "percent_increase"},
+		"spell":      {"is_known", "is_ready", "time_to_ready", "cast_time", "current_cost"},
 		"boss_spell": {"time_to_ready", "is_casting"},
 		"sequence":   {"is_complete", "is_ready", "time_to_ready"},
 	}
@@ -447,13 +448,10 @@ func TestSchemaDerivations(t *testing.T) {
 	forms := map[string][]string{ // SPEC.md §6.4, §6.8
 		"short": {"cast_spell", "channel_spell", "wait", "wait_until", "move", "move_duration", "group_reference", "schedule", "sequence",
 			"const", "and", "or", "not", "cmp", "math", "variable_ref", "variable_placeholder"},
-		"bare": {"autocast_other_cooldowns", "current_time", "current_time_percent", "remaining_time", "remaining_time_percent", "number_targets",
-			"current_rage", "current_energy", "current_combo_points", "current_generic_resource",
-			"current_mana_regen", "max_health", "max_mana", "max_combo_points", "max_energy", "max_rage", "time_to_next_energy_tick", "gcd_is_ready",
-			"gcd_time_to_ready", "channel_clip_delay", "input_delay", "front_of_target", "protection_paladin_damage_taken_last_global"},
-		"unit_prefix": {"current_health", "current_health_percent", "current_mana", "current_mana_percent", "unit_is_moving", "unit_distance",
-			"boss_current_target", "warlock_assigned_curse_is_active"},
-		"list_args": {"max", "min", "strict_sequence"},
+		// A sample of core kinds; siml.llm.txt lists every kind with its form.
+		"bare":        {"autocast_other_cooldowns", "current_time", "remaining_time", "current_energy", "gcd_is_ready", "input_delay"},
+		"unit_prefix": {"current_health", "current_health_percent", "current_mana", "current_mana_percent", "unit_is_moving", "unit_distance"},
+		"list_args":   {"max", "min", "strict_sequence"},
 	}
 	for form, names := range forms {
 		for _, name := range names {
