@@ -50,7 +50,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	}
 	const serverOptions: ServerOptions = {
 		command: go,
-		args: ['run', './tools/spelldata', '-lsp'],
+		args: ['run', './tools/spelldata/launch', '-lsp'],
 		options: { cwd: root },
 		transport: TransportKind.stdio,
 	};
@@ -62,13 +62,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		initializationOptions: { trace: settings.get<string>('trace', 'on'), rankLinks: true },
 		outputChannel,
 		middleware: {
-			// The effects table breaks each wording from its game files row with <br>, which VS
-			// Code renders only where the markdown allows HTML.
+			// VS Code runs a command link in a hover only where the markdown trusts that command.
 			provideHover: async (document, position, token, next) => {
 				const hover = await next(document, position, token);
 				for (const content of hover?.contents ?? []) {
 					if (content instanceof vscode.MarkdownString) {
-						content.supportHtml = true;
 						content.isTrusted = {
 							enabledCommands: ['wowsims-spelldata.changeRank'],
 						};

@@ -68,7 +68,7 @@ const ARMS_PRESET_OPTIONS = {
 // "of the Tiger" suffix, and the neck is a Darkmoon Faire ticket reward. The cloak, the first ring and the
 // Adaptive Combat Assistant are sold by the Undermine Trader in Stranglethorn Vale; the Dawn Armor pattern and
 // the second ring have no known source.
-export const PreBiSFuryGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSFuryGearJson, FURY_PRESET_OPTIONS);
+export const PreBiSFuryGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSFuryGearJson, { ...FURY_PRESET_OPTIONS, devOnly: true });
 
 // Measured on the Pre-BiS Fury gear with the Fury talents.
 export const PreBiSFuryEpWeights = PresetUtils.makePresetEpWeights(
@@ -93,7 +93,7 @@ export const PreBiSFuryEpWeights = PresetUtils.makePresetEpWeights(
 
 // The same sources as the Pre-BiS Fury gear; the cloak and the bow are world-drop greens with the "of the
 // Tiger" suffix too.
-export const PreBiSArmsGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSArmsGearJson, ARMS_PRESET_OPTIONS);
+export const PreBiSArmsGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSArmsGearJson, { ...ARMS_PRESET_OPTIONS, devOnly: true });
 
 // Measured on the Pre-BiS Arms gear with the Arms talents. Hit is its value below the 8% cap.
 export const PreBiSArmsEpWeights = PresetUtils.makePresetEpWeights(

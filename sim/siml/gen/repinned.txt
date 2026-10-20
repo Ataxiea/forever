@@ -51,3 +51,14 @@ shared.aura.increase_spell_dam_undead_58: was spell 28890, now spell 28890 tag 1
 shared.aura.increase_spell_dam_undead_58_tag14: was spell 28890 tag 14, now nothing
 shared.aura.undead_slayer_99: was spell 28893, now spell 28893 tag 14
 shared.aura.undead_slayer_99_tag14: was spell 28893 tag 14, now nothing
+mage.spell.arcane_missiles: was spell 25345 rank 8, now spell 10212 rank 7
+mage.spell.arcane_missiles_25346: was spell 25346 rank 8, now nothing
+mage.spell.fireball_25306_tag0: was spell 25306 rank 12, now nothing
+mage.spell.fireball_tag1: was spell 25306 tag 1 rank 12, now spell 10151 tag 1 rank 11
+mage.spell.frostbolt_rank11: was spell 25304 rank 11, now nothing
+mage.target_aura.arcane_missiles: was spell 25345, now spell 10212
+mage.target_aura.arcane_missiles_10212: was spell 10212, now nothing
+mage.target_aura.fireball_25306: was spell 25306, now nothing
+shared.spell.fireball: was spell 18082, now nothing
+shared.spell.frostbolt: was spell 13439, now nothing
+shared.target_aura.fireball: was spell 133, now nothing

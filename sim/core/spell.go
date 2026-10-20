@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -146,6 +147,9 @@ type Spell struct {
 
 	// Performs a cast of this spell.
 	castFn CastSuccessFunc
+
+	hitRanges      []*hitRanges
+	splitHitRanges [][]*hitRanges
 
 	SpellMetrics      []SpellMetrics
 	splitSpellMetrics [][]SpellMetrics // Used to split metrics by some condition.
@@ -315,6 +319,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		ThreatAPCoefficient: config.ThreatAPCoefficient,
 
 		splitSpellMetrics: make([][]SpellMetrics, max(1, config.MetricSplits)),
+		splitHitRanges:    make([][]*hitRanges, max(1, config.MetricSplits)),
 
 		RelatedAuraArrays: config.RelatedAuraArrays,
 		RelatedDotSpell:   config.RelatedDotSpell,
@@ -387,7 +392,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		spell.MaxRange = config.MaxRange
 		oldExtraCastCondition := spell.ExtraCastCondition
 		spell.ExtraCastCondition = func(sim *Simulation, target *Unit) bool {
-			if ((spell.MinRange != 0) && (spell.Unit.DistanceFromTarget < spell.MinRange)) || ((spell.MaxRange != 0) && (spell.Unit.DistanceFromTarget > spell.MaxRange*spell.RangeMultiplier)) {
+			if ((spell.MinRange != 0) && (spell.Unit.DistanceFromTarget < spell.MinRange)) || ((spell.MaxRange != 0) && (spell.Unit.DistanceFromTarget > spell.EffectiveMaxRange())) {
 				/*if sim.Log != nil {
 					sim.Log("Cannot cast spell %s, out of range!", spell.ActionID)
 				}*/
@@ -441,6 +446,12 @@ func (spell *Spell) Dot(target *Unit) *Dot {
 	}
 	return spell.dots.Get(target)
 }
+
+// The distance the range check allows: MaxRange after the range mods.
+func (spell *Spell) EffectiveMaxRange() float64 {
+	return spell.MaxRange * spell.RangeMultiplier
+}
+
 func (spell *Spell) CurDot() *Dot {
 	if spell.dots == nil {
 		if spell.RelatedDotSpell != nil {
@@ -543,6 +554,10 @@ func (spell *Spell) finalize() {
 		spell.splitSpellMetrics[i] = make([]SpellMetrics, len(spell.Unit.Env.AllUnits))
 	}
 	spell.SpellMetrics = spell.splitSpellMetrics[0]
+	for i := range spell.splitHitRanges {
+		spell.splitHitRanges[i] = make([]*hitRanges, len(spell.Unit.Env.AllUnits))
+	}
+	spell.hitRanges = spell.splitHitRanges[0]
 
 	if spell.hasCastRequirement {
 		spell.resolveCasterAuras()
@@ -572,6 +587,7 @@ func (spell *Spell) reset(sim *Simulation) {
 
 func (spell *Spell) SetMetricsSplit(splitIdx int32) {
 	spell.SpellMetrics = spell.splitSpellMetrics[splitIdx]
+	spell.hitRanges = spell.splitHitRanges[splitIdx]
 	spell.ActionID.Tag = splitIdx
 
 	// Also set the tag on any dots to have them line up in the timeline
@@ -597,11 +613,42 @@ func (spell *Spell) doneIteration() {
 	}
 
 	if len(spell.splitSpellMetrics) == 1 {
-		spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID, spell.SpellMetrics)
+		spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID, spell.SpellMetrics, spell.hitRanges)
 	} else {
 		for i, spellMetrics := range spell.splitSpellMetrics {
-			spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID.WithTag(int32(i)), spellMetrics)
+			spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID.WithTag(int32(i)), spellMetrics, spell.splitHitRanges[i])
 		}
+	}
+}
+
+func (spell *Spell) rangesToRecord(target *Unit, value float64) *hitRanges {
+	if value <= 0 || spell.Flags.Matches(SpellFlagNoMetrics) {
+		return nil
+	}
+	hr := spell.hitRanges[target.UnitIndex]
+	if hr == nil {
+		hr = &hitRanges{}
+		spell.hitRanges[target.UnitIndex] = hr
+	}
+	return hr
+}
+
+func (spell *Spell) recordHit(target *Unit, kind proto.HitKind, value float64) {
+	if hr := spell.rangesToRecord(target, value); hr != nil {
+		hr.kinds[kind].add(value)
+	}
+}
+
+// Credits an absorbed or applied amount to the spell's shielding total and its shield range.
+func (spell *Spell) RecordShielding(target *Unit, amount float64) {
+	spell.SpellMetrics[target.UnitIndex].TotalShielding += amount
+	spell.recordHit(target, proto.HitKind_HitKindShield, amount)
+}
+
+// Feeds the named range in this spell's details, for values the hit kinds do not cover.
+func (spell *Spell) RecordCustomMetric(target *Unit, key string, value float64) {
+	if hr := spell.rangesToRecord(target, value); hr != nil {
+		hr.customRange(key).add(value)
 	}
 }
 
@@ -801,6 +848,14 @@ func (spell *Spell) applyEffects(sim *Simulation, target *Unit) {
 func (spell *Spell) ApplyAOEThreatIgnoreMultipliers(threatAmount float64) {
 	for _, target := range spell.Unit.Env.GetActiveTargetUnits() {
 		spell.SpellMetrics[target.UnitIndex].TotalThreat += threatAmount
+	}
+}
+
+// Threat no single enemy draws, such as a heal's or a resource gain's, split between the targets in
+// combat at the time.
+func (spell *Spell) applySplitThreat(sim *Simulation, threat float64) {
+	if targets := len(sim.Encounter.ActiveTargetUnits); targets > 0 {
+		spell.ApplyAOEThreatIgnoreMultipliers(threat / float64(targets))
 	}
 }
 func (spell *Spell) ApplyAOEThreat(threatAmount float64) {

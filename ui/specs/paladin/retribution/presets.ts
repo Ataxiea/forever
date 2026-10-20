@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
+import * as Mechanics from '@sim/constants/mechanics';
 import { Stats } from '@sim/proto/stats';
 
 import DefaultsJson from './defaults.siml';
@@ -17,9 +18,11 @@ export const HolyShockAplPreset = PresetUtils.makePresetAPLRotation('Holy Shock'
 export const TwistOfLightAplPreset = PresetUtils.makePresetAPLRotation('Twist of Light', TwistOfLightApl);
 
 export const HolyShockGearPreset = PresetUtils.makePresetGear('Holy Shock', HolyShockGear, {
+	devOnly: true,
 	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
 });
 export const TwistOfLightGearPreset = PresetUtils.makePresetGear('Twist of Light', TwistOfLightGear, {
+	devOnly: true,
 	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
 });
 
@@ -42,7 +45,7 @@ export const HolyShockEpWeights = PresetUtils.makePresetEpWeights(
 		},
 		{
 			[PseudoStat.PseudoStatMainHandDps]: 13.04,
-			[PseudoStat.PseudoStatSchoolHitPercentHoly]: 2.32,
+			[PseudoStat.PseudoStatSchoolHitPercentHoly]: 2.32 * Mechanics.HIT_RATING_PER_HIT_PERCENT,
 		},
 	),
 );
@@ -66,7 +69,7 @@ export const TwistOfLightEpWeights = PresetUtils.makePresetEpWeights(
 		},
 		{
 			[PseudoStat.PseudoStatMainHandDps]: 13.85,
-			[PseudoStat.PseudoStatSchoolHitPercentHoly]: 0.6,
+			[PseudoStat.PseudoStatSchoolHitPercentHoly]: 0.6 * Mechanics.HIT_RATING_PER_HIT_PERCENT,
 		},
 	),
 );

@@ -76,7 +76,7 @@
         },
         {
           "id":  22688,
-          "enchant":  2504
+          "enchant":  8217
         },
         {
           "id":  11904
@@ -495,6 +495,37 @@
                 "const":  {
                   "val":  "0ms"
                 }
+              }
+            }
+          }
+        },
+        {
+          "action":  {
+            "condition":  {
+              "and":  {
+                "vals":  [
+                  {
+                    "auraIsKnown":  {
+                      "auraId":  {
+                        "spellId":  1323418
+                      }
+                    }
+                  },
+                  {
+                    "auraIsActive":  {
+                      "auraId":  {
+                        "spellId":  1323418
+                      },
+                      "includeReactionTime":  true
+                    }
+                  }
+                ]
+              }
+            },
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  10414,
+                "rank":  7
               }
             }
           }

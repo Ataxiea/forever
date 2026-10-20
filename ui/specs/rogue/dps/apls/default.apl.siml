@@ -1,7 +1,7 @@
 siml 1
 spec rogue
 
-var ${Use Backstab} = false
+var ${Use Backstab} = true
 var ${Use Expose Armor} = false
 var ${Use Stealth/Vanish for Damage} = true
 var ${Use Ambush Opener} = false
@@ -17,6 +17,15 @@ var ${Expose - Low Duration} =
     and (not target.aura(expose_armor).is_active or target.aura(expose_armor).remaining_time <= 16s)
 var ${Expose - Should Cast Check} = current_combo_points == 5 and $expose_low_duration
 var ${Expose - Prevent Other Finishers} = $use_expose_armor and $expose_low_duration
+var ${Gnome Eureka - Active or Not Ready} =
+    not spell(eureka).is_known
+    or aura(eureka).is_active(include_reaction_time=true)
+    or not spell(eureka).is_ready
+    or spell(eureka).is_ready and spell(adrenaline_rush).time_to_ready <= spell(eureka).full_cooldown
+var ${Gnome Eureka - Should Cast} =
+    spell(eureka).is_known
+    and spell(eureka).is_ready
+    and (not spell(adrenaline_rush).is_known or aura(adrenaline_rush).is_active(include_reaction_time=true) or spell(adrenaline_rush).time_to_ready > spell(eureka).full_cooldown or remaining_time < spell(adrenaline_rush).time_to_ready)
 
 prepull:
   -2s cast blade_flurry
@@ -48,24 +57,29 @@ priority:
       and not $snd_fall_imminent
   cast preparation if and(not spell(vanish).is_ready)
   autocast_other_cooldowns
+  group "Energy Pooling Checks"
   cast adrenaline_rush
       if current_energy <= 50
       and aura(slice_and_dice).is_active(include_reaction_time=true)
+      and not spell(elunes_light).is_known
       and not spell(blood_fury).is_known
-  cast blood_fury if spell(adrenaline_rush).time_to_ready >= 2m
   strict_sequence(cast blood_fury, cast adrenaline_rush)
       if spell(adrenaline_rush).is_ready
-      and spell(blood_fury).is_ready
+      and (spell(blood_fury).is_known and spell(blood_fury).is_ready)
+      and (spell(elunes_light).is_known and spell(elunes_light).is_ready)
       and aura(slice_and_dice).is_active(include_reaction_time=true)
+  strict_sequence(cast elunes_light, cast adrenaline_rush)
+      if spell(adrenaline_rush).is_ready
+      and spell(elunes_light).is_ready
+      and aura(slice_and_dice).is_active(include_reaction_time=true)
+  cast blood_fury if spell(adrenaline_rush).time_to_ready >= 1.9m
+  cast elunes_light if spell(adrenaline_rush).time_to_ready >= 1.9m
+  cast eureka if $gnome_eureka_should_cast
   cast other.offensive_potion
       if not spell(blade_flurry).is_known
       or aura(blade_flurry).is_active(include_reaction_time=true)
-  cast eureka
-      if not spell(blade_flurry).is_known
-      or aura(blade_flurry).is_active(include_reaction_time=true)
   cast item.thistle_tea
-      if (current_energy <= 15 or current_energy <= 20 and aura(eureka).is_active(include_reaction_time=true))
-      and spell(item.thistle_tea).can_cast
+      if (current_energy <= 15 or spell(eureka).is_known and current_energy <= 25 and aura(eureka).is_active(include_reaction_time=true))
       and (current_combo_points < 3 or $expose_low_duration or aura(eureka).is_active(include_reaction_time=true))
   cast blade_flurry if and(not $snd_fall_imminent)
   cast premeditation if current_combo_points <= 3
@@ -89,6 +103,7 @@ priority:
       and not $snd_fall_imminent
       and current_energy >= spell(eviscerate).current_cost
       and not $expose_prevent_other_finishers
+      and not aura(elunes_light).is_active(include_reaction_time=true)
   cast eviscerate
       if (current_combo_points >= 5 or current_combo_points == 4 and spell(mutilate).is_known or current_combo_points >= 4 and aura(slice_and_dice).remaining_time <= 6s and not $snd_fall_imminent or current_combo_points >= 3 and $fight_about_to_end)
       and (not aura(thousand_cuts).is_known or dot(rupture).remaining_time >= 4 or $in_danger_of_energy_capping or $fight_about_to_end)
@@ -103,19 +118,26 @@ priority:
       and $use_backstab
       and $current_points_less_than_5
       and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(backstab).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and $gnome_eureka_active_or_not_ready
   cast mutilate
       if $current_points_less_than_5
       and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(mutilate).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and $gnome_eureka_active_or_not_ready
   cast hemorrhage
       if not $use_backstab
       and $current_points_less_than_5
       and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(hemorrhage).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and $gnome_eureka_active_or_not_ready
   cast sinister_strike
       if not spell(mutilate).is_known
       and not spell(hemorrhage).is_known
       and not $use_backstab
       and $current_points_less_than_5
       and (not $snd_fall_imminent or current_energy > spell(slice_and_dice).current_cost + spell(sinister_strike).current_cost and not $snd_fall_imminent or not $above_snd_point_threshold or $in_danger_of_energy_capping or $expose_low_duration)
+      and $gnome_eureka_active_or_not_ready
 
 group "Maintain Expose":
   cast expose_armor if $expose_should_cast_check
+
+group "Energy Pooling Checks":
+  strict_sequence(wait until current_energy >= 90) if $gnome_eureka_should_cast

@@ -1,0 +1,429 @@
+{
+  "raidBuffs": {
+    "arcaneBrilliance": true,
+    "prayerOfSpirit": true,
+    "giftOfTheWild": true,
+    "prayerOfFortitude": true,
+    "moonkinAura": true
+  },
+  "debuffs": {
+    "judgementOfWisdom": true
+  },
+  "partyBuffs": {
+    "manaSpringTotem": "TristateEffectRegular"
+  },
+  "player": {
+    "race": "RaceOrc",
+    "class": "ClassWarlock",
+    "consumables": {
+      "flaskId": 13512,
+      "foodId": 13931,
+      "conjuredId": 12662,
+      "explosiveId": 18588,
+      "mhImbueId": 20749,
+      "offensivePotId": 250937
+    },
+    "buffs": {
+      "greaterBlessingOfKings": true,
+      "greaterBlessingOfWisdom": true
+    },
+    "warlock": {
+      "options": {
+        "classOptions": {
+          "summon": "Succubus",
+          "armor": "DemonArmor",
+          "soulShards": 32
+        }
+      }
+    },
+    "talentsString": "2530000013-0004-0050355103101351",
+    "profession1": "Engineering",
+    "profession2": "Tailoring",
+    "rotation": {
+      "type": "TypeAPL",
+      "priorityList": [
+        {
+          "action": {
+            "autocastOtherCooldowns": {}
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "or": {
+                "vals": [
+                  {
+                    "and": {
+                      "vals": [
+                        {
+                          "dotIsActive": {
+                            "spellId": {
+                              "spellId": 603
+                            }
+                          }
+                        },
+                        {
+                          "cmp": {
+                            "op": "OpLe",
+                            "lhs": {
+                              "dotRemainingTime": {
+                                "spellId": {
+                                  "spellId": 603
+                                }
+                              }
+                            },
+                            "rhs": {
+                              "variableRef": {
+                                "name": "Boost window"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "and": {
+                      "vals": [
+                        {
+                          "not": {
+                            "val": {
+                              "dotIsActive": {
+                                "spellId": {
+                                  "spellId": 603
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "cmp": {
+                            "op": "OpLt",
+                            "lhs": {
+                              "remainingTime": {}
+                            },
+                            "rhs": {
+                              "variableRef": {
+                                "name": "Doom tick"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "groupReference": {
+              "groupName": "Boosts"
+            }
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "and": {
+                "vals": [
+                  {
+                    "not": {
+                      "val": {
+                        "dotIsActive": {
+                          "spellId": {
+                            "spellId": 603
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpGe",
+                      "lhs": {
+                        "remainingTime": {}
+                      },
+                      "rhs": {
+                        "variableRef": {
+                          "name": "Doom tick"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "castSpell": {
+              "spellId": {
+                "spellId": 603
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "and": {
+                "vals": [
+                  {
+                    "not": {
+                      "val": {
+                        "dotIsActive": {
+                          "spellId": {
+                            "spellId": 603
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "val": {
+                        "dotIsActive": {
+                          "spellId": {
+                            "spellId": 11713,
+                            "rank": 6
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpLt",
+                      "lhs": {
+                        "remainingTime": {}
+                      },
+                      "rhs": {
+                        "variableRef": {
+                          "name": "Doom tick"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "castSpell": {
+              "spellId": {
+                "spellId": 11713,
+                "rank": 6
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "warlockAssignedCurseIsActive": {}
+                }
+              }
+            },
+            "castWarlockAssignedCurse": {}
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "dotIsActive": {
+                    "spellId": {
+                      "spellId": 25309,
+                      "rank": 8
+                    }
+                  }
+                }
+              }
+            },
+            "castSpell": {
+              "spellId": {
+                "spellId": 25309,
+                "rank": 8
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "dotIsActive": {
+                    "spellId": {
+                      "spellId": 25311,
+                      "rank": 7
+                    }
+                  }
+                }
+              }
+            },
+            "castSpell": {
+              "spellId": {
+                "spellId": 25311,
+                "rank": 7
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "condition": {
+              "dotIsActive": {
+                "spellId": {
+                  "spellId": 25309,
+                  "rank": 8
+                }
+              }
+            },
+            "castSpell": {
+              "spellId": {
+                "spellId": 18932,
+                "rank": 6
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "castSpell": {
+              "spellId": {
+                "spellId": 18871,
+                "rank": 6
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "castSpell": {
+              "spellId": {
+                "spellId": 1293813,
+                "rank": 3
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "castSpell": {
+              "spellId": {
+                "spellId": 11689,
+                "rank": 6
+              }
+            }
+          }
+        }
+      ],
+      "groups": [
+        {
+          "name": "Boosts",
+          "actions": [
+            {
+              "action": {
+                "castSpell": {
+                  "spellId": {
+                    "spellId": 20572
+                  }
+                }
+              }
+            },
+            {
+              "action": {
+                "castSpell": {
+                  "spellId": {
+                    "itemId": 250937
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "valueVariables": [
+        {
+          "name": "Doom tick",
+          "value": {
+            "const": {
+              "val": "60s"
+            }
+          }
+        },
+        {
+          "name": "Boost window",
+          "value": {
+            "const": {
+              "val": "14s"
+            }
+          }
+        }
+      ]
+    },
+    "reactionTimeMs": 100,
+    "distanceFromTarget": 20
+  },
+  "encounter": {
+    "duration": 180,
+    "durationVariation": 5,
+    "executeProportion20": 0.2,
+    "executeProportion25": 0.25,
+    "executeProportion35": 0.35,
+    "executeProportion45": 0.45,
+    "executeProportion90": 0.9,
+    "targets": [
+      {
+        "id": 31146,
+        "name": "Raid Target",
+        "level": 63,
+        "mobType": "MobTypeMechanical",
+        "stats": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          320,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          54,
+          0,
+          0,
+          3731,
+          0,
+          1428900,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "minBaseDamage": 2601,
+        "damageSpread": 0.5,
+        "swingSpeed": 2,
+        "parryHaste": true,
+        "canCrush": true
+      }
+    ]
+  }
+}

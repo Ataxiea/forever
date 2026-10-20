@@ -1,0 +1,31 @@
+siml 1
+spec mage
+
+var ${Mana budget} = current_mana_percent - remaining_time / 1s * 0.2%
+var $EndOfFightBurn = current_mana_percent >= 20% + remaining_time / 1s * 1.4%
+
+prepull:
+  -3.5s cast arcane_wrath
+
+priority:
+  group "Evocation" if current_mana_percent <= 10%
+  autocast_other_cooldowns
+      if aura(missile_barrage).is_active(include_reaction_time=true)
+      or spell(arcane_wrath).is_ready
+  cast presence_of_mind if spell(arcane_wrath).is_ready
+  cast arcane_missiles if aura(missile_barrage).is_active(include_reaction_time=true)
+  cast arcane_blast
+      if aura(arcane_blast).is_active
+      and aura(arcane_blast).remaining_time < spell(arcane_blast).cast_time
+  cast arcane_wrath
+  cast arcane_blast
+      if aura(arcane_blast).remaining_time < spell(arcane_blast).cast_time
+      or aura(arcane_blast).num_stacks < 4 and $mana_budget >= 40%
+      or aura(arcane_blast).num_stacks < 3 and $mana_budget >= 30%
+      or aura(arcane_blast).num_stacks(include_reaction_time=true) < 2
+  cast arcane_blast if $EndOfFightBurn
+  cast frostbolt
+
+group "Evocation":
+  cast read_leyline if not aura(energized).is_active and spell(read_leyline).is_known
+  channel evocation until current_mana_percent >= 99%

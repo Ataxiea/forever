@@ -11,10 +11,13 @@ prepull:
 
 priority:
   autocast_other_cooldowns if current_time >= 5s
+  cast raptor_strike_tag1
   cast hunters_mark if not target.aura(hunters_mark).is_active
   cast mongoose_bite
   cast strider_kick
+  cast immolation_trap_14305
   cast summon_hawk if $use_summon_hawk
+  cast wing_clip
 
 group "Move to starting range":
   move $melee_range

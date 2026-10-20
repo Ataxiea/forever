@@ -12,18 +12,12 @@ export const Defaults = PresetUtils.specDefaultsFromSettings(Spec.SpecFeralBearD
 
 export const ROTATION_DEFAULT = PresetUtils.makePresetAPLRotation('APL', DefaultApl);
 
-// Nature's Reach (melee hit) and Nature's Majesty (melee crit) are worth more to the bear than Furor and
-// Naturalist. Feral Instinct raises only Swipe, which the single-target APL does not cast.
 export const BearTalents = PresetUtils.makePresetTalents('Bear', Defaults.talents);
-// Tanks and plays cat on one set of talents. As a bear, about the same threat as the Bear talents and a
-// TMI 2 to 3 higher, for no Natural Reaction.
-export const HybridTalents = PresetUtils.makePresetTalents(
-	'Hybrid 9/42/0',
-	SavedTalents.create({ talentsString: '0500220000000000-35230332121132212051-0000000000000000' }),
-);
+export const HybridTalents = PresetUtils.makePresetTalents('Hybrid', SavedTalents.create({ talentsString: '050022-05230332121131212051-04' }));
 
 // Leather at 60 with no set bonus and no proc, about the item level of the cat preset.
 export const Level60Gear = PresetUtils.makePresetGear('Level 60', Level60GearJson, {
+	devOnly: true,
 	tooltip: 'Leather at level 60 with no set bonus and no proc. The idol slot is empty: every idol has an effect.',
 });
 

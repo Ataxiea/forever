@@ -476,7 +476,7 @@
       ]
     },
     "reactionTimeMs":  100,
-    "distanceFromTarget":  11
+    "distanceFromTarget":  12
   },
   "encounter":  {
     "duration":  180,

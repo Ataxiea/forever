@@ -7,14 +7,28 @@
 			"toggle": "Toggle navigation"
 		},
 		"home": {
-			"title": "WoWSims - Forever",
-			"description": "A powerful simulation tool for World of Warcraft: Forever",
-			"welcomeDescription": "Welcome to WoWSims - Forever! This is a community-driven project to provide class and raid simulations for World of Warcraft® Forever together with the leading theorycrafters and class representatives."
+			"title": "WoWSims - Forever DPS & Gear Simulators",
+			"description": "Free, open-source World of Warcraft® Forever simulators. Sim your DPS, compare gear and optimize your character.",
+			"heading": "<expansion>Forever</expansion> Simulations",
+			"allSpecs": "All Specializations",
+			"welcomeDescription": "<brand>WoWSims</brand> is a fan-made open-source project started in 2021 with the goal of providing user-friendly tools for players to simulate their gameplay in <bold>World of Warcraft® Classic</bold>. Since then we've supported every Classic release, and now we're carrying that forward into <expansion>World of Warcraft®: Forever</expansion>. It's thanks to dozens of developers, hundreds of players, and thousands of hours of time that we've been able to keep the project going so that our users can continue to make the most out of their gameplay."
 		},
 		"header": {
 			"wowsims": "WoWSims",
-			"expansion": "Forever",
-			"supportDevs": "Support our devs"
+			"subtitle": "World of Warcraft Simulations",
+			"discord": "Discord",
+			"github": "GitHub",
+			"addon": "Download the WoWSims Exporter addon",
+			"patreon": "Become a Patron!"
+		},
+		"actions": {
+			"discord": "Join our Discord",
+			"github": "Contribute on GitHub",
+			"addon": "Get the Exporter addon"
+		},
+		"footer": {
+			"copyright": "© 2021-{{year}} WoWSims team",
+			"disclaimer": "A fan-made project, not affiliated with Blizzard Entertainment."
 		}
 	},
 	"common": {
@@ -432,6 +446,8 @@
 	"sim": {
 		"title": "Forever {{spec}} {{class}} simulator",
 		"description": "{{spec}} {{class}} simulations for World of Warcraft® Forever.",
+		"title_class": "Forever {{class}} simulator",
+		"description_class": "{{class}} simulations for World of Warcraft® Forever.",
 		"basic_bis_disclaimer": "<p>Preset gear lists are intended as rough approximations of BIS, and will often not be the absolute highest-DPS setup for you. Your optimal gear setup will depend on many factors; that's why we have a sim!</p><p>Items may also be omitted from the presets if they are highly contested and clearly better utilized on other classes, to encourage equitable gearing for the raid as a whole.</p>",
 		"healing_sim_disclaimer": "*** WARNING - USE AT YOUR OWN RISK ***\n\nThe entire concept of a healing sim is EXPERIMENTAL. All results should be taken with an EXTREMELY large grain of salt.\n\nThis tool is currently more similar to a spreadsheet than a true sim. Options for specifying incoming damage profiles in order to have proper reactive rotations have not yet been added.",
 		"notice_native_download": {
@@ -620,7 +636,11 @@
 			"spell_power": "Spell Power",
 			"spell_haste": "Spell Haste",
 			"crit_percent": "Crit %",
-			"stamina": "Stamina"
+			"stamina": "Stamina",
+			"fire_resistance": "Fire Resistance",
+			"frost_resistance": "Frost Resistance",
+			"shadow_resistance": "Shadow Resistance",
+			"nature_resistance": "Nature Resistance"
 		},
 		"party_buffs": {
 			"title": "Party Buffs",
@@ -655,7 +675,12 @@
 			"phys_dmg_reduction": "Phys Dmg Reduction",
 			"cast_speed": "Cast Speed",
 			"phys_dmg": "Phys Dmg",
-			"spell_dmg": "Spell Dmg"
+			"spell_dmg": "Spell Dmg",
+			"major_armor_reduction": "Major Armor Reduction",
+			"minor_armor_reduction": "Minor Armor Reduction",
+			"attack_power_reduction": "Attack Power Reduction",
+			"hit_chance_reduction": "Hit Chance Reduction",
+			"attack_speed_reduction": "Attack Speed Reduction"
 		},
 		"other": {
 			"title": "Other",
@@ -929,7 +954,9 @@
 				"title": "Scrolls"
 			},
 			"miscellaneous": {
-				"title": "Miscellaneous"
+				"title": "Miscellaneous",
+				"offensive": "Offensive",
+				"defensive": "Defensive"
 			}
 		},
 		"encounter": {
@@ -1132,7 +1159,6 @@
 	},
 	"bulk_tab": {
 		"title": "Batch",
-		"description": "<span className=\"bold\">Batch Simming</span> is a new feature akin to the <span className=\"bold\">Top Gear</span> sim on <a href=\"https://raidbots.com\" target=\"_blank\">Raidbots.com</a> that allows you to select multiple items and sim them to find the best combinations.<br />This is an <span className=\"text-brand\">Alpha</span> feature, so if you have feedback or found a bug, please report it!",
 		"download_native": "Download the local sim for faster results.",
 		"tabs": {
 			"setup": "Setup",
@@ -1161,8 +1187,21 @@
 			"total_iterations": "Minimum iterations",
 			"total_iterations_tooltip": "The batch sims at least this many iterations. The error target adds more as it runs.",
 			"groups": {
+				"encounters": "Encounters",
 				"enchants": "Enchants",
 				"frozen_slots": "Frozen slots"
+			},
+			"encounters": {
+				"description": "The batch runs once per encounter, and each encounter gets its own results. Save encounters in Settings → Saved Encounters.",
+				"current": "Current encounter",
+				"presets": "Presets",
+				"saved": "Saved",
+				"empty": "No saved encounters yet. Save one in Settings → Saved Encounters to run the batch against it too.",
+				"duplicate": "Same as another encounter, skipped",
+				"count": "Encounters",
+				"health_summary": "Health",
+				"targets_one": "{{count}} target",
+				"targets_other": "{{count}} targets"
 			},
 			"iterations": "Iterations",
 			"freeze_ring": {
@@ -1238,13 +1277,30 @@
 			"run_simulation": "Run a simulation to view results",
 			"equip_button": "Equip",
 			"gear_equipped": "Batch gear equipped!",
-			"current_gear": "Current Gear",
+			"current_gear": "Current gear",
 			"margin_of_error": "95% confidence interval of the mean DPS. Rankings closer than this can change between runs.",
-			"tied_group": "Statistically tied — the order within this group can change between runs"
+			"tied_group": "Statistically tied — the order within this group can change between runs",
+			"encounters": "Encounters",
+			"encounters_caption": "The best set's DPS and its gain over your current gear, per encounter. Pick one to see its ranking.",
+			"current": "Current",
+			"export_csv": "Export CSV"
+		},
+		"compare": {
+			"button": "Compare encounters",
+			"title": "Compare encounters",
+			"short_set": "S{{number}}",
+			"readout_rank": "#{{rank}} · {{dps}} DPS",
+			"readout_current": "{{dps}} DPS",
+			"readout_spread": "±{{spread}} per fight",
+			"not_ranked": "Not ranked",
+			"table_caption": "Each set's gain over your current gear in every encounter, its DPS underneath. A dashed cell is an encounter that did not rank the set; point at a cell for its rank and spread.",
+			"table_set": "Gear set",
+			"table_legend_best": "Best in the encounter",
+			"table_legend_gap": "Not ranked in that encounter"
 		},
 		"import_modal": {
 			"title": "Bag Item Import",
-			"description_line1": "Import bag items from a JSON file, which can be created by the WowSimsExporter in-game AddOn.",
+			"description_line1": "Import bag items from a JSON file, which can be created by the WoWSimsExporter in-game AddOn.",
 			"description_line2": "To import, upload the file or paste the text below, then click, 'Import'."
 		}
 	},
@@ -1488,6 +1544,10 @@
 					"duration_tooltip": "Amount of time the character should move.",
 					"move_duration_tooltip": "The characters moves for the given duration."
 				},
+				"pet_attack": {
+					"label": "Pet Attack",
+					"tooltip": "Works like /petattack in-game. Tells the pet to move/attack."
+				},
 				"custom_rotation": {
 					"label": "Custom Rotation",
 					"tooltip": "INTERNAL ONLY"
@@ -1621,11 +1681,11 @@
 				},
 				"current_mana": {
 					"label": "Current Mana",
-					"tooltip": "Amount of currently available Mana."
+					"tooltip": "Amount of currently available Mana of the unit."
 				},
 				"current_mana_percent": {
 					"label": "Current Mana (%)",
-					"tooltip": "Amount of currently available Mana, as a percentage."
+					"tooltip": "Amount of currently available Mana of the unit, as a percentage."
 				},
 				"max_mana": {
 					"label": "Max Mana",
@@ -1776,6 +1836,10 @@
 				"spell_in_flight": {
 					"label": "Spell in Flight",
 					"tooltip": "<b>True</b> if this spell is currently in flight, otherwise <b>False</b>."
+				},
+				"spell_expected_dpet": {
+					"label": "Spell Expected DPET",
+					"tooltip": "The expected damage of a spell if you cast it now, assuming it lands. Includes cast time, GCD time, and averaged crit. Only damage that lands before the fight ends counts."
 				},
 				"aura_known": {
 					"label": "Aura Known",
@@ -1962,10 +2026,6 @@
 					"label": "Dot Base Duration",
 					"tooltip": "The base duration of the DoT."
 				},
-				"dot_crit_percent_increase": {
-					"label": "Dot Crit Chance Increase %",
-					"tooltip": "How much higher a new DoT's Critical Strike Chance would be compared to the old."
-				},
 				"dot_tick_rate_percent_increase": {
 					"label": "Dot Tick Rate Increase %",
 					"tooltip": "How much faster a new DoT would tick compared to the old."
@@ -2089,6 +2149,7 @@
 					"non_instant_spells": "Non-instant Spell",
 					"friendly_spells": "Friendly Spell",
 					"expected_dot_spells": "DoT Spell",
+					"expected_damage_spells": "Damage Spell",
 					"spells_with_travelTime": "Spell"
 				},
 				"field_configs": {
@@ -2200,7 +2261,7 @@
 				},
 				"time_to_weave": {
 					"label": "Time to weave (ms)",
-					"tooltip": "Amount of time, in milliseconds, between when you start moving towards the boss and when you re-engage your ranged autos."
+					"tooltip": "How long, in milliseconds, you stay in melee after the weave swing before walking back out. Never shorter than your input delay."
 				},
 				"use_aimed": {
 					"label": "Use Aimed Shot",
@@ -2264,6 +2325,7 @@
 			"sim_1_death": "Simulate a Death",
 			"all_targets": "All Targets",
 			"target_number": "Target {{number}}",
+			"group_ranks": "Group ranks",
 			"damage": {
 				"dps_histogram": "DPS Histogram"
 			},
@@ -2493,16 +2555,23 @@
 				"crush": "Crush",
 				"glance": "Glance",
 				"block": "Block",
-				"critical_block": "Critical Block"
+				"critical_block": "Critical Block",
+				"shield": "Shield"
 			},
 			"tooltip_table": {
 				"type": "Type",
 				"count": "Count",
 				"average": "Average",
+				"min": "Min",
+				"max": "Max",
 				"amount": "Amount",
 				"per_cast": "Per Cast",
 				"per_hit": "Per Hit",
 				"ticks": "Ticks"
+			},
+			"custom_metrics": {
+				"group": "Spec metrics",
+				"divine_aegis": "Divine Aegis shield"
 			},
 			"unit": "Unit",
 			"damage_result": {
@@ -2725,7 +2794,8 @@
 			}
 		},
 		"download_native_sim": "Download simulator for faster simulating",
-		"native_sim_outdated": "Newer version of simulator available for download"
+		"native_sim_outdated": "Newer version of simulator available for download",
+		"forever_notice": "Forever sims are still changing rapidly and may have issues. If your results look wrong or your sim won't run, try restoring the default settings."
 	},
 	"sidebar": {
 		"iterations": "Iterations",
@@ -3071,7 +3141,9 @@
 				"with_holy_shield": " (with HS)"
 			},
 			"bonus_prefix": "Bonus",
+			"rating_suffix": "Rating",
 			"points_suffix": "Points",
+			"percent_label": "Percent",
 			"percent_suffix": "%"
 		}
 	},

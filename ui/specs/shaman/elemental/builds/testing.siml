@@ -28,7 +28,7 @@ gear:
   finger2    maidens_circle
   trinket1   weakness_analyzer
   trinket2   jewel_of_the_guard_captain
-  main_hand  verimondes_last_resort + weapon_spell_power
+  main_hand  verimondes_last_resort + weapon_revelation
   off_hand   spirit_of_aquementas
   ranged     totem_of_the_storm
   bonus_stats()
@@ -101,6 +101,9 @@ priority:
     cast chain_lightning
   cast lava_burst if dot(flame_shock_rank5).is_active
   multidot(flame_shock_rank5, max_dots=3, max_overlap=0ms)
+  cast earth_shock
+      if aura(revelation_1323418).is_known
+      and aura(revelation_1323418).is_active(include_reaction_time=true)
   cast elemental_mastery
   cast lightning_bolt_10392_tag0 if current_mana_percent < 20%
   cast lightning_bolt

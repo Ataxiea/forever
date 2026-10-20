@@ -259,7 +259,9 @@ func (warrior *Warrior) registerBloodthrill() {
 
 	// The proc opens Overpower's window as a dodge would, for the window's own duration, and the
 	// cast consumes it. The tooltip's $s1 names an effect, so the row's own ProcChanceEffectN
-	// reads the rate ladder. The caller checks for the Rend the tooltip asks for.
+	// reads the rate ladder. Main-hand white swings, extra attacks included, and the on-next-swing
+	// Heroic Strike and Cleave proc it on a target with the warrior's Rend; the row's melee-ability
+	// bit would also admit the instant specials, which in game do not proc it.
 	trigger := spelldata.ProcTrigger(&warrior.Character, talent,
 		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			warrior.OverpowerAura.Activate(sim)
@@ -268,7 +270,9 @@ func (warrior *Warrior) registerBloodthrill() {
 	trigger.RequireDamageDealt = false
 	trigger.RequireDamageComponent = true
 	trigger.ExtraCondition = func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) bool {
-		return warrior.Rend.Dot(result.Target).IsActive()
+		swing := spell.ProcMask.Matches(core.ProcMaskMeleeMHAuto) ||
+			spellData.HeroicStrike.Contains(spell) || spellData.Cleave.Contains(spell)
+		return swing && warrior.Rend.Dot(result.Target).IsActive()
 	}
 
 	warrior.MakeProcTriggerAura(trigger)

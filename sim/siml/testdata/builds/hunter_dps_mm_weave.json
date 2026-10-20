@@ -186,6 +186,16 @@
         },
         {
           "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  14266,
+                "tag":  1
+              }
+            }
+          }
+        },
+        {
+          "action":  {
             "condition":  {
               "not":  {
                 "val":  {
@@ -258,6 +268,60 @@
               "spellId":  {
                 "spellId":  1317257,
                 "rank":  1
+              }
+            }
+          }
+        },
+        {
+          "action":  {
+            "condition":  {
+              "cmp":  {
+                "op":  "OpLe",
+                "lhs":  {
+                  "unitDistance":  {
+                    "sourceUnit":  {
+                      "type":  "Self"
+                    }
+                  }
+                },
+                "rhs":  {
+                  "variableRef":  {
+                    "name":  "Melee range"
+                  }
+                }
+              }
+            },
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  14305,
+                "rank":  5
+              }
+            }
+          }
+        },
+        {
+          "action":  {
+            "condition":  {
+              "cmp":  {
+                "op":  "OpLe",
+                "lhs":  {
+                  "unitDistance":  {
+                    "sourceUnit":  {
+                      "type":  "Self"
+                    }
+                  }
+                },
+                "rhs":  {
+                  "variableRef":  {
+                    "name":  "Melee range"
+                  }
+                }
+              }
+            },
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  14268,
+                "rank":  3
               }
             }
           }
@@ -749,8 +813,16 @@
                             }
                           },
                           "rhs":  {
-                            "variableRef":  {
-                              "name":  "Move duration"
+                            "math":  {
+                              "op":  "OpSub",
+                              "lhs":  {
+                                "variableRef":  {
+                                  "name":  "Move duration"
+                                }
+                              },
+                              "rhs":  {
+                                "inputDelay":  {}
+                              }
                             }
                           }
                         }
@@ -819,7 +891,7 @@
           "name":  "Time to weave",
           "value":  {
             "const":  {
-              "val":  "400ms"
+              "val":  "100ms"
             }
           }
         },
@@ -835,7 +907,7 @@
           "name":  "Ranged range",
           "value":  {
             "const":  {
-              "val":  "11.00"
+              "val":  "12.00"
             }
           }
         },
@@ -894,28 +966,8 @@
                   "inputDelay":  {}
                 },
                 {
-                  "math":  {
-                    "op":  "OpSub",
-                    "lhs":  {
-                      "variableRef":  {
-                        "name":  "Time to weave"
-                      }
-                    },
-                    "rhs":  {
-                      "math":  {
-                        "op":  "OpMul",
-                        "lhs":  {
-                          "variableRef":  {
-                            "name":  "Move duration"
-                          }
-                        },
-                        "rhs":  {
-                          "const":  {
-                            "val":  "2"
-                          }
-                        }
-                      }
-                    }
+                  "variableRef":  {
+                    "name":  "Time to weave"
                   }
                 }
               ]
@@ -983,7 +1035,7 @@
       ]
     },
     "reactionTimeMs":  100,
-    "distanceFromTarget":  11
+    "distanceFromTarget":  12
   },
   "encounter":  {
     "duration":  180,

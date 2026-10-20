@@ -82,6 +82,7 @@ import {
 	APLValueSpellChanneledTicks,
 	APLValueSpellCPM,
 	APLValueSpellCurrentCost,
+	APLValueSpellExpectedDpet,
 	APLValueSpellFullCooldown,
 	APLValueSpellGCDHastedDuration,
 	APLValueSpellInFlight,
@@ -379,7 +380,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 			const clss = player.getClass();
 			return !isPrepull && clss !== Class.ClassRogue && clss !== Class.ClassWarrior;
 		},
-		fields: [],
+		fields: [unitFieldConfig('sourceUnit', 'self_and_pets')],
 	}),
 	currentManaPercent: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.current_mana_percent.label'),
@@ -390,7 +391,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 			const clss = player.getClass();
 			return !isPrepull && clss !== Class.ClassRogue && clss !== Class.ClassWarrior;
 		},
-		fields: [],
+		fields: [unitFieldConfig('sourceUnit', 'self_and_pets')],
 	}),
 	maxMana: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.max_mana.label'),
@@ -700,6 +701,14 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [actionIdFieldConfig('spellId', 'spells_with_travelTime', '')],
 	}),
+	spellExpectedDpet: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.spell_expected_dpet.label'),
+		submenu: ['spell'],
+		shortDescription: i18n.t('rotation_tab.apl.values.spell_expected_dpet.tooltip'),
+		newValue: APLValueSpellExpectedDpet.create,
+		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
+		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_damage_spells', '')],
+	}),
 
 	// Auras
 	auraIsKnown: inputBuilder({
@@ -979,14 +988,6 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		label: i18n.t('rotation_tab.apl.values.dot_percent_increase.label'),
 		submenu: ['dot'],
 		shortDescription: i18n.t('rotation_tab.apl.values.dot_percent_increase.tooltip'),
-		newValue: APLValueDotPercentIncrease.create,
-		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
-		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_dot_spells', ''), makeUseDotBaseValueCheckbox()],
-	}),
-	dotCritPercentIncrease: inputBuilder({
-		label: i18n.t('rotation_tab.apl.values.dot_crit_percent_increase.label'),
-		submenu: ['dot'],
-		shortDescription: i18n.t('rotation_tab.apl.values.dot_crit_percent_increase.tooltip'),
 		newValue: APLValueDotPercentIncrease.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_dot_spells', ''), makeUseDotBaseValueCheckbox()],

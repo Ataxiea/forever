@@ -15,7 +15,7 @@
     "manaSpringTotem":  "TristateEffectRegular"
   },
   "player":  {
-    "race":  "RaceUndead",
+    "race":  "RaceHuman",
     "class":  "ClassPriest",
     "equipment":  {
       "items":  [
@@ -34,7 +34,7 @@
         },
         {
           "id":  14136,
-          "enchant":  1893
+          "enchant":  8492
         },
         {
           "id":  10248,
@@ -42,7 +42,8 @@
           "enchant":  1901
         },
         {
-          "id":  18407
+          "id":  18407,
+          "enchant":  8492
         },
         {
           "id":  10255,
@@ -50,11 +51,13 @@
         },
         {
           "id":  10252,
-          "randomSuffix":  12761
+          "randomSuffix":  12761,
+          "enchant":  8492
         },
         {
           "id":  10247,
-          "randomSuffix":  12761
+          "randomSuffix":  12761,
+          "enchant":  8492
         },
         {
           "id":  272407
@@ -132,7 +135,7 @@
         }
       }
     },
-    "talentsString":  "00530321103--50052001231312251",
+    "talentsString":  "00530320103--50052201251302051",
     "profession1":  "Enchanting",
     "profession2":  "Tailoring",
     "rotation":  {
@@ -140,15 +143,21 @@
       "prepullActions":  [
         {
           "action":  {
+            "condition":  {
+              "variableRef":  {
+                "name":  "Troll"
+              }
+            },
             "castSpell":  {
               "spellId":  {
-                "spellId":  15473
+                "spellId":  19312,
+                "rank":  6
               }
             }
           },
           "doAtValue":  {
             "const":  {
-              "val":  "-5s"
+              "val":  "-3s"
             }
           }
         },
@@ -206,39 +215,14 @@
         },
         {
           "action":  {
-            "castSpell":  {
-              "spellId":  {
-                "otherId":  "OtherActionOffensivePotion"
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "autocastOtherCooldowns":  {}
-          }
-        },
-        {
-          "hide":  true,
-          "action":  {
             "condition":  {
-              "not":  {
-                "val":  {
-                  "auraIsActive":  {
-                    "sourceUnit":  {
-                      "type":  "Target"
-                    },
-                    "auraId":  {
-                      "spellId":  15286
-                    },
-                    "includeReactionTime":  true
-                  }
-                }
+              "variableRef":  {
+                "name":  "Night Elf"
               }
             },
             "castSpell":  {
               "spellId":  {
-                "spellId":  15286
+                "spellId":  1259799
               }
             }
           }
@@ -247,24 +231,19 @@
           "action":  {
             "condition":  {
               "variableRef":  {
-                "name":  "Inner Focus Rules"
+                "name":  "Gnome"
               }
             },
             "castSpell":  {
               "spellId":  {
-                "spellId":  14751
+                "spellId":  1259823
               }
             }
           }
         },
         {
           "action":  {
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  10947,
-                "rank":  9
-              }
-            }
+            "autocastOtherCooldowns":  {}
           }
         },
         {
@@ -278,16 +257,6 @@
               "spellId":  {
                 "spellId":  10894,
                 "rank":  8
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  1309636,
-                "rank":  4
               }
             }
           }
@@ -315,14 +284,81 @@
           }
         },
         {
+          "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  10947,
+                "rank":  9
+              }
+            }
+          }
+        },
+        {
+          "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  1309636,
+                "rank":  4
+              }
+            }
+          }
+        },
+        {
+          "hide":  true,
+          "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  15286
+              }
+            }
+          }
+        },
+        {
           "hide":  true,
           "action":  {
             "condition":  {
-              "spellIsKnown":  {
-                "spellId":  {
-                  "spellId":  19305,
-                  "rank":  7
-                }
+              "and":  {
+                "vals":  [
+                  {
+                    "cmp":  {
+                      "op":  "OpGt",
+                      "lhs":  {
+                        "spellExpectedDpet":  {
+                          "spellId":  {
+                            "spellId":  19305,
+                            "rank":  7
+                          }
+                        }
+                      },
+                      "rhs":  {
+                        "spellExpectedDpet":  {
+                          "spellId":  {
+                            "spellId":  18807,
+                            "rank":  6
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "cmp":  {
+                      "op":  "OpGe",
+                      "lhs":  {
+                        "spellTimeToReady":  {
+                          "spellId":  {
+                            "spellId":  10947,
+                            "rank":  9
+                          }
+                        }
+                      },
+                      "rhs":  {
+                        "const":  {
+                          "val":  "4s"
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             },
             "castSpell":  {
@@ -334,15 +370,91 @@
           }
         },
         {
+          "hide":  true,
+          "action":  {
+            "strictSequence":  {
+              "actions":  [
+                {
+                  "castSpell":  {
+                    "spellId":  {
+                      "spellId":  14751
+                    }
+                  }
+                },
+                {
+                  "castSpell":  {
+                    "spellId":  {
+                      "spellId":  19305,
+                      "rank":  7
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "action":  {
+            "strictSequence":  {
+              "actions":  [
+                {
+                  "castSpell":  {
+                    "spellId":  {
+                      "spellId":  14751
+                    }
+                  }
+                },
+                {
+                  "castSpell":  {
+                    "spellId":  {
+                      "spellId":  18807,
+                      "rank":  6
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
           "action":  {
             "channelSpell":  {
               "spellId":  {
                 "spellId":  18807,
                 "rank":  6
               },
-              "interruptIf":  {}
+              "interruptIf":  {
+                "or":  {
+                  "vals":  [
+                    {
+                      "variableRef":  {
+                        "name":  "MF3"
+                      }
+                    }
+                  ]
+                }
+              }
             }
           }
+        }
+      ],
+      "groups":  [
+        {
+          "name":  "Cooldowns",
+          "actions":  [
+            {
+              "action":  {}
+            },
+            {
+              "action":  {}
+            },
+            {
+              "action":  {}
+            },
+            {
+              "action":  {}
+            }
+          ]
         }
       ],
       "valueVariables":  [
@@ -365,11 +477,34 @@
         {
           "name":  "Inner Focus Rules",
           "value":  {
-            "spellIsReady":  {
-              "spellId":  {
-                "spellId":  10947,
-                "rank":  9
-              }
+            "and":  {
+              "vals":  [
+                {
+                  "not":  {
+                    "val":  {
+                      "spellIsReady":  {
+                        "spellId":  {
+                          "spellId":  10947,
+                          "rank":  9
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "cmp":  {
+                    "op":  "OpGe",
+                    "lhs":  {
+                      "currentTime":  {}
+                    },
+                    "rhs":  {
+                      "const":  {
+                        "val":  "4.5s"
+                      }
+                    }
+                  }
+                }
+              ]
             }
           }
         },
@@ -383,6 +518,143 @@
                     "spellId":  10894,
                     "rank":  8
                   }
+                }
+              }
+            }
+          }
+        },
+        {
+          "name":  "Troll",
+          "value":  {
+            "spellIsKnown":  {
+              "spellId":  {
+                "spellId":  19312,
+                "rank":  6
+              }
+            }
+          }
+        },
+        {
+          "name":  "Night Elf",
+          "value":  {
+            "or":  {
+              "vals":  [
+                {
+                  "cmp":  {
+                    "op":  "OpEq",
+                    "lhs":  {
+                      "currentTime":  {}
+                    },
+                    "rhs":  {
+                      "const":  {
+                        "val":  "3s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "cmp":  {
+                    "op":  "OpGe",
+                    "lhs":  {
+                      "currentTime":  {}
+                    },
+                    "rhs":  {
+                      "const":  {
+                        "val":  "180s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "spellIsKnown":  {
+                    "spellId":  {
+                      "spellId":  1259799
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name":  "Gnome",
+          "value":  {
+            "or":  {
+              "vals":  [
+                {
+                  "cmp":  {
+                    "op":  "OpEq",
+                    "lhs":  {
+                      "currentTime":  {}
+                    },
+                    "rhs":  {
+                      "const":  {
+                        "val":  "3s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "cmp":  {
+                    "op":  "OpGe",
+                    "lhs":  {
+                      "currentTime":  {}
+                    },
+                    "rhs":  {
+                      "const":  {
+                        "val":  "120s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "spellIsKnown":  {
+                    "spellId":  {
+                      "spellId":  1259823
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name":  "MF3",
+          "value":  {
+            "cmp":  {
+              "op":  "OpEq",
+              "lhs":  {
+                "spellChanneledTicks":  {
+                  "spellId":  {
+                    "spellId":  18807,
+                    "rank":  6
+                  }
+                }
+              },
+              "rhs":  {
+                "const":  {
+                  "val":  "3"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name":  "MF2",
+          "value":  {
+            "cmp":  {
+              "op":  "OpEq",
+              "lhs":  {
+                "spellChanneledTicks":  {
+                  "spellId":  {
+                    "spellId":  18807,
+                    "rank":  6
+                  }
+                }
+              },
+              "rhs":  {
+                "const":  {
+                  "val":  "2"
                 }
               }
             }

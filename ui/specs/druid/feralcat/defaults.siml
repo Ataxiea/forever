@@ -1,6 +1,6 @@
 siml 1
 spec feral_cat_druid
-talents "050022-55000032021031212051-054"
+talents "050022-35200032121131212051-05002"
 use "gear_sets/pre_raid.gear.siml"
 
 settings:

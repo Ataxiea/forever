@@ -395,3 +395,76 @@ func (value *APLValueSpellInFlight) GetBool(sim *Simulation) bool {
 func (value *APLValueSpellInFlight) String() string {
 	return fmt.Sprintf("SpellInFlight(%s)", value.spell.ActionID)
 }
+
+// The expected damage of one full cast if cast now, its hit and its ticks, over the time the cast
+// costs the caster: the cast time or channel, or the GCD when that is longer. Only what lands before the
+// fight ends counts, and a channel costs only the ticks it gets in.
+type APLValueSpellExpectedDpet struct {
+	DefaultAPLValueImpl
+	spell     *Spell
+	targetRef UnitReference
+}
+
+func (rot *APLRotation) newValueSpellExpectedDpet(config *proto.APLValueSpellExpectedDpet, _ *proto.UUID) APLValue {
+	spell := rot.GetAPLSpell(config.SpellId)
+	if spell == nil || (spell.expectedInitialDamageInternal == nil && spell.expectedTickDamageInternal == nil) {
+		return nil
+	}
+	return &APLValueSpellExpectedDpet{
+		spell:     spell,
+		targetRef: rot.GetTargetUnit(config.TargetUnit),
+	}
+}
+
+func (value *APLValueSpellExpectedDpet) Type() proto.APLValueType {
+	return proto.APLValueType_ValueTypeFloat
+}
+
+func (value *APLValueSpellExpectedDpet) GetFloat(sim *Simulation) float64 {
+	spell := value.spell
+	target := value.targetRef.Get()
+
+	cast := spell.DefaultCast
+	if !spell.IgnoreHaste {
+		cast.GCD = spell.hastedGCD(cast.GCD)
+		cast.CastTime = spell.CastTime().Round(time.Millisecond)
+	}
+
+	remaining := sim.GetRemainingDuration()
+	landsAt := cast.CastTime + spell.TravelTime()
+	if landsAt > remaining {
+		return 0
+	}
+
+	var damage float64
+	if spell.expectedInitialDamageInternal != nil {
+		damage += spell.ExpectedInitialDamage(sim, target)
+	}
+	if dot := spell.Dot(target); dot != nil {
+		channeled := spell.Flags.Matches(SpellFlagChanneled)
+		tickPeriod := dot.CalcTickPeriod()
+		// A channel ticks from the start of the cast, a DoT from when it lands.
+		firstTickFrom := landsAt
+		if channeled {
+			firstTickFrom = 0
+		}
+		ticks := int32(min(time.Duration(dot.ExpectedTickCount()), (remaining-firstTickFrom)/tickPeriod))
+		if spell.expectedTickDamageInternal != nil {
+			damage += spell.ExpectedTickDamage(sim, target) * float64(ticks)
+		}
+		if channeled {
+			cast.CastTime = tickPeriod * time.Duration(ticks)
+		}
+	}
+
+	// A spell with no GCD and no cast time (an auto attack, an off-GCD instant) scores 0.
+	executeTime := cast.EffectiveTime()
+	if executeTime == 0 {
+		return 0
+	}
+	return damage / executeTime.Seconds()
+}
+
+func (value *APLValueSpellExpectedDpet) String() string {
+	return fmt.Sprintf("Spell Expected DPET(%s)", value.spell.ActionID)
+}

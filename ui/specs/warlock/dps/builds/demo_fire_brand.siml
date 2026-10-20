@@ -1,0 +1,67 @@
+siml 1
+spec warlock
+talents "011-0305003201220301351-0050055003"
+
+settings:
+  name "Player"
+  race orc
+  profession1 engineering
+  profession2 tailoring
+  distance_from_target 20
+  summon imp
+  armor demon_armor
+  sacrificed_demon succubus
+  soul_shards 32
+
+consumables:
+  flask flask_of_supreme_power
+  food nightfin_soup
+  conjured demonic_rune
+  explosive ez_thro_dynamite_ii
+  mh_imbue brilliant_wizard_oil
+  offensive_pot major_spellblasting_potion
+
+buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
+
+party_buffs: mana_spring_totem
+
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
+
+debuffs: judgement_of_wisdom
+
+apl:
+  var ${Execute at} = 35%
+  var ${Time to execute} = remaining_time - (current_time + remaining_time) * $execute_at
+  var ${In execute} = $time_to_execute <= 0s
+  var ${Doom tick} = 60s
+  var ${Boost window} = 14s
+  var ${Firebolt cost} = 115
+
+priority:
+  autocast_other_cooldowns
+  group "Boosts"
+      if dot(bane_of_doom).is_active and dot(bane_of_doom).remaining_time <= $boost_window
+      or not dot(bane_of_doom).is_active and remaining_time < $doom_tick
+  group "Split Boosts" if dot(bane_of_doom).is_active and not $in_execute
+  cast bane_of_doom if not dot(bane_of_doom).is_active and remaining_time >= $doom_tick
+  cast searing_pain if not target.aura(demonic_brand).is_active
+  cast bane_of_agony
+      if not dot(bane_of_doom).is_active
+      and not dot(bane_of_agony).is_active
+      and remaining_time < $doom_tick
+  cast immolate if not dot(immolate).is_active
+  cast_warlock_assigned_curse if not warlock_assigned_curse_is_active
+  cast life_tap if pet1.current_mana < $firebolt_cost
+  group "Split Boosts" if aura(decimation_440873).is_active
+  cast soul_fire if aura(decimation_440873).is_active
+  cast corruption if not dot(corruption).is_active
+  cast searing_pain
+  cast life_tap
+
+group "Boosts":
+  cast blood_fury
+  cast item.major_spellblasting_potion
+
+group "Split Boosts":
+  cast berserking if $in_execute or $time_to_execute >= 3m
+  cast eureka if $in_execute or $time_to_execute >= 2m

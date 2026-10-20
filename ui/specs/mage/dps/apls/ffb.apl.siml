@@ -1,0 +1,19 @@
+siml 1
+spec mage
+
+prepull:
+  -6s cast pyroblast
+
+priority:
+  group "Evocation" if current_mana_percent <= 10%
+  cast scorch
+      if target1.aura(fire_vulnerability).num_stacks < 5
+      or target1.aura(fire_vulnerability).remaining_time < 5
+  autocast_other_cooldowns
+  cast pyroblast if aura(heating_up).num_stacks == 3
+  cast fire_blast if aura(fingers_of_frost).num_stacks(include_reaction_time=true) < 2
+  cast frostfire_bolt
+
+group "Evocation":
+  cast read_leyline if not aura(energized).is_active and spell(read_leyline).is_known
+  channel evocation until current_mana_percent >= 99%

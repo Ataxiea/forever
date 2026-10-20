@@ -1,9 +1,7 @@
 siml 1
 spec protection_paladin
 
-def consecrated =
-    not target.aura(consecrated_ground).is_known
-    or target.aura(consecrated_ground).is_active
+def consecrated = not target.aura(consecration).is_known or target.aura(consecration).is_active
 def seal_fading(seal) =
     aura(seal).remaining_time < auto_time_to_next(main_hand_auto)
     and aura(seal).is_inactive

@@ -98,6 +98,31 @@ var ItemOverrides = []*proto.UIItem{
 	},
 }
 
+// Each Naxxramas tier 3 armor piece comes from its own class's quest, and the game files open every
+// one to every class: AllowableClass is 32767, or 1535 on Dreadnaught's and most of Bonescythe's. Only
+// the set's ring names the class, so each piece of the set takes it. Keyed by item set id.
+var ItemSetClasses = map[int32]proto.Class{
+	521: proto.Class_ClassDruid,   // Dreamwalker Raiment
+	523: proto.Class_ClassWarrior, // Dreadnaught's Battlegear
+	524: proto.Class_ClassRogue,   // Bonescythe Armor
+	525: proto.Class_ClassPriest,  // Vestments of Faith
+	526: proto.Class_ClassMage,    // Frostfire Regalia
+	527: proto.Class_ClassShaman,  // The Earthshatterer
+	528: proto.Class_ClassPaladin, // Redemption Armor
+	529: proto.Class_ClassWarlock, // Plagueheart Raiment
+	530: proto.Class_ClassHunter,  // Cryptstalker Armor
+}
+
+// Every item of a set in ItemSetClasses gets that class as its whole allowlist. It replaces the list
+// rather than merging, so the ring, which already names the class, does not name it twice.
+func ApplyItemSetClasses(db *WowDatabase) {
+	for _, item := range db.Items {
+		if class, ok := ItemSetClasses[item.SetId]; ok {
+			item.ClassAllowlist = []proto.Class{class}
+		}
+	}
+}
+
 // Keep these sorted by item ID.
 var ItemAllowList = map[int32]struct{}{
 	1168:  {}, // Skullflame Shield
@@ -1093,6 +1118,7 @@ var ConsumableAllowList = []int32{
 	13454, // Greater Arcane Elixir
 	12662, // Demonic Rune
 	5206,  // Bogling Root
+	12217, // Dragonbreath Chili, whose proc sim/common/forever registers by hand
 	// The Natural flasks, whose zone bonus sim/common/forever registers by hand
 	274273, // Flask of Natural Accuracy
 	274274, // Flask of Natural Aggression
@@ -1174,6 +1200,14 @@ var ConsumableExclusiveGroups = []ConsumableGroup{
 		8423,  // Cerebral Cortex Compound
 		8424,  // Gizzard Gum
 		20079, // Spirit of Zanza
+	}},
+	{Group: ConsumableGroupKey{Key: "Rum", Name: "Rum"}, Items: []int32{
+		17048, // Rumsey Rum
+		18269, // Gordok Green Grog
+		18284, // Kreeg's Stout Beatdown
+		20709, // Rumsey Rum Light
+		21114, // Rumsey Rum Dark
+		21151, // Rumsey Rum Black Label
 	}},
 	{Group: ConsumableGroupKey{Key: "Hit food", Name: "Hit food"}, Items: []int32{
 		22237, // Dark Desire

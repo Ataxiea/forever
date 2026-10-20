@@ -102,6 +102,6 @@ priority:
   cast searing_totem if totem_down(fire)
   cast stormstrike
   cast lightning_bolt if aura(maelstrom_weapon).is_known and aura(maelstrom_weapon).num_stacks >= 5
-  cast flame_shock if not dot(flame_shock).is_active
+  cast flame_shock_rank5 if not dot(flame_shock_rank5).is_active
   cast earth_shock
   cast fire_nova if current_mana_percent > 10%

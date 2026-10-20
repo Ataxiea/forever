@@ -1,0 +1,58 @@
+siml 1
+spec warlock
+talents "25300020135201351--0550005003"
+
+settings:
+  name "Player"
+  race orc
+  profession1 engineering
+  profession2 tailoring
+  distance_from_target 20
+  summon succubus
+  armor demon_armor
+  soul_shards 32
+
+consumables:
+  flask flask_of_supreme_power
+  food nightfin_soup
+  conjured demonic_rune
+  explosive ez_thro_dynamite_ii
+  mh_imbue brilliant_wizard_oil
+  offensive_pot major_spellblasting_potion
+
+buffs: greater_blessing_of_kings, greater_blessing_of_wisdom
+
+party_buffs: mana_spring_totem
+
+raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
+
+debuffs: judgement_of_wisdom
+
+apl:
+  var ${Wrack minimum} = 4s
+  var ${Dot floor} = min(dot(corruption).remaining_time, dot(bane_of_agony).remaining_time)
+
+priority:
+  autocast_other_cooldowns
+  group "Boosts"
+  cast amplify_curse if not dot(bane_of_agony).is_active and not aura(amplify_curse).is_active
+  cast bane_of_agony if not dot(bane_of_agony).is_active
+  cast corruption if not dot(corruption).is_active
+  cast siphon_life if not dot(siphon_life).is_active
+  cast_warlock_assigned_curse if not warlock_assigned_curse_is_active
+  cast immolate if not dot(immolate).is_active
+  cast berserking
+      if dot(bane_of_agony).is_active
+      and dot(corruption).is_active
+      and dot(siphon_life).is_active
+      and dot(immolate).is_active
+      and warlock_assigned_curse_is_active
+  cast shadow_bolt_rank10 if not target.aura(shadow_vulnerability).is_active
+  cast shadow_bolt_rank10 if aura(shadow_trance).is_active
+  channel wrack if $dot_floor >= $wrack_minimum
+  cast shadow_bolt_rank10
+  cast life_tap
+
+group "Boosts":
+  cast blood_fury
+  cast item.major_spellblasting_potion

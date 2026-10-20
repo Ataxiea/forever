@@ -91,7 +91,7 @@ func TestCharacterFromRepoLoadsTheBuildOfTheRotation(t *testing.T) {
 	if want := filepath.Join(root, "ui/specs/hunter/dps/builds/sv_melee.siml") + " over " + filepath.Join(root, "ui/specs/hunter/dps/defaults.siml"); c.info.Source != want {
 		t.Errorf("source %q", c.info.Source)
 	}
-	if p.TalentsString != "53200005021-005005-5502000300500201" || c.info.Gear != "p1_melee" || p.DistanceFromTarget != 5 {
+	if p.TalentsString != "53200005021-005003-5502000300500221" || c.info.Gear != "p1_melee" || p.DistanceFromTarget != 5 {
 		t.Errorf("got talents %q, gear %q and distance %v, want the SV Melee build's", p.TalentsString, c.info.Gear, p.DistanceFromTarget)
 	}
 	if p.GetHunter().GetOptions().GetClassOptions().GetPetType() != proto.HunterOptions_Raptor {

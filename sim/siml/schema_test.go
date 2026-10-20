@@ -424,8 +424,8 @@ func TestSchemaDerivations(t *testing.T) {
 	}
 	accessors := map[string][]string{ // SPEC.md §6.7
 		"aura":       {"is_known", "is_active", "is_inactive", "remaining_time", "num_stacks", "internal_cooldown", "icd_is_ready", "should_refresh", "duration"},
-		"dot":        {"is_active", "is_active_on_all_targets", "remaining_time", "lowest_remaining_time", "tick_frequency", "time_to_next_tick", "base_duration", "percent_increase", "crit_percent_increase", "tick_rate_percent_increase"},
-		"spell":      {"is_known", "can_cast", "is_ready", "time_to_ready", "cast_time", "travel_time", "cpm", "is_channeling", "channeled_ticks", "current_cost", "num_charges", "time_to_charge", "gcd_hasted_duration", "full_cooldown", "in_flight"},
+		"dot":        {"is_active", "is_active_on_all_targets", "remaining_time", "lowest_remaining_time", "tick_frequency", "time_to_next_tick", "base_duration", "percent_increase", "tick_rate_percent_increase"},
+		"spell":      {"is_known", "can_cast", "is_ready", "time_to_ready", "cast_time", "travel_time", "cpm", "is_channeling", "channeled_ticks", "current_cost", "num_charges", "time_to_charge", "gcd_hasted_duration", "full_cooldown", "in_flight", "expected_dpet"},
 		"boss_spell": {"time_to_ready", "is_casting"},
 		"sequence":   {"is_complete", "is_ready", "time_to_ready"},
 	}

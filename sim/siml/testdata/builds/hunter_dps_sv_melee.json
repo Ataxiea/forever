@@ -120,7 +120,7 @@
         }
       }
     },
-    "talentsString":  "53200005021-005005-5502000300500201",
+    "talentsString":  "53200005021-005003-5502000300500221",
     "profession1":  "Engineering",
     "profession2":  "Blacksmithing",
     "rotation":  {
@@ -190,6 +190,16 @@
         },
         {
           "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  14266,
+                "tag":  1
+              }
+            }
+          }
+        },
+        {
+          "action":  {
             "condition":  {
               "not":  {
                 "val":  {
@@ -234,6 +244,16 @@
         },
         {
           "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  14305,
+                "rank":  5
+              }
+            }
+          }
+        },
+        {
+          "action":  {
             "condition":  {
               "variableRef":  {
                 "name":  "Use Summon Hawk"
@@ -243,6 +263,16 @@
               "spellId":  {
                 "spellId":  1293527,
                 "rank":  4
+              }
+            }
+          }
+        },
+        {
+          "action":  {
+            "castSpell":  {
+              "spellId":  {
+                "spellId":  14268,
+                "rank":  3
               }
             }
           }

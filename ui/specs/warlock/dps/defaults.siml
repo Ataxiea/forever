@@ -1,5 +1,6 @@
 siml 1
 spec warlock
+talents "011-0305003201220301351-0050055003"
 
 settings:
   race human
@@ -9,7 +10,7 @@ settings:
   distance_from_target 20
   summon imp
   armor demon_armor
-  curse_options recklessness
+  curse_options elements
   sacrificed_demon succubus
   // A full Felcloth Bag (21341), the largest Soul Bag a warlock can carry.
   soul_shards 32
@@ -28,9 +29,7 @@ party_buffs: mana_spring_totem
 
 raid_buffs: arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
 
-debuffs:
-  judgement_of_wisdom, curse_of_elements, curse_of_recklessness, faerie_fire, expose_armor
-  sunder_armor, gift_of_arthas
+debuffs: judgement_of_wisdom
 
 apl: type auto
 

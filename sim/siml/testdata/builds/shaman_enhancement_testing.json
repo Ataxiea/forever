@@ -426,8 +426,8 @@
                 "val":  {
                   "dotIsActive":  {
                     "spellId":  {
-                      "spellId":  29228,
-                      "rank":  6
+                      "spellId":  10448,
+                      "rank":  5
                     }
                   }
                 }
@@ -435,8 +435,8 @@
             },
             "castSpell":  {
               "spellId":  {
-                "spellId":  29228,
-                "rank":  6
+                "spellId":  10448,
+                "rank":  5
               }
             }
           }

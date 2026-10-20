@@ -1,7 +1,8 @@
 siml 1
 spec mage
-talents "0502205003100301531--055500032"
+talents "0552205003100311531-03-0533"
 use "gear_sets/p1Arcane.gear.siml"
+use "apls/arcaneFrostFill.apl.siml"
 
 settings:
   race human
@@ -13,9 +14,11 @@ settings:
 
 consumables:
   resource_pot major_mana_potion
+  flask flask_of_supreme_power
   food nightfin_soup
   mh_imbue brilliant_wizard_oil
-  elixir greater_arcane_elixir, elixir_of_the_sages
+  mh_weapon_imbue scroll_of_imbue_precision
+  elixir greater_arcane_elixir, elixir_of_the_sages, elixir_of_the_whale, mageblood_elixir
 
 buffs:
   greater_blessing_of_kings, greater_blessing_of_wisdom, greater_blessing_of_salvation
@@ -26,14 +29,9 @@ party_buffs:
   mana_tide_totems 1
 
 raid_buffs:
-  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude
+  arcane_brilliance, prayer_of_spirit, gift_of_the_wild, prayer_of_fortitude, moonkin_aura
 
 debuffs: judgement_of_wisdom, curse_of_elements
-
-simple:
-  conserve_start 20
-  conserve_end 30
-  delay_major_c_ds 10
 
 encounter:
   duration 180

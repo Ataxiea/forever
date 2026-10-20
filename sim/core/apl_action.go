@@ -172,6 +172,9 @@ func (rot *APLRotation) newAPLAction(config *proto.APLAction) *APLAction {
 		condition: condition,
 		impl:      impl,
 	}
+	if multidot, ok := impl.(*APLActionStrictMultidot); ok {
+		multidot.parent = action
+	}
 
 	return action
 }
@@ -249,6 +252,8 @@ func (rot *APLRotation) newAPLActionImpl(config *proto.APLAction) APLActionImpl 
 		return rot.newActionMove(config.GetMove())
 	case *proto.APLAction_MoveDuration:
 		return rot.newActionMoveDuration(config.GetMoveDuration())
+	case *proto.APLAction_PetAttack:
+		return rot.newActionPetAttack(config.GetPetAttack())
 	case *proto.APLAction_CustomRotation:
 		return rot.newActionCustomRotation(config.GetCustomRotation())
 	case *proto.APLAction_GroupReference:

@@ -36,13 +36,13 @@ export const TALENTS_COMBAT_SS = {
 export const TALENTS_COMBAT_BS = {
 	name: 'Combat BS',
 	data: SavedTalents.create({
-		talentsString: '00530310301-32030320201515231-002',
+		talentsString: '00532310101-32030320201515231-002',
 	}),
 };
 export const TALENTS_SUB_HEMO = {
 	name: 'Subtlety Hemo',
 	data: SavedTalents.create({
-		talentsString: '0053031-320003-4323200300013211501',
+		talentsString: '005323101014--4323200300013211501',
 	}),
 };
 export const TALENTS_SUB_BS = {
@@ -63,10 +63,10 @@ const SIMPLE_BACKSTAB_BUILD_ROTATION = PresetUtils.makePresetSimpleRotation(
 	RogueRotation.create({ useBackstab: true, useExposeArmor: false }),
 );
 
-export const P1_BS_COMBAT_GEAR = PresetUtils.makePresetGear('Backstab Combat', P1BsCombatGear);
-export const P1_MUTI_GEAR = PresetUtils.makePresetGear('Mutilate', P1MutiGear);
-export const P1_SLOW_MH_GEAR = PresetUtils.makePresetGear('Slow Main Hand', P1SlowMhGear);
-export const P1_BS_SUB_GEAR = PresetUtils.makePresetGear('Backstab Subtlety', P1BsSubGear);
+export const P1_BS_COMBAT_GEAR = PresetUtils.makePresetGear('Backstab Combat', P1BsCombatGear, { devOnly: true });
+export const P1_MUTI_GEAR = PresetUtils.makePresetGear('Mutilate', P1MutiGear, { devOnly: true });
+export const P1_SLOW_MH_GEAR = PresetUtils.makePresetGear('Slow Main Hand', P1SlowMhGear, { devOnly: true });
+export const P1_BS_SUB_GEAR = PresetUtils.makePresetGear('Backstab Subtlety', P1BsSubGear, { devOnly: true });
 
 // Preset options for EP weights
 export const EP_PRESET_COMBAT_SINISTER = PresetUtils.makePresetEpWeights(
