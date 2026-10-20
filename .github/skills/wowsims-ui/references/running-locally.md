@@ -36,22 +36,16 @@ to the landing page, so getting the landing page means there is no `ui/specs/<cl
 
 ## The release a page shows
 
-`tools/vite/build_info.mts` reads the commit (`BUILD_COMMIT`, else `git rev-parse HEAD`, else `GITHUB_SHA`), the UTC
-build date, the game build stamped on each part of `assets/db_inputs/spell_store_inputs.json` (each class, items,
-racials, shared) and, for each spec page, two last changes when vite loads its config:
+`tools/vite/build_info.mts` reads the release when vite loads its config: the commit (`BUILD_COMMIT`, else
+`git rev-parse HEAD`, else `GITHUB_SHA`), the UTC build date, the game build stamped on each part of
+`assets/db_inputs/spell_store_inputs.json`, and each spec page's last presets and engine changes, over the paths listed
+above `specReleases`. A shallow clone has no changes to read, so the build workflows check out the full history.
 
-- presets: `git log` over its `presets.ts`, `apls/`, `gear_sets/` and `builds/`, and its class's `shared/presets.ts`;
-- engine: `git log` over the files directly in `sim/<class>` (its generated spell data, and the expected results of a
-  class with no spec folders), `sim/<class>/<spec>` when it exists, and `sim/core/racials.go`.
-
-`vite.config.mts` defines the lot as `import.meta.env.VITE_BUILD_INFO`, whose types `ui/sim/constants/build_info.ts`
-takes from the tool. Both logs start at the checkout, and dates are UTC. A shallow clone has no changes to read, so the
-build workflows check out the full history. The landing page shows the newest game build, the build date and the
-commit beside its title. A spec page shows the same line under the sidebar's stats with the newest game build of the
-parts its sim reads, and its info button opens the sim build and the spec's presets and engine changes. The values
-are read at each `vite build` and dev server start; an incremental `make` with no change to its prerequisites keeps
-the last build's. vitest and Storybook define no `VITE_BUILD_INFO`, so `BUILD_INFO` is empty there; the stories and
-tests fill it from `ui/testing/build_info.ts`.
+`vite.config.mts` defines the lot as `import.meta.env.VITE_BUILD_INFO`. The landing page shows the game build, the build
+date and the commit beside its title; a spec page shows them under the sidebar's stats, and its info button opens the
+sim build and the spec's presets and engine changes. The makefile's bundle target depends on the checkout's `HEAD` and
+`index`, so a commit or checkout rebuilds it. vitest and Storybook define no `VITE_BUILD_INFO`; the stories and tests
+fill `BUILD_INFO` from `ui/testing/build_info.ts`.
 
 ## Running real sims
 

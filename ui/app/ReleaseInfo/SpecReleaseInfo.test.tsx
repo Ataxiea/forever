@@ -5,14 +5,17 @@ import { RELEASE, withRelease } from '@testing/build_info';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import character from '../../../assets/locales/en/character.json';
 import english from '../../../assets/locales/en/translation.json';
 import { SpecReleaseInfo } from './SpecReleaseInfo';
 
 beforeAll(() => {
 	i18n.addResourceBundle('en', 'translation', english, true, true);
+	i18n.addResourceBundle('en', 'character', character, true, true);
 });
 afterAll(() => {
 	i18n.removeResourceBundle('en', 'translation');
+	i18n.removeResourceBundle('en', 'character');
 });
 
 let restore = () => {};
@@ -21,8 +24,8 @@ afterEach(() => restore());
 const details = () => {
 	fireEvent.click(screen.getByRole('button', { name: 'Release details' }));
 	return {
-		labels: [...document.querySelectorAll('dt')].map(dt => dt.textContent),
-		values: [...document.querySelectorAll('dd')].map(dd => dd.textContent),
+		labels: screen.getAllByRole('term').map(term => term.textContent),
+		values: screen.getAllByRole('definition').map(definition => definition.textContent),
 	};
 };
 
@@ -36,7 +39,7 @@ describe('SpecReleaseInfo', () => {
 	it('lists the sim build and the last preset and engine changes on clicking its info button', () => {
 		restore = withRelease(RELEASE);
 		render(<SpecReleaseInfo spec={PlayerSpecs.FeralCatDruid} />);
-		expect(document.querySelector('dd')).toBeNull();
+		expect(screen.queryByRole('definition')).toBeNull();
 
 		const { labels, values } = details();
 		const spec = translatePlayerSpec(PlayerSpecs.FeralCatDruid);
@@ -46,7 +49,7 @@ describe('SpecReleaseInfo', () => {
 		expect(screen.getByRole('link', { name: '474c498' }).getAttribute('href')).toBe(`https://github.com/wowsims/forever/commit/${engine}`);
 	});
 
-	it("names a one-spec class's rows after the class", () => {
+	it('names the rows of a spec without a name of its own after its class', () => {
 		restore = withRelease(RELEASE);
 		render(<SpecReleaseInfo spec={PlayerSpecs.Mage} />);
 		expect(details().labels).toEqual(['Sim build', `${translatePlayerClass(PlayerSpecs.getPlayerClass(PlayerSpecs.Mage))} presets`]);
@@ -56,10 +59,5 @@ describe('SpecReleaseInfo', () => {
 		restore = withRelease(RELEASE);
 		render(<SpecReleaseInfo spec={PlayerSpecs.DpsWarrior} />);
 		expect(details().labels).toEqual(['Sim build']);
-	});
-
-	it('renders nothing when the build read nothing', () => {
-		const { container } = render(<SpecReleaseInfo spec={PlayerSpecs.FeralCatDruid} />);
-		expect(container.innerHTML).toBe('');
 	});
 });

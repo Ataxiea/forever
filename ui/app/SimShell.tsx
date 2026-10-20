@@ -85,7 +85,7 @@ export const SimShell = ({ domRef, host, sim, className, spec, noticeText, known
 									{host && <SimWarnings warnings={host.warnings} ready={simReady} className="my-auto" />}
 									{host && <CharacterStats className="mt-auto" />}
 								</div>
-								{host && <SpecReleaseInfo spec={spec} className="border-t border-border px-sidebar py-2 text-xs text-white/65" />}
+								{host && <SpecReleaseInfo spec={spec} className="border-t border-border px-sidebar py-2 text-xs text-muted" />}
 							</aside>
 							<div
 								className="z-1 mx-auto flex w-full min-w-[calc(275px+1vw)] flex-4 flex-col pt-0 pr-page pb-page pl-page max-lg:min-h-auto"

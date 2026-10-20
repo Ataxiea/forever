@@ -20,9 +20,9 @@ export interface Change {
 export interface SpecRelease {
 	/** The newest game build among the spell data parts its sim reads: its class, racials, items and shared. */
 	gameVersion?: string;
-	/** The last change to its presets: presets.ts, the apls, gear_sets and builds folders, and the class's shared presets. */
+	/** The last change to its presets: spec.ts, presets.ts, the apls, gear_sets and builds folders, and the class's shared presets. */
 	presets?: Change;
-	/** The last change to its engine: its class's sim code and spell data, its own sim folder and expected results, and the racials. */
+	/** The last change to its engine: its class's sim code and spell data, its own sim folder and expected results, and sim/core and sim/common. */
 	engine?: Change;
 }
 
@@ -79,32 +79,22 @@ const spellDataBuilds = (root: string): Record<string, string> => {
 	}
 };
 
-const newest = (builds: string[]): string => [...builds].sort(compareBuilds).at(-1) ?? '';
-
-const compareBuilds = (a: string, b: string): number => {
-	const left = a.split('.').map(Number);
-	const right = b.split('.').map(Number);
-	for (let i = 0; i < Math.max(left.length, right.length); i++) {
-		const difference = (left[i] ?? 0) - (right[i] ?? 0);
-		if (difference !== 0) {
-			return difference;
-		}
-	}
-	return 0;
-};
+// Build numbers compare part by part as numbers, so 1.60.1.9999 is older than 1.60.1.70450.
+const newest = (builds: string[]): string => [...builds].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })).at(-1) ?? '';
 
 // A spec's presets and engine are each the last commit over a set of paths:
-//   - presets: presets.ts and the apls, gear_sets and builds folders in ui/specs/<class>/<spec>, and
-//     ui/specs/<class>/shared/presets.ts, which the warrior specs take their default buffs from;
+//   - presets: spec.ts (the defaults and the preset lists the pickers offer), presets.ts and the apls,
+//     gear_sets and builds folders in ui/specs/<class>/<spec>, and ui/specs/<class>/shared/presets.ts,
+//     which the warrior specs take their default buffs from;
 //   - engine: the files directly in sim/<class>, its generated spell data among them and the expected
 //     results of a class with no spec folders, sim/<class>/<spec> with its expected results when the
-//     spec has a sim folder, and
-//     sim/core/racials.go. The racials' generated spell data shares one file with every other part's, so
-//     a racials-only regeneration is not counted.
+//     spec has a sim folder, and sim/core and sim/common, which every spec's sim runs on: the outcome
+//     rolls, the APL, the racials, the item effects, enchants and buffs, and the shared spell data.
 // The log starts at the checkout, which is what the bundle is built from: a pull request's preview is
 // built from its merge commit, so a master change its branch lacks is still dated; where both sides
-// touched the paths, the row names that merge commit, which lives only on refs/pull/<n>/merge. A shallow clone has
-// no history to read, so it reports no change rather than its one commit for every spec.
+// touched the paths, the row names that merge commit, which lives only on refs/pull/<n>/merge. A
+// shallow clone has no history to read, so it reports no change rather than its one commit for every
+// spec.
 const specReleases = (root: string, builds: Record<string, string>): Record<string, SpecRelease> => {
 	let shallow = true;
 	try {
@@ -130,10 +120,10 @@ const specReleases = (root: string, builds: Record<string, string>): Record<stri
 		const release: SpecRelease = {
 			gameVersion: newest([className, 'racials', 'items', 'shared'].flatMap(part => (builds[part] ? [builds[part]] : []))) || undefined,
 			presets: lastChange([
-				...['presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${key}/${name}`),
+				...['spec.ts', 'spec.tsx', 'presets.ts', 'apls', 'gear_sets', 'builds'].map(name => `ui/specs/${key}/${name}`),
 				`ui/specs/${className}/shared/presets.ts`,
 			]),
-			engine: lastChange([`:(glob)sim/${className}/*`, ...(existsSync(path.join(root, specSim)) ? [specSim] : []), 'sim/core/racials.go']),
+			engine: lastChange([`:(glob)sim/${className}/*`, ...(existsSync(path.join(root, specSim)) ? [specSim] : []), 'sim/core', 'sim/common']),
 		};
 		specs[key] = release;
 	}

@@ -11,7 +11,7 @@ const meta = {
 	parameters: { spec: 'none' },
 	args: {
 		spec: PlayerSpecs.FeralCatDruid,
-		className: 'border-t border-border px-sidebar py-2 text-xs text-white/65',
+		className: 'border-t border-border px-sidebar py-2 text-xs text-muted',
 	},
 	beforeEach: () => withRelease(RELEASE),
 } satisfies Meta<typeof SpecReleaseInfo>;

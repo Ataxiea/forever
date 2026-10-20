@@ -1,4 +1,6 @@
-import { BUILD_INFO, type BuildInfo } from '@sim/constants/build_info';
+import { BUILD_INFO } from '@sim/constants/build_info';
+
+import type { BuildInfo } from '../../tools/vite/build_info.mjs';
 
 /**
  * A release as a build reads it: Feral Cat with every part, Mage, a one-spec class, with its presets,

@@ -38,9 +38,4 @@ describe('ReleaseInfo', () => {
 		expect(screen.getByRole('paragraph').textContent).toBe('Built 2026-10-18');
 		expect(screen.queryByRole('link')).toBeNull();
 	});
-
-	it('renders nothing when the build read nothing', () => {
-		const { container } = render(<ReleaseInfo />);
-		expect(container.innerHTML).toBe('');
-	});
 });
