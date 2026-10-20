@@ -418,3 +418,28 @@ func TestSetMaximumEnergy(t *testing.T) {
 		t.Errorf("metrics after losing 10: actual gain %v over %d events, want -10 over 1", metrics.ActualGain, metrics.Events)
 	}
 }
+
+func TestCharacterReadsEPWeights(t *testing.T) {
+	player := &proto.Player{
+		Name:      "EP Weights Tester",
+		Class:     proto.Class_ClassWarrior,
+		Race:      proto.Race_RaceHuman,
+		Spec:      &proto.Player_ProtectionWarrior{ProtectionWarrior: &proto.ProtectionWarrior{}},
+		Equipment: &proto.EquipmentSpec{},
+		EpWeights: &proto.UnitStats{Stats: stats.Stats{
+			stats.AttackPower: 1,
+			stats.HasteRating: 2.5,
+		}.ToProtoArray()},
+	}
+	character := NewCharacter(&Party{}, 0, player)
+	if character.EPWeights[stats.AttackPower] != 1 || character.EPWeights[stats.HasteRating] != 2.5 {
+		t.Fatalf("Incorrect EP weights: Expected AttackPower 1 and HasteRating 2.5, Actual: %v and %v",
+			character.EPWeights[stats.AttackPower], character.EPWeights[stats.HasteRating])
+	}
+
+	player.EpWeights = nil
+	character = NewCharacter(&Party{}, 0, player)
+	if character.EPWeights != (stats.Stats{}) {
+		t.Fatalf("Incorrect EP weights without the field: Expected all zeros, Actual: %v", character.EPWeights)
+	}
+}

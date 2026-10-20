@@ -18,7 +18,7 @@ import "shaman.proto";
 import "warlock.proto";
 import "warrior.proto";
 
-// NextIndex: 62
+// NextIndex: 63
 message Player {
 	// Proto version at the time Player were saved.
 	// A "breaking change" here is defined as anything that will break saved
@@ -94,6 +94,8 @@ message Player {
 	bool challenge_mode = 58;
 	// A weapon skill missing from the list is at the maximum for the player's level.
 	repeated WeaponSkillValue weapon_skills = 61;
+	// The player's current EP weights, for APL actions that rank by stat value.
+	UnitStats ep_weights = 62;
 
 	HealingModel healing_model = 49;
 

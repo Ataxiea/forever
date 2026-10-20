@@ -1440,6 +1440,7 @@ export class Player<SpecType extends Spec> {
 			apiVersion: CURRENT_API_VERSION,
 			class: this.getClass(),
 			database: forExport ? undefined : this.toDatabase(),
+			epWeights: this.getEpWeights().toProto(),
 		});
 		if (exportCategory(SimSettingCategories.Gear)) {
 			PlayerProto.mergePartial(player, {

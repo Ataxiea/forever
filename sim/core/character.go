@@ -58,6 +58,9 @@ type Character struct {
 	// Base stats for this Character.
 	baseStats stats.Stats
 
+	// The player's EP weights from the request; zero when the request carries none.
+	EPWeights stats.Stats
+
 	// Bonus stats for this Character, specified in the UI and/or EP
 	// calculator
 	bonusStats     stats.Stats
@@ -153,6 +156,10 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 	character.PseudoStats.BaseDodgeChance += ClassBaseDodge[character.Class]
 	if _, ok := ClassWeaponTypeCapabilities[character.Class][proto.WeaponType_WeaponTypeShield]; ok {
 		character.PseudoStats.BlockValuePerStrength = 0.05
+	}
+
+	if player.EpWeights != nil {
+		character.EPWeights = stats.WeightsFromUnitStatsProto(player.EpWeights)
 	}
 
 	if player.BonusStats != nil {
