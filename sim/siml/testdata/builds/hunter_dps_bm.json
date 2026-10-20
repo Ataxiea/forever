@@ -1,496 +1,450 @@
 {
-  "settings":  {
-    "iterations":  25000
-  },
-  "raidBuffs":  {
-    "arcaneBrilliance":  true,
-    "prayerOfSpirit":  true,
-    "giftOfTheWild":  true,
-    "strengthOfEarthTotem":  true,
-    "graceOfAirTotem":  true,
-    "battleShout":  "TristateEffectRegular",
-    "leaderOfThePack":  true
-  },
-  "debuffs":  {
-    "judgementOfLight":  true,
-    "judgementOfWisdom":  true,
-    "curseOfElements":  true,
-    "curseOfRecklessness":  true,
-    "faerieFire":  true,
-    "exposeArmor":  true,
-    "sunderArmor":  true,
-    "giftOfArthas":  true,
-    "insectSwarm":  true
-  },
-  "player":  {
-    "race":  "RaceOrc",
-    "class":  "ClassHunter",
-    "equipment":  {
-      "items":  [
-        {
-          "id":  16428,
-          "enchant":  2586
-        },
-        {
-          "id":  21809
-        },
-        {
-          "id":  13116
-        },
-        {
-          "id":  21187,
-          "enchant":  7667
-        },
-        {
-          "id":  19685,
-          "enchant":  1891
-        },
-        {
-          "id":  19687,
-          "enchant":  7656
-        },
-        {
-          "id":  19686,
-          "enchant":  8206
-        },
-        {
-          "id":  20216
-        },
-        {
-          "id":  22690,
-          "enchant":  2586
-        },
-        {
-          "id":  18506,
-          "enchant":  904
-        },
-        {
-          "id":  272408
-        },
-        {
-          "id":  21182
-        },
-        {
-          "id":  272437
-        },
-        {
-          "id":  270276
-        },
-        {
-          "id":  250619,
-          "enchant":  2646
-        },
-        {},
-        {
-          "id":  22347,
-          "enchant":  8720
-        }
-      ]
-    },
-    "consumables":  {
-      "foodId":  250072,
-      "conjuredId":  12662,
-      "explosiveId":  18588,
-      "extraIds":  [
-        10646,
-        10310
-      ],
-      "elixirIds":  [
-        13452,
-        250341
-      ],
-      "resourcePotId":  13444
-    },
-    "buffs":  {
-      "greaterBlessingOfKings":  true
-    },
-    "hunter":  {
-      "options":  {
-        "classOptions":  {
-          "quiverBonus":  "AncientSinewWrappedLamina",
-          "ammo":  "ThoriumHeadedArrow",
-          "petType":  "Raptor",
-          "petUptime":  1,
-          "cobraReflexes":  true,
-          "petAggression":  5,
-          "petAttackSpeed":  "FasterAttackII"
-        }
-      }
-    },
-    "talentsString":  "5320001505101251-0053250001-4",
-    "profession1":  "Engineering",
-    "profession2":  "Blacksmithing",
-    "rotation":  {
-      "type":  "TypeAPL",
-      "prepullActions":  [
-        {
-          "action":  {
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  14325,
-                "rank":  4
-              }
-            }
-          },
-          "doAtValue":  {
-            "const":  {
-              "val":  "-22s"
-            }
-          }
-        },
-        {
-          "action":  {
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  25296,
-                "rank":  7
-              }
-            }
-          },
-          "doAtValue":  {
-            "const":  {
-              "val":  "-20s"
-            }
-          }
-        }
-      ],
-      "priorityList":  [
-        {
-          "action":  {
-            "condition":  {
-              "cmp":  {
-                "op":  "OpGe",
-                "lhs":  {
-                  "currentTime":  {}
-                },
-                "rhs":  {
-                  "const":  {
-                    "val":  "5s"
-                  }
-                }
-              }
-            },
-            "autocastOtherCooldowns":  {}
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "not":  {
-                "val":  {
-                  "auraIsActive":  {
-                    "sourceUnit":  {
-                      "type":  "CurrentTarget"
-                    },
-                    "auraId":  {
-                      "spellId":  14325
-                    }
-                  }
-                }
-              }
-            },
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  14325,
-                "rank":  4
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "and":  {
-                "vals":  [
-                  {
-                    "and":  {
-                      "vals":  [
-                        {
-                          "variableRef":  {
-                            "name":  "Use Summon Hawk"
-                          }
-                        },
-                        {
-                          "variableRef":  {
-                            "name":  "Use Arcane Shot"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "sequenceIsComplete":  {
-                      "sequenceName":  "HHA"
-                    }
-                  }
-                ]
-              }
-            },
-            "resetSequence":  {
-              "sequenceName":  "HHA"
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "and":  {
-                "vals":  [
-                  {
-                    "variableRef":  {
-                      "name":  "Use Summon Hawk"
-                    }
-                  },
-                  {
-                    "variableRef":  {
-                      "name":  "Use Arcane Shot"
-                    }
-                  }
-                ]
-              }
-            },
-            "sequence":  {
-              "name":  "HHA",
-              "actions":  [
-                {
-                  "castSpell":  {
-                    "spellId":  {
-                      "spellId":  1293527,
-                      "rank":  4
-                    }
-                  }
-                },
-                {
-                  "castSpell":  {
-                    "spellId":  {
-                      "spellId":  1293527,
-                      "rank":  4
-                    }
-                  }
-                },
-                {
-                  "castSpell":  {
-                    "spellId":  {
-                      "spellId":  14287,
-                      "rank":  8
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "and":  {
-                "vals":  [
-                  {
-                    "variableRef":  {
-                      "name":  "Use Summon Hawk"
-                    }
-                  },
-                  {
-                    "not":  {
-                      "val":  {
-                        "variableRef":  {
-                          "name":  "Use Arcane Shot"
-                        }
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  1293527,
-                "rank":  4
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "and":  {
-                "vals":  [
-                  {
-                    "variableRef":  {
-                      "name":  "Use Arcane Shot"
-                    }
-                  },
-                  {
-                    "not":  {
-                      "val":  {
-                        "variableRef":  {
-                          "name":  "Use Summon Hawk"
-                        }
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  14287,
-                "rank":  8
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "not":  {
-                "val":  {
-                  "dotIsActive":  {
-                    "spellId":  {
-                      "spellId":  25295,
-                      "rank":  9
-                    }
-                  }
-                }
-              }
-            },
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  25295,
-                "rank":  9
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "variableRef":  {
-                "name":  "Use Aimed Shot"
-              }
-            },
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  20904,
-                "rank":  6
-              }
-            }
-          }
-        },
-        {
-          "action":  {
-            "condition":  {
-              "variableRef":  {
-                "name":  "Use Multi-Shot"
-              }
-            },
-            "castSpell":  {
-              "spellId":  {
-                "spellId":  2643
-              }
-            }
-          }
-        }
-      ],
-      "valueVariables":  [
-        {
-          "name":  "Use Aimed Shot",
-          "value":  {
-            "const":  {
-              "val":  "true"
-            }
-          }
-        },
-        {
-          "name":  "Use Multi-Shot",
-          "value":  {
-            "const":  {
-              "val":  "false"
-            }
-          }
-        },
-        {
-          "name":  "Use Arcane Shot",
-          "value":  {
-            "const":  {
-              "val":  "true"
-            }
-          }
-        },
-        {
-          "name":  "Use Summon Hawk",
-          "value":  {
-            "const":  {
-              "val":  "true"
-            }
-          }
-        }
-      ]
-    },
-    "reactionTimeMs":  100,
-    "distanceFromTarget":  12
-  },
-  "encounter":  {
-    "duration":  180,
-    "durationVariation":  5,
-    "executeProportion20":  0.2,
-    "executeProportion25":  0.25,
-    "executeProportion35":  0.35,
-    "executeProportion45":  0.45,
-    "executeProportion90":  0.9,
-    "targets":  [
-      {
-        "id":  31146,
-        "name":  "Raid Target",
-        "level":  63,
-        "mobType":  "MobTypeMechanical",
-        "stats":  [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          320,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          54,
-          0,
-          0,
-          3731,
-          0,
-          1428900,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "minBaseDamage":  2601,
-        "damageSpread":  0.5,
-        "swingSpeed":  2,
-        "parryHaste":  true,
-        "canCrush":  true
-      }
-    ]
-  }
+	"settings": {
+		"iterations": 25000
+	},
+	"raidBuffs": {
+		"arcaneBrilliance": true,
+		"prayerOfSpirit": true,
+		"giftOfTheWild": true,
+		"strengthOfEarthTotem": true,
+		"graceOfAirTotem": true,
+		"battleShout": "TristateEffectRegular",
+		"leaderOfThePack": true
+	},
+	"debuffs": {
+		"judgementOfLight": true,
+		"judgementOfWisdom": true,
+		"curseOfElements": true,
+		"curseOfRecklessness": true,
+		"faerieFire": true,
+		"exposeArmor": true,
+		"sunderArmor": true,
+		"giftOfArthas": true,
+		"insectSwarm": true
+	},
+	"player": {
+		"race": "RaceOrc",
+		"class": "ClassHunter",
+		"equipment": {
+			"items": [
+				{
+					"id": 16428,
+					"enchant": 2586
+				},
+				{
+					"id": 21809
+				},
+				{
+					"id": 13116
+				},
+				{
+					"id": 21187,
+					"enchant": 7667
+				},
+				{
+					"id": 19685,
+					"enchant": 1891
+				},
+				{
+					"id": 19687,
+					"enchant": 7656
+				},
+				{
+					"id": 19686,
+					"enchant": 8206
+				},
+				{
+					"id": 20216
+				},
+				{
+					"id": 22690,
+					"enchant": 2586
+				},
+				{
+					"id": 18506,
+					"enchant": 904
+				},
+				{
+					"id": 272408
+				},
+				{
+					"id": 21182
+				},
+				{
+					"id": 272437
+				},
+				{
+					"id": 270276
+				},
+				{
+					"id": 250619,
+					"enchant": 2646
+				},
+				{},
+				{
+					"id": 22347,
+					"enchant": 8720
+				}
+			]
+		},
+		"consumables": {
+			"foodId": 250072,
+			"conjuredId": 12662,
+			"explosiveId": 18588,
+			"extraIds": [10646, 10310],
+			"elixirIds": [13452, 250341],
+			"resourcePotId": 13444
+		},
+		"buffs": {
+			"greaterBlessingOfKings": true
+		},
+		"hunter": {
+			"options": {
+				"classOptions": {
+					"quiverBonus": "AncientSinewWrappedLamina",
+					"ammo": "ThoriumHeadedArrow",
+					"petType": "Raptor",
+					"petUptime": 1,
+					"cobraReflexes": true,
+					"petAggression": 5,
+					"petAttackSpeed": "FasterAttackII"
+				}
+			}
+		},
+		"talentsString": "5320001505101251-0053250001-4",
+		"profession1": "Engineering",
+		"profession2": "Blacksmithing",
+		"rotation": {
+			"type": "TypeAPL",
+			"prepullActions": [
+				{
+					"action": {
+						"castSpell": {
+							"spellId": {
+								"spellId": 14325,
+								"rank": 4
+							}
+						}
+					},
+					"doAtValue": {
+						"const": {
+							"val": "-22s"
+						}
+					}
+				},
+				{
+					"action": {
+						"castSpell": {
+							"spellId": {
+								"spellId": 25296,
+								"rank": 7
+							}
+						}
+					},
+					"doAtValue": {
+						"const": {
+							"val": "-20s"
+						}
+					}
+				}
+			],
+			"priorityList": [
+				{
+					"action": {
+						"condition": {
+							"cmp": {
+								"op": "OpGe",
+								"lhs": {
+									"currentTime": {}
+								},
+								"rhs": {
+									"const": {
+										"val": "5s"
+									}
+								}
+							}
+						},
+						"autocastOtherCooldowns": {}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"not": {
+								"val": {
+									"auraIsActive": {
+										"sourceUnit": {
+											"type": "CurrentTarget"
+										},
+										"auraId": {
+											"spellId": 14325
+										}
+									}
+								}
+							}
+						},
+						"castSpell": {
+							"spellId": {
+								"spellId": 14325,
+								"rank": 4
+							}
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"and": {
+								"vals": [
+									{
+										"and": {
+											"vals": [
+												{
+													"variableRef": {
+														"name": "Use Summon Hawk"
+													}
+												},
+												{
+													"variableRef": {
+														"name": "Use Arcane Shot"
+													}
+												}
+											]
+										}
+									},
+									{
+										"sequenceIsComplete": {
+											"sequenceName": "HHA"
+										}
+									}
+								]
+							}
+						},
+						"resetSequence": {
+							"sequenceName": "HHA"
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"and": {
+								"vals": [
+									{
+										"variableRef": {
+											"name": "Use Summon Hawk"
+										}
+									},
+									{
+										"variableRef": {
+											"name": "Use Arcane Shot"
+										}
+									}
+								]
+							}
+						},
+						"sequence": {
+							"name": "HHA",
+							"actions": [
+								{
+									"castSpell": {
+										"spellId": {
+											"spellId": 1293527,
+											"rank": 4
+										}
+									}
+								},
+								{
+									"castSpell": {
+										"spellId": {
+											"spellId": 1293527,
+											"rank": 4
+										}
+									}
+								},
+								{
+									"castSpell": {
+										"spellId": {
+											"spellId": 14287,
+											"rank": 8
+										}
+									}
+								}
+							]
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"and": {
+								"vals": [
+									{
+										"variableRef": {
+											"name": "Use Summon Hawk"
+										}
+									},
+									{
+										"not": {
+											"val": {
+												"variableRef": {
+													"name": "Use Arcane Shot"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						"castSpell": {
+							"spellId": {
+								"spellId": 1293527,
+								"rank": 4
+							}
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"and": {
+								"vals": [
+									{
+										"variableRef": {
+											"name": "Use Arcane Shot"
+										}
+									},
+									{
+										"not": {
+											"val": {
+												"variableRef": {
+													"name": "Use Summon Hawk"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						"castSpell": {
+							"spellId": {
+								"spellId": 14287,
+								"rank": 8
+							}
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"not": {
+								"val": {
+									"dotIsActive": {
+										"spellId": {
+											"spellId": 25295,
+											"rank": 9
+										}
+									}
+								}
+							}
+						},
+						"castSpell": {
+							"spellId": {
+								"spellId": 25295,
+								"rank": 9
+							}
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"variableRef": {
+								"name": "Use Aimed Shot"
+							}
+						},
+						"castSpell": {
+							"spellId": {
+								"spellId": 20904,
+								"rank": 6
+							}
+						}
+					}
+				},
+				{
+					"action": {
+						"condition": {
+							"variableRef": {
+								"name": "Use Multi-Shot"
+							}
+						},
+						"castSpell": {
+							"spellId": {
+								"spellId": 2643
+							}
+						}
+					}
+				}
+			],
+			"valueVariables": [
+				{
+					"name": "Use Aimed Shot",
+					"value": {
+						"const": {
+							"val": "true"
+						}
+					}
+				},
+				{
+					"name": "Use Multi-Shot",
+					"value": {
+						"const": {
+							"val": "false"
+						}
+					}
+				},
+				{
+					"name": "Use Arcane Shot",
+					"value": {
+						"const": {
+							"val": "true"
+						}
+					}
+				},
+				{
+					"name": "Use Summon Hawk",
+					"value": {
+						"const": {
+							"val": "true"
+						}
+					}
+				}
+			]
+		},
+		"reactionTimeMs": 100,
+		"distanceFromTarget": 12
+	},
+	"encounter": {
+		"duration": 180,
+		"durationVariation": 5,
+		"executeProportion20": 0.2,
+		"executeProportion25": 0.25,
+		"executeProportion35": 0.35,
+		"executeProportion45": 0.45,
+		"executeProportion90": 0.9,
+		"targets": [
+			{
+				"id": 31146,
+				"name": "Raid Target",
+				"level": 63,
+				"mobType": "MobTypeMechanical",
+				"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 320, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 3731, 0, 1428900, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+				"minBaseDamage": 2601,
+				"damageSpread": 0.5,
+				"swingSpeed": 2,
+				"parryHaste": true,
+				"canCrush": true
+			}
+		]
+	}
 }

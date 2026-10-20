@@ -1,192 +1,146 @@
 {
-  "raidBuffs":  {
-    "giftOfTheWild":  true,
-    "prayerOfFortitude":  true,
-    "strengthOfEarthTotem":  true,
-    "windfuryTotem":  true,
-    "leaderOfThePack":  true
-  },
-  "debuffs":  {
-    "curseOfRecklessness":  true,
-    "faerieFire":  true,
-    "exposeArmor":  true,
-    "sunderArmor":  true,
-    "giftOfArthas":  true
-  },
-  "player":  {
-    "race":  "RaceOrc",
-    "class":  "ClassWarrior",
-    "equipment":  {
-      "items":  [
-        {
-          "id":  12640,
-          "enchant":  2543
-        },
-        {
-          "id":  19491
-        },
-        {
-          "id":  10263,
-          "randomSuffix":  12727
-        },
-        {
-          "id":  272414,
-          "enchant":  7667
-        },
-        {
-          "id":  252483,
-          "enchant":  1891
-        },
-        {
-          "id":  10147,
-          "randomSuffix":  12727,
-          "enchant":  7656
-        },
-        {
-          "id":  21998,
-          "enchant":  8206
-        },
-        {
-          "id":  20216
-        },
-        {
-          "id":  22385,
-          "enchant":  2543
-        },
-        {
-          "id":  21995,
-          "enchant":  1887
-        },
-        {
-          "id":  272408
-        },
-        {
-          "id":  284716
-        },
-        {
-          "id":  249469
-        },
-        {
-          "id":  272437
-        },
-        {
-          "id":  22384,
-          "enchant":  1900
-        },
-        {
-          "id":  12798,
-          "enchant":  1900
-        },
-        {
-          "id":  22347
-        }
-      ]
-    },
-    "consumables":  {
-      "foodId":  20452,
-      "explosiveId":  260817,
-      "mhImbueId":  12643,
-      "ohImbueId":  12404,
-      "extraIds":  [
-        10646
-      ],
-      "elixirIds":  [
-        250350,
-        13452,
-        12820
-      ],
-      "resourcePotId":  13442
-    },
-    "buffs":  {
-      "greaterBlessingOfKings":  true,
-      "greaterBlessingOfMight":  true
-    },
-    "dpsWarrior":  {
-      "options":  {
-        "classOptions":  {
-          "defaultStance":  "WarriorStanceBerserker",
-          "startingRage":  50,
-          "stanceSnapshot":  true,
-          "hasBsT2":  true,
-          "useBattleShout":  true,
-          "queueDelay":  250
-        }
-      }
-    },
-    "talentsString":  "30305013002-25053005052010501",
-    "profession1":  "Engineering",
-    "profession2":  "Blacksmithing",
-    "rotation":  {
-      "type":  "TypeSimple",
-      "simple":  {
-        "specRotationJson":  "{\"spec\":\"DpsWarriorSpecFury\",\"useOverpower\":true,\"sunderArmor\":\"WarriorSunderHelp\",\"useRend\":true,\"useHamstring\":true}",
-        "cooldowns":  {}
-      }
-    },
-    "reactionTimeMs":  100,
-    "distanceFromTarget":  25
-  },
-  "encounter":  {
-    "duration":  180,
-    "durationVariation":  5,
-    "executeProportion20":  0.2,
-    "executeProportion25":  0.25,
-    "executeProportion35":  0.35,
-    "executeProportion45":  0.45,
-    "executeProportion90":  0.9,
-    "targets":  [
-      {
-        "id":  31146,
-        "name":  "Raid Target",
-        "level":  63,
-        "mobType":  "MobTypeMechanical",
-        "stats":  [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          320,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          54,
-          0,
-          0,
-          3731,
-          0,
-          1428900,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "minBaseDamage":  2601,
-        "damageSpread":  0.5,
-        "swingSpeed":  2,
-        "parryHaste":  true,
-        "canCrush":  true
-      }
-    ]
-  }
+	"raidBuffs": {
+		"giftOfTheWild": true,
+		"prayerOfFortitude": true,
+		"strengthOfEarthTotem": true,
+		"windfuryTotem": true,
+		"leaderOfThePack": true
+	},
+	"debuffs": {
+		"curseOfRecklessness": true,
+		"faerieFire": true,
+		"exposeArmor": true,
+		"sunderArmor": true,
+		"giftOfArthas": true
+	},
+	"player": {
+		"race": "RaceOrc",
+		"class": "ClassWarrior",
+		"equipment": {
+			"items": [
+				{
+					"id": 12640,
+					"enchant": 2543
+				},
+				{
+					"id": 19491
+				},
+				{
+					"id": 10263,
+					"randomSuffix": 12727
+				},
+				{
+					"id": 272414,
+					"enchant": 7667
+				},
+				{
+					"id": 252483,
+					"enchant": 1891
+				},
+				{
+					"id": 10147,
+					"randomSuffix": 12727,
+					"enchant": 7656
+				},
+				{
+					"id": 21998,
+					"enchant": 8206
+				},
+				{
+					"id": 20216
+				},
+				{
+					"id": 22385,
+					"enchant": 2543
+				},
+				{
+					"id": 21995,
+					"enchant": 1887
+				},
+				{
+					"id": 272408
+				},
+				{
+					"id": 284716
+				},
+				{
+					"id": 249469
+				},
+				{
+					"id": 272437
+				},
+				{
+					"id": 22384,
+					"enchant": 1900
+				},
+				{
+					"id": 12798,
+					"enchant": 1900
+				},
+				{
+					"id": 22347
+				}
+			]
+		},
+		"consumables": {
+			"foodId": 20452,
+			"explosiveId": 260817,
+			"mhImbueId": 12643,
+			"ohImbueId": 12404,
+			"extraIds": [10646],
+			"elixirIds": [250350, 13452, 12820],
+			"resourcePotId": 13442
+		},
+		"buffs": {
+			"greaterBlessingOfKings": true,
+			"greaterBlessingOfMight": true
+		},
+		"dpsWarrior": {
+			"options": {
+				"classOptions": {
+					"defaultStance": "WarriorStanceBerserker",
+					"startingRage": 50,
+					"stanceSnapshot": true,
+					"hasBsT2": true,
+					"useBattleShout": true,
+					"queueDelay": 250
+				}
+			}
+		},
+		"talentsString": "30305013002-25053005052010501",
+		"profession1": "Engineering",
+		"profession2": "Blacksmithing",
+		"rotation": {
+			"type": "TypeSimple",
+			"simple": {
+				"specRotationJson": "{\"spec\":\"DpsWarriorSpecFury\",\"useOverpower\":true,\"sunderArmor\":\"WarriorSunderHelp\",\"useRend\":true,\"useHamstring\":true}",
+				"cooldowns": {}
+			}
+		},
+		"reactionTimeMs": 100,
+		"distanceFromTarget": 25
+	},
+	"encounter": {
+		"duration": 180,
+		"durationVariation": 5,
+		"executeProportion20": 0.2,
+		"executeProportion25": 0.25,
+		"executeProportion35": 0.35,
+		"executeProportion45": 0.45,
+		"executeProportion90": 0.9,
+		"targets": [
+			{
+				"id": 31146,
+				"name": "Raid Target",
+				"level": 63,
+				"mobType": "MobTypeMechanical",
+				"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 320, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 3731, 0, 1428900, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+				"minBaseDamage": 2601,
+				"damageSpread": 0.5,
+				"swingSpeed": 2,
+				"parryHaste": true,
+				"canCrush": true
+			}
+		]
+	}
 }

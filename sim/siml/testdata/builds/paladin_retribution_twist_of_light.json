@@ -1,197 +1,145 @@
 {
-  "settings":  {
-    "iterations":  25000
-  },
-  "raidBuffs":  {
-    "arcaneBrilliance":  true,
-    "prayerOfSpirit":  true,
-    "giftOfTheWild":  true,
-    "prayerOfFortitude":  true,
-    "strengthOfEarthTotem":  true,
-    "windfuryTotem":  true,
-    "battleShout":  "TristateEffectRegular",
-    "leaderOfThePack":  true
-  },
-  "debuffs":  {
-    "judgementOfLight":  true,
-    "judgementOfWisdom":  true,
-    "curseOfElements":  true,
-    "curseOfRecklessness":  true,
-    "faerieFire":  true,
-    "exposeArmor":  true,
-    "sunderArmor":  true
-  },
-  "partyBuffs":  {
-    "manaSpringTotem":  "TristateEffectRegular"
-  },
-  "player":  {
-    "race":  "RaceHuman",
-    "class":  "ClassPaladin",
-    "equipment":  {
-      "items":  [
-        {
-          "id":  12640,
-          "enchant":  2543
-        },
-        {
-          "id":  22150,
-          "enchant":  904
-        },
-        {
-          "id":  22093
-        },
-        {
-          "id":  272411,
-          "enchant":  849
-        },
-        {
-          "id":  22089,
-          "enchant":  1891
-        },
-        {
-          "id":  22088,
-          "enchant":  2566
-        },
-        {
-          "id":  22090,
-          "enchant":  8206
-        },
-        {
-          "id":  22086
-        },
-        {
-          "id":  22385,
-          "enchant":  2543
-        },
-        {
-          "id":  22087,
-          "enchant":  1887
-        },
-        {
-          "id":  21182
-        },
-        {
-          "id":  19325
-        },
-        {
-          "id":  274759
-        },
-        {
-          "id":  272437
-        },
-        {
-          "id":  12784,
-          "enchant":  1900
-        },
-        {},
-        {
-          "id":  272435
-        }
-      ]
-    },
-    "consumables":  {
-      "flaskId":  13512,
-      "foodId":  13933,
-      "conjuredId":  12662,
-      "explosiveId":  18588,
-      "mhImbueId":  20749,
-      "extraIds":  [
-        10646,
-        8410
-      ],
-      "elixirIds":  [
-        21546,
-        250338,
-        13452,
-        250337,
-        250351,
-        13454,
-        250341,
-        12460
-      ],
-      "offensivePotId":  250937
-    },
-    "buffs":  {
-      "greaterBlessingOfKings":  true,
-      "greaterBlessingOfMight":  true,
-      "greaterBlessingOfWisdom":  true,
-      "greaterBlessingOfSalvation":  true
-    },
-    "retributionPaladin":  {
-      "options":  {
-        "classOptions":  {}
-      }
-    },
-    "talentsString":  "55003003--05225331101330321",
-    "profession1":  "Engineering",
-    "profession2":  "Blacksmithing",
-    "rotation":  {
-      "type":  "TypeAuto"
-    },
-    "reactionTimeMs":  100,
-    "distanceFromTarget":  5
-  },
-  "encounter":  {
-    "duration":  180,
-    "durationVariation":  5,
-    "executeProportion20":  0.2,
-    "executeProportion25":  0.25,
-    "executeProportion35":  0.35,
-    "executeProportion45":  0.45,
-    "executeProportion90":  0.9,
-    "targets":  [
-      {
-        "id":  31146,
-        "name":  "Raid Target",
-        "level":  63,
-        "mobType":  "MobTypeMechanical",
-        "stats":  [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          320,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          54,
-          0,
-          0,
-          3731,
-          0,
-          1428900,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "minBaseDamage":  2601,
-        "damageSpread":  0.5,
-        "swingSpeed":  2,
-        "parryHaste":  true,
-        "canCrush":  true
-      }
-    ]
-  }
+	"settings": {
+		"iterations": 25000
+	},
+	"raidBuffs": {
+		"arcaneBrilliance": true,
+		"prayerOfSpirit": true,
+		"giftOfTheWild": true,
+		"prayerOfFortitude": true,
+		"strengthOfEarthTotem": true,
+		"windfuryTotem": true,
+		"battleShout": "TristateEffectRegular",
+		"leaderOfThePack": true
+	},
+	"debuffs": {
+		"judgementOfLight": true,
+		"judgementOfWisdom": true,
+		"curseOfElements": true,
+		"curseOfRecklessness": true,
+		"faerieFire": true,
+		"exposeArmor": true,
+		"sunderArmor": true
+	},
+	"partyBuffs": {
+		"manaSpringTotem": "TristateEffectRegular"
+	},
+	"player": {
+		"race": "RaceHuman",
+		"class": "ClassPaladin",
+		"equipment": {
+			"items": [
+				{
+					"id": 12640,
+					"enchant": 2543
+				},
+				{
+					"id": 22150,
+					"enchant": 904
+				},
+				{
+					"id": 22093
+				},
+				{
+					"id": 272411,
+					"enchant": 849
+				},
+				{
+					"id": 22089,
+					"enchant": 1891
+				},
+				{
+					"id": 22088,
+					"enchant": 2566
+				},
+				{
+					"id": 22090,
+					"enchant": 8206
+				},
+				{
+					"id": 22086
+				},
+				{
+					"id": 22385,
+					"enchant": 2543
+				},
+				{
+					"id": 22087,
+					"enchant": 1887
+				},
+				{
+					"id": 21182
+				},
+				{
+					"id": 19325
+				},
+				{
+					"id": 274759
+				},
+				{
+					"id": 272437
+				},
+				{
+					"id": 12784,
+					"enchant": 1900
+				},
+				{},
+				{
+					"id": 272435
+				}
+			]
+		},
+		"consumables": {
+			"flaskId": 13512,
+			"foodId": 13933,
+			"conjuredId": 12662,
+			"explosiveId": 18588,
+			"mhImbueId": 20749,
+			"extraIds": [10646, 8410],
+			"elixirIds": [21546, 250338, 13452, 250337, 250351, 13454, 250341, 12460],
+			"offensivePotId": 250937
+		},
+		"buffs": {
+			"greaterBlessingOfKings": true,
+			"greaterBlessingOfMight": true,
+			"greaterBlessingOfWisdom": true,
+			"greaterBlessingOfSalvation": true
+		},
+		"retributionPaladin": {
+			"options": {
+				"classOptions": {}
+			}
+		},
+		"talentsString": "55003003--05225331101330321",
+		"profession1": "Engineering",
+		"profession2": "Blacksmithing",
+		"rotation": {
+			"type": "TypeAuto"
+		},
+		"reactionTimeMs": 100,
+		"distanceFromTarget": 5
+	},
+	"encounter": {
+		"duration": 180,
+		"durationVariation": 5,
+		"executeProportion20": 0.2,
+		"executeProportion25": 0.25,
+		"executeProportion35": 0.35,
+		"executeProportion45": 0.45,
+		"executeProportion90": 0.9,
+		"targets": [
+			{
+				"id": 31146,
+				"name": "Raid Target",
+				"level": 63,
+				"mobType": "MobTypeMechanical",
+				"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 320, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 3731, 0, 1428900, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+				"minBaseDamage": 2601,
+				"damageSpread": 0.5,
+				"swingSpeed": 2,
+				"parryHaste": true,
+				"canCrush": true
+			}
+		]
+	}
 }
